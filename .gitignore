@@ -1,0 +1,44 @@
+# Windows-Native .gitignore
+# -------------------------
+
+# Build outputs
+bin/
+obj/
+Debug/
+Release/
+publish/
+
+# IDE files
+.vs/
+*.suo
+*.user
+*.userosscache
+*.csproj.user
+
+# OS files
+Thumbs.db
+[Dd]esktop.ini
+
+# Backup/temp files
+*.bak
+*.tmp
+~*
+
+# NuGet packages
+packages/
+*.nupkg
+project.nuget.cache
+*.nuget.props
+*.nuget.targets
+
+# Compiled app output
+Cine.exe.zip
+Cine.WinUI.exe
+
+# Python reference build artifacts
+build/
+*.flatpak
+*.flatpak-builder
+
+# dotnet tool
+.dotnet/

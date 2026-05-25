@@ -1,0 +1,33 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 18
+VisualStudioVersion = 18.6.11819.183
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cine.WinUI", "Cine.WinUI\Cine.WinUI.csproj", "{4F26528C-D7B4-4E8A-9A1B-3C5E8F9D2A1B}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cine.Core", "Cine.Core\Cine.Core.csproj", "{5E37639D-E8C5-5F9B-A2C4-4D6F0E0F3B2C}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cine.Media", "Cine.Media\Cine.Media.csproj", "{6F4874AE-F9D6-60AC-B3D5-5E7F1F1F4C3D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4F26528C-D7B4-4E8A-9A1B-3C5E8F9D2A1B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4F26528C-D7B4-4E8A-9A1B-3C5E8F9D2A1B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4F26528C-D7B4-4E8A-9A1B-3C5E8F9D2A1B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4F26528C-D7B4-4E8A-9A1B-3C5E8F9D2A1B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5E37639D-E8C5-5F9B-A2C4-4D6F0E0F3B2C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5E37639D-E8C5-5F9B-A2C4-4D6F0E0F3B2C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5E37639D-E8C5-5F9B-A2C4-4D6F0E0F3B2C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5E37639D-E8C5-5F9B-A2C4-4D6F0E0F3B2C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6F4874AE-F9D6-60AC-B3D5-5E7F1F1F4C3D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6F4874AE-F9D6-60AC-B3D5-5E7F1F1F4C3D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6F4874AE-F9D6-60AC-B3D5-5E7F1F1F4C3D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6F4874AE-F9D6-60AC-B3D5-5E7F1F1F4C3D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
