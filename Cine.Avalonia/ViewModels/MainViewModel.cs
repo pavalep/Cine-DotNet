@@ -36,8 +36,26 @@ public class MainViewModel : INotifyPropertyChanged
     // --- Collections ---
     public ObservableCollection<string> SubtitleTracks { get; } = new();
     public ObservableCollection<string> AudioTracks { get; } = new();
+    public ObservableCollection<string> VideoTracks { get; } = new();
     public ObservableCollection<ChapterInfo> Chapters { get; } = new();
     public ObservableCollection<string> Playlist { get; } = new();
+    public ObservableCollection<double> ChapterMarkers { get; } = new();
+
+    // --- Commands ---
+    public ICommand OpenFilesCommand { get; }
+    public ICommand OpenFolderCommand { get; }
+    public ICommand AddFilesCommand { get; }
+    public ICommand AddSubtitleCommand { get; }
+    public ICommand AddAudioCommand { get; }
+
+    // File dialog callbacks (set by MainWindow code-behind)
+    public Func<Task<string[]?>>? RequestOpenFilesAsync { get; set; }
+    public Func<Task<string?>>? RequestOpenFolderAsync { get; set; }
+    public Func<Task<string[]?>>? RequestAddFilesAsync { get; set; }
+    public Func<Task<string?>>? RequestSubtitleFileAsync { get; set; }
+    public Func<Task<string?>>? RequestAudioFileAsync { get; set; }
+
+    public string Title => Path.GetFileName(_filePath) ?? "Cine";
 
     public MainViewModel(IMediaPlayer player)
     {
@@ -52,6 +70,52 @@ public class MainViewModel : INotifyPropertyChanged
             Interval = TimeSpan.FromMilliseconds(100)
         };
         _positionTimer.Tick += OnPositionTick;
+
+        // Initialize commands
+        OpenFilesCommand = new RelayCommand(async _ => await OnOpenFiles());
+        OpenFolderCommand = new RelayCommand(async _ => await OnOpenFolder());
+        AddFilesCommand = new RelayCommand(async _ => await OnAddFiles());
+        AddSubtitleCommand = new RelayCommand(async _ => await OnAddSubtitle());
+        AddAudioCommand = new RelayCommand(async _ => await OnAddAudio());
+    }
+
+    private async Task OnOpenFiles()
+    {
+        if (RequestOpenFilesAsync == null) return;
+        var paths = await RequestOpenFilesAsync();
+        if (paths != null && paths.Length > 0)
+            OpenFiles(paths);
+    }
+
+    private async Task OnOpenFolder()
+    {
+        if (RequestOpenFolderAsync == null) return;
+        var path = await RequestOpenFolderAsync();
+        if (!string.IsNullOrEmpty(path))
+            OpenFile(path);
+    }
+
+    private async Task OnAddFiles()
+    {
+        if (RequestAddFilesAsync == null) return;
+        var paths = await RequestAddFilesAsync();
+        if (paths != null)
+            foreach (var p in paths)
+                Playlist.Add(p);
+    }
+
+    private async Task OnAddSubtitle()
+    {
+        if (RequestSubtitleFileAsync == null) return;
+        var path = await RequestSubtitleFileAsync();
+        // TODO: wire subtitle loading to player
+    }
+
+    private async Task OnAddAudio()
+    {
+        if (RequestAudioFileAsync == null) return;
+        var path = await RequestAudioFileAsync();
+        // TODO: wire audio track loading to player
     }
 
     // --- Playback commands ---
@@ -96,6 +160,12 @@ public class MainViewModel : INotifyPropertyChanged
 
     public bool IsPlaying => _state == PlaybackState.Playing;
     public bool IsPaused => _state == PlaybackState.Paused;
+
+    public double Volume
+    {
+        get => _volumeValue;
+        set { _volumeValue = value; OnPropertyChanged(); }
+    }
 
     public TimeSpan Position
     {
@@ -152,7 +222,7 @@ public class MainViewModel : INotifyPropertyChanged
     public string FilePath
     {
         get => _filePath;
-        set { _filePath = value; OnPropertyChanged(); }
+        set { _filePath = value; OnPropertyChanged(); OnPropertyChanged(nameof(Title)); }
     }
 
     public string ChapterTitle
@@ -203,8 +273,13 @@ public class MainViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(VolumeValue));
 
         Chapters.Clear();
+        ChapterMarkers.Clear();
         foreach (var ch in _player.ChapterList)
+        {
             Chapters.Add(ch);
+            if (Duration.TotalSeconds > 0)
+                ChapterMarkers.Add(ch.Time / Duration.TotalSeconds);
+        }
     }
 
     private static string FormatTime(TimeSpan ts)

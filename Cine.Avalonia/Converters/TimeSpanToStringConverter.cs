@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using Avalonia;
 using Avalonia.Data.Converters;
 
 namespace Cine.Avalonia.Converters;
@@ -29,7 +30,39 @@ public class PercentConverter : IValueConverter
 
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        return value is double d ? $"{(int)(d * 100)}%" : "0%";
+        if (value is double d)
+        {
+            // If target is Thickness (for thumb margin), return the pixel offset
+            if (targetType == typeof(Thickness))
+            {
+                return new Thickness(d * 100, 0, 0, 0);
+            }
+            return $"{(int)(d * 100)}%";
+        }
+        return "0%";
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotSupportedException();
+    }
+}
+
+/// <summary>Converts a chapter position (0.0-1.0) to a margin for the seek bar overlay.</summary>
+public class ChapterMarginConverter : IValueConverter
+{
+    public static ChapterMarginConverter Instance { get; } = new();
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        // Expects a double value representing position (0.0 to 1.0)
+        // Returns a Thickness with left margin as percentage of slider width
+        if (value is double position)
+        {
+            var left = position * 100;
+            return new Thickness(left, 0, 0, 0);
+        }
+        return new Thickness(0);
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
