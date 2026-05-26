@@ -588,6 +588,7 @@ internal unsafe interface ID3D11DeviceContext
     void PSSetShaderResources(uint StartSlot, uint NumViews, IntPtr ppShaderResourceViews);
     void PSSetShader(IntPtr pPixelShader, IntPtr pClassInstances, uint NumClassInstances);
     void PSSetSamplers(uint StartSlot, uint NumSamplers, IntPtr ppSamplers);
+    void PSSetConstantBuffers(uint StartSlot, uint NumBuffers, IntPtr ppConstantBuffers);
     void Draw(uint VertexCount, uint StartVertexLocation);
     void ClearRenderTargetView(IntPtr pRenderTargetView, [MarshalAs(UnmanagedType.LPArray, SizeConst = 4)] float[] ColorRGBA);
     void ClearDepthStencilView(IntPtr pDepthStencilView, uint ClearFlags, float Depth, byte Stencil);
@@ -1160,14 +1161,14 @@ internal static class NativeMethods
         out IntPtr ppBuffer);
 
     // ---- DXGI ----
-    [DllImport("dxgi.dll", SetLastError = true, PreserveSig = false)]
+    [DllImport("dxgi.dll", SetLastError = true, PreserveSig = true)]
     internal static extern int CreateDXGIFactory1(ref Guid riid, out IntPtr ppFactory);
 
-    [DllImport("dxgi.dll", SetLastError = true, PreserveSig = false)]
+    [DllImport("dxgi.dll", SetLastError = true, PreserveSig = true)]
     internal static extern int CreateDXGIFactory2(uint Flags, ref Guid riid, out IntPtr ppFactory);
 
     // ---- D3D11 ----
-    [DllImport("d3d11.dll", SetLastError = true, PreserveSig = false)]
+    [DllImport("d3d11.dll", SetLastError = true, PreserveSig = true)]
     internal static extern int D3D11CreateDevice(
         IntPtr pAdapter,
         int DriverType,
@@ -1233,7 +1234,7 @@ internal static class NativeMethods
         out IntPtr ppCode,
         out IntPtr ppErrorMsgs);
 
-    [DllImport("d3dcompiler_47.dll", SetLastError = true, PreserveSig = false)]
+    [DllImport("d3dcompiler_47.dll", SetLastError = true, PreserveSig = true)]
     internal static extern int D3DCompile(
         IntPtr pSrcData,
         nuint SrcDataSize,

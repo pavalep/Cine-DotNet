@@ -25,18 +25,19 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
 using Cine.Media.Events;
+using Cine.Media.Interfaces;
 using Cine.Media.Implementations;
 using Cine.Media.Models;
 
 namespace Cine.Media.Implementations;
 
-public class MediaFoundationPlayer : IDisposable
+public class MediaFoundationPlayer : IMediaPlayer, IDisposable
 {
     #region Private Fields
 
     // === WPF MediaElement path (Phase 1) ===
     private PlaybackState _currentState = PlaybackState.Stopped;
-    private MediaElement _mediaElement;
+    private MediaElement? _mediaElement;
     private DispatcherTimer? _positionTimer;
 
     // === Native D3D11 path (Phase 2) ===
@@ -87,6 +88,11 @@ public class MediaFoundationPlayer : IDisposable
     private bool _isShuffled;
     private HwdecMode _hardwareDecoding = HwdecMode.Automatic;
     private bool _openedFired;
+
+    // === Chapter support ===
+    private ChapterInfo[] _chapters = Array.Empty<ChapterInfo>();
+    private int _currentChapter;
+    private const double ChapterIntervalSeconds = 60.0; // Default 1-minute chapters when no metadata
 
     #endregion
 
@@ -194,6 +200,7 @@ public class MediaFoundationPlayer : IDisposable
         get => _audioDelay; set { _audioDelay = value; UpdateAudioDelay(); }
     }
     public string CurrentPath => _currentFilePath;
+    public bool IsPlaying => _currentState == PlaybackState.Playing;
     public string[] Playlist => _playlist;
     public int PlaylistPosition
     {
@@ -212,8 +219,8 @@ public class MediaFoundationPlayer : IDisposable
     {
         get => _isFullscreen; set { SetFullscreen(value); }
     }
-    public int CurrentChapter => 0;
-    public ChapterInfo[] ChapterList => Array.Empty<ChapterInfo>();
+    public int CurrentChapter => _currentChapter;
+    public ChapterInfo[] ChapterList => _chapters;
     public HwdecMode HardwareDecoding
     {
         get => _hardwareDecoding; set { _hardwareDecoding = value; ApplyHardwareDecoding(); }
@@ -234,8 +241,8 @@ public class MediaFoundationPlayer : IDisposable
         }
     }
 
-    /// <summary>Exposes the MediaElement for WPF interop (Phase 1 path only).</summary>
-    public MediaElement MediaElement => _mediaElement;
+    /// <summary>Exposes the MediaElement for WPF interop (Phase 1 path only). May be null in Avalonia-only mode.</summary>
+    public MediaElement? MediaElement => _mediaElement;
 
     #endregion
 
@@ -262,6 +269,7 @@ public class MediaFoundationPlayer : IDisposable
 
     public event EventHandler? Opened;
     public event EventHandler? Closed;
+    public event EventHandler<string>? Error;
 
     #endregion
 
@@ -269,17 +277,43 @@ public class MediaFoundationPlayer : IDisposable
 
     public MediaFoundationPlayer()
     {
-        _mediaElement = new MediaElement
+        // WPF objects are only created on demand when non-native rendering is used.
+        // In Avalonia-only apps, no WPF Dispatcher exists, so we defer creation.
+    }
+
+    private void EnsureMediaElement()
+    {
+        if (_mediaElement != null) return;
+        try
         {
-            LoadedBehavior = MediaState.Manual,
-            UnloadedBehavior = MediaState.Close,
-            Stretch = Stretch.Uniform
-        };
-        _mediaElement.MediaOpened += OnMediaOpened;
-        _mediaElement.MediaEnded += OnMediaEnded;
-        _mediaElement.MediaFailed += OnMediaFailed;
-        _positionTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
-        _positionTimer.Tick += OnPositionTimerTick;
+            _mediaElement = new MediaElement
+            {
+                LoadedBehavior = MediaState.Manual,
+                UnloadedBehavior = MediaState.Close,
+                Stretch = Stretch.Uniform
+            };
+            _mediaElement.MediaOpened += OnMediaOpened;
+            _mediaElement.MediaEnded += OnMediaEnded;
+            _mediaElement.MediaFailed += OnMediaFailed;
+        }
+        catch (Exception ex)
+        {
+            Error?.Invoke(this, $"Failed to create WPF MediaElement: {ex.Message}");
+        }
+    }
+
+    private void EnsurePositionTimer()
+    {
+        if (_positionTimer != null) return;
+        try
+        {
+            _positionTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+            _positionTimer.Tick += OnPositionTimerTick;
+        }
+        catch (Exception ex)
+        {
+            Error?.Invoke(this, $"Failed to create DispatcherTimer: {ex.Message}");
+        }
     }
 
     #endregion
@@ -290,14 +324,33 @@ public class MediaFoundationPlayer : IDisposable
     {
         if (_nativeInitialized || hwnd == IntPtr.Zero) return;
 
-        // Create the renderer but don't initialize it yet - we need to know the video format first
-        _renderer = new D3D11Renderer(hwnd);
-        
-        _mfHelper = new MfHelper();
-        _mfHelper.Initialize();
+        try
+        {
+            // Enable native rendering since we now have a valid HWND
+            _nativeRendering = true;
 
-        // Initialize the audio renderer for WASAPI output
-        _audioRenderer = new AudioRenderer();
+            // Create the renderer but don't initialize it yet - we need to know the video format first
+            _renderer = new D3D11Renderer(hwnd);
+
+            _mfHelper = new MfHelper();
+            _mfHelper.Initialize();
+
+            // Initialize the audio renderer for WASAPI output
+            _audioRenderer = new AudioRenderer();
+        }
+        catch (Exception ex)
+        {
+            Error?.Invoke(this, $"Failed to initialize native renderer: {ex.Message}");
+            _nativeRendering = false;
+            _nativeInitialized = false;
+            _renderer?.Dispose();
+            _renderer = null;
+            _mfHelper?.Dispose();
+            _mfHelper = null;
+            _audioRenderer?.Dispose();
+            _audioRenderer = null;
+            return;
+        }
 
         // Store delegates so we can unsubscribe them in Dispose
         _mfMediaOpenedHandler = (s, e) =>
@@ -412,6 +465,7 @@ public class MediaFoundationPlayer : IDisposable
 
     #region Public Methods
 
+    void IMediaPlayer.Open(string path) => Open(path, "replace");
     public void Open(string path, string mode = "replace")
     {
         if (string.IsNullOrEmpty(path))
@@ -434,6 +488,8 @@ public class MediaFoundationPlayer : IDisposable
             }
             else
             {
+                EnsureMediaElement();
+                EnsurePositionTimer();
                 if (_mediaElement is not null && _mediaElement.IsEnabled)
                 {
                     _mediaElement.Source = new Uri(path);
@@ -649,8 +705,58 @@ public class MediaFoundationPlayer : IDisposable
 
     public void SeekForward(double seconds) => Seek(Position + TimeSpan.FromSeconds(seconds));
     public void SeekBackward(double seconds) => Seek(Position - TimeSpan.FromSeconds(seconds));
-    public void NextChapter() { /* TODO */ }
-    public void PreviousChapter() { /* TODO */ }
+    public void NextChapter()
+    {
+        if (_chapters.Length == 0) EnsureChaptersGenerated();
+        if (_chapters.Length == 0) return;
+        double currentPos = Position.TotalSeconds;
+        for (int i = 0; i < _chapters.Length; i++)
+        {
+            if (_chapters[i].Time > currentPos + 1.0)
+            {
+                Seek(TimeSpan.FromSeconds(_chapters[i].Time));
+                _currentChapter = i;
+                ChapterListChanged?.Invoke(this, new ChapterListChangedEventArgs(_chapters));
+                return;
+            }
+        }
+        _currentChapter = _chapters.Length - 1;
+        Seek(TimeSpan.FromSeconds(_chapters[_currentChapter].Time));
+    }
+    public void PreviousChapter()
+    {
+        if (_chapters.Length == 0) EnsureChaptersGenerated();
+        if (_chapters.Length == 0) return;
+        double currentPos = Position.TotalSeconds;
+        for (int i = _chapters.Length - 1; i >= 0; i--)
+        {
+            if (_chapters[i].Time < currentPos - 1.0)
+            {
+                Seek(TimeSpan.FromSeconds(_chapters[i].Time));
+                _currentChapter = i;
+                ChapterListChanged?.Invoke(this, new ChapterListChangedEventArgs(_chapters));
+                return;
+            }
+        }
+        Seek(TimeSpan.Zero);
+        _currentChapter = 0;
+        ChapterListChanged?.Invoke(this, new ChapterListChangedEventArgs(_chapters));
+    }
+
+    private void EnsureChaptersGenerated()
+    {
+        if (_duration <= TimeSpan.Zero) return;
+        double totalSeconds = _duration.TotalSeconds;
+        int count = Math.Max(1, (int)Math.Ceiling(totalSeconds / 60.0));
+        _chapters = new ChapterInfo[count];
+        for (int i = 0; i < count; i++)
+        {
+            double time = i * 60.0;
+            if (time > totalSeconds) time = totalSeconds;
+            _chapters[i] = new ChapterInfo { Title = $"Chapter {i + 1}", Index = i, Time = time };
+        }
+        ChapterListChanged?.Invoke(this, new ChapterListChangedEventArgs(_chapters));
+    }
 
     public void NextPlaylistItem()
     {

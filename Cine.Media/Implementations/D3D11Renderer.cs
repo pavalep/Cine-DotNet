@@ -24,12 +24,11 @@ using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace Cine.Media.Implementations;
 
 /// <summary>
-/// Manages a Direct3D 11 device, DXGI swap chain, render target,
+/// Manages a Direct3D 11 GPU device, DXGI swap chain, render target,
 /// and frame presentation for the native Media Foundation pipeline.
 /// </summary>
 internal unsafe class D3D11Renderer : IDisposable
@@ -56,8 +55,9 @@ internal unsafe class D3D11Renderer : IDisposable
     private const uint D3D11_USAGE_STAGING = 4;
     private const uint D3D11_SRV_DIMENSION_TEXTURE2D = 8;
     private const uint D3D11_APPEND_ALIGNED_ELEMENT = 0xFFFFFFFF;
-    private const uint D3D11_MAP_WRITE_DISCARD = 0x4;
-    private const uint D3D11_MAP_READ = 0x08;
+    private const uint D3D11_MAP_WRITE_DISCARD = 4;
+    private const uint D3D11_MAP_READ = 1;
+    private const uint D3D11_MAP_WRITE = 2;
 
     // Filter: MIN_MAG_MIP_LINEAR
     private const uint D3D11_FILTER_MIN_MAG_MIP_LINEAR = 0x15;
@@ -65,6 +65,8 @@ internal unsafe class D3D11Renderer : IDisposable
     private const uint D3D11_TEXTURE_ADDRESS_CLAMP = 1;
     // Comparison: NEVER
     private const uint D3D11_COMPARISON_NEVER = 0;
+    // Primitive topology: TRIANGLESTRIP
+    private const uint D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP = 5;
 
     // Float comparison epsilon
     private const float FLOAT_EPSILON = 1e-6f;
@@ -95,11 +97,26 @@ internal unsafe class D3D11Renderer : IDisposable
     private IntPtr _psBlob;        // ID3DBlob — pixel shader bytecode (needed for input layout)
     private IntPtr _vsBlob;        // ID3DBlob — vertex shader bytecode (needed for input layout)
 
+    // --- Post-process filter pipeline (Phase 4) ---
+    private IntPtr _filterPixelShader;     // ID3D11PixelShader — filter pass
+    private IntPtr _filterPsBlob;          // ID3DBlob — filter shader bytecode
+    private IntPtr _filterRenderTarget;    // ID3D11RenderTargetView — intermediate RT
+    private IntPtr _filterTexture;         // ID3D11Texture2D — intermediate texture
+    private IntPtr _filterSRV;             // ID3D11ShaderResourceView — input to filter
+    private IntPtr _filterSamplerState;    // ID3D11SamplerState — linear clamp for filter
+
     private int _nv12Width;        // video width (0 = not yet created)
     private int _nv12Height;       // video height (0 = not yet created)
     private bool _useShaderPath;   // true when decoder outputs NV12 (not BGRA)
     private readonly IntPtr _hwnd;
     private bool _disposed;
+
+    // --- Filter parameters ---
+    private float _brightness;  // [-1.0, 1.0], default 0.0
+    private float _contrast;    // [0.0, 3.0], default 1.0
+    private float _gamma;       // [0.1, 3.0], default 1.0
+    private float _saturation;  // [0.0, 3.0], default 1.0
+    private float _hue;         // [-180, 180] in degrees, default 0.0
 
     #endregion
 
@@ -128,6 +145,49 @@ internal unsafe class D3D11Renderer : IDisposable
             _useShaderPath = value;
         }
     }
+
+    /// <summary>Brightness adjustment [-1.0, 1.0], default 0.0.</summary>
+    public float Brightness
+    {
+        get => _brightness;
+        set { _brightness = Math.Clamp(value, -1.0f, 1.0f); }
+    }
+
+    /// <summary>Contrast adjustment [0.0, 3.0], default 1.0.</summary>
+    public float Contrast
+    {
+        get => _contrast;
+        set { _contrast = Math.Clamp(value, 0.0f, 3.0f); }
+    }
+
+    /// <summary>Gamma adjustment [0.1, 3.0], default 1.0.</summary>
+    public float Gamma
+    {
+        get => _gamma;
+        set { _gamma = Math.Clamp(value, 0.1f, 3.0f); }
+    }
+
+    /// <summary>Saturation adjustment [0.0, 3.0], default 1.0.</summary>
+    public float Saturation
+    {
+        get => _saturation;
+        set { _saturation = Math.Clamp(value, 0.0f, 3.0f); }
+    }
+
+    /// <summary>Hue adjustment [-180, 180] degrees, default 0.0.</summary>
+    public float Hue
+    {
+        get => _hue;
+        set { _hue = Math.Clamp(value, -180.0f, 180.0f); }
+    }
+
+    /// <summary>True when any video filter is active.</summary>
+    public bool HasActiveFilters =>
+        Math.Abs(_brightness) > 1e-5f ||
+        Math.Abs(_contrast - 1.0f) > 1e-5f ||
+        Math.Abs(_gamma - 1.0f) > 1e-5f ||
+        Math.Abs(_saturation - 1.0f) > 1e-5f ||
+        Math.Abs(_hue) > 1e-5f;
 
     #endregion
 
@@ -184,9 +244,9 @@ internal unsafe class D3D11Renderer : IDisposable
                 pFeatureLevels: IntPtr.Zero,
                 FeatureLevels: 0,
                 SDKVersion: D3D11_SDK_VERSION,
-                ppDevice: out _device,
-                pFeatureLevel: out _,
-                ppImmediateContext: out _context);
+                out _device,
+                out _,
+                out _context);
 
             Marshal.ThrowExceptionForHR(hr);
         }
@@ -235,6 +295,10 @@ internal unsafe class D3D11Renderer : IDisposable
         // ── 4. Compile shader pipeline (if NV12 mode) ──
         if (_useShaderPath)
             CreateNv12Pipeline();
+
+        // ── 5. Compile post-process filter pipeline (if filters active) ──
+        if (HasActiveFilters)
+            CreateFilterPipeline();
     }
 
     /// <summary>Creates the back-buffer RTV and caches dimensions.</summary>
@@ -295,8 +359,8 @@ VS_OUT main(VS_IN input) {
         // ── 2. Create vertex shader ──
         var device = (ID3D11Device)Marshal.GetObjectForIUnknown(_device);
         Marshal.ThrowExceptionForHR(device.CreateVertexShader(
-            pShaderBytecode: _vsBlob,
-            BytecodeLength: ((ID3DBlob)Marshal.GetObjectForIUnknown(_vsBlob)).GetBufferSize(),
+            pShaderBytecode: GetBlobPointer(_vsBlob),
+            BytecodeLength: GetBlobSize(_vsBlob),
             pClassLinkage: IntPtr.Zero,
             out _vertexShader));
 
@@ -330,8 +394,8 @@ VS_OUT main(VS_IN input) {
             Marshal.ThrowExceptionForHR(device.CreateInputLayout(
                 (IntPtr)pLayout,
                 (uint)layout.Length,
-                _vsBlob,
-                ((ID3DBlob)Marshal.GetObjectForIUnknown(_vsBlob)).GetBufferSize(),
+                GetBlobPointer(_vsBlob),
+                GetBlobSize(_vsBlob),
                 out _inputLayout));
         }
 
@@ -361,18 +425,21 @@ float4 main(PS_IN input) : SV_TARGET {
 
         // ── 5. Create pixel shader ──
         Marshal.ThrowExceptionForHR(device.CreatePixelShader(
-            pShaderBytecode: _psBlob,
-            BytecodeLength: ((ID3DBlob)Marshal.GetObjectForIUnknown(_psBlob)).GetBufferSize(),
+            pShaderBytecode: GetBlobPointer(_psBlob),
+            BytecodeLength: GetBlobSize(_psBlob),
             pClassLinkage: IntPtr.Zero,
             out _pixelShader));
 
         // ── 6. Create VS → PS input layout ──
-        Marshal.ThrowExceptionForHR(device.CreateInputLayout(
-            pInputElementDescs: (IntPtr)layout,
-            NumElements: (uint)layout.Length,
-            pShaderBytecodeWithInputSignature: _vsBlob,
-            BytecodeLength: ((ID3DBlob)Marshal.GetObjectForIUnknown(_vsBlob)).GetBufferSize(),
-            out _inputLayout));
+        fixed (D3D11_INPUT_ELEMENT_DESC* pLayout = layout)
+        {
+            Marshal.ThrowExceptionForHR(device.CreateInputLayout(
+                pInputElementDescs: (IntPtr)pLayout,
+                NumElements: (uint)layout.Length,
+                pShaderBytecodeWithInputSignature: GetBlobPointer(_vsBlob),
+                BytecodeLength: GetBlobSize(_vsBlob),
+                out _inputLayout));
+        }
 
         // ── 7. Create fullscreen quad vertex buffer ──
         var vertices = new[]
@@ -396,22 +463,309 @@ float4 main(PS_IN input) : SV_TARGET {
         // ── 9. Create Y and UV default textures + staging textures ──
         // Y plane: full resolution, 8-bit single channel
         CreateTexture2D(_nv12Width, _nv12Height, DXGI_FORMAT_R8_UNORM,
-            D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, out _yDefaultTex);
+            D3D11_BIND_SHADER_RESOURCE, out _yDefaultTex);
         CreateTexture2D(_nv12Width, _nv12Height, DXGI_FORMAT_R8_UNORM,
-            D3D11_USAGE_STAGING, 0, out _yStagingTex);
+            0, out _yStagingTex);
 
         // UV plane: half resolution (for NV12, U and V are interleaved at half height)
         int uvWidth = (_nv12Width + 1) / 2;
         int uvHeight = (_nv12Height + 1) / 2;
         CreateTexture2D(uvWidth, uvHeight, DXGI_FORMAT_R8G8_UNORM,
-            D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, out _uvDefaultTex);
+            D3D11_BIND_SHADER_RESOURCE, out _uvDefaultTex);
         CreateTexture2D(uvWidth, uvHeight, DXGI_FORMAT_R8G8_UNORM,
-            D3D11_USAGE_STAGING, 0, out _uvStagingTex);
+            0, out _uvStagingTex);
 
         // ── 10. Create shader resource views ──
         CreateTextureSRV(_yDefaultTex, DXGI_FORMAT_R8_UNORM, out _ySrv);
         CreateTextureSRV(_uvDefaultTex, DXGI_FORMAT_R8G8_UNORM, out _uvSrv);
 
+        Marshal.ReleaseComObject(device);
+    }
+
+    // ======================
+    //  POST-PROCESS FILTER PIPELINE
+    // ======================
+
+    /// <summary>
+    /// Creates the post-process filter pipeline: intermediate texture, RTV, SRV,
+    /// constant buffer, and pixel shader for brightness/contrast/gamma/saturation/hue.
+    /// </summary>
+    private void CreateFilterPipeline()
+    {
+        var device = (ID3D11Device)Marshal.GetObjectForIUnknown(_device);
+
+        try
+        {
+            // 1. Create intermediate render target texture (same size as back buffer)
+            var texDesc = new D3D11_TEXTURE2D_DESC
+            {
+                Width = (uint)BackBufferWidth,
+                Height = (uint)BackBufferHeight,
+                MipLevels = 1,
+                ArraySize = 1,
+                Format = DXGI_FORMAT_B8G8R8A8_UNORM,
+                SampleDesc_Count = 1,
+                SampleDesc_Quality = 0,
+                Usage = D3D11_USAGE_DEFAULT,
+                BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE,
+                CPUAccessFlags = 0,
+                MiscFlags = 0
+            };
+
+            Marshal.ThrowExceptionForHR(device.CreateTexture2D(ref texDesc, IntPtr.Zero, out _filterTexture));
+
+            // 2. Create render target view for the intermediate texture
+            Marshal.ThrowExceptionForHR(device.CreateRenderTargetView(_filterTexture, IntPtr.Zero, out _filterRenderTarget));
+
+            // 3. Create shader resource view for sampling the intermediate texture
+            var srvDesc = new D3D11_SHADER_RESOURCE_VIEW_DESC
+            {
+                Format = DXGI_FORMAT_B8G8R8A8_UNORM,
+                ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D,
+                MostDetailedMip = 0,
+                MipLevels = 1
+            };
+            Marshal.ThrowExceptionForHR(device.CreateShaderResourceView(_filterTexture, ref srvDesc, out _filterSRV));
+
+            // 4. Create a second sampler state for the filter pass
+            var sampDesc = new D3D11_SAMPLER_DESC
+            {
+                Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR,
+                AddressU = D3D11_TEXTURE_ADDRESS_CLAMP,
+                AddressV = D3D11_TEXTURE_ADDRESS_CLAMP,
+                AddressW = D3D11_TEXTURE_ADDRESS_CLAMP,
+                MipLODBias = 0,
+                MaxAnisotropy = 1,
+                ComparisonFunc = D3D11_COMPARISON_NEVER,
+                BorderColor = new float[4] { 0, 0, 0, 0 },
+                MinLOD = 0,
+                MaxLOD = float.MaxValue
+            };
+            Marshal.ThrowExceptionForHR(device.CreateSamplerState(ref sampDesc, out _filterSamplerState));
+
+            // 5. Compile the filter pixel shader
+            string filterPsSource = @"
+cbuffer FilterParams : register(b0)
+{
+    float Brightness;
+    float Contrast;
+    float Gamma;
+    float Saturation;
+    float Hue;
+    float3 Pad;
+};
+
+Texture2D InputTex : register(t0);
+SamplerState Sampler : register(s0);
+
+struct PS_IN {
+    float4 pos : SV_POSITION;
+    float2 uv  : TEXCOORD0;
+};
+
+float3 RGBtoHSV(float3 c)
+{
+    float4 K = float4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+    float4 p = lerp(float4(c.bg, K.wz), float4(c.gb, K.xy), step(c.b, c.g));
+    float4 q = lerp(float4(p.xyw, c.r), float4(c.r, p.yzx), step(p.x, c.r));
+    float d = q.x - min(q.w, q.y);
+    return float3(abs(q.z + (q.w - q.y) / (6.0 * d + 1e-10)), d / (q.x + 1e-10), q.x);
+}
+
+float3 HSVtoRGB(float3 c)
+{
+    float4 K = float4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    float3 p = abs(frac(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * lerp(K.xxx, saturate(p - K.xxx), c.y);
+}
+
+float4 main(PS_IN input) : SV_TARGET
+{
+    float4 color = InputTex.Sample(Sampler, input.uv);
+    color.rgb += Brightness;
+    color.rgb = lerp(float3(0.5, 0.5, 0.5), color.rgb, Contrast);
+    color.rgb = pow(max(color.rgb, 0.0), 1.0 / max(Gamma, 0.01));
+    float gray = dot(color.rgb, float3(0.299, 0.587, 0.114));
+    color.rgb = lerp(float3(gray, gray, gray), color.rgb, Saturation);
+    if (abs(Hue) > 1e-5)
+    {
+        float3 hsv = RGBtoHSV(color.rgb);
+        float hueRad = radians(Hue);
+        hsv.x = frac(hsv.x + hueRad / (2.0 * 3.14159265));
+        color.rgb = HSVtoRGB(hsv);
+    }
+    color.a = 1.0;
+    return color;
+}
+";
+            IntPtr psBlob = CompileShader(filterPsSource, "ps_5_0", "main");
+
+            Marshal.ThrowExceptionForHR(device.CreatePixelShader(
+                pShaderBytecode: GetBlobPointer(psBlob),
+                BytecodeLength: GetBlobSize(psBlob),
+                pClassLinkage: IntPtr.Zero,
+                out _filterPixelShader));
+            _filterPsBlob = psBlob;
+        }
+        finally
+        {
+            Marshal.ReleaseComObject(device);
+        }
+    }
+
+    /// <summary>
+    /// Applies the post-process filter by rendering a fullscreen quad through
+    /// the filter shader, reading from the intermediate texture and writing to the back buffer.
+    /// </summary>
+    private unsafe void ApplyFilter()
+    {
+        if (!HasActiveFilters || _filterPixelShader == IntPtr.Zero || _filterSRV == IntPtr.Zero)
+            return;
+
+        var device = (ID3D11Device)Marshal.GetObjectForIUnknown(_device);
+        var context = (ID3D11DeviceContext)Marshal.GetObjectForIUnknown(_context);
+
+        try
+        {
+            // 1. Copy current back buffer to filter intermediate texture
+            context.CopyResource(_filterTexture, _backBuffer);
+
+            // 2. Set back buffer as render target
+            IntPtr[] rts = new IntPtr[] { _rtv };
+            fixed (IntPtr* pRts = rts)
+            {
+                context.OMSetRenderTargets(1, (IntPtr)pRts, IntPtr.Zero);
+            }
+
+            // 3. Set up filter shader resources and sampler
+            IntPtr[] srvs = new IntPtr[] { _filterSRV };
+            fixed (IntPtr* pSrvs = srvs)
+            {
+                context.PSSetShaderResources(0, 1, (IntPtr)pSrvs);
+            }
+
+            IntPtr[] samplers = new IntPtr[] { _filterSamplerState };
+            fixed (IntPtr* pSamplers = samplers)
+            {
+                context.PSSetSamplers(0, 1, (IntPtr)pSamplers);
+            }
+
+            // 4. Create/update constant buffer with filter parameters
+            int paramSize = 8 * sizeof(float);
+            GCHandle handle = GCHandle.Alloc(new float[8]
+            {
+                _brightness,
+                _contrast,
+                _gamma,
+                _saturation,
+                _hue,
+                0f, 0f, 0f
+            }, GCHandleType.Pinned);
+            try
+            {
+                var bufDesc = new D3D11_BUFFER_DESC
+                {
+                    ByteWidth = (uint)paramSize,
+                    Usage = D3D11_USAGE_DYNAMIC,
+                    BindFlags = 0x4, // D3D11_BIND_CONSTANT_BUFFER
+                    CPUAccessFlags = 0x10000, // D3D11_CPU_ACCESS_WRITE
+                    MiscFlags = 0,
+                    StructureByteStride = 0
+                };
+
+                IntPtr cbBuffer;
+                Marshal.ThrowExceptionForHR(device.CreateBuffer(ref bufDesc, IntPtr.Zero, out cbBuffer));
+
+                try
+                {
+                    var mapped = new MappedSubresource();
+                    Marshal.ThrowExceptionForHR(context.Map(cbBuffer, 0, 0x2, 0, out mapped));
+                    try
+                    {
+                        byte* pSrc = (byte*)handle.AddrOfPinnedObject().ToPointer();
+                        byte* pDst = (byte*)mapped.pData.ToPointer();
+                        for (int i = 0; i < paramSize; i++)
+                            pDst[i] = pSrc[i];
+                    }
+                    finally
+                    {
+                        context.Unmap(cbBuffer, 0);
+                    }
+
+                    IntPtr[] cbs = new IntPtr[] { cbBuffer };
+                    fixed (IntPtr* pCbs = cbs)
+                    {
+                        context.PSSetConstantBuffers(0, 1, (IntPtr)pCbs);
+                    }
+                }
+                finally
+                {
+                    SafeRelease(ref cbBuffer);
+                }
+            }
+            finally
+            {
+                handle.Free();
+            }
+
+            // 5. Draw fullscreen quad
+            uint[] strideArr = new uint[] { (uint)sizeof(Vertex) };
+            uint[] offsetArr = new uint[] { 0 };
+            IntPtr[] vbs = new IntPtr[] { _vertexBuffer };
+            fixed (uint* pStride = strideArr)
+            fixed (uint* pOffset = offsetArr)
+            fixed (IntPtr* pVbs = vbs)
+            {
+                context.IASetVertexBuffers(0, 1, (IntPtr)pVbs,
+                    (IntPtr)pStride, (IntPtr)pOffset);
+            }
+
+            context.IASetInputLayout(_inputLayout);
+            context.IASetPrimitiveTopology(0x5); // TRIANGLESTRIP
+            context.VSSetShader(_vertexShader, IntPtr.Zero, 0);
+            context.PSSetShader(_filterPixelShader, IntPtr.Zero, 0);
+
+            var viewport = new D3D11_VIEWPORT
+            {
+                TopLeftX = 0,
+                TopLeftY = 0,
+                Width = (float)BackBufferWidth,
+                Height = (float)BackBufferHeight,
+                MinDepth = 0,
+                MaxDepth = 1
+            };
+            context.RSSetViewports(1, new IntPtr(&viewport));
+
+            context.Draw(4, 0);
+
+            Marshal.ReleaseComObject(context);
+        }
+        finally
+        {
+            Marshal.ReleaseComObject(device);
+        }
+    }
+
+    /// <summary>Creates a texture with the specified parameters.</summary>
+    private void CreateTexture2D(int width, int height, uint format, uint bindFlags, out IntPtr texture)
+    {
+        var desc = new D3D11_TEXTURE2D_DESC
+        {
+            Width = (uint)width,
+            Height = (uint)height,
+            MipLevels = 1,
+            ArraySize = 1,
+            Format = format,
+            SampleDesc_Count = 1,
+            SampleDesc_Quality = 0,
+            Usage = bindFlags == 0 ? D3D11_USAGE_STAGING : D3D11_USAGE_DEFAULT,
+            BindFlags = bindFlags,
+            CPUAccessFlags = bindFlags == 0 ? D3D11_CPU_ACCESS_READ : 0,
+            MiscFlags = 0
+        };
+
+        var device = (ID3D11Device)Marshal.GetObjectForIUnknown(_device);
+        Marshal.ThrowExceptionForHR(device.CreateTexture2D(ref desc, IntPtr.Zero, out texture));
         Marshal.ReleaseComObject(device);
     }
 
@@ -431,15 +785,10 @@ float4 main(PS_IN input) : SV_TARGET {
                 StructureByteStride = 0
             };
 
-            var subResource = new D3D11_SUBRESOURCE_DATA
-            {
-                pSysMem = handle.AddrOfPinnedObject(),
-                SysMemPitch = 0,
-                SysMemSlicePitch = 0
-            };
+            IntPtr pInitialData = handle.AddrOfPinnedObject();
 
             var device = (ID3D11Device)Marshal.GetObjectForIUnknown(_device);
-            Marshal.ThrowExceptionForHR(device.CreateBuffer(ref desc, ref subResource, out IntPtr buffer));
+            Marshal.ThrowExceptionForHR(device.CreateBuffer(ref desc, pInitialData, out IntPtr buffer));
             Marshal.ReleaseComObject(device);
             return buffer;
         }
@@ -490,21 +839,29 @@ float4 main(PS_IN input) : SV_TARGET {
     /// <summary>Compiles an HLSL shader from source.</summary>
     private IntPtr CompileShader(string source, string target, string entryPoint)
     {
-        int hr = NativeMethods.D3DCompile(
-            pSrcData: source,
-            SrcDataSize: (nuint)source.Length,
-            pSourceName: null,
-            pDefines: IntPtr.Zero,
-            pInclude: IntPtr.Zero,
-            pEntrypoint: entryPoint,
-            pTarget: target,
-            Flags1: 0,
-            Flags2: 0,
-            out IntPtr blob,
-            out IntPtr errMsgs);
+        IntPtr pSource = Marshal.StringToHGlobalAnsi(source);
+        try
+        {
+            int hr = NativeMethods.D3DCompile(
+                pSrcData: pSource,
+                SrcDataSize: (nuint)source.Length,
+                pSourceName: IntPtr.Zero,
+                pDefines: IntPtr.Zero,
+                pInclude: IntPtr.Zero,
+                pEntrypoint: entryPoint,
+                pTarget: target,
+                Flags1: 0,
+                Flags2: 0,
+                out IntPtr blob,
+                out IntPtr errMsgs);
 
-        Marshal.ThrowExceptionForHR(hr);
-        return blob;
+            Marshal.ThrowExceptionForHR(hr);
+            return blob;
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(pSource);
+        }
     }
 
     /// <summary>Releases all NV12 shader pipeline COM objects.</summary>
@@ -548,7 +905,6 @@ float4 main(PS_IN input) : SV_TARGET {
         Marshal.ReleaseComObject(swapChain);
         CreateRenderTarget();
 
-        // Update NV12 textures if in shader mode
         if (_useShaderPath)
         {
             DestroyNv12Textures();
@@ -588,7 +944,7 @@ float4 main(PS_IN input) : SV_TARGET {
                 var context = (ID3D11DeviceContext)Marshal.GetObjectForIUnknown(_context);
 
                 hr = context.Map(_backBuffer, Subresource: 0,
-                    MapType: (uint)D3D11MapMode.Write, MapFlags: 0, out mapped);
+                    MapType: D3D11_MAP_WRITE, MapFlags: 0, out mapped);
                 if (hr < 0) return;
 
                 try
@@ -625,9 +981,163 @@ float4 main(PS_IN input) : SV_TARGET {
                     context.Unmap(_backBuffer, Subresource: 0);
                 }
 
+                // Apply post-process filter pipeline if any filters are active
+                ApplyFilter();
+
                 var swapChain = (IDXGISwapChain1)Marshal.GetObjectForIUnknown(_swapChain);
                 swapChain.Present(SyncInterval: 1, Flags: 0);
                 Marshal.ReleaseComObject(swapChain);
+            }
+            finally
+            {
+                buffer.Unlock();
+            }
+        }
+        finally
+        {
+            if (buffer != null) Marshal.ReleaseComObject(buffer);
+        }
+    }
+
+    /// <summary>
+    /// Presents an NV12 sample using the shader pipeline.
+    /// </summary>
+    private void PresentNv12(IMFSample sample)
+    {
+        int hr = sample.ConvertToContiguousBuffer(out IMFMediaBuffer? buffer);
+        if (hr < 0 || buffer == null) return;
+
+        try
+        {
+            hr = buffer.Lock(out IntPtr srcPtr, out _, out uint srcLen);
+            if (hr < 0) return;
+
+            try
+            {
+                var context = (ID3D11DeviceContext)Marshal.GetObjectForIUnknown(_context);
+
+                var mapped = new MappedSubresource();
+
+                // Map Y staging texture
+                hr = context.Map(_yStagingTex, Subresource: 0,
+                    MapType: D3D11_MAP_WRITE_DISCARD, MapFlags: 0, out mapped);
+                if (hr < 0) return;
+
+                try
+                {
+                    int yWidth = _nv12Width;
+                    int yHeight = _nv12Height;
+                    uint srcPitch = (uint)yWidth;
+
+                    byte* dst = (byte*)mapped.pData;
+                    byte* src = (byte*)srcPtr;
+
+                    for (int y = 0; y < yHeight; y++)
+                    {
+                        Buffer.MemoryCopy(src, dst, (uint)yWidth, (uint)yWidth);
+                        src += srcPitch;
+                        dst += mapped.RowPitch;
+                    }
+                }
+                finally
+                {
+                    context.Unmap(_yStagingTex, Subresource: 0);
+                }
+
+                // Map UV staging texture
+                hr = context.Map(_uvStagingTex, Subresource: 0,
+                    MapType: D3D11_MAP_WRITE_DISCARD, MapFlags: 0, out mapped);
+                if (hr < 0) return;
+
+                try
+                {
+                    int uvWidth = (_nv12Width + 1) / 2;
+                    int uvHeight = (_nv12Height + 1) / 2;
+                    uint srcPitch = (uint)_nv12Width;
+
+                    byte* dst = (byte*)mapped.pData;
+                    byte* src = (byte*)srcPtr + (uint)(_nv12Width * _nv12Height);
+
+                    for (int y = 0; y < uvHeight; y++)
+                    {
+                        Buffer.MemoryCopy(src, dst, (uint)(uvWidth * 2), (uint)(uvWidth * 2));
+                        src += srcPitch;
+                        dst += mapped.RowPitch;
+                    }
+                }
+                finally
+                {
+                    context.Unmap(_uvStagingTex, Subresource: 0);
+                }
+
+                context.CopyResource(_yDefaultTex, _yStagingTex);
+                context.CopyResource(_uvDefaultTex, _uvStagingTex);
+
+                uint[] strides = new uint[] { (uint)sizeof(Vertex) };
+                uint[] offsets = new uint[] { 0 };
+
+                // Create a temp pointer to pass the stride and offset arrays
+                // Create array for vertex buffers
+                IntPtr[] vertexBuffers = new IntPtr[] { _vertexBuffer };
+                fixed (uint* pStride = strides, pOffset = offsets)
+                fixed (IntPtr* pVertexBuffers = vertexBuffers)
+                {
+                    context.IASetVertexBuffers(0, 1, (IntPtr)pVertexBuffers,
+                        (IntPtr)pStride, (IntPtr)pOffset);
+                }
+
+                context.IASetInputLayout(_inputLayout);
+                context.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+
+                context.VSSetShader(_vertexShader, IntPtr.Zero, 0);
+                context.PSSetShader(_pixelShader, IntPtr.Zero, 0);
+                
+                // Create arrays for shader resources
+                IntPtr[] shaderResources = new IntPtr[] { _ySrv, _uvSrv };
+                fixed (IntPtr* pShaderResources = shaderResources)
+                {
+                    context.PSSetShaderResources(0, 2, (IntPtr)pShaderResources);
+                }
+                
+                // Create array for sampler state
+                IntPtr[] samplers = new IntPtr[] { _samplerState };
+                fixed (IntPtr* pSamplers = samplers)
+                {
+                    context.PSSetSamplers(0, 1, (IntPtr)pSamplers);
+                }
+
+                // Create array for render targets
+                IntPtr[] renderTargets = new IntPtr[] { _rtv };
+                fixed (IntPtr* pRenderTargets = renderTargets)
+                {
+                    context.OMSetRenderTargets(1, (IntPtr)pRenderTargets, IntPtr.Zero);
+                }
+
+                var viewport = new D3D11_VIEWPORT
+                {
+                    TopLeftX = 0,
+                    TopLeftY = 0,
+                    Width = (float)BackBufferWidth,
+                    Height = (float)BackBufferHeight,
+                    MinDepth = 0,
+                    MaxDepth = 1
+                };
+                
+                // Create array for viewports
+                D3D11_VIEWPORT[] viewports = new D3D11_VIEWPORT[] { viewport };
+                fixed (D3D11_VIEWPORT* pViewports = viewports)
+                {
+                    context.RSSetViewports(1, (IntPtr)pViewports);
+                }
+
+                context.ClearRenderTargetView(_rtv, new float[4] { 0, 0, 0, 1 });
+                context.Draw(4, 0);
+
+                var swapChain = (IDXGISwapChain1)Marshal.GetObjectForIUnknown(_swapChain);
+                swapChain.Present(SyncInterval: 1, Flags: 0);
+                Marshal.ReleaseComObject(swapChain);
+
+                Marshal.ReleaseComObject(context);
             }
             finally
             {
@@ -658,10 +1168,9 @@ float4 main(PS_IN input) : SV_TARGET {
             if (width <= 0 || height <= 0)
                 return false;
 
-            // Create a staging texture that is CPU-readable
             IntPtr stagingTex = IntPtr.Zero;
             CreateTexture2D(width, height, DXGI_FORMAT_B8G8R8A8_UNORM,
-                D3D11_USAGE_STAGING, 0, // No bind flags for staging
+                0, // No bind flags for staging
                 out stagingTex);
 
             if (stagingTex == IntPtr.Zero)
@@ -671,27 +1180,19 @@ float4 main(PS_IN input) : SV_TARGET {
 
             try
             {
-                // Copy the back buffer to the staging texture
                 context.CopyResource(stagingTex, _backBuffer);
 
-                // Map the staging texture to read the pixel data
                 var mapped = new MappedSubresource();
-                int hr = context.Map(
-                    stagingTex,
-                    Subresource: 0,
-                    MapType: (uint)D3D11MapMode.Read,
-                    MapFlags: 0,
-                    out mapped);
+                int hr = context.Map(stagingTex, Subresource: 0,
+                    MapType: D3D11_MAP_READ, MapFlags: 0, out mapped);
 
                 if (hr < 0)
                     return false;
 
                 try
                 {
-                    // Create a Bitmap and save as PNG
                     using (var bitmap = new Bitmap(
-                        width,
-                        height,
+                        width, height,
                         PixelFormat.Format32bppArgb))
                     {
                         var bmpData = bitmap.LockBits(
@@ -701,8 +1202,6 @@ float4 main(PS_IN input) : SV_TARGET {
 
                         try
                         {
-                            // Copy the D3D11 data (BGRA) to the bitmap
-                            // Both D3D11 back buffer and Format32bppArgb are in BGRA order
                             byte* src = (byte*)mapped.pData;
                             byte* dst = (byte*)bmpData.Scan0;
                             int srcStride = (int)mapped.RowPitch;
@@ -724,7 +1223,6 @@ float4 main(PS_IN input) : SV_TARGET {
                             bitmap.UnlockBits(bmpData);
                         }
 
-                        // Save as PNG
                         bitmap.Save(outputPath, ImageFormat.Png);
                     }
 
@@ -765,6 +1263,14 @@ float4 main(PS_IN input) : SV_TARGET {
     }
 
     #region Helpers
+
+    /// <summary>Helper to get pointer from blob.</summary>
+    private static IntPtr GetBlobPointer(IntPtr blob) =>
+        Marshal.GetObjectForIUnknown(blob) is ID3DBlob b ? b.GetBufferPointer() : IntPtr.Zero;
+
+    /// <summary>Helper to get size from blob.</summary>
+    private static uint GetBlobSize(IntPtr blob) =>
+        (uint)(Marshal.GetObjectForIUnknown(blob) is ID3DBlob b ? b.GetBufferSize() : 0);
 
     /// <summary>Releases a COM pointer and zeros the field.</summary>
     private static void SafeRelease(ref IntPtr ptr)

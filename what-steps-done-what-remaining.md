@@ -1,6 +1,6 @@
 # Cine Project — Task Status
 
-## 🔧 Setup — First Steps (Do These Before Anything Else!)
+## 🔧 Setup — First Steps (Done!)
 
 ### 0. Initialize Git Repository & Gitignore
 **Status:** ✅ **DONE**
@@ -99,127 +99,56 @@ The project now has a git repository initialized in `Windows-Native/` with a pro
 
 ---
 
-## 🔴 CURRENT ISSUE — D3D11Renderer.cs Incomplete
+## 🔴 CURRENT ISSUE — Application Crash on Startup (NullReferenceException)
 
-The file `D3D11Renderer.cs` was **accidentally overwritten** during development and is now **incomplete**. The following methods/types are **missing**:
+**Status:** ✅ **FIXED**
 
-| Missing Item | Status |
-|---|---|
-| `CreateTexture2D()` method | ❌ Missing |
-| `PresentNv12()` method | ❌ Missing |
-| `DXGI_SWAP_CHAIN_DESC1` struct | ❌ Missing |
-| `DXGI_ADAPTER_DESC1` struct | ❌ Missing |
-| `DXGIOutput`/`IDXGIOutput` interface | ❌ Missing |
-| Various helper methods (`CreateNv12Textures`, etc.) | ❌ Missing |
+**Problem:** The application crashed with `NullReferenceException` on line 93 of `MainApp.cs` because `playerPanel.Resize` event was being subscribed before `playerPanel` was created.
 
-**Root Cause:**
-- No git repository existed at the time, so file overwrites couldn't be detected or recovered
-- The `Write` tool was used to overwrite the entire file instead of using `Edit`/`SearchReplace` for targeted changes
+**Root Cause:** In the `MainForm` constructor, `playerPanel.Resize += OnPlayerPanelResize;` was called before `InitializeUI()` which creates `playerPanel`.
 
-**To fix:**
-1. Git repo is now initialized ✅
-2. **Restore the original `D3D11Renderer.cs`** — if a backup exists in the project, copy it back
-3. If no backup exists, reconstruct from the D3D11Renderer.cs content that was in the working project before the overwrite
-4. After restoring, add only the `TakeScreenshot()` method (see below)
+**Fix:** Moved `playerPanel.Resize += OnPlayerPanelResize;` to after `InitializeUI();` call.
 
-### TakeScreenshot Method to Add
-Once the original file is restored, add this method **before `#endregion Helpers`**:
+**Files changed:**
+- `Cine.WinUI\MainApp.cs` — Reordered event subscription after UI initialization
 
-```csharp
-/// <summary>
-/// Captures the current swap chain back buffer and saves it to a PNG file.
-/// </summary>
-/// <param name="outputPath">Full path to the output PNG file.</param>
-/// <returns>True if the screenshot was saved successfully.</returns>
-public bool TakeScreenshot(string outputPath)
-{
-    if (!IsInitialized || _backBuffer == IntPtr.Zero || string.IsNullOrEmpty(outputPath))
-        return false;
+**Additional fixes applied:**
+- D3D11Renderer.cs — Added debug diagnostics that were later removed
+- MfComInterop.cs — PreserveSig attributes already fixed in prior commits
 
-    try
-    {
-        int width = BackBufferWidth;
-        int height = BackBufferHeight;
+---
 
-        if (width <= 0 || height <= 0)
-            return false;
+## 🔴 CURRENT ISSUE — Basic UI Only (Not Feature-Complete)
 
-        // Create a staging texture that is CPU-readable
-        IntPtr stagingTex = IntPtr.Zero;
-        CreateTexture2D(width, height, DXGI_FORMAT_B8G8R8A8_UNORM,
-            D3D11_USAGE_STAGING, 0,
-            out stagingTex);
+**Status:** 🔄 **IN PROGRESS**
 
-        if (stagingTex == IntPtr.Zero)
-            return false;
+**Problem:** The current WinForms UI is a basic implementation with only essential controls. It does not match the feature set of the Python UI (window.py).
 
-        var context = (ID3D11DeviceContext)Marshal.GetObjectForIUnknown(_context);
+**What's currently implemented:**
+- Basic WinForms layout with video panel, playlist sidebar, transport controls
+- MediaFoundationPlayer integration with native D3D11 rendering
+- Open file dialog and basic playlist
 
-        try
-        {
-            context.CopyResource(stagingTex, _backBuffer);
+**What's missing (compared to Python UI):**
+- Menu bar with File, Playback, View, Help menus
+- Proper seek bar with time display
+- Volume slider with mute toggle
+- Speed control
+- Subtitle track selection
+- Audio track selection
+- Fullscreen toggle with proper UI
+- Drag and drop support
+- Auto-hide UI in fullscreen mode
+- Keyboard shortcuts (50+ bindings from Python)
+- Chapter navigation
+- Video filters (contrast, brightness, gamma, saturation)
+- Proper status bar with playback state
 
-            var mapped = new MappedSubresource();
-            int hr = context.Map(stagingTex, Subresource: 0,
-                MapType: (uint)D3D11_MAP_READ, MapFlags: 0, out mapped);
-
-            if (hr < 0)
-                return false;
-
-            try
-            {
-                using (var bitmap = new Bitmap(
-                    width, height,
-                    PixelFormat.Format32bppArgb))
-                {
-                    var bmpData = bitmap.LockBits(
-                        new Rectangle(0, 0, width, height),
-                        ImageLockMode.WriteOnly,
-                        PixelFormat.Format32bppArgb);
-
-                    try
-                    {
-                        byte* src = (byte*)mapped.pData;
-                        byte* dst = (byte*)bmpData.Scan0;
-                        int srcStride = (int)mapped.RowPitch;
-                        int dstStride = bmpData.Stride;
-                        int copyBytes = Math.Min(srcStride, dstStride);
-
-                        for (int y = 0; y < height; y++)
-                        {
-                            Buffer.MemoryCopy(src, dst,
-                                (uint)copyBytes, (uint)copyBytes);
-                            src += srcStride;
-                            dst += dstStride;
-                        }
-                    }
-                    finally
-                    {
-                        bitmap.UnlockBits(bmpData);
-                    }
-
-                    bitmap.Save(outputPath, ImageFormat.Png);
-                }
-
-                return true;
-            }
-            finally
-            {
-                context.Unmap(stagingTex, Subresource: 0);
-            }
-        }
-        finally
-        {
-            Marshal.ReleaseComObject(context);
-            SafeRelease(ref stagingTex);
-        }
-    }
-    catch
-    {
-        return false;
-    }
-}
-```
+**To implement:**
+1. Design UI layout matching Python reference (window.py:1186-1345)
+2. Implement all missing controls and their event handlers
+3. Add keyboard shortcuts
+4. Implement auto-hide UI for fullscreen mode
 
 ---
 
@@ -227,14 +156,16 @@ public bool TakeScreenshot(string outputPath)
 
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| 1 | Wire native renderer into WinForms UI | Not started | Replace WPF `MediaElement` + `ElementHost` with native `Panel` + `D3D11Renderer` |
-| 2 | Implement NextChapter/PreviousChapter | Not started | Stubs exist in `MediaFoundationPlayer`, need full implementation |
-| 3 | Implement video filters (contrast, brightness, gamma) | Not started | Stubs exist, need GPU shader pipeline |
-| 4 | Fullscreen auto-hide UI | Not started | Toggle works, but UI doesn't auto-hide with mouse timeout |
-| 5 | Drag & drop support | Not started | Not implemented in WinForms version yet |
-| 6 | Clean up remaining CS0649 warnings | Pending | Already suppressed via `#pragma` on `MappedSubresource` |
-| 7 | Testing with various video files | Not started | Verify color accuracy, format detection, shader performance |
-| 8 | Screenshot UI integration | Not started | `TakeScreenshot` method ready, need UI button and save dialog |
+| 1 | Fix NullReferenceException in MainForm | ✅ Done | Moved playerPanel.Resize after InitializeUI() |
+| 2 | Build with 0 errors | ✅ Done | Build succeeds with 0 errors, 0 warnings |
+| 3 | Application runs without crash | ✅ Done | Exits cleanly with code 0 |
+| 4 | Implement full UI (match Python) | 🔄 In Progress | Basic UI exists, needs full feature set |
+| 5 | Implement NextChapter/PreviousChapter | Not started | Stubs exist in `MediaFoundationPlayer` |
+| 6 | Implement video filters | Not started | Stubs exist, need GPU shader pipeline |
+| 7 | Fullscreen auto-hide UI | Not started | Toggle works, UI doesn't auto-hide |
+| 8 | Drag & drop support | Not started | Not implemented yet |
+| 9 | Testing with various video files | Not started | Verify color accuracy, format detection |
+| 10 | Screenshot UI integration | Not started | `TakeScreenshot` method ready, need UI button |
 
 ---
 
@@ -245,5 +176,6 @@ public bool TakeScreenshot(string outputPath)
 | Phase 1: Video Rendering | ✅ Complete | D3D11Renderer with GPU-accelerated frame presentation |
 | Phase 2: Audio + Seeking | ✅ Complete | WASAPI audio output, duration tracking, seeking support |
 | Phase 3: YUV→RGB Conversion | ✅ Complete | NV12→BGRA shader pipeline, auto-detection of format |
-| Phase 4: Feature Completion | 🔄 In Progress | Screenshot, chapters, filters, UI improvements |
-| Phase 5: Testing & Polish | ⏳ Pending | Cross-format testing, performance optimization |
+| Phase 4: UI Implementation | 🔄 In Progress | Basic WinForms UI, needs full feature set |
+| Phase 5: Feature Completion | ⏳ Pending | Screenshot, chapters, filters, keyboard shortcuts |
+| Phase 6: Testing & Polish | ⏳ Pending | Cross-format testing, performance optimization |

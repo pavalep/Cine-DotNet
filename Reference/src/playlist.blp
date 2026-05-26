@@ -1,0 +1,89 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $Playlist: Adw.Dialog {
+	title: _("Playlist");
+	content-width: 600;
+	presentation-mode: bottom_sheet;
+
+	styles [
+		"osd",
+	]
+
+	Adw.ToastOverlay toast_overlay {
+		Overlay {
+			[overlay]
+			Adw.ToolbarView {
+				[top]
+				Adw.HeaderBar {
+					[start]
+					Button {
+						icon-name: "list-add-symbolic";
+						clicked => $_on_add_playlist_files();
+						tooltip-text: _("Add Files");
+					}
+
+					[start]
+					Adw.Spinner spinner {
+						visible: false;
+					}
+				}
+
+				content: ScrolledWindow {
+					Adw.Clamp playlist_clamp {
+						ListBox playlist_list_box {
+							hexpand: true;
+							valign: start;
+							activate-on-single-click: true;
+							selection-mode: none;
+							margin-top: 2;
+							margin-end: 10;
+							margin-start: 10;
+							margin-bottom: 20;
+
+							styles [
+								"boxed-list",
+							]
+						}
+					}
+				};
+			}
+
+			[overlay]
+			Revealer drop_indicator_revealer {
+				transition-duration: 200;
+				transition-type: crossfade;
+				can-focus: false;
+				can-target: false;
+
+				Box {
+					styles [
+						"drop-indicator",
+					]
+
+					homogeneous: true;
+
+					Box {
+						valign: center;
+
+						Image drop_icon {
+							icon-name: "cine-list-add-symbolic";
+							pixel-size: 64;
+						}
+
+						orientation: vertical;
+						spacing: 12;
+
+						Label drop_label {
+							label: _("Add to Playlist");
+
+							styles [
+								"title-1",
+							]
+						}
+					}
+				}
+			}
+		}
+	}
+}

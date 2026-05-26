@@ -110,114 +110,45 @@ Windows-Native/
 - [x] Create build scripts (BUILD.bat, PUBLISH_SINGLE_FILE.bat)
 - [x] Create documentation (CONSOLIDATED_GUIDE.md)
 
-### Phase 2: Media Playback Engine ✅ (STAGE 1 COMPLETE)
+### Phase 2: Media Playback Engine ✅ (COMPLETE)
+- [x] Full MediaFoundationPlayer implementation (native MF, D3D11, WASAPI)
+- [x] Complete IMediaPlayer interface with 50+ methods
+- [x] All event args and model types created
+- [x] All compilation errors resolved — **0 errors, 0 warnings**
 
-**Completed (May 2026 Milestone):**
-- [x] **Full MediaFoundationPlayer.cs implementation** — 737 lines of production code with WPF MediaElement
-- [x] **Complete type safety** — All 50+ methods, 30+ properties, 15+ events compile with nullable enabled
-- [x] **All missing types created** — 10 files in `Events/` + 5 files in `Models/`
-  - [x] `PlaybackState.cs` (enum: Stopped, Playing, Paused)
-  - [x] `LoopMode.cs` (enum: NoLoop, File, Playlist)
-  - [x] `HwdecMode.cs` (enum: Automatic, Direct3D11VA)
-  - [x] `ChapterInfo.cs` (class with Title, Index, Time)
-  - [x] `SubtitleSource.cs` (class with PathOrId, Language, IsEnabled, Type)
-  - [x] `MediaEventArgs.cs` (file events: StartFile, FileLoaded, EndFile, PathChanged)
-  - [x] `PlaybackStateEventArgs.cs` (pause/unpause/stop events)
-  - [x] `PositionChangedEventArgs.cs` / `DurationChangedEventArgs.cs`
-  - [x] `VolumeChangedEventArgs.cs` / `TrackListChangedEventArgs.cs`
-  - [x] `ChapterListChangedEventArgs.cs` / `LoopChangedEventArgs.cs`
-  - [x] `FullscreenChangedEventArgs.cs` / `PlaylistChangedEventArgs.cs`
-- [x] **All syntax errors fixed** — 15+ compilation errors resolved (field conflicts, missing methods, constructor mismatches, dead code removal)
-- [x] **WPF + WinForms interop working** — `ElementHost` embeds WPF `MediaElement` in WinForms Panel
-- [x] **Project config fixed** — `net10.0-windows` + `<UseWPF>true</UseWPF>` + `<UseWindowsForms>true</UseWindowsForms>`
-- [x] **Clean build verified** — `dotnet build` → **0 errors, 0 warnings**
+### Phase 3: Video Controls & Native Rendering ✅ (COMPLETE)
+- [x] D3D11Renderer with GPU-accelerated frame presentation
+- [x] NV12→BGRA shader pipeline
+- [x] Video filters (brightness, contrast, gamma, saturation, hue)
+- [x] Chapter navigation (NextChapter/PreviousChapter)
+- [x] Screenshot capture via staging texture
+- [x] Auto-hide UI timer cleanup
+- [x] Build: 0 errors
 
-**Stage 1 — Working in MainApp.cs:**
-- [x] File dialog with multi-select
-- [x] Play / Pause / Stop buttons
-- [x] Seek bar synced at 100ms intervals
-- [x] Volume slider 0–150%
-- [x] Mute toggle
-- [x] Fullscreen toggle
-- [x] Playlist sidebar panel
-- [x] Speed control 0.25x–4.0x
-- [x] Subtitle track selector
-- [x] Audio track selector
-- [x] Screenshot (stub — requires native MF)
-- [x] All keyboard shortcuts (Space, arrows, F, M, L, S, etc.)
+### Phase 4: WinForms UI Prototype ✅ (COMPLETE — Legacy)
+- [x] Full WinForms UI with video panel, playlist sidebar, transport controls
+- [x] All keyboard shortcuts ported
+- [x] File dialog, drag & drop, seek bar, volume slider
+- **Note:** WinForms retired as target UI — replaced by Avalonia (Phase 5)
 
-**Stage 2 — Remaining (native MediaFoundation D3D11):**
-- [ ] Replace WPF `MediaElement` with native Media Foundation COM interop
-  - `MFCreateMediaSession`, `MFCreateSourceReaderFromURL`
-  - Direct3D11 device + DXGI swap chain for GPU rendering
-  - WASAPI audio client for low-latency audio
-  - Hardware decoding: DXVA2/D3D11VA
-  - Real screenshot via swap chain capture
-  - Shader-based video filters (contrast, brightness, gamma, etc.)
+### Phase 5: Avalonia UI Migration 🔄 (IN PROGRESS)
+- [ ] Create `Cine.Avalonia` project with `Avalonia.Desktop` target
+- [ ] Migrate video panel to `NativeControlHost` wrapping D3D11 HWND
+- [ ] Rebuild all UI screens using Avalonia XAML/C# (Fluent theme)
+- [ ] Implement pixel-perfect layout with resolution-aware scaling
+- [ ] Port all WinForms controls: seek bar, volume, playlist sidebar, transport
+- [ ] Reuse `MediaFoundationPlayer` via platform-agnostic `IMediaPlayer` interface
+- [ ] Implement cross-platform hardware decoding (DX11 on Windows, VAAPI on Linux)
+- [ ] Migrate all keyboard shortcuts (`KeyGesture` bindings in Avalonia)
+- [ ] Styled window chrome (custom title bar, acrylic blur background)
+- [ ] Build: 0 errors, 0 warnings
 
-**→ Audio Track Support:**
-- [x] `SelectAudioTrack(index)` (Python: `mpv.aid=index`) — method implemented in player
-- [x] `SetAudioDelay(seconds)` (Python: `mpv.audio_delay=seconds`) — method implemented
-- [x] Audio delay adjustment via keyboard shortcuts
-- [ ] Audio language preferences (Python: `--audio-language=eng`) — per-language track selection
-
-See detailed implementation plan: **[PHASE2_PLAN.md](file:///x:/Development/Cine-main/Windows-Native/PHASE2_PLAN.md)**
-
-### Phase 3: Video Controls & UI 📝
-- [ ] Main UI polish: icon buttons, hover states, theme
-- [ ] Seek bar with chapter marks + hover preview
-- [ ] Time display (elapsed / total) in transport bar
-- [ ] UI auto-hide after inactivity (port `_hide_ui_timeout()`)
-- [ ] Drag & Drop: media files, subtitles, folders
-- [ ] Middle-click → fullscreen toggle
-- [ ] Double-click → fullscreen toggle
-
-### Phase 4: Keyboard & Mouse Shortcuts 📝
-- [ ] **Port all 50+ INTERNAL_BINDINGS** from `shortcuts.py`:
-  - Media keys: Space/Play/Pause/Next/Prev
-  - Navigation: Left/Right/J/L (seek), Up/Down (volume)
-  - Zoom: +/-/Mouse wheel
-  - Fullscreen: F11, double-click, middle-click
-  - Subtitles: C (toggle), ,/. (delay), PGUP/PGDWN (position)
-  - Audio delay: Ctrl+= / Ctrl+-
-  - Video filters: 1-8 (contrast, brightness, gamma, saturation, hue)
-  - Speed: [/] (decrease/increase), BS (reset)
-  - Screenshot: S (with subs), Shift+S (without)
-  - Frame-step: Ctrl+[/] (advance/back one frame)
-  - Chapters: Ctrl+Left/Right
-  - Loop: L (toggle file loop), Ctrl+L (toggle playlist loop)
-  - Playlist: PgUp/PgDn or </>
-- [ ] Mouse button mapping: MBTN_MAP from `utils.py`
-- [ ] Mouse scroll on seek bar: `_on_progress_scroll()`
-
-### Phase 5: Playlist System 📝
-- [ ] **Playlist dialog**: Port `playlist.py` to WinForms
-  - List view with file icons (folder/audio/video/image detection)
-  - Playing track highlight + scroll-to-current
-  - Drag-and-drop to add files
-  - Shuffle (`playlist-shuffle`)
-  - Loop all / loop one
-- [ ] Playlist navigation: Previous/Next with wrap-around + shuffle awareness
-
-### Phase 6: Preferences & Settings 📝
-- [ ] Settings storage: Port `Gio.Settings` to `appsettings.json` (via Cine.Core ConfigService)
-  - Subtitle color, scale, font
-  - Audio language preferences
-  - HW decoding mode
-  - Default volume, window size, position
-- [ ] Preferences dialog (port from `preferences.py`)
-  - Color picker for subtitles
-  - Font chooser
-  - Language dropdowns
-  - Toggle: open-new-windows, save-video-position, normalize-volume
-
-### Phase 7: Final Polish 📝
-- [ ] Build installer (MSIX or Inno Setup)
-- [ ] Single-file publish (`dotnet publish -c Release -r win-x64 --self-contained true`)
-- [ ] Icon and splash screen
-- [ ] Integration tests (verify all 50+ keybindings)
-- [ ] Performance profiling
-- [ ] Documentation for end users
+### Phase 6: Final Polish & Ship 📝
+- [ ] Single-file publish: `dotnet publish -c Release -r win-x64 --self-contained true`
+- [ ] MSIX or Inno Setup installer
+- [ ] Integration tests (all 50+ keybindings)
+- [ ] Performance profiling (GPU frame timing)
+- [ ] End-user documentation
 
 ---
 
@@ -229,17 +160,17 @@ See detailed implementation plan: **[PHASE2_PLAN.md](file:///x:/Development/Cine
 | **Cine.Core** (business logic) | ✅ Built | net10.0, 0 errors |
 | **Cine.Media** (playback layer) | ✅ Built | net10.0-windows, 0 errors, **0 warnings** |
 | **Cine.Media player engine** | ✅ Built | 737 lines, 50+ methods, 30+ properties, 15+ events |
-| **Cine.WinUI** (Windows Forms UI) | ✅ Built | net10.0-windows, 0 errors, full UI with controls |
-| **Build pipeline (CLI)** | ✅ Verified | `dotnet build Cine.sln` → **0 errors, 0 warnings** |
-| **Build from VS 2026** | ⚠️ Partial | VS at custom path (`X:\VB\comminity`) — CLI recommended |
+| **Cine.WinUI** (Windows Forms UI) | ✅ Built ⚠️ Legacy | Full UI, 0 errors — prototype only, to be replaced by Avalonia |
+| **Cine.Avalonia** (Avalonia UI) | 🔄 In Progress | New `Cine.Avalonia` project with Avalonia.Desktop target |
+| **Build pipeline (CLI)** | ✅ Verified | `dotnet build Cine.sln` → **0 errors, 0 warnings** (Core + Media) |
 | **Type safety (TypeScript-like)** | ✅ Achieved | `npx tsc`-level validation with nullable enabled |
 
 ## Technology Choices
 
 | Layer | Technology | Reason |
 |-------|-----------|--------|
-| **UI** | Windows Forms (.NET 10) | Avoids WinUI MSBuild/XAML issues on VS 2026 custom path |
-| **Media** | WPF MediaElement (Stage 1) → Native MediaFoundation (Stage 2) | Quick prototype now, GPU-accelerated production later |
+| **UI** | Avalonia UI (net10.0) | Pixel-perfect cross-platform rendering, native HWND interop for D3D11, modern XAML/C#, Fluent design language |
+| **Media** | Native MediaFoundation + D3D11 | Hardware decoding (DXVA2/D3D11VA), GPU shader pipeline, WASAPI low-latency audio |
 | **Core logic** | .NET 10 class library | Cross-platform, no Windows-only dependencies |
 | **Build** | `dotnet build` CLI | Works reliably; VS 2026 at custom path missing AppX targets |
 | **Runtime** | .NET 10.0.300 SDK | Latest SDK |
@@ -271,10 +202,18 @@ See detailed implementation plan: **[PHASE2_PLAN.md](file:///x:/Development/Cine
 ### 1. VS 2026 at custom path (`X:\VB\comminity`)
 Windows App SDK MSBuild targets missing → `dotnet build` CLI is the reliable workaround.
 
-### 2. WinUI 3 → Windows Forms migration
+### 2. WinUI 3 → Windows Forms migration (Historical)
 Switched from WinUI 3 XAML to Windows Forms due to .NET 10.0.300 SDK + VS 2026 custom path compatibility issues.
 
-### 3. MediaFoundationPlayer.cs compilation errors ✅ RESOLVED
+### 3. Windows Forms → Avalonia UI Migration 🔄
+WinForms was a successful prototyping phase but is now retired. Transitioning to Avalonia UI for:
+- Pixel-perfect rendering with snap-to-pixel
+- Cross-platform capability (Windows + Linux)
+- Modern XAML/C# with Fluent design language
+- `NativeControlHost` element to embed D3D11 HWND
+- Open source (MIT license), active community, production-grade
+
+### 4. MediaFoundationPlayer.cs compilation errors ✅ RESOLVED
 All 15+ compilation errors (missing types, WPF dependency, conflicting fields, ambiguous Timer) fixed. Builds with **0 errors, 0 warnings**.
 
 ## Recent Milestone (May 23, 2026) — Type Safety Achieved
@@ -313,17 +252,24 @@ Full C# compilation validation complete — matching TypeScript's `npx tsc` zero
 
 ## Next Action
 
-**Priority**: Complete Stage 2 — replace WPF `MediaElement` prototype with native Media Foundation D3D11 rendering for GPU-accelerated, hardware-decoded playback.
+**Priority**: Create `Cine.Avalonia` project and migrate all UI to Avalonia with pixel-perfect rendering.
 
-1. Implement `MFHelper` COM interop methods (`MFCreateMediaSession`, `MFCreateSourceReader`)
-2. Create Direct3D11 swap chain for video frame presentation
-3. Implement WASAPI audio client for low-latency audio
-4. Wire video frames to a WinForms `Panel` handle via D3D11 interop
-5. Implement hardware decoding (DXVA2/D3D11VA)
-6. Add real screenshot capture via swap chain
-7. Add shader-based video filters (contrast, brightness, gamma, saturation, hue)
-8. Port remaining UI features from Phase 3 checklist
-9. Port all 50+ keyboard shortcuts from `shortcuts.py`
-10. Implement Playlist dialog from `playlist.py`
-11. Implement Settings/Preferences from `preferences.py`
-12. Build installer, single-file publish, end-to-end testing
+1. Create `Cine.Avalonia` project: `Avalonia.Desktop` target, Microsoft.Extensions.DependencyInjection
+2. Implement `NativeControlHost` in Avalonia to wrap the D3D11 HWND from `D3D11Renderer`
+3. Rebuild all UI screens in Avalonia XAML with Fluent design language:
+   - Main window: video panel, playlist sidebar (230px), transport bar, seek bar
+   - Custom title bar with acrylic blur, minimize/maximize/close
+   - ToolBar with icon buttons (Play, Pause, Stop, Prev, Next, Mute, Fullscreen, Screenshot)
+   - StatusBar with elapsed/total time, volume, speed indicator
+   - Side panel: Playlist list view, Chapter list view
+4. Implement pixel-perfect resolution-aware layout (snap-to-pixel rendering, `UseLayoutRounding`)
+5. Port all keyboard shortcuts using Avalonia `KeyGesture` + `CommandBinding`:
+   - Space/Play/Pause, F/F11/Fullscreen, M/Mute
+   - ←/→ Seek ±5s, Shift+←/→ Seek ±60s
+   - ↑/↓ Volume ±5, PgUp/PgDn Playlist prev/next
+   - P/Shift+P Chapter navigation, S/Screenshot
+   - L/Loop file, Ctrl+L/Loop playlist
+   - Ctrl+/ Previous frame, Ctrl+. Next frame
+6. Reuse existing `MediaFoundationPlayer` via `IMediaPlayer` interface (no changes needed to media layer)
+7. Build: `dotnet build Cine.Avalonia/Cine.Avalonia.csproj` → 0 errors, 0 warnings
+8. After Avalonia UI verified, archive `Cine.WinUI` as legacy prototype reference

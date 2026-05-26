@@ -1,0 +1,176 @@
+.osd {
+  box-shadow: none;
+  text-shadow: 0px 1px 6px rgba(0, 0, 0, 0.6);
+  -gtk-icon-shadow: 0px 1px 6px rgba(0, 0, 0, 0.6);
+  color: white;
+}
+
+.header-bar {
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.14) 0%,
+    rgba(0, 0, 0, 0.08) 40%,
+    rgba(0, 0, 0, 0) 100%
+  );
+}
+.controls {
+  background: linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.2) 0%,
+    rgba(0, 0, 0, 0.1) 40%,
+    rgba(0, 0, 0, 0) 100%
+  );
+}
+.header-and-controls {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.3) 0%,
+      rgba(0, 0, 0, 0.15) 5%,
+      rgba(0, 0, 0, 0) 17%
+    ),
+    linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.4) 0%,
+      rgba(0, 0, 0, 0.23) 10%,
+      rgba(0, 0, 0, 0) 35%
+    );
+}
+
+.start-page {
+  color: #e5e5e5;
+  background: linear-gradient(180deg, transparent 0%, #0c0c0e 100%);
+}
+.start-page button.suggested-action {
+  background: #e5e5e5;
+  color: black;
+}
+.start-page button.suggested-action:hover {
+  background: white;
+}
+.start-page button {
+  --accent-color: #e5e5e5;
+  background: rgba(255, 255, 255, 0.12);
+}
+.start-page button:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+.start-page button:active {
+  transform: scale(0.98);
+}
+.osd button:hover:not(.close):not(.maximize):not(.minimize) {
+  background: rgba(255, 255, 255, 0.17);
+}
+.osd button:active:not(.close):not(.maximize):not(.minimize) {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.osd.controls button:disabled {
+  -gtk-icon-shadow: 0px 1px 5px black;
+}
+.osd.controls button.flat.toggle:checked {
+  background-color: white;
+  color: black;
+  -gtk-icon-shadow: none;
+  box-shadow: 0 1px 3px 0px rgba(0, 0, 0, 0.2);
+}
+.osd.controls .time-separator {
+  background-color: #ddd;
+  opacity: 0.4;
+  border-radius: 2px;
+}
+
+.osd popover > contents,
+.osd popover > arrow {
+  border: 1px solid #202021;
+  background: rgba(25, 25, 27, 0.95);
+  box-shadow: 0px 1px 4px rgba(0, 0, 0, 0.33);
+}
+
+.cine-spinner {
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  border-radius: 50%;
+  padding: 10px;
+}
+
+scale highlight,
+scale > trough > slider {
+  background-color: white;
+}
+
+scale > trough > slider {
+  border-radius: 100%;
+  min-width: 20px;
+  min-height: 20px;
+  margin: -8px;
+}
+
+scale trough {
+  background-color: rgba(255, 255, 255, 0.225);
+}
+
+scale mark {
+  color: white;
+  box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.33);
+}
+
+.first-label-bold popover modelbutton:first-child {
+  font-weight: bold;
+}
+
+.time-elapsed {
+  margin: 0 -7px;
+}
+
+.icon-pause-play {
+  -gtk-icon-size: 72px;
+  -gtk-icon-shadow: 0px 1px 8px rgba(0, 0, 0, 0.55);
+  color: white;
+}
+
+.drop-indicator {
+  background-color: color-mix(
+    in srgb,
+    var(--window-bg-color) 80%,
+    rgb(from currentColor r g b / calc(alpha * 0.87))
+  );
+  color: var(--accent-color);
+  border-radius: 7px;
+  border: 2px dashed currentColor;
+  outline: 20px solid
+    rgb(from var(--window-bg-color) r g b / calc(alpha * 0.87));
+  transition: opacity 250ms ease-in-out;
+  margin: 12px;
+}
+
+.popover-scrolled > contents scrollbar.vertical > range > trough > slider {
+  min-height: 16px;
+}
+
+dialog:not(.shortcuts) preferencespage scrolledwindow viewport clamp {
+  margin-top: -22px;
+}
+
+statuspage box {
+  margin-top: 0px;
+}
+
+.playing-item-playlist {
+  background-color: rgb(from var(--accent-color) r g b / calc(alpha * 0.16));
+}
+.playing-item-playlist:hover {
+  background-color: rgb(from var(--accent-color) r g b / calc(alpha * 0.21));
+}
+
+#options spinbutton {
+  background: none;
+  outline: none;
+  padding: 0;
+  font-weight: bold;
+  box-shadow: none;
+}
+
+#options dropdown button * {
+  background: none;
+}

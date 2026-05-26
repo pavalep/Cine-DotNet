@@ -518,40 +518,62 @@ public void SetAudioDelay(float seconds)
 
 ---
 
-## Next Actions
+## Next Actions (Phase 2 — COMPLETE)
 
-**Immediate:**
-1. Add WPF dependency to `Cine.WinUI` (if not already added)
-2. Connect `MediaFoundationPlayer` to `MainApp.cs`
-3. Add video Panel to `MainApp.cs` to host the player
-4. Wire up Play/Pause/Stop buttons
+All Phase 2 items have been implemented:
+- ✅ Full `MediaFoundationPlayer` with native MF, D3D11 + WASAPI — all events, properties, methods working
+- ✅ Native rendering via `D3D11Renderer` — GPU hardware decoding, swap chain, present pipeline
+- ✅ Video filters (brightness, contrast, gamma, saturation, hue) via GPU shader
+- ✅ Chapter navigation (auto-generated at 60s intervals)
+- ✅ Screenshot capture via staging texture + PNG save
+- ✅ All keyboard shortcuts from Python ported
+- ✅ Playback controls, seek bar, volume, speed, playlist, subtitles, audio tracks
 
-**Once Player Works:**
-1. Add Seek bar (bind to `player.Position`)
-2. Add Volume slider (bind to `player.Volume`)
-3. Add Time display (bind to `position` and `duration`)
-4. Add Fullscreen toggle
+## Phase 6: Avalonia UI Migration (NEW DIRECTION — IN PROGRESS)
 
-**Then:**
-1. Implement subtitle support
-2. Implement audio track switching
-3. Port keyboard shortcuts from Python
-4. Add playlist support
+**Why Avalonia:**
+- Pixel-perfect rendering with snap-to-pixel layout
+- Cross-platform: Windows + Linux (expand market)
+- Hardware-accelerated Skia rendering backend
+- Native HWND interop via `NativeControlHost` for D3D11 video rendering
+- Fluent design language, modern XAML/C#, active open-source community (MIT)
+- Intent to sell product — needs professional-grade UI
+
+**Migration approach:**
+1. Create `Cine.Avalonia.csproj` with `<Avalonia.Desktop>` target
+2. Reuse existing `MediaFoundationPlayer`, `D3D11Renderer`, `IMediaPlayer` — zero changes to media layer
+3. Wrap D3D11 HWND in Avalonia `NativeControlHost`
+4. Rebuild all UI screens in XAML/C# with Fluent theme
+5. Port all keyboard shortcuts to Avalonia `KeyGesture` + `CommandBinding`
+6. Same layout/proportions as WinForms prototype (1088×612 base, resolution-aware scaling)
+
+**Tasks:**
+- [ ] Create `Cine.Avalonia` project: `Avalonia.Desktop` + `Microsoft.Extensions.DependencyInjection`
+- [ ] Implement `NativeControlHost`-wrapped D3D11 video panel
+- [ ] Rebuild MainWindow: video area, playlist sidebar (230px), transport bar, seek bar
+- [ ] Custom title bar with acrylic blur, minimize/maximize/close buttons
+- [ ] Toolbar with icon buttons (Play, Pause, Stop, Prev, Next, Mute, Fullscreen, Screenshot)
+- [ ] StatusBar: elapsed/total time, volume, speed, current chapter
+- [ ] Port keyboard shortcuts (Space, F, M, ←/→, ↑/↓, P, S, L, Ctrl+L, PgUp/PgDn, etc.)
+- [ ] Playlist list with file icons + playing indicator + drag-and-drop
+- [ ] Chapter list view with thumbnails (future)
+- [ ] Settings/Preferences dialog from `preferences.py`
+- [ ] Pixel-perfect: `UseLayoutRounding`, `SnapToDevicePixels`, resolution-aware scaling
+- [ ] Build: 0 errors, 0 warnings
 
 ---
 
 ## Summary
 
-Phase 2 uses a **two-stage approach**:
-1. **Stage 1 (Current)**: Quick prototype with WPF MediaElement
-2. **Stage 2 (Future)**: Production-ready with native MediaFoundation D3D11 rendering
+Phase 2 uses a **three-stage approach**:
+1. **Stage 1 (Completed)**: All media playback logic + prototype WinForms UI
+2. **Stage 2 (Completed)**: Native MediaFoundation D3D11 rendering with GPU acceleration
+3. **Stage 3 (In Progress)**: Avalonia UI migration for pixel-perfect, cross-platform, sellable product
 
-This allows **rapid development and testing** while we verify the player works correctly, then **migrate to native MF** for better performance and GPU acceleration when ready.
+The `MediaFoundationPlayer`/`D3D11Renderer`/`IMediaPlayer` architecture is **UI-agnostic** — only the presentation layer changes. All business logic, decoding, rendering, and event systems carry over unchanged.
 
 The code structure is **already Python-compatible**:
 - Event system mirrors Python's `@event_callback` decorator
 - Properties mirror Python's `@property` system
 - Methods mirror Python's `mpv.*` commands
 - Volume range matches Python's `volume_max=150`
-
-When production-ready, only the **rendering layer** changes, not the player logic or UI bindings.

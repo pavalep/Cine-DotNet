@@ -1,0 +1,55 @@
+using Gtk 4.0;
+using Adw 1;
+
+Adw.ShortcutsDialog shortcuts_dialog {
+  content-width: 524;
+
+  Adw.ShortcutsSection {
+    title: _("Shortcuts");
+
+    Adw.ShortcutsItem {
+      title: _("New Window");
+      action-name: "app.new-window";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Open Files");
+      action-name: "win.clear-and-add";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Open Folder");
+      action-name: "win.open-folder";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Add Files to Playlist");
+      action-name: "win.add-playlist-files";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Open Subtitles Menu");
+      action-name: "win.open-sub-menu";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Open Audio Menu");
+      action-name: "win.open-audio-menu";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Show Shortcuts");
+      action-name: "win.custom-shortcuts";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Close Window");
+      action-name: "win.quit";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Quit");
+      action-name: "app.quit";
+    }
+  }
+}
