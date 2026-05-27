@@ -33,11 +33,15 @@ public interface IMediaPlayer
     void DecreaseVolume();
     void ToggleMute();
     float AudioDelay { get; set; }
+    void IncreaseAudioDelay();
+    void DecreaseAudioDelay();
 
     // === Speed ===
     double Speed { get; set; }
     void SetSpeed(double speed);
     void ResetSpeed();
+    void IncreaseSpeed();
+    void DecreaseSpeed();
 
     // === Playlist ===
     string[] Playlist { get; }
@@ -54,14 +58,17 @@ public interface IMediaPlayer
     int CurrentSubtitleTrack { get; set; }
     SubtitleSource[] SubtitleSources { get; }
     void AddSubtitle(string path);
-  public void SelectSubtitleTrack(int trackIndex);
+    void SelectSubtitleTrack(int trackIndex);
     void SelectAudioTrack(int trackIndex);
     void CycleSubtitleTrack();
     float SubtitleDelay { get; set; }
     void IncreaseSubtitleDelay();
     void DecreaseSubtitleDelay();
+    int SubtitlePosition { get; set; }
+    void SetSubtitlePosition(int position);
 
     // === Video filters ===
+    double Zoom { get; set; }
     double Contrast { get; set; }
     double Brightness { get; set; }
     double Gamma { get; set; }
@@ -88,6 +95,10 @@ public interface IMediaPlayer
     bool IsFullscreen { get; set; }
     void ToggleFullscreen();
     void SetFullscreen(bool fullscreen);
+
+    // === Navigation ===
+    void NextFrame();
+    void PreviousFrame();
 
     // === Screenshot ===
     void TakeScreenshot(string outputPath, bool includeSubtitles = true);

@@ -88,14 +88,16 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
 
-                        <!-- Open Menu Button -->
+                        <!-- Open Menu Button (GTK style with label and arrow) -->
                         <Button x:Name="BtnOpenMenu" Grid.Column="0"
                                 Classes="circular-menu"
                                 ToolTip.Tip="Open files..."
-                                IsVisible="False">
-                            <Path Data="M 4 4H 20V 20H 4V 4 Z M 8 8V 16H 10V 8H 8 Z M 12 8V 16H 14V 8H 12 Z"
-                                  Width="16" Height="16" Stretch="Uniform"
-                                  Fill="{StaticResource OsdForeground}" />
+                                IsVisible="False"
+                                Width="NaN" Padding="12,0">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <TextBlock Text="Open" VerticalAlignment="Center" Foreground="{StaticResource OsdForeground}" FontWeight="SemiBold" />
+                                <Path Data="M 7 10 L 12 15 L 17 10" Stroke="{StaticResource OsdForeground}" StrokeThickness="2" VerticalAlignment="Center" Margin="0,2,0,0"/>
+                            </StackPanel>
                             <Button.Flyout>
                                 <MenuFlyout Placement="Bottom">
                                     <MenuItem Header="Open Files" Command="{Binding OpenFilesCommand}" />
@@ -128,7 +130,7 @@
                         <Button x:Name="BtnPrimaryMenu" Grid.Column="3"
                                 Classes="circular-menu"
                                 ToolTip.Tip="Main Menu">
-                            <Path Data="{StaticResource MenuIcon}"
+                            <Path Data="M 12 8C 13.1 8 14 7.1 14 6C 14 4.9 13.1 4 12 4C 10.9 4 10 4.9 10 6C 10 7.1 10.9 8 12 8 Z M 12 10C 10.9 10 10 10.9 10 12C 10 13.1 10.9 14 12 14C 13.1 14 14 13.1 14 12C 14 10.9 13.1 10 12 10 Z M 12 16C 10.9 16 10 16.9 10 18C 10 19.1 10.9 20 12 20C 13.1 20 14 19.1 14 18C 14 16.9 13.1 16 12 16 Z"
                                   Width="16" Height="16" Stretch="Uniform"
                                   Fill="{StaticResource OsdForeground}" />
                             <Button.Flyout>

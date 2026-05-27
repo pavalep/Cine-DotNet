@@ -44,9 +44,7 @@
             <ControlTemplate TargetType="Button">
                 <Border x:Name="RootBorder"
                         Background="{TemplateBinding Background}"
-                        CornerRadius="{TemplateBinding CornerRadius}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}">
+                        CornerRadius="{TemplateBinding CornerRadius}">
                     <ContentPresenter x:Name="ContentPresenter"
                                       Content="{TemplateBinding Content}"
                                       ContentTemplate="{TemplateBinding ContentTemplate}"
@@ -81,9 +79,7 @@
             <ControlTemplate TargetType="Button">
                 <Border x:Name="RootBorder"
                         Background="{TemplateBinding Background}"
-                        CornerRadius="{TemplateBinding CornerRadius}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}">
+                        CornerRadius="{TemplateBinding CornerRadius}">
                     <ContentPresenter x:Name="ContentPresenter"
                                       Content="{TemplateBinding Content}"
                                       ContentTemplate="{TemplateBinding ContentTemplate}"
@@ -177,6 +173,7 @@
     <Style Selector="Button.start-page-button">
         <Setter Property="Height" Value="40" />
         <Setter Property="CornerRadius" Value="20" />
+        <Setter Property="MinWidth" Value="140" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Background" Value="#1FFFFFFF" />
@@ -317,6 +314,10 @@
         <Setter Property="Height" Value="50" />
         <Setter Property="VerticalAlignment" Value="Top" />
         <Setter Property="Background" Value="{StaticResource HeaderGradient}" />
+    </Style>
+
+    <Style Selector="Border.osd">
+        <!-- Any shared OSD styles can go here -->
     </Style>
     
     <!-- Controls Box (bottom area with gradient) -->

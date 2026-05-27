@@ -83,14 +83,18 @@ internal unsafe class D3D11Renderer : IDisposable
     private IntPtr _backBuffer;    // ID3D11Texture2D (back buffer)
 
     // --- NV12 Shader Pipeline (Phase 3) ---
+    private IntPtr _bgraStagingTex; // ID3D11Texture2D — BGRA staging (CPU write)
+    private IntPtr _bgraDefaultTex; // ID3D11Texture2D — BGRA default (GPU)
     private IntPtr _yDefaultTex;   // ID3D11Texture2D — Y plane (GPU default)
     private IntPtr _uvDefaultTex;  // ID3D11Texture2D — UV plane (GPU default)
     private IntPtr _yStagingTex;   // ID3D11Texture2D — Y plane staging (CPU write)
     private IntPtr _uvStagingTex;  // ID3D11Texture2D — UV plane staging (CPU write)
+    private IntPtr _bgraSrv;       // ID3D11ShaderResourceView — BGRA SRV
     private IntPtr _ySrv;          // ID3D11ShaderResourceView — Y SRV
     private IntPtr _uvSrv;         // ID3D11ShaderResourceView — UV SRV
     private IntPtr _vertexShader;  // ID3D11VertexShader
     private IntPtr _pixelShader;   // ID3D11PixelShader
+    private IntPtr _bgraPixelShader; // ID3D11PixelShader — BGRA path
     private IntPtr _inputLayout;   // ID3D11InputLayout
     private IntPtr _vertexBuffer;  // ID3D11Buffer — fullscreen quad VB
     private IntPtr _samplerState;  // ID3D11SamplerState — linear clamp
@@ -105,8 +109,8 @@ internal unsafe class D3D11Renderer : IDisposable
     private IntPtr _filterSRV;             // ID3D11ShaderResourceView — input to filter
     private IntPtr _filterSamplerState;    // ID3D11SamplerState — linear clamp for filter
 
-    private int _nv12Width;        // video width (0 = not yet created)
-    private int _nv12Height;       // video height (0 = not yet created)
+    private int _videoWidth;       // video width (0 = not yet created)
+    private int _videoHeight;      // video height (0 = not yet created)
     private bool _useShaderPath;   // true when decoder outputs NV12 (not BGRA)
     private readonly IntPtr _hwnd;
     private bool _disposed;
@@ -292,11 +296,18 @@ internal unsafe class D3D11Renderer : IDisposable
         // ── 3. Create render target view ──
         CreateRenderTarget();
 
-        // ── 4. Compile shader pipeline (if NV12 mode) ──
+        // ── 4. Create BGRA staging texture ──
+        if (!_useShaderPath && _videoWidth > 0 && _videoHeight > 0)
+        {
+            CreateTexture2D(_videoWidth, _videoHeight, DXGI_FORMAT_B8G8R8A8_UNORM, 0, out _bgraStagingTex);
+            CreateBgraPipeline();
+        }
+
+        // ── 5. Compile shader pipeline (if NV12 mode) ──
         if (_useShaderPath)
             CreateNv12Pipeline();
 
-        // ── 5. Compile post-process filter pipeline (if filters active) ──
+        // ── 6. Compile post-process filter pipeline (if filters active) ──
         if (HasActiveFilters)
             CreateFilterPipeline();
     }
@@ -365,38 +376,51 @@ VS_OUT main(VS_IN input) {
             out _vertexShader));
 
         // ── 3. Create input layout ──
-        var layout = new[]
-        {
-            new D3D11_INPUT_ELEMENT_DESC
-            {
-                SemanticName     = "POSITION",
-                SemanticIndex    = 0,
-                Format           = 2, // DXGI_FORMAT_R32G32B32A32_FLOAT
-                InputSlot        = 0,
-                AlignedByteOffset= 0,
-                InputSlotClass   = 0, // D3D11_INPUT_PER_VERTEX_DATA
-                InstanceDataStepRate = 0
-            },
-            new D3D11_INPUT_ELEMENT_DESC
-            {
-                SemanticName     = "TEXCOORD",
-                SemanticIndex    = 0,
-                Format           = 16, // DXGI_FORMAT_R32G32_FLOAT
-                InputSlot        = 0,
-                AlignedByteOffset= D3D11_APPEND_ALIGNED_ELEMENT,
-                InputSlotClass   = 0,
-                InstanceDataStepRate = 0
-            }
-        };
+        IntPtr posName = Marshal.StringToHGlobalAnsi("POSITION");
+        IntPtr texName = Marshal.StringToHGlobalAnsi("TEXCOORD");
 
-        fixed (D3D11_INPUT_ELEMENT_DESC* pLayout = layout)
+        try
         {
-            Marshal.ThrowExceptionForHR(device.CreateInputLayout(
-                (IntPtr)pLayout,
-                (uint)layout.Length,
-                GetBlobPointer(_vsBlob),
-                GetBlobSize(_vsBlob),
-                out _inputLayout));
+            var layout = new[]
+            {
+                new D3D11_INPUT_ELEMENT_DESC
+                {
+                    SemanticName     = posName,
+                    SemanticIndex    = 0,
+                    Format           = 2, // DXGI_FORMAT_R32G32B32A32_FLOAT
+                    InputSlot        = 0,
+                    AlignedByteOffset= 0,
+                    InputSlotClass   = 0, // D3D11_INPUT_PER_VERTEX_DATA
+                    InstanceDataStepRate = 0
+                },
+                new D3D11_INPUT_ELEMENT_DESC
+                {
+                    SemanticName     = texName,
+                    SemanticIndex    = 0,
+                    Format           = 16, // DXGI_FORMAT_R32G32_FLOAT
+                    InputSlot        = 0,
+                    AlignedByteOffset= D3D11_APPEND_ALIGNED_ELEMENT,
+                    InputSlotClass   = 0,
+                    InstanceDataStepRate = 0
+                }
+            };
+
+            fixed (D3D11_INPUT_ELEMENT_DESC* pLayout = layout)
+            {
+                Marshal.ThrowExceptionForHR(device.CreateInputLayout(
+                    (IntPtr)pLayout,
+                    (uint)layout.Length,
+                    GetBlobPointer(_vsBlob),
+                    GetBlobSize(_vsBlob),
+                    out _inputLayout));
+            }
+        }
+        finally
+        {
+            // Note: SemanticName must be valid when CreateInputLayout is called.
+            // It doesn't need to be kept alive after that.
+            Marshal.FreeHGlobal(posName);
+            Marshal.FreeHGlobal(texName);
         }
 
         // ── 4. Compile pixel shader ──
@@ -430,16 +454,7 @@ float4 main(PS_IN input) : SV_TARGET {
             pClassLinkage: IntPtr.Zero,
             out _pixelShader));
 
-        // ── 6. Create VS → PS input layout ──
-        fixed (D3D11_INPUT_ELEMENT_DESC* pLayout = layout)
-        {
-            Marshal.ThrowExceptionForHR(device.CreateInputLayout(
-                pInputElementDescs: (IntPtr)pLayout,
-                NumElements: (uint)layout.Length,
-                pShaderBytecodeWithInputSignature: GetBlobPointer(_vsBlob),
-                BytecodeLength: GetBlobSize(_vsBlob),
-                out _inputLayout));
-        }
+        // ── 6. Input layout already created in step 3 ──
 
         // ── 7. Create fullscreen quad vertex buffer ──
         var vertices = new[]
@@ -462,14 +477,14 @@ float4 main(PS_IN input) : SV_TARGET {
 
         // ── 9. Create Y and UV default textures + staging textures ──
         // Y plane: full resolution, 8-bit single channel
-        CreateTexture2D(_nv12Width, _nv12Height, DXGI_FORMAT_R8_UNORM,
+        CreateTexture2D(_videoWidth, _videoHeight, DXGI_FORMAT_R8_UNORM,
             D3D11_BIND_SHADER_RESOURCE, out _yDefaultTex);
-        CreateTexture2D(_nv12Width, _nv12Height, DXGI_FORMAT_R8_UNORM,
+        CreateTexture2D(_videoWidth, _videoHeight, DXGI_FORMAT_R8_UNORM,
             0, out _yStagingTex);
 
         // UV plane: half resolution (for NV12, U and V are interleaved at half height)
-        int uvWidth = (_nv12Width + 1) / 2;
-        int uvHeight = (_nv12Height + 1) / 2;
+        int uvWidth = (_videoWidth + 1) / 2;
+        int uvHeight = (_videoHeight + 1) / 2;
         CreateTexture2D(uvWidth, uvHeight, DXGI_FORMAT_R8G8_UNORM,
             D3D11_BIND_SHADER_RESOURCE, out _uvDefaultTex);
         CreateTexture2D(uvWidth, uvHeight, DXGI_FORMAT_R8G8_UNORM,
@@ -867,6 +882,9 @@ float4 main(PS_IN input) : SV_TARGET
     /// <summary>Releases all NV12 shader pipeline COM objects.</summary>
     private void DestroyNv12Textures()
     {
+        SafeRelease(ref _bgraStagingTex);
+        SafeRelease(ref _bgraDefaultTex);
+        SafeRelease(ref _bgraSrv);
         SafeRelease(ref _yDefaultTex);
         SafeRelease(ref _uvDefaultTex);
         SafeRelease(ref _yStagingTex);
@@ -875,6 +893,7 @@ float4 main(PS_IN input) : SV_TARGET
         SafeRelease(ref _uvSrv);
         SafeRelease(ref _vertexShader);
         SafeRelease(ref _pixelShader);
+        SafeRelease(ref _bgraPixelShader);
         SafeRelease(ref _inputLayout);
         SafeRelease(ref _vertexBuffer);
         SafeRelease(ref _samplerState);
@@ -908,9 +927,36 @@ float4 main(PS_IN input) : SV_TARGET
         if (_useShaderPath)
         {
             DestroyNv12Textures();
-            _nv12Width = width;
-            _nv12Height = height;
+            _videoWidth = width;
+            _videoHeight = height;
             CreateNv12Pipeline();
+        }
+        else if (_videoWidth > 0 && _videoHeight > 0)
+        {
+            SafeRelease(ref _bgraStagingTex);
+            CreateTexture2D(_videoWidth, _videoHeight, DXGI_FORMAT_B8G8R8A8_UNORM, 0, out _bgraStagingTex);
+            CreateBgraPipeline();
+        }
+    }
+
+    public void SetVideoDimensions(int width, int height)
+    {
+        if (_videoWidth == width && _videoHeight == height) return;
+        _videoWidth = width;
+        _videoHeight = height;
+        if (IsInitialized)
+        {
+            if (_useShaderPath)
+            {
+                DestroyNv12Textures();
+                CreateNv12Pipeline();
+            }
+            else
+            {
+                SafeRelease(ref _bgraStagingTex);
+                CreateTexture2D(_videoWidth, _videoHeight, DXGI_FORMAT_B8G8R8A8_UNORM, 0, out _bgraStagingTex);
+                CreateBgraPipeline();
+            }
         }
     }
 
@@ -940,46 +986,44 @@ float4 main(PS_IN input) : SV_TARGET
 
             try
             {
+                if (_bgraStagingTex == IntPtr.Zero) return;
+
                 var mapped = new MappedSubresource();
                 var context = (ID3D11DeviceContext)Marshal.GetObjectForIUnknown(_context);
 
-                hr = context.Map(_backBuffer, Subresource: 0,
-                    MapType: D3D11_MAP_WRITE, MapFlags: 0, out mapped);
+                hr = context.Map(_bgraStagingTex, Subresource: 0,
+                    MapType: D3D11_MAP_WRITE_DISCARD, MapFlags: 0, out mapped);
                 if (hr < 0) return;
 
                 try
                 {
-                    uint srcPitch = (uint)BackBufferWidth * 4;
+                    uint srcPitch = (uint)_videoWidth * 4;
                     uint dstPitch = mapped.RowPitch;
-                    uint rows = (uint)BackBufferHeight;
+                    uint rows = (uint)_videoHeight;
 
-                    if (srcPitch == dstPitch)
+                    byte* dst = (byte*)mapped.pData;
+                    byte* src = (byte*)srcPtr;
+                    uint copyBytes = Math.Min(srcPitch, dstPitch);
+
+                    for (uint y = 0; y < rows; y++)
                     {
-                        Buffer.MemoryCopy(
-                            (void*)srcPtr, (void*)mapped.pData,
-                            srcPitch * rows, srcPitch * rows);
-                    }
-                    else
-                    {
-                        byte* dst = (byte*)mapped.pData;
-                        byte* src = (byte*)srcPtr;
-                        uint copyBytes = srcPitch < dstPitch ? srcPitch : dstPitch;
-
-                        for (uint y = 0; y < rows; y++)
-                        {
-                            Buffer.MemoryCopy(
-                                src, dst,
-                                copyBytes, copyBytes);
-
-                            src += srcPitch;
-                            dst += dstPitch;
-                        }
+                        Buffer.MemoryCopy(src, dst, copyBytes, copyBytes);
+                        src += srcPitch;
+                        dst += dstPitch;
                     }
                 }
                 finally
                 {
-                    context.Unmap(_backBuffer, Subresource: 0);
+                    context.Unmap(_bgraStagingTex, Subresource: 0);
                 }
+
+                // Copy from staging to intermediate or back buffer
+                // For simplicity, we'll use StretchRect behavior or just copy if sizes match
+                // Actually, let's use the shader quad to render it if we want scaling/aspect ratio.
+                // But for now, let's just CopyResource if it matches, otherwise we need a shader path for BGRA too.
+                // Given the requirement for aspect ratio preservation, using the quad is better.
+
+                RenderQuad(_bgraStagingTex);
 
                 // Apply post-process filter pipeline if any filters are active
                 ApplyFilter();
@@ -987,6 +1031,7 @@ float4 main(PS_IN input) : SV_TARGET
                 var swapChain = (IDXGISwapChain1)Marshal.GetObjectForIUnknown(_swapChain);
                 swapChain.Present(SyncInterval: 1, Flags: 0);
                 Marshal.ReleaseComObject(swapChain);
+                Marshal.ReleaseComObject(context);
             }
             finally
             {
@@ -997,6 +1042,127 @@ float4 main(PS_IN input) : SV_TARGET
         {
             if (buffer != null) Marshal.ReleaseComObject(buffer);
         }
+    }
+
+    private void RenderQuad(IntPtr texture)
+    {
+        if (_bgraPixelShader == IntPtr.Zero || _bgraSrv == IntPtr.Zero || _bgraDefaultTex == IntPtr.Zero) return;
+
+        var context = (ID3D11DeviceContext)Marshal.GetObjectForIUnknown(_context);
+
+        // 0. Copy from staging to default
+        context.CopyResource(_bgraDefaultTex, texture);
+
+        // 1. Set render target
+        IntPtr[] rts = new IntPtr[] { _rtv };
+        fixed (IntPtr* pRts = rts)
+        {
+            context.OMSetRenderTargets(1, (IntPtr)pRts, IntPtr.Zero);
+        }
+
+        context.ClearRenderTargetView(_rtv, new float[4] { 0, 0, 0, 1 });
+
+        // 2. Set up shader resources and sampler
+        IntPtr[] srvs = new IntPtr[] { _bgraSrv };
+        fixed (IntPtr* pSrvs = srvs)
+        {
+            context.PSSetShaderResources(0, 1, (IntPtr)pSrvs);
+        }
+
+        IntPtr[] samplers = new IntPtr[] { _samplerState };
+        fixed (IntPtr* pSamplers = samplers)
+        {
+            context.PSSetSamplers(0, 1, (IntPtr)pSamplers);
+        }
+
+        // 3. Draw fullscreen quad
+        uint[] strideArr = new uint[] { (uint)sizeof(Vertex) };
+        uint[] offsetArr = new uint[] { 0 };
+        IntPtr[] vbs = new IntPtr[] { _vertexBuffer };
+        fixed (uint* pStride = strideArr)
+        fixed (uint* pOffset = offsetArr)
+        fixed (IntPtr* pVbs = vbs)
+        {
+            context.IASetVertexBuffers(0, 1, (IntPtr)pVbs,
+                (IntPtr)pStride, (IntPtr)pOffset);
+        }
+
+        context.IASetInputLayout(_inputLayout);
+        context.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+        context.VSSetShader(_vertexShader, IntPtr.Zero, 0);
+        context.PSSetShader(_bgraPixelShader, IntPtr.Zero, 0);
+
+        // Calculate letterboxing/pillarboxing
+        float videoAspect = (float)_videoWidth / _videoHeight;
+        float windowAspect = (float)BackBufferWidth / BackBufferHeight;
+
+        float drawW, drawH;
+        if (videoAspect > windowAspect)
+        {
+            drawW = BackBufferWidth;
+            drawH = BackBufferWidth / videoAspect;
+        }
+        else
+        {
+            drawH = BackBufferHeight;
+            drawW = BackBufferHeight * videoAspect;
+        }
+
+        float x = (BackBufferWidth - drawW) / 2;
+        float y = (BackBufferHeight - drawH) / 2;
+
+        var viewport = new D3D11_VIEWPORT
+        {
+            TopLeftX = x,
+            TopLeftY = y,
+            Width = drawW,
+            Height = drawH,
+            MinDepth = 0,
+            MaxDepth = 1
+        };
+        context.RSSetViewports(1, new IntPtr(&viewport));
+
+        context.Draw(4, 0);
+
+        Marshal.ReleaseComObject(context);
+    }
+
+    private void CreateBgraPipeline()
+    {
+        if (_device == IntPtr.Zero || _videoWidth <= 0 || _videoHeight <= 0) return;
+
+        var device = (ID3D11Device)Marshal.GetObjectForIUnknown(_device);
+
+        // 1. Create BGRA Default Texture
+        SafeRelease(ref _bgraDefaultTex);
+        CreateTexture2D(_videoWidth, _videoHeight, DXGI_FORMAT_B8G8R8A8_UNORM, D3D11_BIND_SHADER_RESOURCE, out _bgraDefaultTex);
+
+        // 2. Create SRV
+        SafeRelease(ref _bgraSrv);
+        CreateTextureSRV(_bgraDefaultTex, DXGI_FORMAT_B8G8R8A8_UNORM, out _bgraSrv);
+
+        // 3. Create simple BGRA pixel shader
+        string psSource = @"
+Texture2D    InputTex : register(t0);
+SamplerState Sampler  : register(s0);
+
+struct PS_IN {
+    float4 pos : SV_POSITION;
+    float2 uv  : TEXCOORD0;
+};
+
+float4 main(PS_IN input) : SV_TARGET {
+    return InputTex.Sample(Sampler, input.uv);
+}";
+        _psBlob = CompileShader(psSource, "ps_5_0", "main");
+
+        Marshal.ThrowExceptionForHR(device.CreatePixelShader(
+            pShaderBytecode: GetBlobPointer(_psBlob),
+            BytecodeLength: GetBlobSize(_psBlob),
+            pClassLinkage: IntPtr.Zero,
+            out _bgraPixelShader));
+
+        Marshal.ReleaseComObject(device);
     }
 
     /// <summary>
@@ -1025,8 +1191,8 @@ float4 main(PS_IN input) : SV_TARGET
 
                 try
                 {
-                    int yWidth = _nv12Width;
-                    int yHeight = _nv12Height;
+                    int yWidth = _videoWidth;
+                    int yHeight = _videoHeight;
                     uint srcPitch = (uint)yWidth;
 
                     byte* dst = (byte*)mapped.pData;
@@ -1051,12 +1217,12 @@ float4 main(PS_IN input) : SV_TARGET
 
                 try
                 {
-                    int uvWidth = (_nv12Width + 1) / 2;
-                    int uvHeight = (_nv12Height + 1) / 2;
-                    uint srcPitch = (uint)_nv12Width;
+                    int uvWidth = (_videoWidth + 1) / 2;
+                    int uvHeight = (_videoHeight + 1) / 2;
+                    uint srcPitch = (uint)_videoWidth;
 
                     byte* dst = (byte*)mapped.pData;
-                    byte* src = (byte*)srcPtr + (uint)(_nv12Width * _nv12Height);
+                    byte* src = (byte*)srcPtr + (uint)(_videoWidth * _videoHeight);
 
                     for (int y = 0; y < uvHeight; y++)
                     {

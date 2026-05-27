@@ -180,14 +180,15 @@ public partial class MainWindow : Window
             var subtitleFiles = paths.Where(f => f.EndsWith(".srt", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".ass", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".vtt", StringComparison.OrdinalIgnoreCase)).ToList();
             
             if (videoFiles.Any())
-             {
-                 _viewModel?.OpenFiles(videoFiles.ToArray());
-             }
-            else if (subtitleFiles.Any() && _viewModel != null && _viewModel.Duration.TotalSeconds > 0)
+            {
+                _viewModel?.OpenFiles(videoFiles.ToArray());
+            }
+
+            if (subtitleFiles.Any() && _viewModel != null && !string.IsNullOrEmpty(_viewModel.FilePath))
             {
                 foreach (var subFile in subtitleFiles)
                 {
-                    _viewModel.AddSubtitleCommand?.Execute(subFile);
+                    _playerService?.Player?.AddSubtitle(subFile);
                 }
             }
             }
@@ -244,11 +245,11 @@ public partial class MainWindow : Window
             }
 
             DropIndicatorOverlay.IsVisible = true;
-            await FadeVisual(DropIndicatorOverlay, DropIndicatorOverlay.Opacity, 1, 150, true);
+            await FadeVisual(DropIndicatorOverlay, DropIndicatorOverlay.Opacity, 1, 200, true);
         }
         else
         {
-            await FadeVisual(DropIndicatorOverlay, DropIndicatorOverlay.Opacity, 0, 150, false);
+            await FadeVisual(DropIndicatorOverlay, DropIndicatorOverlay.Opacity, 0, 200, false);
             if (!_isDropIndicatorVisible)
                 DropIndicatorOverlay.IsVisible = false;
         }
@@ -345,35 +346,17 @@ public partial class MainWindow : Window
 
     /// <summary>
     /// Updates the layout based on current window width.
-    /// Breakpoints: Narrow (&lt;600px), Medium (600-1024px), Wide (&gt;1024px)
-    /// Matches Python GTK4 responsive breakpoints.
+    /// Breakpoints: Narrow (&lt;495px)
+    /// Matches Python Adw.Breakpoint in window.blp.
     /// </summary>
     private void UpdateResponsiveLayout(double width)
     {
         if (!this.IsInitialized) return;
 
-        if (width < NarrowBreakpoint)
+        bool isNarrow = width < 495;
+
+        if (isNarrow)
         {
-            if (HeaderGrid != null)
-            {
-                HeaderGrid.ColumnDefinitions.Clear();
-                HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-                HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-                HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-                HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-                HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-            }
-            SetButtonSize(BtnOpenMenu, 36);
-            SetButtonSize(BtnPrimaryMenu, 36);
-            SetButtonSize(BtnPlayPause, 36);
-            SetButtonSize(BtnPrevious, 36);
-            SetButtonSize(BtnNext, 36);
-            SetButtonSize(BtnRewind, 36);
-            SetButtonSize(BtnForward, 36);
-            SetButtonSize(BtnVolumeMenu, 36);
-            SetButtonSize(BtnFullscreen, 36);
-            SetButtonSize(BtnLoopFile, 36);
-            SetButtonSize(BtnLoopPlaylist, 36);
             SetVis(BtnPip, false);
             SetVis(BtnSubtitlesMenu, false);
             SetVis(BtnAudioMenu, false);
@@ -381,74 +364,35 @@ public partial class MainWindow : Window
             SetFont(PositionTimeLabel, 11);
             SetFont(DurationTimeLabel, 11);
         }
-        else if (width < MediumBreakpoint)
-        {
-            if (HeaderGrid != null)
-            {
-                HeaderGrid.ColumnDefinitions.Clear();
-                HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-                HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-                HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-                HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-                HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-            }
-            SetButtonSize(BtnOpenMenu, 38);
-            SetButtonSize(BtnPrimaryMenu, 38);
-            SetButtonSize(BtnPlayPause, 38);
-            SetButtonSize(BtnPrevious, 38);
-            SetButtonSize(BtnNext, 38);
-            SetButtonSize(BtnRewind, 38);
-            SetButtonSize(BtnForward, 38);
-            SetButtonSize(BtnVolumeMenu, 38);
-            SetButtonSize(BtnFullscreen, 38);
-            SetButtonSize(BtnLoopFile, 38);
-            SetButtonSize(BtnLoopPlaylist, 38);
-            SetVis(BtnPip, false);
-            SetVis(BtnSubtitlesMenu, true);
-            SetVis(BtnAudioMenu, true);
-            SetVis(BtnVideoMenu, false);
-            SetFont(PositionTimeLabel, 12);
-            SetFont(DurationTimeLabel, 12);
-        }
         else
         {
-            if (HeaderGrid != null)
-            {
-                HeaderGrid.ColumnDefinitions.Clear();
-                HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-                HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-                HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-                HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-                HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-            }
-            SetButtonSize(BtnOpenMenu, 40);
-            SetButtonSize(BtnPrimaryMenu, 40);
-            SetButtonSize(BtnPlayPause, 40);
-            SetButtonSize(BtnPrevious, 40);
-            SetButtonSize(BtnNext, 40);
-            SetButtonSize(BtnRewind, 40);
-            SetButtonSize(BtnForward, 40);
-            SetButtonSize(BtnVolumeMenu, 40);
-            SetButtonSize(BtnFullscreen, 40);
-            SetButtonSize(BtnLoopFile, 40);
-            SetButtonSize(BtnLoopPlaylist, 40);
             SetVis(BtnPip, true);
             SetVis(BtnSubtitlesMenu, true);
             SetVis(BtnAudioMenu, true);
-            SetVis(BtnVideoMenu, true);
+            SetVis(BtnVideoMenu, _viewModel?.HasMultipleVideoTracks ?? false);
             SetFont(PositionTimeLabel, 13);
             SetFont(DurationTimeLabel, 13);
         }
 
+        // Button sizes are generally constant in the reference but we can tweak if needed
+        double btnSize = isNarrow ? 36 : 40;
+        SetButtonSize(BtnPrimaryMenu, btnSize);
+        SetButtonSize(BtnPlayPause, btnSize);
+        SetButtonSize(BtnPrevious, btnSize);
+        SetButtonSize(BtnNext, btnSize);
+        SetButtonSize(BtnRewind, btnSize);
+        SetButtonSize(BtnForward, btnSize);
+        SetButtonSize(BtnVolumeMenu, btnSize);
+        SetButtonSize(BtnFullscreen, btnSize);
+        SetButtonSize(BtnLoopFile, btnSize);
+        SetButtonSize(BtnLoopPlaylist, btnSize);
+
         if (ControlsBox != null)
-            ControlsBox.Height = width < NarrowBreakpoint ? 90 :
-                                 width < MediumBreakpoint ? 100 : 120;
+            ControlsBox.Height = isNarrow ? 90 : 120;
         if (HeaderBar != null)
-            HeaderBar.Height = width < NarrowBreakpoint ? 40 :
-                               width < MediumBreakpoint ? 46 : 50;
+            HeaderBar.Height = isNarrow ? 40 : 50;
         if (TitleText != null)
-            TitleText.FontSize = width < NarrowBreakpoint ? 12 :
-                                 width < MediumBreakpoint ? 13 : 14;
+            TitleText.FontSize = isNarrow ? 12 : 14;
     }
 
     /// <summary>Sets button size and corner radius directly for responsive layout.</summary>
@@ -993,7 +937,8 @@ public partial class MainWindow : Window
         Dispatcher.UIThread.Post(() =>
         {
             // Allow replay at EOF (GTK parity)
-            _viewModel?.Stop();
+            _playerService?.Player?.Seek(TimeSpan.Zero);
+            _playerService?.Player?.Pause();
             ShowUiControls();
         });
     }
@@ -1098,10 +1043,10 @@ public partial class MainWindow : Window
             Handle(() => _viewModel?.IncreaseVolume());
         else if (key == Key.Down || key == Key.VolumeDown) 
             Handle(() => _viewModel?.DecreaseVolume());
-        else if (ctrl && key == Key.OemPlus) 
-            Handle(() => _playerService?.Player?.Command("add", "audio-delay", "0.1"));
-        else if (ctrl && key == Key.OemMinus) 
-            Handle(() => _playerService?.Player?.Command("add", "audio-delay", "-0.1"));
+        else if (ctrl && (key == Key.OemMinus || key == Key.Subtract))
+            Handle(() => { _playerService?.Player?.DecreaseAudioDelay(); });
+        else if (ctrl && (key == Key.OemPlus || key == Key.Add))
+            Handle(() => { _playerService?.Player?.IncreaseAudioDelay(); });
 
         // Navigation
         else if (key == Key.Left) 
@@ -1109,13 +1054,13 @@ public partial class MainWindow : Window
         else if (key == Key.Right) 
             Handle(() => { if (ctrl) _viewModel?.NextChapter(); else if (shift) _viewModel?.SeekLargeForward(); else _viewModel?.SeekForward(); });
         else if (key == Key.J) 
-            Handle(() => _playerService?.Player?.Command("seek", "-10", "exact"));
+            Handle(() => _playerService?.Player?.SeekBackward(10));
         else if (key == Key.L && !shift && !ctrl) 
-            Handle(() => _playerService?.Player?.Command("seek", "10", "exact"));
+            Handle(() => _playerService?.Player?.SeekForward(10));
         else if (ctrl && key == Key.OemOpenBrackets) 
-            Handle(() => _playerService?.Player?.Command("frame-step", "-1"));
+            Handle(() => _playerService?.Player?.PreviousFrame());
         else if (ctrl && key == Key.OemCloseBrackets) 
-            Handle(() => _playerService?.Player?.Command("frame-step", "1"));
+            Handle(() => _playerService?.Player?.NextFrame());
         else if (key == Key.MediaNextTrack)
             Handle(() => _viewModel?.NextChapter());
         else if (key == Key.MediaPreviousTrack)
@@ -1123,49 +1068,49 @@ public partial class MainWindow : Window
 
         // Subtitles
         else if (key == Key.C) 
-            Handle(() => _playerService?.Player?.Command("cycle", "sub-visibility"));
+            Handle(() => _playerService?.Player?.CycleSubtitleTrack());
         else if (key == Key.OemComma) 
-            Handle(() => _playerService?.Player?.Command("add", "sub-delay", "-0.1"));
+            Handle(() => _playerService?.Player?.DecreaseSubtitleDelay());
         else if (key == Key.OemPeriod) 
-            Handle(() => _playerService?.Player?.Command("add", "sub-delay", "0.1"));
+            Handle(() => _playerService?.Player?.IncreaseSubtitleDelay());
         else if (key == Key.PageUp) 
-            Handle(() => _playerService?.Player?.Command("add", "sub-pos", "-1"));
+            Handle(() => _playerService?.Player?.SetSubtitlePosition((_playerService?.Player?.SubtitlePosition ?? 50) - 1));
         else if (key == Key.PageDown) 
-            Handle(() => _playerService?.Player?.Command("add", "sub-pos", "1"));
+            Handle(() => _playerService?.Player?.SetSubtitlePosition((_playerService?.Player?.SubtitlePosition ?? 50) + 1));
 
         // Video / Display
-        else if (key == Key.OemPlus && !ctrl) 
-            Handle(() => _playerService?.Player?.Command("add", "video-zoom", "0.05"));
-        else if (key == Key.OemMinus && !ctrl) 
-            Handle(() => _playerService?.Player?.Command("add", "video-zoom", "-0.05"));
+        else if ((key == Key.OemPlus || key == Key.Add) && !ctrl)
+            Handle(() => { if (_playerService?.Player != null) _playerService.Player.Zoom += 0.05; });
+        else if ((key == Key.OemMinus || key == Key.Subtract) && !ctrl)
+            Handle(() => { if (_playerService?.Player != null) _playerService.Player.Zoom -= 0.05; });
         else if (key == Key.D1) 
-            Handle(() => _playerService?.Player?.Command("add", "contrast", "-1"));
+            Handle(() => _playerService?.Player?.DecreaseContrast());
         else if (key == Key.D2) 
-            Handle(() => _playerService?.Player?.Command("add", "contrast", "1"));
+            Handle(() => _playerService?.Player?.IncreaseContrast());
         else if (key == Key.D3) 
-            Handle(() => _playerService?.Player?.Command("add", "brightness", "-1"));
+            Handle(() => _playerService?.Player?.DecreaseBrightness());
         else if (key == Key.D4) 
-            Handle(() => _playerService?.Player?.Command("add", "brightness", "1"));
+            Handle(() => _playerService?.Player?.IncreaseBrightness());
         else if (key == Key.D5) 
-            Handle(() => _playerService?.Player?.Command("add", "gamma", "-1"));
+            Handle(() => _playerService?.Player?.DecreaseGamma());
         else if (key == Key.D6) 
-            Handle(() => _playerService?.Player?.Command("add", "gamma", "1"));
+            Handle(() => _playerService?.Player?.IncreaseGamma());
         else if (key == Key.D7) 
-            Handle(() => _playerService?.Player?.Command("add", "saturation", "-1"));
+            Handle(() => _playerService?.Player?.DecreaseSaturation());
         else if (key == Key.D8) 
-            Handle(() => _playerService?.Player?.Command("add", "saturation", "1"));
+            Handle(() => _playerService?.Player?.IncreaseSaturation());
         else if (key == Key.OemOpenBrackets && !ctrl) 
-            Handle(() => _playerService?.Player?.Command("multiply", "speed", "0.90909090")); // 1/1.1
+            Handle(() => _playerService?.Player?.DecreaseSpeed());
         else if (key == Key.OemCloseBrackets && !ctrl) 
-            Handle(() => _playerService?.Player?.Command("multiply", "speed", "1.1"));
+            Handle(() => _playerService?.Player?.IncreaseSpeed());
         else if (key == Key.Back) 
-            Handle(() => _playerService?.Player?.Command("set", "speed", "1.0"));
+            Handle(() => _playerService?.Player?.ResetSpeed());
 
         // Miscellaneous
         else if (key == Key.S) 
-            Handle(() => { if (shift) _playerService?.Player?.Command("screenshot", "video"); else _viewModel?.Screenshot(); });
+            Handle(() => { if (shift) _playerService?.Player?.ScreenshotWithoutSubtitles(); else _playerService?.Player?.ScreenshotWithSubtitles(); });
         else if (key == Key.I) 
-            Handle(() => { if (shift) _playerService?.Player?.Command("script-binding", "stats/display-stats-toggle"); else _playerService?.Player?.Command("script-binding", "stats/display-stats"); });
+            Handle(() => { /* Stats not implemented in MF player */ });
         else if (key == Key.L && shift) 
             Handle(() => _viewModel?.ToggleLoopFile());
     }
