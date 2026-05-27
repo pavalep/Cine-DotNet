@@ -456,9 +456,10 @@ public class MainViewModel : INotifyPropertyChanged
     public async void OpenFile(string path)
     {
         if (string.IsNullOrWhiteSpace(path)) return;
-        _player.Open(path);
         FilePath = path;
+        await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Render);
         await System.Threading.Tasks.Task.Delay(50);
+        _player.Open(path);
         RefreshState();
     }
 
