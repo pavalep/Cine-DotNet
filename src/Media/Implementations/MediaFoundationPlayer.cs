@@ -57,6 +57,7 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
     // === Shared state ===
     private TimeSpan _position = TimeSpan.Zero;
     private TimeSpan _duration = TimeSpan.Zero;
+    private long _lastNativeTimestamp;
     private DateTime _playbackStartTime;
     private double _volume = 50.0;
     private readonly double _volumeMax = 150.0;
@@ -411,6 +412,7 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
         {
             if (_renderer != null && _currentState == PlaybackState.Playing)
             {
+                _lastNativeTimestamp = e.Timestamp;
                 try { _renderer.Present(e.Sample); }
                 catch { /* Drop corrupted frame */ }
             }
@@ -624,9 +626,14 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
         if (position < TimeSpan.Zero) return;
 
         _position = position;
+        _lastNativeTimestamp = position.Ticks;
         PositionChanged?.Invoke(this, new PositionChangedEventArgs(position));
 
-        if (!_nativeRendering && _mediaElement != null)
+        if (_nativeRendering)
+        {
+            _mfHelper?.Seek(position.Ticks);
+        }
+        else if (_mediaElement != null)
         {
             var adjusted = position + TimeSpan.FromSeconds(_subtitleDelay);
             if (_mediaElement.NaturalDuration.HasTimeSpan && position <= _mediaElement.NaturalDuration.TimeSpan)
@@ -862,12 +869,9 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
     {
         if (_nativeRendering)
         {
-            // Position is estimated from elapsed time since playback start
-            // (accurate duration tracking requires IMFPresentationDescriptor)
             if (_currentState == PlaybackState.Playing)
             {
-                var elapsed = DateTime.UtcNow - _playbackStartTime;
-                Position = elapsed;
+                Position = TimeSpan.FromTicks(_lastNativeTimestamp);
             }
         }
         else if (_mediaElement?.NaturalDuration.HasTimeSpan == true)
