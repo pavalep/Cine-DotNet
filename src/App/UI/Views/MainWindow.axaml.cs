@@ -803,9 +803,42 @@ public partial class MainWindow : Window
     private void OnMaximizeRestoreClick(object? sender, RoutedEventArgs e) => WindowState = WindowState == global::Avalonia.Controls.WindowState.Maximized ? global::Avalonia.Controls.WindowState.Normal : global::Avalonia.Controls.WindowState.Maximized;
     private void OnCloseClick(object? sender, RoutedEventArgs e) => Close();
     private void OnNewWindowClick(object? sender, RoutedEventArgs e) => new MainWindow().Show();
-    private void OnPreferencesClick(object? sender, RoutedEventArgs e) => _viewModel?.Screenshot(); // Placeholder action
+    private void OnPreferencesClick(object? sender, RoutedEventArgs e) { } // Placeholder
     private void OnShortcutsClick(object? sender, RoutedEventArgs e) { } // Placeholder
-    private void OnAboutClick(object? sender, RoutedEventArgs e) { } // Placeholder
+    private async void OnAboutClick(object? sender, RoutedEventArgs e)
+    {
+        var closeButton = new global::Avalonia.Controls.Button
+        {
+            Content = "Close",
+            HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Center,
+            Margin = new Thickness(0, 10, 0, 0)
+        };
+
+        var messageBox = new Window
+        {
+            Title = "About Cine",
+            Content = new StackPanel
+            {
+                Margin = new Thickness(20),
+                Spacing = 10,
+                Children =
+                {
+                    new TextBlock { Text = "Cine Media Player", FontSize = 20, FontWeight = FontWeight.Bold, HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Center },
+                    new TextBlock { Text = "A native Windows media player built with Avalonia UI.", HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Center },
+                    new TextBlock { Text = "Version 1.0.0", HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Center },
+                    closeButton
+                }
+            },
+            Width = 350,
+            Height = 200,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            CanResize = false,
+            WindowDecorations = global::Avalonia.Controls.WindowDecorations.Full
+        };
+
+        closeButton.Click += (s, a) => messageBox.Close();
+        await messageBox.ShowDialog(this);
+    }
     private void OnSeekBack(object? sender, RoutedEventArgs e) => _viewModel?.SeekBackward();
     private void OnSeekForward(object? sender, RoutedEventArgs e) => _viewModel?.SeekForward();
     private void OnToggleMute(object? sender, RoutedEventArgs e) => _viewModel?.ToggleMute();
