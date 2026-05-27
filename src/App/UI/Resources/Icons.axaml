@@ -1,0 +1,86 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Styles.Resources>
+    
+    <!-- ======================== -->
+    <!--  SYMBOLIC ICONS          -->
+    <!-- ======================== -->
+    <!-- Using Segoe MDL2 Assets glyphs to match Python GTK4 symbolic icons -->
+    
+    <!-- Play Icon -->
+    <Geometry x:Key="PlayIcon">M 8 5V 19L 16 12L 8 5 Z</Geometry>
+    
+    <!-- Pause Icon -->
+    <Geometry x:Key="PauseIcon">M 8 4H 12V 20H 8V 4 Z M 16 4H 20V 20H 16V 4 Z</Geometry>
+    
+    <!-- Stop Icon -->
+    <Geometry x:Key="StopIcon">M 5 4H 9V 20H 5V 4 Z M 13 4H 17V 20H 13V 4 Z</Geometry>
+    
+    <!-- Skip Backward Icon -->
+    <Geometry x:Key="SkipBackwardIcon">M 15.41 7.41L 14 6L 8 12L 14 18L 15.41 16.59L 10.83 12L 15.41 7.41 Z</Geometry>
+    
+    <!-- Skip Forward Icon -->
+    <Geometry x:Key="SkipForwardIcon">M 10 6L 8.59 7.41L 13.17 12L 8.59 16.59L 10 18L 16 12L 10 6 Z</Geometry>
+    
+    <!-- Previous Chapter Icon -->
+    <Geometry x:Key="PreviousChapterIcon">M 16 5V 19L 8 12L 16 5 Z</Geometry>
+    
+    <!-- Next Chapter Icon -->
+    <Geometry x:Key="NextChapterIcon">M 8 5V 19L 16 12L 8 5 Z</Geometry>
+    
+    <!-- Volume Up (High) Icon -->
+    <Geometry x:Key="VolumeMaxIcon">M 3 9H 5L 9 5H 11V 19H 9V 15H 5V 9 Z M 13 9L 17 5V 19L 13 15Z</Geometry>
+    
+    <!-- Volume Medium Icon -->
+    <Geometry x:Key="VolumeMediumIcon">M 3 9H 5L 9 5H 11V 19H 9V 15H 5V 9 Z M 13 9L 15 7V 17L 13 15Z</Geometry>
+    
+    <!-- Volume Low Icon -->
+    <Geometry x:Key="VolumeLowIcon">M 3 9H 5L 9 5H 11V 19H 9V 15H 5V 9 Z</Geometry>
+    
+    <!-- Volume Mute Icon -->
+    <Geometry x:Key="VolumeMuteIcon">M 3 9H 5L 9 5H 11V 19H 9V 15H 5V 9 Z M 13 9L 17 5M 17 19L 13 15</Geometry>
+    
+    <!-- Screenshot Icon -->
+    <Geometry x:Key="ScreenshotIcon">M 4 4H 20V 20H 4V 4 Z M 8 8H 10V 16H 8V 8 Z M 12 8H 14V 16H 12V 8 Z M 16 8H 18V 16H 16V 8 Z</Geometry>
+    
+    <!-- Fullscreen Enter Icon -->
+    <Geometry x:Key="FullscreenEnterIcon">M 4 4H 6V 6H 4V 4 Z M 8 4H 10V 6H 8V 4 Z M 12 4H 14V 6H 12V 4 Z M 16 4H 18V 6H 16V 4 Z M 4 8H 6V 10H 4V 8 Z M 16 8H 18V 10H 16V 8 Z M 4 12H 6V 14H 4V 12 Z M 12 12H 14V 14H 12V 12 Z M 4 16H 6V 18H 4V 16 Z M 8 16H 10V 18H 8V 16 Z M 12 16H 14V 18H 12V 16 Z M 16 16H 18V 18H 16V 16 Z</Geometry>
+    
+    <!-- Fullscreen Exit Icon -->
+    <Geometry x:Key="FullscreenExitIcon">M 6 4H 4V 6H 6V 4 Z M 10 4H 8V 6H 10V 4 Z M 14 4H 12V 6H 14V 4 Z M 18 4H 16V 6H 18V 4 Z M 6 8H 4V 10H 6V 8 Z M 18 8H 16V 10H 18V 8 Z M 6 14H 4V 12H 6V 14 Z M 14 14H 12V 12H 14V 14 Z M 6 18H 4V 16H 6V 18 Z M 10 18H 8V 16H 10V 18 Z M 14 18H 12V 16H 14V 18 Z M 18 18H 16V 16H 18V 18 Z</Geometry>
+    
+    <!-- Picture-in-Picture (PIP) Icon -->
+    <Geometry x:Key="PipIcon">M 6 4H 22V 16H 22V 4H 6V 4 Z M 10 8H 18V 12H 10V 8 Z</Geometry>
+    
+    <!-- Menu Icon (Three dots) -->
+    <Geometry x:Key="MenuIcon">M 4 6C 4 7.10457 4.89543 8 6 8C 7.10457 8 8 7.10457 8 6C 8 4.89543 7.10457 4 6 4C 4.89543 4 4 4.89543 4 6 Z M 10 6C 10 7.10457 10.8954 8 12 8C 13.1046 8 14 7.10457 14 6C 14 4.89543 13.1046 4 12 4C 10.8954 4 10 4.89543 10 6 Z M 16 6C 16 7.10457 16.8954 8 18 8C 19.1046 8 20 7.10457 20 6C 20 4.89543 19.1046 4 18 4C 16.8954 4 16 4.89543 16 6 Z</Geometry>
+
+    <!-- Subtitles Icon -->
+    <Geometry x:Key="SubtitlesIcon">M 4 4H 20V 20H 4V 4 Z M 8 8H 12V 16H 8V 8 Z M 14 8H 18V 16H 14V 8 Z</Geometry>
+
+    <!-- Audio Icon -->
+    <Geometry x:Key="AudioIcon">M 3 9H 5L 9 5H 11V 19H 9V 15H 5V 9 Z M 13 9L 15 7V 17L 13 15Z</Geometry>
+
+    <!-- Playlist Icon -->
+    <Geometry x:Key="PlaylistIcon">M 5 6H 17V 8H 5V 6 Z M 5 11H 17V 13H 5V 11 Z M 5 16H 13V 18H 5V 16 Z M 15 15L 19 17L 15 19V 15 Z</Geometry>
+
+    <!-- Playlist Shuffle Icon -->
+    <Geometry x:Key="PlaylistShuffleIcon">M 5 7H 7.5L 10 10H 12L 15 7H 19V9H15.8L12.8 12L15.8 15H19V17H15L12 14H10L7.5 17H5L8.5 12L5 7 Z</Geometry>
+
+    <!-- Options Icon -->
+    <Geometry x:Key="OptionsIcon">M 6 4H 8V 10H6V4 Z M 6 14H 8V20H6V14 Z M 11 9H13V15H11V9 Z M 16 4H18V10H16V4 Z M 16 14H18V20H16V14 Z</Geometry>
+    
+    <!-- Play/Pause Combined Icon -->
+    <Geometry x:Key="PlayPauseIcon">M 8 5V 19L 16 12L 8 5 Z</Geometry>
+    
+    <!-- Previous (Revind) Icon -->
+    <Geometry x:Key="RewindIcon">M 8.5 5L 4 12L 8.5 19V 15.5L 12 12L 8.5 8.5V 5 Z M 16 5V 19L 12 12L 16 5 Z</Geometry>
+    
+    <!-- Forward (Fast-Forward) Icon -->
+    <Geometry x:Key="FastForwardIcon">M 15.5 5L 20 12L 15.5 19V 15.5L 12 12L 15.5 8.5V 5 Z M 8 5V 19L 12 12L 8 5 Z</Geometry>
+    
+    <!-- Spinner / Loading Icon -->
+    <Geometry x:Key="SpinnerIcon">M 20 12C 20 16.4183 16.4183 20 12 20C 7.58172 20 4 16.4183 4 12C 4 11.4477 4.44772 11 5 11C 5.55228 11 6 11.4477 6 12C 6 14.7614 8.23858 17 11 17C 11 17 11 17 11 17C 11 17 11 17 11 17C 13.7614 17 16 14.7614 16 12C 16 11.4477 16.4477 11 17 11C 17.5523 11 18 11.4477 18 12C 18 16.4183 14.4183 20 10 20C 5.58172 20 2 16.4183 2 12C 2 7.58172 5.58172 4 10 4C 14.4183 4 18 7.58172 18 12Z M 19 12C 19 17.5228 14.5228 22 9 22C 3.47715 22 0 17.5228 0 12C 0 6.47715 3.47715 2 9 2C 14.5228 2 19 6.47715 19 12Z</Geometry>
+    
+    </Styles.Resources>
+</Styles>

@@ -1,0 +1,353 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:conv="using:Cine.Avalonia.Converters">
+        
+    <Styles.Resources>
+        <conv:PercentConverter x:Key="PercentConverter" />
+    </Styles.Resources>
+    
+    <!-- ======================== -->
+    <!--  RESOURCE DICTIONARIES   -->
+    <!-- ======================== -->
+    <StyleInclude Source="avares://App/UI/Resources/Colors.axaml" />
+    <StyleInclude Source="avares://App/UI/Resources/Typography.axaml" />
+    <StyleInclude Source="avares://App/UI/Resources/Icons.axaml" />
+    
+    <!-- ======================== -->
+    <!--  GLOBAL STYLES           -->
+    <!-- ======================== -->
+    
+    <!-- Window Base Style -->
+    <Style Selector="Window">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontFamily" Value="{StaticResource SystemFont}" />
+        <Setter Property="ExtendClientAreaToDecorationsHint" Value="True" />
+        <Setter Property="TransparencyLevelHint" Value="Blur" />
+    </Style>
+    
+    <!-- ======================== -->
+    <!--  TRANSPORT BUTTONS       -->
+    <!-- ======================== -->
+    
+    <!-- Circular Transport Button -->
+    <Style Selector="Button.circular-transport">
+        <Setter Property="Width" Value="40" />
+        <Setter Property="Height" Value="40" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="20" />
+        <Setter Property="Template">
+            <ControlTemplate TargetType="Button">
+                <Border x:Name="RootBorder"
+                        Background="{TemplateBinding Background}"
+                        CornerRadius="{TemplateBinding CornerRadius}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}">
+                    <ContentPresenter x:Name="ContentPresenter"
+                                      Content="{TemplateBinding Content}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                      Margin="{TemplateBinding Padding}" />
+                </Border>
+            </ControlTemplate>
+        </Setter>
+        <Style Selector="^:pointerover /template/ Border#RootBorder">
+            <Setter Property="Background" Value="{StaticResource ButtonHoverBackground}" />
+        </Style>
+        <Style Selector="^:pressed /template/ Border#RootBorder">
+            <Setter Property="Background" Value="{StaticResource ButtonActiveBackground}" />
+        </Style>
+        <Style Selector="^:disabled /template/ ContentPresenter#ContentPresenter">
+            <Setter Property="Opacity" Value="0.4" />
+        </Style>
+    </Style>
+    
+    <!-- Circular Menu Button -->
+    <Style Selector="Button.circular-menu">
+        <Setter Property="Width" Value="40" />
+        <Setter Property="Height" Value="40" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="20" />
+        <Setter Property="Template">
+            <ControlTemplate TargetType="Button">
+                <Border x:Name="RootBorder"
+                        Background="{TemplateBinding Background}"
+                        CornerRadius="{TemplateBinding CornerRadius}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}">
+                    <ContentPresenter x:Name="ContentPresenter"
+                                      Content="{TemplateBinding Content}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                      Margin="{TemplateBinding Padding}" />
+                </Border>
+            </ControlTemplate>
+        </Setter>
+        <Style Selector="^:pointerover /template/ Border#RootBorder">
+            <Setter Property="Background" Value="{StaticResource ButtonHoverBackground}" />
+        </Style>
+        <Style Selector="^:pressed /template/ Border#RootBorder">
+            <Setter Property="Background" Value="{StaticResource ButtonActiveBackground}" />
+        </Style>
+        <Style Selector="^:disabled /template/ ContentPresenter#ContentPresenter">
+            <Setter Property="Opacity" Value="0.4" />
+        </Style>
+    </Style>
+    
+    <!-- Circular Toggle Button -->
+    <Style Selector="ToggleButton.circular-toggle">
+        <Setter Property="Width" Value="40" />
+        <Setter Property="Height" Value="40" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="20" />
+        <Setter Property="Template">
+            <ControlTemplate TargetType="Button">
+                <Border x:Name="RootBorder"
+                        Background="{TemplateBinding Background}"
+                        CornerRadius="{TemplateBinding CornerRadius}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}">
+                    <ContentPresenter x:Name="ContentPresenter"
+                                      Content="{TemplateBinding Content}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                      Margin="{TemplateBinding Padding}" />
+                </Border>
+            </ControlTemplate>
+        </Setter>
+        <Style Selector="^:pointerover /template/ Border#RootBorder">
+            <Setter Property="Background" Value="{StaticResource ButtonHoverBackground}" />
+        </Style>
+        <Style Selector="^:pressed /template/ Border#RootBorder">
+            <Setter Property="Background" Value="{StaticResource ButtonActiveBackground}" />
+        </Style>
+        <Style Selector="^:checked /template/ Border#RootBorder">
+            <Setter Property="Background" Value="{StaticResource ToggleButtonCheckedBackground}" />
+        </Style>
+        <Style Selector="^:disabled /template/ ContentPresenter#ContentPresenter">
+            <Setter Property="Opacity" Value="0.4" />
+        </Style>
+    </Style>
+    
+    <!-- ======================== -->
+    <!--  VOLUME POPOVER          -->
+    <!-- ======================== -->
+    <Style Selector="Popup.volume-popover">
+        <Setter Property="Placement" Value="Bottom" />
+    </Style>
+    
+    <!-- Volume Popover Content -->
+    <Style Selector="Border.volume-popover-content">
+        <Setter Property="Background" Value="{StaticResource PopoverBackground}" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Padding" Value="12" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="BorderBrush" Value="{StaticResource PopoverBorder}" />
+    </Style>
+    
+    <!-- ======================== -->
+    <!--  VIDEO INFO OVERLAYS     -->
+    <!-- ======================== -->
+    
+    <!-- Position Overlay (bottom-left) -->
+    <Style Selector="Border.video-position-overlay">
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="VerticalAlignment" Value="Bottom" />
+        <Setter Property="Margin" Value="12" />
+        <Setter Property="Padding" Value="8,4" />
+        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="Background" Value="#BD000000" />
+    </Style>
+    
+    <!-- Chapter Badge (top-right) -->
+    <Style Selector="Border.chapter-badge-overlay">
+        <Setter Property="HorizontalAlignment" Value="Right" />
+        <Setter Property="VerticalAlignment" Value="Top" />
+        <Setter Property="Margin" Value="12" />
+        <Setter Property="Padding" Value="8,4" />
+        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="Background" Value="#BD000000" />
+    </Style>
+    
+    <!-- ======================== -->
+    <!--  OSD CONTROLS OVERLAY    -->
+    <!-- ======================== -->
+    
+    <!-- OSD Notification Style -->
+    <Style Selector="Border.OsdNotificationStyle">
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Bottom" />
+        <Setter Property="Margin" Value="0,0,0,80" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Padding" Value="16,10" />
+        <Setter Property="Background" Value="#CC000000" />
+        <Setter Property="Opacity" Value="0" />
+        <Style.Animations>
+            <Animation Duration="0:0:0.30" FillMode="Forward">
+                <KeyFrame Cue="0%">
+                    <Setter Property="Opacity" Value="0" />
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="Opacity" Value="1" />
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
+    
+    <!-- UI Controls Overlay -->
+    <Style Selector="Border.ui-controls-overlay">
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+    
+    <!-- Loading Spinner Animation -->
+    <Style Selector="Border.loading-spinner">
+        <Style.Animations>
+            <Animation Duration="0:0:1" IterationCount="INFINITE">
+                <KeyFrame Cue="0%">
+                    <Setter Property="RotateTransform.Angle" Value="0"/>
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="RotateTransform.Angle" Value="360"/>
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
+    
+    <!-- Header Bar -->
+    <Style Selector="Border.header-bar">
+        <Setter Property="Height" Value="50" />
+        <Setter Property="VerticalAlignment" Value="Top" />
+        <Setter Property="Background" Value="{StaticResource HeaderGradient}" />
+    </Style>
+    
+    <!-- Controls Box (bottom area with gradient) -->
+    <Style Selector="Border.controls-box">
+        <Setter Property="Height" Value="120" />
+        <Setter Property="VerticalAlignment" Value="Bottom" />
+        <Setter Property="Background" Value="{StaticResource ControlsGradient}" />
+        <Setter Property="Padding" Value="0,0,0,20" />
+    </Style>
+    
+    <!-- ======================== -->
+    <!--  TEXT STYLES             -->
+    <!-- ======================== -->
+    
+    <!-- Time Labels -->
+    <Style Selector="TextBlock.time-label">
+        <Setter Property="FontFamily" Value="{StaticResource NumericFont}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    
+    <!-- Speed Display -->
+    <Style Selector="TextBlock.speed-display">
+        <Setter Property="FontFamily" Value="{StaticResource NumericFont}" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    
+    <!-- Status Text -->
+    <Style Selector="TextBlock.status-text">
+        <Setter Property="FontFamily" Value="{StaticResource NumericFont}" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Foreground" Value="#AAAAAA" />
+    </Style>
+    
+    <!-- Seek Slider -->
+    <Style Selector="Slider.seek-slider">
+        <Setter Property="Height" Value="32" />
+        <Setter Property="Template">
+            <ControlTemplate TargetType="Slider">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Track (trough) -->
+                    <Border Grid.Row="1"
+                            Background="{StaticResource ProgressTroughBackground}"
+                            CornerRadius="2"
+                            Height="4"
+                            VerticalAlignment="Center"
+                            Margin="0" />
+                    
+                    <!-- Filled portion -->
+                    <Border Grid.Row="1"
+                            Background="{StaticResource ProgressSliderBackground}"
+                            CornerRadius="2"
+                            Height="4"
+                            VerticalAlignment="Center"
+                            Margin="0">
+                        <Border.Clip>
+                            <RectangleGeometry Rect="{Binding Value, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource PercentConverter}}" />
+                        </Border.Clip>
+                    </Border>
+                    
+                    <!-- Thumb -->
+                    <Ellipse Grid.Row="1"
+                             Width="16" Height="16"
+                             Fill="{StaticResource ProgressSliderBackground}"
+                             HorizontalAlignment="Left"
+                             VerticalAlignment="Center"
+                             Margin="-8,0,0,0" />
+                </Grid>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    
+    <!-- Volume Slider -->
+    <Style Selector="Slider.volume-slider">
+        <Setter Property="Width" Value="180" />
+        <Setter Property="Minimum" Value="0" />
+        <Setter Property="Maximum" Value="130" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Template">
+            <ControlTemplate TargetType="Slider">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Track (trough) -->
+                    <Border Grid.Row="1"
+                            Background="{StaticResource VolumeTroughBackground}"
+                            CornerRadius="2"
+                            Height="4"
+                            VerticalAlignment="Center" />
+                    
+                    <!-- Thumb -->
+                    <Ellipse Grid.Row="1"
+                             Width="14" Height="14"
+                             Fill="{StaticResource VolumeSliderBackground}"
+                             HorizontalAlignment="Left"
+                             VerticalAlignment="Center"
+                             Margin="-7,0,0,0" />
+                </Grid>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    
+</Styles>

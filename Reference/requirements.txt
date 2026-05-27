@@ -1,4 +1,0 @@
-pygobject
-python-mpv
-pyinstaller
-# blueprint-compiler (needs to be installed via pip or system)

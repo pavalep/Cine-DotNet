@@ -1,1 +1,0 @@
-dotnet build X:\Development\Cine-main\Windows-Native\Cine.Avalonia\Cine.Avalonia.csproj 2>&1
