@@ -6,11 +6,13 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using Avalonia.Threading;
 using Cine.Media.Interfaces;
 using Cine.Media.Models;
 using Cine.Media.Events;
+using Cine.Media.Implementations;
 
 namespace Cine.Avalonia.ViewModels;
 
@@ -20,13 +22,11 @@ namespace Cine.Avalonia.ViewModels;
 public class MainViewModel : INotifyPropertyChanged
 {
     private readonly IMediaPlayer _player;
-    private readonly DispatcherTimer _positionTimer;
-
     // --- Bindable state ---
-    private PlaybackState _state;
+    private PlaybackState _state = PlaybackState.Stopped;
     private string _positionText = string.Empty;
     private string _durationText = string.Empty;
-    private double _volumeValue;
+    private double _volumeValue = 100;
     private double _speedValue;
     private double _seekValue;
     private bool _isMuted;
@@ -40,12 +40,15 @@ public class MainViewModel : INotifyPropertyChanged
     private bool _hasMultiplePlaylistItems;
     private bool _hasMultipleVideoTracks;
 
-    // --- Collections ---
-    public ObservableCollection<string> SubtitleTracks { get; } = new();
-    public ObservableCollection<string> AudioTracks { get; } = new();
-    public ObservableCollection<string> VideoTracks { get; } = new();
+    // --- Typed track collections (replaces plain string lists) ---
+    public ObservableCollection<TrackMenuItem> SubtitleTracks { get; } = new();
+    public ObservableCollection<TrackMenuItem> AudioTracks { get; } = new();
+    public ObservableCollection<TrackMenuItem> VideoTracks { get; } = new();
+
+    // --- Other collections ---
     public ObservableCollection<ChapterInfo> Chapters { get; } = new();
     public ObservableCollection<string> Playlist { get; } = new();
+    public ObservableCollection<PlaylistItemViewModel> PlaylistItems { get; } = new();
     public ObservableCollection<double> ChapterMarkers { get; } = new();
 
     // --- Commands ---
@@ -73,13 +76,12 @@ public class MainViewModel : INotifyPropertyChanged
         _player.TrackListChanged += OnTrackListChanged;
         _player.PlaylistChanged += OnPlaylistChanged;
         _player.LoopChangedEvent += OnLoopChanged;
+        _player.PositionChanged += OnPositionChanged;
 
-        // Position polling timer (matching Python's property_observer pattern)
-        _positionTimer = new DispatcherTimer
+        if (_player is MediaFoundationPlayer mfPlayer)
         {
-            Interval = TimeSpan.FromMilliseconds(100)
-        };
-        _positionTimer.Tick += OnPositionTick;
+            mfPlayer.PlaybackStateChangedEvent += OnPlaybackStateChanged;
+        }
 
         // Initialize commands
         OpenFilesCommand = new RelayCommand(async _ => await OnOpenFiles());
@@ -87,6 +89,80 @@ public class MainViewModel : INotifyPropertyChanged
         AddFilesCommand = new RelayCommand(async _ => await OnAddFiles());
         AddSubtitleCommand = new RelayCommand(async _ => await OnAddSubtitle());
         AddAudioCommand = new RelayCommand(async _ => await OnAddAudio());
+
+        // Build initial empty track menus with placeholder entries
+        BuildEmptyTrackMenus();
+    }
+
+    /// <summary>Initializes track menus with "Add..." and "None" pseudo-entries.</summary>
+    private void BuildEmptyTrackMenus()
+    {
+        SubtitleTracks.Add(new TrackMenuItem("Add Subtitle Track…", TrackType.Subtitle, -1, OnSelectSubtitle));
+        SubtitleTracks.Add(new TrackMenuItem("None", TrackType.Subtitle, -2, OnSelectSubtitle));
+
+        AudioTracks.Add(new TrackMenuItem("Add Audio Track…", TrackType.Audio, -1, OnSelectAudio));
+        AudioTracks.Add(new TrackMenuItem("None", TrackType.Audio, -2, OnSelectAudio));
+
+        VideoTracks.Add(new TrackMenuItem("No video tracks", TrackType.Video, -1, OnSelectVideo));
+    }
+
+    // ---- Track selection handlers ----
+
+    private void OnSelectSubtitle(TrackMenuItem item)
+    {
+        if (item.DisplayName == "Add Subtitle Track…")
+        {
+            _ = OnAddSubtitle();
+            return;
+        }
+
+        if (item.DisplayName == "None")
+        {
+            // Just select a negative track index to turn off subtitles in mpv
+            _player.SelectSubtitleTrack(-1);
+            foreach (var t in SubtitleTracks) t.RefreshSelection(false);
+            item.RefreshSelection(true);
+            return;
+        }
+
+        if (item.TrackIndex >= 0)
+        {
+            _player.SelectSubtitleTrack(item.TrackIndex);
+            foreach (var t in SubtitleTracks) t.RefreshSelection(false);
+            item.RefreshSelection(true);
+        }
+    }
+
+    private void OnSelectAudio(TrackMenuItem item)
+    {
+        if (item.DisplayName == "Add Audio Track…")
+        {
+            _ = OnAddAudio();
+            return;
+        }
+
+        if (item.DisplayName == "None")
+        {
+            // Fallback/No audio
+            return;
+        }
+
+        if (item.TrackIndex >= 0)
+        {
+            _player.SelectAudioTrack(item.TrackIndex);
+            foreach (var t in AudioTracks) t.RefreshSelection(false);
+            item.RefreshSelection(true);
+        }
+    }
+
+    private void OnSelectVideo(TrackMenuItem item)
+    {
+        if (item.TrackIndex >= 0)
+        {
+            _player.SelectAudioTrack(item.TrackIndex); // Uses existing track indexer under hood
+            foreach (var t in VideoTracks) t.RefreshSelection(false);
+            item.RefreshSelection(true);
+        }
     }
 
     private async Task OnOpenFiles()
@@ -118,14 +194,15 @@ public class MainViewModel : INotifyPropertyChanged
     {
         if (RequestSubtitleFileAsync == null) return;
         var path = await RequestSubtitleFileAsync();
-        // TODO: wire subtitle loading to player
+        if (!string.IsNullOrWhiteSpace(path))
+            _player.AddSubtitle(path);
     }
 
     private async Task OnAddAudio()
     {
         if (RequestAudioFileAsync == null) return;
         var path = await RequestAudioFileAsync();
-        // TODO: wire audio track loading to player
+        // TODO: wire audio track loading to player when supported
     }
 
     // --- Playback commands ---
@@ -138,6 +215,21 @@ public class MainViewModel : INotifyPropertyChanged
     }
 
     public void Stop() => _player.Stop();
+    public int PlaylistPosition
+    {
+        get => _player.PlaylistPosition;
+        set
+        {
+            _player.PlaylistPosition = value;
+            OnPropertyChanged();
+            foreach (var item in PlaylistItems) item.NotifyPlayingChanged();
+        }
+    }
+
+    public void PlayPlaylistItem(int index)
+    {
+        PlaylistPosition = index;
+    }
     public void SeekForward() => _player.Seek(Position + TimeSpan.FromSeconds(5));
     public void SeekBackward() => _player.Seek(Position - TimeSpan.FromSeconds(5));
     public void SeekLargeForward() => _player.Seek(Position + TimeSpan.FromSeconds(60));
@@ -223,6 +315,68 @@ public class MainViewModel : INotifyPropertyChanged
         set { _speedValue = value; _player.Speed = value; OnPropertyChanged(); }
     }
 
+    public double ContrastValue
+    {
+        get => _player.Contrast;
+        set { _player.Contrast = value; OnPropertyChanged(); }
+    }
+
+    public double BrightnessValue
+    {
+        get => _player.Brightness;
+        set { _player.Brightness = value; OnPropertyChanged(); }
+    }
+
+    public double GammaValue
+    {
+        get => _player.Gamma;
+        set { _player.Gamma = value; OnPropertyChanged(); }
+    }
+
+    public double SaturationValue
+    {
+        get => _player.Saturation;
+        set { _player.Saturation = value; OnPropertyChanged(); }
+    }
+
+    public double HueValue
+    {
+        get => _player.Hue;
+        set { _player.Hue = value; OnPropertyChanged(); }
+    }
+
+    public float SubtitleDelayValue
+    {
+        get => _player.SubtitleDelay;
+        set { _player.SubtitleDelay = value; OnPropertyChanged(); }
+    }
+
+    public float AudioDelayValue
+    {
+        get => _player.AudioDelay;
+        set { _player.AudioDelay = value; OnPropertyChanged(); }
+    }
+
+    // --- Reset Commands ---
+    public void ResetContrast() => ContrastValue = 0;
+    public void ResetBrightness() => BrightnessValue = 0;
+    public void ResetGamma() => GammaValue = 1;
+    public void ResetSaturation() => SaturationValue = 1;
+    public void ResetHue() => HueValue = 0;
+    public void ResetSubtitleDelay() => SubtitleDelayValue = 0;
+    public void ResetAudioDelay() => AudioDelayValue = 0;
+    public void ResetAllOptions()
+    {
+        ResetContrast();
+        ResetBrightness();
+        ResetGamma();
+        ResetSaturation();
+        ResetHue();
+        ResetSubtitleDelay();
+        ResetAudioDelay();
+        ResetSpeed();
+    }
+
     public double SeekValue
     {
         get => _seekValue;
@@ -240,7 +394,7 @@ public class MainViewModel : INotifyPropertyChanged
     public bool IsMuted
     {
         get => _isMuted;
-        set { _isMuted = value; _player.IsMuted = value; OnPropertyChanged(); }
+        set { _isMuted = value; OnPropertyChanged(); }
     }
 
     public string FilePath
@@ -316,13 +470,24 @@ public class MainViewModel : INotifyPropertyChanged
     }
 
     // --- Internal helpers ---
-    private void OnPositionTick(object? sender, EventArgs e)
+    private void OnPositionChanged(object? sender, PositionChangedEventArgs e)
     {
-        PositionText = FormatTime(_player.Position);
-        DurationText = FormatTime(_player.Duration);
-        SeekValue = Duration.TotalSeconds > 0
-            ? _player.Position.TotalSeconds / Duration.TotalSeconds
-            : 0;
+        Dispatcher.UIThread.Post(() =>
+        {
+            PositionText = FormatTime(e.Position);
+            DurationText = FormatTime(_player.Duration);
+            SeekValue = Duration.TotalSeconds > 0
+                ? e.Position.TotalSeconds / Duration.TotalSeconds
+                : 0;
+        });
+    }
+
+    private void OnPlaybackStateChanged(object? sender, PlaybackStateChangedEventArgs e)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            State = e.IsPaused ? PlaybackState.Paused : PlaybackState.Playing;
+        });
     }
 
     private void OnMediaOpened(object? sender, EventArgs e)
@@ -330,28 +495,82 @@ public class MainViewModel : INotifyPropertyChanged
         RefreshState();
     }
 
+    /// <summary>
+    /// Rebuilds typed track menu items from player track list events.
+    /// Matches Python's _update_track_menus() behavior: preserves "Add..." and "None"
+    /// pseudo-entries at the top, followed by actual tracks with language/state info.
+    /// </summary>
     private void OnTrackListChanged(object? sender, TrackListChangedEventArgs e)
     {
         Dispatcher.UIThread.Post(() =>
         {
+            // --- Subtitle tracks ---
             SubtitleTracks.Clear();
-            SubtitleTracks.Add("Add Subtitle Track");
-            SubtitleTracks.Add("None");
-            foreach (var track in e.SubtitleTracks)
-                SubtitleTracks.Add(FormatTrack("Sub", track));
-            IsSubtitleEnabled = e.SubtitleTracks.Any(t => t.IsEnabled);
+            SubtitleTracks.Add(new TrackMenuItem("Add Subtitle Track…", TrackType.Subtitle, -1, OnSelectSubtitle));
+            SubtitleTracks.Add(new TrackMenuItem("None", TrackType.Subtitle, -2, OnSelectSubtitle));
+            if (e.SubtitleTracks != null)
+            {
+                int idx = 0;
+                foreach (var track in e.SubtitleTracks)
+                {
+                    var item = new TrackMenuItem(
+                        FormatTrack("Sub", track),
+                        TrackType.Subtitle,
+                        idx,
+                        OnSelectSubtitle,
+                        track
+                    );
+                    item.IsSelected = track.IsEnabled;
+                    SubtitleTracks.Add(item);
+                    idx++;
+                }
+            }
+            IsSubtitleEnabled = e.SubtitleTracks?.Any(t => t.IsEnabled) ?? true;
 
+            // --- Audio tracks ---
             AudioTracks.Clear();
-            AudioTracks.Add("Add Audio Track");
-            AudioTracks.Add("None");
-            foreach (var track in e.AudioTracks)
-                AudioTracks.Add(FormatTrack("Audio", track));
-            IsAudioEnabled = e.AudioTracks.Any(t => t.IsEnabled);
+            AudioTracks.Add(new TrackMenuItem("Add Audio Track…", TrackType.Audio, -1, OnSelectAudio));
+            AudioTracks.Add(new TrackMenuItem("None", TrackType.Audio, -2, OnSelectAudio));
+            if (e.AudioTracks != null)
+            {
+                int idx = 0;
+                foreach (var track in e.AudioTracks)
+                {
+                    var item = new TrackMenuItem(
+                        FormatTrack("Audio", track),
+                        TrackType.Audio,
+                        idx,
+                        OnSelectAudio,
+                        track
+                    );
+                    item.IsSelected = track.IsEnabled;
+                    AudioTracks.Add(item);
+                    idx++;
+                }
+            }
+            IsAudioEnabled = e.AudioTracks?.Any(t => t.IsEnabled) ?? true;
 
+            // --- Video tracks ---
             VideoTracks.Clear();
-            foreach (var track in e.VideoTracks)
-                VideoTracks.Add(FormatTrack("Video", track));
-            HasMultipleVideoTracks = e.VideoTracks.Count() > 1;
+            VideoTracks.Add(new TrackMenuItem("No video tracks", TrackType.Video, -1, OnSelectVideo));
+            if (e.VideoTracks != null)
+            {
+                int idx = 0;
+                foreach (var track in e.VideoTracks)
+                {
+                    var item = new TrackMenuItem(
+                        FormatTrack("Video", track),
+                        TrackType.Video,
+                        idx,
+                        OnSelectVideo,
+                        track
+                    );
+                    item.IsSelected = track.IsEnabled;
+                    VideoTracks.Add(item);
+                    idx++;
+                }
+            }
+            HasMultipleVideoTracks = e.VideoTracks?.Count() > 1;
         });
     }
 
@@ -360,10 +579,17 @@ public class MainViewModel : INotifyPropertyChanged
         Dispatcher.UIThread.Post(() =>
         {
             Playlist.Clear();
+            PlaylistItems.Clear();
+            int idx = 0;
             foreach (var item in e.PlaylistItems)
+            {
                 Playlist.Add(item);
+                PlaylistItems.Add(new PlaylistItemViewModel(this, idx, item));
+                idx++;
+            }
             RefreshPlaylistState();
             HasMultiplePlaylistItems = Playlist.Count > 1;
+            foreach (var item in PlaylistItems) item.NotifyPlayingChanged();
         });
     }
 
@@ -408,6 +634,7 @@ public class MainViewModel : INotifyPropertyChanged
         IsLoopPlaylistEnabled = _player.LoopMode == LoopMode.Playlist;
     }
 
+    /// <summary>Formats a subtitle/audio/video track for display in a menu flyout.</summary>
     private static string FormatTrack(string prefix, SubtitleSource track)
     {
         var lang = string.IsNullOrWhiteSpace(track.Language) ? "und" : track.Language;

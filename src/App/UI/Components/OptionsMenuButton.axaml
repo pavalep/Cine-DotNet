@@ -1,0 +1,100 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Cine.Avalonia.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="600"
+             x:Class="Cine.Avalonia.Components.OptionsMenuButton"
+             x:DataType="vm:MainViewModel">
+
+    <Button x:Name="BtnOptionsMenu"
+            Classes="circular-menu"
+            ToolTip.Tip="Options"
+            Margin="2">
+        <Path Data="{StaticResource OptionsIcon}"
+              Width="16" Height="16" Stretch="Uniform"
+              Fill="{StaticResource OsdForeground}" />
+        <Button.Flyout>
+            <Flyout Placement="Bottom">
+                <ScrollViewer MaxHeight="400" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Spacing="16" Width="260" Margin="8">
+                        
+                        <Button Content="Reset All" 
+                                HorizontalAlignment="Stretch" 
+                                HorizontalContentAlignment="Center"
+                                Click="OnResetAllClick" />
+
+                        <!-- Zoom -->
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <Label Grid.Column="0" Content="Zoom" Classes="heading" VerticalAlignment="Center"/>
+                            <!-- Assuming MPV handles this, but since we don't have it in IMediaPlayer yet we can leave it out or mock it -->
+                        </Grid>
+
+                        <!-- Contrast -->
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <Label Grid.Column="0" Content="Contrast" Classes="heading" VerticalAlignment="Center"/>
+                            <Slider Grid.Column="1" Minimum="-100" Maximum="100" Value="{Binding ContrastValue}" Margin="8,0" VerticalAlignment="Center"/>
+                            <Button Grid.Column="2" Content="↺" Click="OnResetContrastClick" Classes="flat" VerticalAlignment="Center" Padding="4"/>
+                        </Grid>
+
+                        <!-- Brightness -->
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <Label Grid.Column="0" Content="Brightness" Classes="heading" VerticalAlignment="Center"/>
+                            <Slider Grid.Column="1" Minimum="-100" Maximum="100" Value="{Binding BrightnessValue}" Margin="8,0" VerticalAlignment="Center"/>
+                            <Button Grid.Column="2" Content="↺" Click="OnResetBrightnessClick" Classes="flat" VerticalAlignment="Center" Padding="4"/>
+                        </Grid>
+
+                        <!-- Gamma -->
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <Label Grid.Column="0" Content="Gamma" Classes="heading" VerticalAlignment="Center"/>
+                            <Slider Grid.Column="1" Minimum="-100" Maximum="100" Value="{Binding GammaValue}" Margin="8,0" VerticalAlignment="Center"/>
+                            <Button Grid.Column="2" Content="↺" Click="OnResetGammaClick" Classes="flat" VerticalAlignment="Center" Padding="4"/>
+                        </Grid>
+
+                        <!-- Saturation -->
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <Label Grid.Column="0" Content="Saturation" Classes="heading" VerticalAlignment="Center"/>
+                            <Slider Grid.Column="1" Minimum="-100" Maximum="100" Value="{Binding SaturationValue}" Margin="8,0" VerticalAlignment="Center"/>
+                            <Button Grid.Column="2" Content="↺" Click="OnResetSaturationClick" Classes="flat" VerticalAlignment="Center" Padding="4"/>
+                        </Grid>
+
+                        <!-- Hue -->
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <Label Grid.Column="0" Content="Hue" Classes="heading" VerticalAlignment="Center"/>
+                            <Slider Grid.Column="1" Minimum="-100" Maximum="100" Value="{Binding HueValue}" Margin="8,0" VerticalAlignment="Center"/>
+                            <Button Grid.Column="2" Content="↺" Click="OnResetHueClick" Classes="flat" VerticalAlignment="Center" Padding="4"/>
+                        </Grid>
+
+                        <!-- Subtitle Delay -->
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <Label Grid.Column="0" Content="Subtitle Delay" Classes="heading" VerticalAlignment="Center"/>
+                            <Slider Grid.Column="1" Minimum="-10" Maximum="10" Value="{Binding SubtitleDelayValue}" Margin="8,0" VerticalAlignment="Center"/>
+                            <Button Grid.Column="2" Content="↺" Click="OnResetSubtitleDelayClick" Classes="flat" VerticalAlignment="Center" Padding="4"/>
+                        </Grid>
+
+                        <!-- Audio Delay -->
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <Label Grid.Column="0" Content="Audio Delay" Classes="heading" VerticalAlignment="Center"/>
+                            <Slider Grid.Column="1" Minimum="-10" Maximum="10" Value="{Binding AudioDelayValue}" Margin="8,0" VerticalAlignment="Center"/>
+                            <Button Grid.Column="2" Content="↺" Click="OnResetAudioDelayClick" Classes="flat" VerticalAlignment="Center" Padding="4"/>
+                        </Grid>
+
+                        <!-- Playback Speed -->
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <Label Grid.Column="0" Content="Speed" Classes="heading" VerticalAlignment="Center"/>
+                            <Slider Grid.Column="1" Minimum="0.25" Maximum="4" Value="{Binding SpeedValue}" Margin="8,0" VerticalAlignment="Center"/>
+                            <Button Grid.Column="2" Content="↺" Click="OnResetSpeedClick" Classes="flat" VerticalAlignment="Center" Padding="4"/>
+                        </Grid>
+
+                        <Separator />
+                        <Button Content="Take Screenshot" 
+                                HorizontalAlignment="Stretch" 
+                                HorizontalContentAlignment="Center"
+                                Click="OnScreenshotClick" />
+
+                    </StackPanel>
+                </ScrollViewer>
+            </Flyout>
+        </Button.Flyout>
+    </Button>
+</UserControl>

@@ -63,6 +63,7 @@
 
     <!-- Playlist Icon -->
     <Geometry x:Key="PlaylistIcon">M 5 6H 17V 8H 5V 6 Z M 5 11H 17V 13H 5V 11 Z M 5 16H 13V 18H 5V 16 Z M 15 15L 19 17L 15 19V 15 Z</Geometry>
+    <Geometry x:Key="PlaylistAddIcon">M 14 10H 12V 14H 8V 16H 12V 20H 14V 16H 18V 14H 14V 10 Z M 4 6H 20V 8H 4V 6 Z M 4 10H 10V 12H 4V 10 Z M 4 14H 6V 16H 4V 14 Z</Geometry>
 
     <!-- Playlist Shuffle Icon -->
     <Geometry x:Key="PlaylistShuffleIcon">M 5 7H 7.5L 10 10H 12L 15 7H 19V9H15.8L12.8 12L15.8 15H19V17H15L12 14H10L7.5 17H5L8.5 12L5 7 Z</Geometry>

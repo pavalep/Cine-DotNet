@@ -215,6 +215,9 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
     {
         get => _isShuffled; set { SetShuffle(value); }
     }
+    public event EventHandler<PlaybackStateChangedEventArgs>? PlaybackStateChangedEvent;
+    public event EventHandler? MediaEnded;
+
     public bool IsFullscreen
     {
         get => _isFullscreen; set { SetFullscreen(value); }
@@ -400,6 +403,9 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
             FileLoaded?.Invoke(this, new MediaEventArgs(_currentFilePath));
             _openedFired = true;
             Opened?.Invoke(this, EventArgs.Empty);
+            
+            // Auto-play when media is loaded
+            Play();
         };
         _mfSampleReadyHandler = (s, e) =>
         {
@@ -435,6 +441,7 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
         _mfPlaybackEndedHandler = (s, e) =>
         {
             _mfHelper?.StopPlayback();
+            MediaEnded?.Invoke(this, EventArgs.Empty);
             EndFile?.Invoke(this, new MediaEventArgs(_currentFilePath));
         };
         _mfErrorHandler = (s, e) =>
@@ -461,6 +468,13 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
         _renderer?.ResizeBuffers(width, height);
     }
 
+    public void Command(string command, params string[] args)
+    {
+        // For Media Foundation, most mpv commands are either unsupported or handled via properties.
+        // This is a stub implementation to fulfill the IMediaPlayer interface.
+        // Full command routing is only available in libmpv implementations.
+    }
+
     #endregion
 
     #region Public Methods
@@ -481,6 +495,8 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
         try
         {
             _currentFilePath = path;
+            
+            EnsurePositionTimer();
 
             if (_nativeRendering)
             {
@@ -521,6 +537,18 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
         }
     }
 
+    public void SetPause(bool pause)
+    {
+        if (pause)
+        {
+            Pause();
+        }
+        else
+        {
+            Play();
+        }
+    }
+
     public void Play()
     {
         if (_currentState == PlaybackState.Playing) return;
@@ -534,6 +562,7 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
             StartPositionTracking();
             PlaybackResumed?.Invoke(this,
                 new PlaybackStateEventArgs(PlaybackState.Playing, PlaybackState.Paused));
+            PlaybackStateChangedEvent?.Invoke(this, new PlaybackStateChangedEventArgs(false));
         }
         else
         {
@@ -544,6 +573,7 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
             StartPositionTracking();
             PlaybackResumed?.Invoke(this,
                 new PlaybackStateEventArgs(PlaybackState.Playing, PlaybackState.Paused));
+            PlaybackStateChangedEvent?.Invoke(this, new PlaybackStateChangedEventArgs(false));
         }
     }
 
@@ -561,6 +591,7 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
         StopPositionTracking();
         PlaybackPaused?.Invoke(this,
             new PlaybackStateEventArgs(PlaybackState.Paused, previous));
+        PlaybackStateChangedEvent?.Invoke(this, new PlaybackStateChangedEventArgs(true));
     }
 
     public void Stop()
@@ -861,6 +892,7 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
     {
         _currentState = PlaybackState.Stopped;
         StopPositionTracking();
+        MediaEnded?.Invoke(this, EventArgs.Empty);
         EndFile?.Invoke(this, new MediaEventArgs(_currentFilePath));
     }
 

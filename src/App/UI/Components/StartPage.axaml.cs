@@ -23,17 +23,13 @@ public partial class StartPage : global::Avalonia.Controls.UserControl
     /// <summary>Shows the start page overlay.</summary>
     public void Show()
     {
-        var root = this.FindControl<Border>("StartPageRoot");
-        if (root != null)
-            root.IsVisible = true;
+        IsVisible = true;
     }
 
     /// <summary>Hides the start page overlay.</summary>
     public void Hide()
     {
-        var root = this.FindControl<Border>("StartPageRoot");
-        if (root != null)
-            root.IsVisible = false;
+        IsVisible = false;
     }
 
     /// <summary>Filters file paths to only video extensions matching Python reference.</summary>

@@ -145,6 +145,83 @@
     </Style>
     
     <!-- ======================== -->
+    <!--  POPOVER / FLYOUTS       -->
+    <!-- ======================== -->
+    <Style Selector="FlyoutPresenter">
+        <Setter Property="Background" Value="{StaticResource PopoverBackground}" />
+        <Setter Property="BorderBrush" Value="{StaticResource PopoverBorder}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Padding" Value="0" />
+    </Style>
+
+    <Style Selector="FlyoutPresenter /template/ Border#PART_LayoutRoot">
+        <Setter Property="BoxShadow" Value="0 1 4 0 #54000000" />
+    </Style>
+
+    <Style Selector="MenuFlyoutPresenter">
+        <Setter Property="Background" Value="{StaticResource PopoverBackground}" />
+        <Setter Property="BorderBrush" Value="{StaticResource PopoverBorder}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Padding" Value="4" />
+    </Style>
+
+    <Style Selector="MenuFlyoutPresenter /template/ Border#PART_LayoutRoot">
+        <Setter Property="BoxShadow" Value="0 1 4 0 #54000000" />
+    </Style>
+    
+    <!-- ======================== -->
+    <!--  START PAGE BUTTONS      -->
+    <!-- ======================== -->
+    <Style Selector="Button.start-page-button">
+        <Setter Property="Height" Value="40" />
+        <Setter Property="CornerRadius" Value="20" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Background" Value="#1FFFFFFF" />
+        <Setter Property="Foreground" Value="#E5E5E5" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1" />
+            </Transitions>
+        </Setter>
+        <Setter Property="RenderTransform" Value="scale(1)" />
+        <Setter Property="Template">
+            <ControlTemplate TargetType="Button">
+                <Border x:Name="RootBorder"
+                        Background="{TemplateBinding Background}"
+                        CornerRadius="{TemplateBinding CornerRadius}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}">
+                    <ContentPresenter x:Name="ContentPresenter"
+                                      Content="{TemplateBinding Content}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                      Margin="{TemplateBinding Padding}" />
+                </Border>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    <Style Selector="Button.start-page-button:pointerover /template/ Border#RootBorder">
+        <Setter Property="Background" Value="#26FFFFFF" />
+    </Style>
+    <Style Selector="Button.start-page-button:pressed">
+        <Setter Property="RenderTransform" Value="scale(0.98)" />
+    </Style>
+
+    <Style Selector="Button.start-page-suggested-action">
+        <Setter Property="Background" Value="#E5E5E5" />
+        <Setter Property="Foreground" Value="Black" />
+    </Style>
+    <Style Selector="Button.start-page-suggested-action:pointerover /template/ Border#RootBorder">
+        <Setter Property="Background" Value="White" />
+    </Style>
+
+    <!-- ======================== -->
     <!--  VOLUME POPOVER          -->
     <!-- ======================== -->
     <Style Selector="Popup.volume-popover">
@@ -209,6 +286,11 @@
         </Style.Animations>
     </Style>
     
+    <!-- OSD Text & Icon Shadows -->
+    <Style Selector="Border.header-bar Path, Border.header-bar TextBlock, Border.controls-box Path, Border.controls-box TextBlock">
+        <Setter Property="Effect" Value="drop-shadow(0 1 6 #99000000)" />
+    </Style>
+
     <!-- UI Controls Overlay -->
     <Style Selector="Border.ui-controls-overlay">
         <Setter Property="HorizontalAlignment" Value="Stretch" />
@@ -330,14 +412,14 @@
                         <RowDefinition Height="*" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
-                    
+
                     <!-- Track (trough) -->
                     <Border Grid.Row="1"
                             Background="{StaticResource VolumeTroughBackground}"
                             CornerRadius="2"
                             Height="4"
                             VerticalAlignment="Center" />
-                    
+
                     <!-- Thumb -->
                     <Ellipse Grid.Row="1"
                              Width="14" Height="14"
@@ -349,5 +431,25 @@
             </ControlTemplate>
         </Setter>
     </Style>
-    
+
+    <!-- ======================== -->
+    <!--  TRACK MENU ITEMS        -->
+    <!-- ======================== -->
+
+    <!-- MenuItem style for track selection items -->
+    <Style Selector="MenuItem.track-item">
+        <Setter Property="Padding" Value="12,6" />
+        <Setter Property="MinWidth" Value="160" />
+    </Style>
+
+    <!-- Selected track indicator - bold text accent color for active track -->
+    <Style Selector="MenuItem.track-item:selected">
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <!-- Pseudo-entry styling (None, Add...) -->
+    <Style Selector="MenuItem.track-pseudo">
+        <Setter Property="Opacity" Value="0.75" />
+    </Style>
+
 </Styles>

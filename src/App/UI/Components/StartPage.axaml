@@ -4,68 +4,46 @@
              x:Class="Cine.Avalonia.Controls.StartPage"
              x:DataType="vm:MainViewModel">
 
-    <!-- Start Page / Welcome Screen matching Python GTK4 drag-and-drop behavior -->
+    <!-- Start Page / Welcome Screen matching Python GTK4 behavior -->
     <Border x:Name="StartPageRoot"
             HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
             Background="{DynamicResource StartPageBackground}"
-            CornerRadius="0"
-            IsVisible="False">
+            CornerRadius="0">
 
-        <Border x:Name="DropTarget"
-                HorizontalAlignment="Center" VerticalAlignment="Center"
-                Width="480" Height="320"
-                CornerRadius="16"
-                BorderThickness="2"
-                BorderBrush="#40FFFFFF"
-                Background="#20FFFFFF"
-                IsHitTestVisible="True">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Spacing="12" Margin="0,48,0,0">
 
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
-                        Spacing="16">
+            <!-- Icon -->
+            <Path Data="M 12 2C 6.48 2 2 6.48 2 12C 2 17.52 6.48 22 12 22C 17.52 22 22 17.52 22 12C 22 6.48 17.52 2 12 2 Z M 10 16.5V 7.5L 16 12L 10 16.5 Z"
+                  Width="96" Height="96" Stretch="Uniform"
+                  Fill="#80E5E5E5"
+                  HorizontalAlignment="Center"
+                  Margin="0,0,0,16" />
 
-                <!-- Film icon -->
-                <TextBlock Text="🎬"
-                           FontSize="48"
-                           HorizontalAlignment="Center"
-                           Opacity="0.6" />
+            <!-- Drop text -->
+            <TextBlock Text="Drag and Drop Files Here"
+                       FontFamily="{StaticResource SystemFont}"
+                       FontSize="24"
+                       FontWeight="Bold"
+                       Foreground="#E5E5E5"
+                       HorizontalAlignment="Center"
+                       Margin="0,0,0,12" />
 
-                <!-- Drop text -->
-                <TextBlock Text="Drop video files here"
-                           FontFamily="{StaticResource SystemFont}"
-                           FontSize="18"
-                           FontWeight="Medium"
-                           Foreground="{StaticResource OsdForeground}"
-                           HorizontalAlignment="Center"
-                           Opacity="0.8" />
+            <!-- Open button -->
+            <Button x:Name="BtnOpenFile"
+                    Classes="start-page-button start-page-suggested-action"
+                    Content="Open…"
+                    Width="140"
+                    HorizontalAlignment="Center"
+                    Click="BtnOpenFile_Click" />
 
-                <!-- Subtitle -->
-                <TextBlock Text="or click the button below"
-                           FontFamily="{StaticResource SystemFont}"
-                           FontSize="13"
-                           Foreground="{StaticResource OsdForeground}"
-                           HorizontalAlignment="Center"
-                           Opacity="0.5" />
-
-                <!-- Open button -->
-                <Button x:Name="BtnOpenFile"
-                        Classes="circular-transport"
-                        Content="Open..."
-                        Width="140" Height="40"
-                        Background="#FFE5E5E5"
-                        Foreground="Black"
-                        HorizontalAlignment="Center"
-                        Margin="0,12,0,0"
-                        Click="BtnOpenFile_Click" />
-
-                <Button x:Name="BtnOpenFolder"
-                        Classes="circular-transport"
-                        Content="Open Folder"
-                        Width="140" Height="40"
-                        Background="#1FFFFFFF"
-                        Foreground="{StaticResource OsdForeground}"
-                        HorizontalAlignment="Center"
-                        Click="BtnOpenFolder_Click" />
-            </StackPanel>
-        </Border>
+            <!-- Open Folder button -->
+            <Button x:Name="BtnOpenFolder"
+                    Classes="start-page-button"
+                    Content="Open Folder"
+                    Width="140"
+                    HorizontalAlignment="Center"
+                    Click="BtnOpenFolder_Click" />
+        </StackPanel>
     </Border>
 </UserControl>

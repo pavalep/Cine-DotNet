@@ -54,8 +54,10 @@ public interface IMediaPlayer
     int CurrentSubtitleTrack { get; set; }
     SubtitleSource[] SubtitleSources { get; }
     void AddSubtitle(string path);
-    void SelectSubtitleTrack(int trackIndex);
+  public void SelectSubtitleTrack(int trackIndex);
+    void SelectAudioTrack(int trackIndex);
     void CycleSubtitleTrack();
+    float SubtitleDelay { get; set; }
     void IncreaseSubtitleDelay();
     void DecreaseSubtitleDelay();
 
@@ -96,6 +98,7 @@ public interface IMediaPlayer
     void InitializeRenderer(IntPtr hwnd);
     bool UseNativeRendering { get; set; }
     void NotifyResize(int width, int height);
+    void Command(string command, params string[] args);
 
     // === Events ===
     event EventHandler? Opened;

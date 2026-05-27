@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
@@ -15,6 +15,7 @@ using Avalonia.Platform.Storage;
 using Avalonia.Media;
 using Cine.Avalonia.Controls;
 using Cine.Avalonia.ViewModels;
+using Cine.Avalonia.Views;
 using Cine.Media.Events;
 using Cine.Media.Interfaces;
 using Cine.Media.Implementations;
@@ -44,8 +45,8 @@ public partial class MainWindow : Window
     private int _activeFlyouts;
 
     // Responsive breakpoints
-    private const double NarrowBreakpoint = 600;
-    private const double MediumBreakpoint = 1024;
+    private const double NarrowBreakpoint = 600.0;
+    private const double MediumBreakpoint = 1024.0;
 
     #region debug-log
     private static readonly string DebugLogFile = Path.Combine(
@@ -98,6 +99,14 @@ public partial class MainWindow : Window
         player.Opened += OnMediaOpened;
         player.PositionChanged += OnPositionChanged;
         player.ChapterListChanged += OnChapterListChanged;
+        player.FullscreenChangedEvent += OnPlayerFullscreenChanged;
+        
+        // Setup new observer parity events
+        if (player is MediaFoundationPlayer mfPlayer)
+        {
+            mfPlayer.PlaybackStateChangedEvent += OnPlaybackStateChanged;
+            mfPlayer.MediaEnded += OnMediaEnded;
+        }
 
         _videoHost.ChildWindowCreated += OnVideoHostChildCreated;
         KeyDown += OnKeyDown;
@@ -167,12 +176,20 @@ public partial class MainWindow : Window
             if (files != null)
             {
                 var paths = files.Select(f => f.Path.LocalPath).ToArray();
-                var videoFiles = StartPage.FilterVideoFiles(paths);
-                
-                if (videoFiles.Any() && _viewModel != null)
+                var videoFiles = StartPage.FilterVideoFiles(paths).ToList();
+            var subtitleFiles = paths.Where(f => f.EndsWith(".srt", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".ass", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".vtt", StringComparison.OrdinalIgnoreCase)).ToList();
+            
+            if (videoFiles.Any())
+             {
+                 _viewModel?.OpenFiles(videoFiles.ToArray());
+             }
+            else if (subtitleFiles.Any() && _viewModel != null && _viewModel.Duration.TotalSeconds > 0)
+            {
+                foreach (var subFile in subtitleFiles)
                 {
-                    _viewModel.OpenFiles(videoFiles);
+                    _viewModel.AddSubtitleCommand?.Execute(subFile);
                 }
+            }
             }
         }
     }
@@ -191,36 +208,49 @@ public partial class MainWindow : Window
         }
     }
 
-    private void UpdateDropIndicator(global::Avalonia.Input.DragEventArgs? e, bool show)
+    private bool _isDropIndicatorVisible = false;
+    private async void UpdateDropIndicator(global::Avalonia.Input.DragEventArgs? e, bool show)
     {
         if (DropIndicatorOverlay == null || DropIndicatorText == null || DropIndicatorIcon == null)
             return;
 
-        DropIndicatorOverlay.IsVisible = show;
-        if (!show) return;
+        if (show == _isDropIndicatorVisible) return;
+        _isDropIndicatorVisible = show;
 
-        bool subtitleDrop = false;
-        try
+        if (show)
         {
-            var files = e?.DataTransfer?.TryGetFiles();
-            var first = files?.FirstOrDefault()?.Path.LocalPath;
-            if (!string.IsNullOrWhiteSpace(first))
+            bool subtitleDrop = false;
+            try
             {
-                var ext = Path.GetExtension(first).ToLowerInvariant();
-                subtitleDrop = ext is ".srt" or ".ass" or ".ssa" or ".vtt" or ".sub" or ".idx";
+                var files = e?.DataTransfer?.TryGetFiles();
+                var first = files?.FirstOrDefault()?.Path.LocalPath;
+                if (!string.IsNullOrWhiteSpace(first))
+                {
+                    var ext = Path.GetExtension(first).ToLowerInvariant();
+                    subtitleDrop = ext is ".srt" or ".ass" or ".ssa" or ".vtt" or ".sub" or ".idx";
+                }
             }
-        }
-        catch { }
+            catch { }
 
-        if (subtitleDrop && !string.IsNullOrWhiteSpace(_viewModel?.FilePath))
-        {
-            DropIndicatorText.Text = "Add Subtitle Track";
-            DropIndicatorIcon.Data = Geometry.Parse("M 4 4H 20V 20H 4V 4 Z M 8 8H 12V 16H 8V 8 Z M 14 8H 18V 16H 14V 8 Z");
+            if (subtitleDrop && !string.IsNullOrWhiteSpace(_viewModel?.FilePath))
+            {
+                DropIndicatorText.Text = "Add Subtitle Track";
+                DropIndicatorIcon.Data = Geometry.Parse("M 4 4H 20V 20H 4V 4 Z M 8 8H 12V 16H 8V 8 Z M 14 8H 18V 16H 14V 8 Z");
+            }
+            else
+            {
+                DropIndicatorText.Text = "Play";
+                DropIndicatorIcon.Data = Geometry.Parse("M 8 5V 19L 16 12L 8 5 Z");
+            }
+
+            DropIndicatorOverlay.IsVisible = true;
+            await FadeVisual(DropIndicatorOverlay, DropIndicatorOverlay.Opacity, 1, 150, true);
         }
         else
         {
-            DropIndicatorText.Text = "Play";
-            DropIndicatorIcon.Data = Geometry.Parse("M 8 5V 19L 16 12L 8 5 Z");
+            await FadeVisual(DropIndicatorOverlay, DropIndicatorOverlay.Opacity, 0, 150, false);
+            if (!_isDropIndicatorVisible)
+                DropIndicatorOverlay.IsVisible = false;
         }
     }
 
@@ -322,104 +352,92 @@ public partial class MainWindow : Window
     {
         if (!this.IsInitialized) return;
 
-        if (MainGrid != null)
+        if (width < NarrowBreakpoint)
         {
-            MainGrid.ColumnDefinitions.Clear();
-            MainGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-            MainGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-            MainGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-            MainGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-
-            if (width < NarrowBreakpoint)
+            if (HeaderGrid != null)
             {
-                if (HeaderGrid != null)
-                {
-                    HeaderGrid.ColumnDefinitions.Clear();
-                    HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-                    HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-                    HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-                    HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-                }
-                SetButtonSize(BtnOpenMenu, 36);
-                SetButtonSize(BtnPrimaryMenu, 36);
-                SetButtonSize(BtnPlayPause, 36);
-                SetButtonSize(BtnStop, 36);
-                SetButtonSize(BtnPrevious, 36);
-                SetButtonSize(BtnNext, 36);
-                SetButtonSize(BtnRewind, 36);
-                SetButtonSize(BtnForward, 36);
-                SetButtonSize(BtnVolumeMenu, 36);
-                SetButtonSize(BtnFullscreen, 36);
-                SetButtonSize(BtnLoopFile, 36);
-                SetButtonSize(BtnLoopPlaylist, 36);
-                SetVis(BtnPip, false);
-                SetVis(BtnSubtitlesMenu, false);
-                SetVis(BtnAudioMenu, false);
-                SetVis(BtnVideoMenu, false);
-                SetVis(BtnScreenshot, false);
-                SetFont(PositionTimeLabel, 11);
-                SetFont(DurationTimeLabel, 11);
+                HeaderGrid.ColumnDefinitions.Clear();
+                HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+                HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+                HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+                HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+                HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
             }
-            else if (width < MediumBreakpoint)
+            SetButtonSize(BtnOpenMenu, 36);
+            SetButtonSize(BtnPrimaryMenu, 36);
+            SetButtonSize(BtnPlayPause, 36);
+            SetButtonSize(BtnPrevious, 36);
+            SetButtonSize(BtnNext, 36);
+            SetButtonSize(BtnRewind, 36);
+            SetButtonSize(BtnForward, 36);
+            SetButtonSize(BtnVolumeMenu, 36);
+            SetButtonSize(BtnFullscreen, 36);
+            SetButtonSize(BtnLoopFile, 36);
+            SetButtonSize(BtnLoopPlaylist, 36);
+            SetVis(BtnPip, false);
+            SetVis(BtnSubtitlesMenu, false);
+            SetVis(BtnAudioMenu, false);
+            SetVis(BtnVideoMenu, false);
+            SetFont(PositionTimeLabel, 11);
+            SetFont(DurationTimeLabel, 11);
+        }
+        else if (width < MediumBreakpoint)
+        {
+            if (HeaderGrid != null)
             {
-                if (HeaderGrid != null)
-                {
-                    HeaderGrid.ColumnDefinitions.Clear();
-                    HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-                    HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-                    HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-                    HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-                }
-                SetButtonSize(BtnOpenMenu, 38);
-                SetButtonSize(BtnPrimaryMenu, 38);
-                SetButtonSize(BtnPlayPause, 38);
-                SetButtonSize(BtnStop, 38);
-                SetButtonSize(BtnPrevious, 38);
-                SetButtonSize(BtnNext, 38);
-                SetButtonSize(BtnRewind, 38);
-                SetButtonSize(BtnForward, 38);
-                SetButtonSize(BtnVolumeMenu, 38);
-                SetButtonSize(BtnFullscreen, 38);
-                SetButtonSize(BtnLoopFile, 38);
-                SetButtonSize(BtnLoopPlaylist, 38);
-                SetVis(BtnPip, false);
-                SetVis(BtnSubtitlesMenu, true);
-                SetVis(BtnAudioMenu, true);
-                SetVis(BtnVideoMenu, false);
-                SetVis(BtnScreenshot, false);
-                SetFont(PositionTimeLabel, 12);
-                SetFont(DurationTimeLabel, 12);
+                HeaderGrid.ColumnDefinitions.Clear();
+                HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+                HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+                HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+                HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+                HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
             }
-            else
+            SetButtonSize(BtnOpenMenu, 38);
+            SetButtonSize(BtnPrimaryMenu, 38);
+            SetButtonSize(BtnPlayPause, 38);
+            SetButtonSize(BtnPrevious, 38);
+            SetButtonSize(BtnNext, 38);
+            SetButtonSize(BtnRewind, 38);
+            SetButtonSize(BtnForward, 38);
+            SetButtonSize(BtnVolumeMenu, 38);
+            SetButtonSize(BtnFullscreen, 38);
+            SetButtonSize(BtnLoopFile, 38);
+            SetButtonSize(BtnLoopPlaylist, 38);
+            SetVis(BtnPip, false);
+            SetVis(BtnSubtitlesMenu, true);
+            SetVis(BtnAudioMenu, true);
+            SetVis(BtnVideoMenu, false);
+            SetFont(PositionTimeLabel, 12);
+            SetFont(DurationTimeLabel, 12);
+        }
+        else
+        {
+            if (HeaderGrid != null)
             {
-                if (HeaderGrid != null)
-                {
-                    HeaderGrid.ColumnDefinitions.Clear();
-                    HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-                    HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-                    HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-                    HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-                }
-                SetButtonSize(BtnOpenMenu, 40);
-                SetButtonSize(BtnPrimaryMenu, 40);
-                SetButtonSize(BtnPlayPause, 40);
-                SetButtonSize(BtnStop, 40);
-                SetButtonSize(BtnPrevious, 40);
-                SetButtonSize(BtnNext, 40);
-                SetButtonSize(BtnRewind, 40);
-                SetButtonSize(BtnForward, 40);
-                SetButtonSize(BtnVolumeMenu, 40);
-                SetButtonSize(BtnFullscreen, 40);
-                SetButtonSize(BtnLoopFile, 40);
-                SetButtonSize(BtnLoopPlaylist, 40);
-                SetVis(BtnPip, true);
-                SetVis(BtnSubtitlesMenu, true);
-                SetVis(BtnAudioMenu, true);
-                SetVis(BtnVideoMenu, true);
-                SetVis(BtnScreenshot, true);
-                SetFont(PositionTimeLabel, 13);
-                SetFont(DurationTimeLabel, 13);
+                HeaderGrid.ColumnDefinitions.Clear();
+                HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+                HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+                HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+                HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+                HeaderGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
             }
+            SetButtonSize(BtnOpenMenu, 40);
+            SetButtonSize(BtnPrimaryMenu, 40);
+            SetButtonSize(BtnPlayPause, 40);
+            SetButtonSize(BtnPrevious, 40);
+            SetButtonSize(BtnNext, 40);
+            SetButtonSize(BtnRewind, 40);
+            SetButtonSize(BtnForward, 40);
+            SetButtonSize(BtnVolumeMenu, 40);
+            SetButtonSize(BtnFullscreen, 40);
+            SetButtonSize(BtnLoopFile, 40);
+            SetButtonSize(BtnLoopPlaylist, 40);
+            SetVis(BtnPip, true);
+            SetVis(BtnSubtitlesMenu, true);
+            SetVis(BtnAudioMenu, true);
+            SetVis(BtnVideoMenu, true);
+            SetFont(PositionTimeLabel, 13);
+            SetFont(DurationTimeLabel, 13);
         }
 
         if (ControlsBox != null)
@@ -441,7 +459,7 @@ public partial class MainWindow : Window
         control.Height = size;
         if (control is global::Avalonia.Controls.Button btn)
             btn.CornerRadius = new global::Avalonia.CornerRadius(size / 2);
-        else if (control is ToggleButton tbtn)
+        else if (control is global::Avalonia.Controls.Primitives.ToggleButton tbtn)
             tbtn.CornerRadius = new global::Avalonia.CornerRadius(size / 2);
     }
 
@@ -582,11 +600,6 @@ public partial class MainWindow : Window
     private void TrackFlyout(global::Avalonia.Controls.Control? control)
     {
         if (control is null) return;
-        if (FlyoutBase.GetAttachedFlyout(control) is FlyoutBase attached)
-        {
-            attached.Opened += (_, _) => _activeFlyouts++;
-            attached.Closed += (_, _) => _activeFlyouts = Math.Max(0, _activeFlyouts - 1);
-        }
         if (control is global::Avalonia.Controls.Button b && b.Flyout != null)
         {
             b.Flyout.Opened += (_, _) => _activeFlyouts++;
@@ -606,8 +619,8 @@ public partial class MainWindow : Window
             return;
 
         var p = e.GetPosition(SeekArea);
-        var trackStart = 8.0;
-        var trackWidth = Math.Max(1.0, SeekArea.Bounds.Width - 16.0);
+        var trackStart = 0.0;
+        var trackWidth = Math.Max(1.0, SeekArea.Bounds.Width);
         var normalized = Math.Clamp((p.X - trackStart) / trackWidth, 0, 1);
         var seconds = normalized * _viewModel.Duration.TotalSeconds;
 
@@ -619,7 +632,14 @@ public partial class MainWindow : Window
         if (chapter == null) return;
         ChapterPreviewText.Text = $"{chapter.Title}  ({FormatChapterTime(seconds)})";
         ChapterPreviewPopover.IsVisible = true;
-        ChapterPreviewPopover.Margin = new Thickness(8 + normalized * trackWidth, -34, 0, 0);
+        
+        ChapterPreviewPopover.Measure(new global::Avalonia.Size(double.PositiveInfinity, double.PositiveInfinity));
+        var popoverWidth = ChapterPreviewPopover.DesiredSize.Width;
+        
+        var xPos = trackStart + (normalized * trackWidth) - (popoverWidth / 2);
+        xPos = Math.Clamp(xPos, 0, Math.Max(0, SeekArea.Bounds.Width - popoverWidth));
+
+        ChapterPreviewPopover.Margin = new Thickness(xPos, -34, 0, 0);
     }
 
     private void OnSeekAreaPointerExited(object? sender, PointerEventArgs e)
@@ -648,8 +668,8 @@ public partial class MainWindow : Window
     {
         if (_viewModel == null || SeekArea == null || _viewModel.Duration.TotalSeconds <= 0) return;
         var p = e.GetPosition(SeekArea);
-        var trackStart = 8.0;
-        var trackWidth = Math.Max(1.0, SeekArea.Bounds.Width - 16.0);
+        var trackStart = 0.0;
+        var trackWidth = Math.Max(1.0, SeekArea.Bounds.Width);
         var normalized = Math.Clamp((p.X - trackStart) / trackWidth, 0, 1);
         var target = TimeSpan.FromSeconds(normalized * _viewModel.Duration.TotalSeconds);
         _viewModel.Position = target;
@@ -660,6 +680,100 @@ public partial class MainWindow : Window
     {
         var ts = TimeSpan.FromSeconds(seconds);
         return ts.ToString(ts.TotalHours >= 1 ? "hh\\:mm\\:ss" : "mm\\:ss");
+    }
+
+    // ========================
+    //  TRACK MENU BUILDERS
+    //  Programmatically build MenuFlyout items from typed TrackMenuItem collections.
+    //  This provides proper command routing and visual styling parity with Python's
+    //  track selection menus (active tracks shown bold with accent indicator).
+    // ========================
+
+    private void OnSubtitlesMenuClick(object? sender, RoutedEventArgs e)
+    {
+        if (_viewModel == null || BtnSubtitlesMenu == null) return;
+        var flyout = BuildTrackMenuFlyout(_viewModel.SubtitleTracks);
+        TrackFlyout(flyout);
+        _activeFlyouts++; // Increment early for programmatic show
+        flyout.Closed += (s, args) => _activeFlyouts = Math.Max(0, _activeFlyouts - 1); // Decrement fallback if Opened doesn't fire
+        flyout.ShowAt(BtnSubtitlesMenu);
+    }
+
+    private void OnAudioMenuClick(object? sender, RoutedEventArgs e)
+    {
+        if (_viewModel == null || BtnAudioMenu == null) return;
+        var flyout = BuildTrackMenuFlyout(_viewModel.AudioTracks);
+        TrackFlyout(flyout);
+        _activeFlyouts++;
+        flyout.Closed += (s, args) => _activeFlyouts = Math.Max(0, _activeFlyouts - 1);
+        flyout.ShowAt(BtnAudioMenu);
+    }
+
+    private void OnVideoMenuClick(object? sender, RoutedEventArgs e)
+    {
+        if (_viewModel == null || BtnVideoMenu == null) return;
+        var flyout = BuildTrackMenuFlyout(_viewModel.VideoTracks);
+        TrackFlyout(flyout);
+        _activeFlyouts++;
+        flyout.Closed += (s, args) => _activeFlyouts = Math.Max(0, _activeFlyouts - 1);
+        flyout.ShowAt(BtnVideoMenu);
+    }
+
+    /// <summary>
+    /// Builds a MenuFlyout from a collection of TrackMenuItems with proper
+    /// visual styling (bold for selected, dimmed for pseudo-entries).
+    /// </summary>
+    private global::Avalonia.Controls.MenuFlyout BuildTrackMenuFlyout(System.Collections.ObjectModel.ObservableCollection<TrackMenuItem> tracks)
+    {
+        var flyout = new global::Avalonia.Controls.MenuFlyout();
+
+        foreach (var track in tracks)
+        {
+            var stack = new global::Avalonia.Controls.StackPanel
+            {
+                Orientation = global::Avalonia.Layout.Orientation.Horizontal
+            };
+            stack.Children.Add(new global::Avalonia.Controls.TextBlock
+            {
+                Text = track.DisplayName,
+                FontWeight = track.IsSelected ? global::Avalonia.Media.FontWeight.SemiBold : global::Avalonia.Media.FontWeight.Normal,
+                FontSize = 12
+            });
+
+            if (track.IsSelected && !track.IsPseudoEntry)
+            {
+                stack.Children.Add(new global::Avalonia.Controls.Border
+                {
+                    Width = 6, Height = 6,
+                    CornerRadius = new global::Avalonia.CornerRadius(3),
+                    Background = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.FromArgb(0xFF, 0x6C, 0xB4, 0xFF)),
+                    HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Right,
+                    VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center,
+                    Margin = new global::Avalonia.Thickness(4, 0, 0, 0)
+                });
+            }
+
+            var menuItem = new global::Avalonia.Controls.MenuItem
+            {
+                Header = stack,
+                Opacity = track.DisplayOpacity,
+                Command = track.SelectCommand
+            };
+            menuItem.Classes.Add("track-item");
+            if (track.IsPseudoEntry)
+            {
+                menuItem.Classes.Add("track-pseudo");
+            }
+            flyout.Items.Add(menuItem);
+        }
+
+        return flyout;
+    }
+
+    private void TrackFlyout(global::Avalonia.Controls.MenuFlyout flyout)
+    {
+        flyout.Opened += (_, _) => _activeFlyouts++;
+        flyout.Closed += (_, _) => _activeFlyouts = System.Math.Max(0, _activeFlyouts - 1);
     }
 
     // ========================
@@ -689,7 +803,8 @@ public partial class MainWindow : Window
     private void OnSeekForward(object? sender, RoutedEventArgs e) => _viewModel?.SeekForward();
     private void OnToggleMute(object? sender, RoutedEventArgs e) => _viewModel?.ToggleMute();
     private void OnToggleFullscreen(object? sender, RoutedEventArgs e) => _viewModel?.ToggleFullscreen();
-    private void OnScreenshot(object? sender, RoutedEventArgs e) => _viewModel?.Screenshot();
+    private void OnFullscreenCloseClick(object? sender, RoutedEventArgs e) => Close();
+    private void OnToggleShuffle(object? sender, RoutedEventArgs e) => _viewModel?.ToggleShuffle();
     private void OnNextChapter(object? sender, RoutedEventArgs e) => _viewModel?.NextChapter();
     private void OnPrevChapter(object? sender, RoutedEventArgs e) => _viewModel?.PreviousChapter();
     private void OnPrevious(object? sender, RoutedEventArgs e) => _viewModel?.PreviousChapter();
@@ -698,17 +813,49 @@ public partial class MainWindow : Window
     private void OnNext(object? sender, RoutedEventArgs e) => _viewModel?.NextChapter();
     private void OnToggleLoopFile(object? sender, RoutedEventArgs e) => _viewModel?.ToggleLoopFile();
     private void OnToggleLoopPlaylist(object? sender, RoutedEventArgs e) => _viewModel?.ToggleLoopPlaylist();
-    private void OnToggleShuffle(object? sender, RoutedEventArgs e) => _viewModel?.ToggleShuffle();
-    private void OnIncreaseSpeed(object? sender, RoutedEventArgs e) => _viewModel!.SpeedValue += 0.1;
-    private void OnDecreaseSpeed(object? sender, RoutedEventArgs e) => _viewModel!.SpeedValue = Math.Max(0.1, _viewModel.SpeedValue - 0.1);
-    private void OnResetSpeed(object? sender, RoutedEventArgs e) => _viewModel?.ResetSpeed();
+    private void OnScreenshot(object? sender, RoutedEventArgs e) => _viewModel?.Screenshot();
+    private PlaylistDialog? _playlistDialog;
+
     private void OnOpenPlaylistDialog(object? sender, RoutedEventArgs e)
     {
-        // Placeholder until full playlist dialog parity is implemented.
-        if (OsdNotification != null && OsdText != null)
+        if (_playlistDialog == null)
         {
-            OsdText.Text = "Playlist dialog: pending parity implementation";
-            OsdNotification.IsVisible = true;
+            _playlistDialog = new PlaylistDialog
+            {
+                DataContext = _viewModel
+            };
+            _playlistDialog.Closed += (s, args) => _playlistDialog = null;
+            _playlistDialog.Show(this);
+        }
+        else
+        {
+            _playlistDialog.Activate();
+        }
+    }
+
+    private void OnPlayerFullscreenChanged(object? sender, FullscreenChangedEventArgs e)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            WindowState = e.IsFullscreen ? global::Avalonia.Controls.WindowState.FullScreen : global::Avalonia.Controls.WindowState.Normal;
+            RefreshFullscreenUi();
+        });
+    }
+
+    protected override void OnPropertyChanged(global::Avalonia.AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == global::Avalonia.Controls.Window.WindowStateProperty)
+        {
+            if (change.NewValue is global::Avalonia.Controls.WindowState state)
+            {
+                bool isFullscreen = state == global::Avalonia.Controls.WindowState.FullScreen;
+                if (_playerService?.Player != null && _playerService.Player.IsFullscreen != isFullscreen)
+                {
+                    _playerService.Player.SetFullscreen(isFullscreen);
+                }
+                RefreshFullscreenUi();
+            }
         }
     }
 
@@ -717,20 +864,82 @@ public partial class MainWindow : Window
         if (_playerService?.Player == null || FullscreenIconPath == null || BtnFullscreen == null) return;
         if (_playerService.Player.IsFullscreen)
         {
-            FullscreenIconPath.Data = global::Avalonia.Media.Geometry.Parse("M 8 4H 4V 8H 6V 6H 8V 4 Z M 16 4V 6H 18V 8H 20V 4H 16 Z M 6 16H 4V 20H 8V 18H 6V 16 Z M 18 16H 16V 20H 20V 16H 18V 18Z");
-            global::Avalonia.Controls.ToolTip.SetTip(BtnFullscreen, "Exit Fullscreen");
+            global::Avalonia.Application.Current!.TryGetResource("FullscreenExitIcon", global::Avalonia.Styling.ThemeVariant.Default, out var exitIcon);
+            FullscreenIconPath.Data = (global::Avalonia.Media.Geometry)exitIcon!;
+            global::Avalonia.Controls.ToolTip.SetTip(BtnFullscreen, "Exit Fullscreen (F)");
+            if (BtnFullscreenClose != null) BtnFullscreenClose.IsVisible = true;
+            if (TitleText != null) TitleText.IsVisible = false;
+            if (BtnPrimaryMenu != null) BtnPrimaryMenu.IsVisible = false;
+            if (BtnPip != null) BtnPip.IsVisible = false;
+            if (BtnOpenMenu != null) BtnOpenMenu.IsVisible = false;
         }
         else
         {
-            FullscreenIconPath.Data = global::Avalonia.Media.Geometry.Parse("M 4 4H 10V 6H 6V 10H 4V 4 Z M 14 4H 20V 10H 18V 6H 14V 4 Z M 4 14H 6V 18H 10V 20H 4V 14 Z M 18 14H 20V 20H 14V 18H 18V 14 Z");
-            global::Avalonia.Controls.ToolTip.SetTip(BtnFullscreen, "Fullscreen");
+            global::Avalonia.Application.Current!.TryGetResource("FullscreenEnterIcon", global::Avalonia.Styling.ThemeVariant.Default, out var enterIcon);
+            FullscreenIconPath.Data = (global::Avalonia.Media.Geometry)enterIcon!;
+            global::Avalonia.Controls.ToolTip.SetTip(BtnFullscreen, "Fullscreen (F)");
+            if (BtnFullscreenClose != null) BtnFullscreenClose.IsVisible = false;
+            if (TitleText != null) TitleText.IsVisible = true;
+            if (BtnPrimaryMenu != null) BtnPrimaryMenu.IsVisible = true;
+            if (BtnPip != null) BtnPip.IsVisible = Bounds.Width >= MediumBreakpoint;
+            if (BtnOpenMenu != null) BtnOpenMenu.IsVisible = !string.IsNullOrEmpty(_viewModel?.FilePath);
         }
     }
 
     // ========================
     //  Event handlers
     // ========================
-    private void OnMediaOpened(object? sender, EventArgs e) => _viewModel?.RefreshState();
+    private void OnMediaOpened(object? sender, EventArgs e) 
+    {
+        _viewModel?.RefreshState();
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (StartPage != null) StartPage.IsVisible = false;
+            if (ControlsBox != null) ControlsBox.IsVisible = true;
+            if (VideoHost != null) VideoHost.IsVisible = true;
+            if (BtnOpenMenu != null) BtnOpenMenu.IsVisible = true;
+            _autoHideTimer?.Stop();
+            _autoHideTimer?.Start();
+        });
+    }
+
+    private void OnPlaybackStateChanged(object? sender, PlaybackStateChangedEventArgs e)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (e.IsPaused)
+            {
+                // Show pause indicator briefly
+                if (PauseIndicator != null)
+                {
+                    PauseIndicator.IsVisible = true;
+                    _ = FadeVisual(PauseIndicator, 0, 1, 150, true).ContinueWith(async t =>
+                    {
+                        await Task.Delay(350);
+                        await Dispatcher.UIThread.InvokeAsync(async () =>
+                        {
+                            await FadeVisual(PauseIndicator, 1, 0, 150, false);
+                            if (PauseIndicator != null) PauseIndicator.IsVisible = false;
+                        });
+                    });
+                }
+                
+                // Show UI when paused
+                ShowUiControls();
+            }
+        });
+    }
+
+    private void OnMediaEnded(object? sender, EventArgs e)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            // Allow replay at EOF (GTK parity)
+            _viewModel?.Stop();
+            ShowUiControls();
+        });
+    }
+
     private void OnPositionChanged(object? sender, PositionChangedEventArgs e)
     {
         Dispatcher.UIThread.Post(() =>
@@ -742,7 +951,6 @@ public partial class MainWindow : Window
                             _viewModel.Duration.TotalSeconds >= 600 ? 6 : 5;
                 PositionTimeLabel.MinWidth = chars * 8;
             }
-            RefreshFullscreenUi();
         });
     }
     private void OnChapterListChanged(object? sender, ChapterListChangedEventArgs e) => _viewModel?.RefreshState();
@@ -754,9 +962,10 @@ public partial class MainWindow : Window
             if (!string.IsNullOrEmpty(_viewModel?.FilePath))
             {
                 // Media loaded: hide StartPage, show controls and Open button (matching Python)
-                if (StartPage?.IsVisible == true) StartPage?.Hide();
+                if (StartPage?.IsVisible == true) StartPage.IsVisible = false;
                 if (ControlsBox != null) ControlsBox.IsVisible = true;
                 if (BtnOpenMenu != null) BtnOpenMenu.IsVisible = true;
+                if (VideoHost != null) VideoHost.IsVisible = true;
                 
                 // Restart auto-hide timer now that media is playing
                 _autoHideTimer?.Stop();
@@ -764,10 +973,12 @@ public partial class MainWindow : Window
             }
             else
             {
-                // No media: show StartPage, hide controls and Open button (matching Python)
-                if (StartPage?.IsVisible == false) StartPage?.Show();
+                // No media: show StartPage, hide controls and Open button (matching Python idle-active)
+                if (StartPage?.IsVisible == false) StartPage.IsVisible = true;
                 if (ControlsBox != null) ControlsBox.IsVisible = false;
                 if (BtnOpenMenu != null) BtnOpenMenu.IsVisible = false;
+                if (VideoHost != null) VideoHost.IsVisible = false;
+                if (TitleText != null) TitleText.Text = "Cine";
                 
                 // Ensure UI stays visible when idle
                 ShowUiControls();
@@ -806,17 +1017,99 @@ public partial class MainWindow : Window
     {
         var key = e.Key;
         var shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
+        var ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
+
         void Handle(Action action) { action(); e.Handled = true; }
-        if (key == Key.Space) Handle(() => _viewModel?.PlayPause());
-        else if (key == Key.Escape) Handle(() => { if (_playerService?.Player?.IsFullscreen == true) _viewModel?.ToggleFullscreen(); });
-        else if (key == Key.F) Handle(() => _viewModel?.ToggleFullscreen());
-        else if (key == Key.M) Handle(() => _viewModel?.ToggleMute());
-        else if (key == Key.Left) Handle(() => { if (shift) _viewModel?.SeekLargeBackward(); else _viewModel?.SeekBackward(); });
-        else if (key == Key.Right) Handle(() => { if (shift) _viewModel?.SeekLargeForward(); else _viewModel?.SeekForward(); });
-        else if (key == Key.Up) Handle(() => _viewModel?.IncreaseVolume());
-        else if (key == Key.Down) Handle(() => _viewModel?.DecreaseVolume());
-        else if (key == Key.S) Handle(() => _viewModel?.Screenshot());
-        else if (key == Key.P) Handle(() => { if (shift) _viewModel?.PreviousChapter(); else _viewModel?.NextChapter(); });
+
+        // Playback
+        if (key == Key.Space || key == Key.K || key == Key.P || key == Key.MediaPlayPause) 
+            Handle(() => _viewModel?.PlayPause());
+        else if (key == Key.MediaStop) 
+            Handle(() => _viewModel?.Stop());
+
+        // Fullscreen
+        else if (key == Key.Escape) 
+            Handle(() => { if (_playerService?.Player?.IsFullscreen == true) _viewModel?.ToggleFullscreen(); });
+        else if (key == Key.F || key == Key.F11) 
+            Handle(() => _viewModel?.ToggleFullscreen());
+
+        // Volume / Audio
+        else if (key == Key.M || key == Key.VolumeMute) 
+            Handle(() => _viewModel?.ToggleMute());
+        else if (key == Key.Up || key == Key.VolumeUp) 
+            Handle(() => _viewModel?.IncreaseVolume());
+        else if (key == Key.Down || key == Key.VolumeDown) 
+            Handle(() => _viewModel?.DecreaseVolume());
+        else if (ctrl && key == Key.OemPlus) 
+            Handle(() => _playerService?.Player?.Command("add", "audio-delay", "0.1"));
+        else if (ctrl && key == Key.OemMinus) 
+            Handle(() => _playerService?.Player?.Command("add", "audio-delay", "-0.1"));
+
+        // Navigation
+        else if (key == Key.Left) 
+            Handle(() => { if (ctrl) _viewModel?.PreviousChapter(); else if (shift) _viewModel?.SeekLargeBackward(); else _viewModel?.SeekBackward(); });
+        else if (key == Key.Right) 
+            Handle(() => { if (ctrl) _viewModel?.NextChapter(); else if (shift) _viewModel?.SeekLargeForward(); else _viewModel?.SeekForward(); });
+        else if (key == Key.J) 
+            Handle(() => _playerService?.Player?.Command("seek", "-10", "exact"));
+        else if (key == Key.L && !shift && !ctrl) 
+            Handle(() => _playerService?.Player?.Command("seek", "10", "exact"));
+        else if (ctrl && key == Key.OemOpenBrackets) 
+            Handle(() => _playerService?.Player?.Command("frame-step", "-1"));
+        else if (ctrl && key == Key.OemCloseBrackets) 
+            Handle(() => _playerService?.Player?.Command("frame-step", "1"));
+        else if (key == Key.MediaNextTrack)
+            Handle(() => _viewModel?.NextChapter());
+        else if (key == Key.MediaPreviousTrack)
+            Handle(() => _viewModel?.PreviousChapter());
+
+        // Subtitles
+        else if (key == Key.C) 
+            Handle(() => _playerService?.Player?.Command("cycle", "sub-visibility"));
+        else if (key == Key.OemComma) 
+            Handle(() => _playerService?.Player?.Command("add", "sub-delay", "-0.1"));
+        else if (key == Key.OemPeriod) 
+            Handle(() => _playerService?.Player?.Command("add", "sub-delay", "0.1"));
+        else if (key == Key.PageUp) 
+            Handle(() => _playerService?.Player?.Command("add", "sub-pos", "-1"));
+        else if (key == Key.PageDown) 
+            Handle(() => _playerService?.Player?.Command("add", "sub-pos", "1"));
+
+        // Video / Display
+        else if (key == Key.OemPlus && !ctrl) 
+            Handle(() => _playerService?.Player?.Command("add", "video-zoom", "0.05"));
+        else if (key == Key.OemMinus && !ctrl) 
+            Handle(() => _playerService?.Player?.Command("add", "video-zoom", "-0.05"));
+        else if (key == Key.D1) 
+            Handle(() => _playerService?.Player?.Command("add", "contrast", "-1"));
+        else if (key == Key.D2) 
+            Handle(() => _playerService?.Player?.Command("add", "contrast", "1"));
+        else if (key == Key.D3) 
+            Handle(() => _playerService?.Player?.Command("add", "brightness", "-1"));
+        else if (key == Key.D4) 
+            Handle(() => _playerService?.Player?.Command("add", "brightness", "1"));
+        else if (key == Key.D5) 
+            Handle(() => _playerService?.Player?.Command("add", "gamma", "-1"));
+        else if (key == Key.D6) 
+            Handle(() => _playerService?.Player?.Command("add", "gamma", "1"));
+        else if (key == Key.D7) 
+            Handle(() => _playerService?.Player?.Command("add", "saturation", "-1"));
+        else if (key == Key.D8) 
+            Handle(() => _playerService?.Player?.Command("add", "saturation", "1"));
+        else if (key == Key.OemOpenBrackets && !ctrl) 
+            Handle(() => _playerService?.Player?.Command("multiply", "speed", "0.90909090")); // 1/1.1
+        else if (key == Key.OemCloseBrackets && !ctrl) 
+            Handle(() => _playerService?.Player?.Command("multiply", "speed", "1.1"));
+        else if (key == Key.Back) 
+            Handle(() => _playerService?.Player?.Command("set", "speed", "1.0"));
+
+        // Miscellaneous
+        else if (key == Key.S) 
+            Handle(() => { if (shift) _playerService?.Player?.Command("screenshot", "video"); else _viewModel?.Screenshot(); });
+        else if (key == Key.I) 
+            Handle(() => { if (shift) _playerService?.Player?.Command("script-binding", "stats/display-stats-toggle"); else _playerService?.Player?.Command("script-binding", "stats/display-stats"); });
+        else if (key == Key.L && shift) 
+            Handle(() => _viewModel?.ToggleLoopFile());
     }
 
     protected override void OnOpened(EventArgs e)
@@ -831,10 +1124,11 @@ public partial class MainWindow : Window
             DebugLog("VideoHost.ParentHwnd assigned");
         }
 
-        // Initial state: StartPage visible, controls hidden (matching Python reference)
-        StartPage?.Show();
+        // Initial state: StartPage visible, controls hidden (matching Python reference idle-active)
+        if (StartPage != null) StartPage.IsVisible = true;
         if (ControlsBox != null) ControlsBox.IsVisible = false;
         if (BtnOpenMenu != null) BtnOpenMenu.IsVisible = false;
+        if (VideoHost != null) VideoHost.IsVisible = false;
         RefreshFullscreenUi();
         RefreshSubtitleIcon();
         RefreshAudioIcon();
