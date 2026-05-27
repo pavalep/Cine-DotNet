@@ -559,6 +559,7 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
         {
             if (!_nativeInitialized) return;
             _mfHelper!.StartPlayback();
+            _audioRenderer?.Start();
             _playbackStartTime = DateTime.UtcNow;
             _currentState = PlaybackState.Playing;
             StartPositionTracking();
@@ -584,9 +585,14 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
         if (_currentState != PlaybackState.Playing) return;
 
         if (_nativeRendering)
+        {
             _mfHelper!.Pause();
+            _audioRenderer?.Pause();
+        }
         else
+        {
             _mediaElement?.Pause();
+        }
 
         var previous = _currentState;
         _currentState = PlaybackState.Paused;
@@ -631,7 +637,10 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
 
         if (_nativeRendering)
         {
+            _audioRenderer?.Pause();
             _mfHelper?.Seek(position.Ticks);
+            if (_currentState == PlaybackState.Playing)
+                _audioRenderer?.Start();
         }
         else if (_mediaElement != null)
         {

@@ -377,6 +377,7 @@ public class MainViewModel : INotifyPropertyChanged
         ResetSpeed();
     }
 
+    private bool _isUpdatingPositionFromPlayer;
     public double SeekValue
     {
         get => _seekValue;
@@ -385,7 +386,7 @@ public class MainViewModel : INotifyPropertyChanged
             if (Math.Abs(_seekValue - value) > 0.001)
             {
                 _seekValue = value;
-                if (Duration.TotalSeconds > 0)
+                if (!_isUpdatingPositionFromPlayer && Duration.TotalSeconds > 0)
                     _player.Seek(TimeSpan.FromSeconds(value * Duration.TotalSeconds));
             }
         }
@@ -474,11 +475,19 @@ public class MainViewModel : INotifyPropertyChanged
     {
         Dispatcher.UIThread.Post(() =>
         {
-            PositionText = FormatTime(e.Position);
-            DurationText = FormatTime(_player.Duration);
-            SeekValue = Duration.TotalSeconds > 0
-                ? e.Position.TotalSeconds / Duration.TotalSeconds
-                : 0;
+            _isUpdatingPositionFromPlayer = true;
+            try
+            {
+                PositionText = FormatTime(e.Position);
+                DurationText = FormatTime(_player.Duration);
+                SeekValue = Duration.TotalSeconds > 0
+                    ? e.Position.TotalSeconds / Duration.TotalSeconds
+                    : 0;
+            }
+            finally
+            {
+                _isUpdatingPositionFromPlayer = false;
+            }
         });
     }
 

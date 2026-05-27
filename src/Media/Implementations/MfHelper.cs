@@ -509,8 +509,11 @@ internal sealed class MfHelper : IDisposable
         if (_sourceReader == IntPtr.Zero || _isPlaying) return;
 
         _isPlaying = true;
-        _cts = new CancellationTokenSource();
-        _readingTask = Task.Run(() => ReadingLoop(_cts.Token), _cts.Token);
+        if (_readingTask == null || _readingTask.IsCompleted)
+        {
+            _cts = new CancellationTokenSource();
+            _readingTask = Task.Run(() => ReadingLoop(_cts.Token), _cts.Token);
+        }
     }
 
     // ============================================================
