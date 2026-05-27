@@ -17,10 +17,4 @@
       <supportedOS Id="{35138b9a-5d96-4fbd-8e2d-a24402cc5aae}" /> <!-- Windows 7 -->
     </application>
   </compatibility>
-  <application xmlns="urn:schemas-microsoft-com:asm.v3">
-    <windowsSettings>
-      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true/pm</dpiAware>
-      <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2, System</dpiAwareness>
-    </windowsSettings>
-  </application>
 </assembly>

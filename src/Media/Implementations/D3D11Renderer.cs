@@ -296,18 +296,21 @@ internal unsafe class D3D11Renderer : IDisposable
         // ── 3. Create render target view ──
         CreateRenderTarget();
 
-        // ── 4. Create BGRA staging texture ──
+        // ── 4. Create Common Resources (VS, Layout, VB, Sampler) ──
+        CreateCommonResources();
+
+        // ── 5. Create BGRA staging texture ──
         if (!_useShaderPath && _videoWidth > 0 && _videoHeight > 0)
         {
             CreateTexture2D(_videoWidth, _videoHeight, DXGI_FORMAT_B8G8R8A8_UNORM, 0, out _bgraStagingTex);
             CreateBgraPipeline();
         }
 
-        // ── 5. Compile shader pipeline (if NV12 mode) ──
+        // ── 6. Compile shader pipeline (if NV12 mode) ──
         if (_useShaderPath)
             CreateNv12Pipeline();
 
-        // ── 6. Compile post-process filter pipeline (if filters active) ──
+        // ── 7. Compile post-process filter pipeline (if filters active) ──
         if (HasActiveFilters)
             CreateFilterPipeline();
     }
@@ -343,12 +346,10 @@ internal unsafe class D3D11Renderer : IDisposable
 
     #region NV12 Shader Pipeline
 
-    /// <summary>
-    /// Compiles inline HLSL shaders and creates the NV12→BGRA rendering pipeline.
-    /// Called from Initialize() when UseNv12ShaderPath is true.
-    /// </summary>
-    private void CreateNv12Pipeline()
+    private void CreateCommonResources()
     {
+        var device = (ID3D11Device)Marshal.GetObjectForIUnknown(_device);
+
         // ── 1. Compile vertex shader ──
         string vsSource = @"
 struct VS_IN {
@@ -368,7 +369,6 @@ VS_OUT main(VS_IN input) {
         _vsBlob = CompileShader(vsSource, "vs_5_0", "main");
 
         // ── 2. Create vertex shader ──
-        var device = (ID3D11Device)Marshal.GetObjectForIUnknown(_device);
         Marshal.ThrowExceptionForHR(device.CreateVertexShader(
             pShaderBytecode: GetBlobPointer(_vsBlob),
             BytecodeLength: GetBlobSize(_vsBlob),
@@ -417,11 +417,39 @@ VS_OUT main(VS_IN input) {
         }
         finally
         {
-            // Note: SemanticName must be valid when CreateInputLayout is called.
-            // It doesn't need to be kept alive after that.
             Marshal.FreeHGlobal(posName);
             Marshal.FreeHGlobal(texName);
         }
+
+        // ── 4. Create fullscreen quad vertex buffer ──
+        var vertices = new[]
+        {
+            new Vertex { X = -1, Y = -1, Z = 0, W = 1, U = 0, V = 1 },
+            new Vertex { X = -1, Y =  1, Z = 0, W = 1, U = 0, V = 0 },
+            new Vertex { X =  1, Y = -1, Z = 0, W = 1, U = 1, V = 1 },
+            new Vertex { X =  1, Y =  1, Z = 0, W = 1, U = 1, V = 0 },
+        };
+
+        int vbSize = 4 * sizeof(Vertex);
+        _vertexBuffer = CreateBuffer(
+            data: vertices,
+            size: vbSize,
+            bindFlags: 0,
+            usage: D3D11_USAGE_DEFAULT);
+
+        // ── 5. Create sampler state (linear clamp) ──
+        CreateSamplerState();
+
+        Marshal.ReleaseComObject(device);
+    }
+
+    /// <summary>
+    /// Compiles inline HLSL shaders and creates the NV12→BGRA rendering pipeline.
+    /// Called from Initialize() when UseNv12ShaderPath is true.
+    /// </summary>
+    private void CreateNv12Pipeline()
+    {
+        var device = (ID3D11Device)Marshal.GetObjectForIUnknown(_device);
 
         // ── 4. Compile pixel shader ──
         string psSource = @"
@@ -454,26 +482,7 @@ float4 main(PS_IN input) : SV_TARGET {
             pClassLinkage: IntPtr.Zero,
             out _pixelShader));
 
-        // ── 6. Input layout already created in step 3 ──
 
-        // ── 7. Create fullscreen quad vertex buffer ──
-        var vertices = new[]
-        {
-            new Vertex { X = -1, Y = -1, Z = 0, W = 1, U = 0, V = 1 },
-            new Vertex { X = -1, Y =  1, Z = 0, W = 1, U = 0, V = 0 },
-            new Vertex { X =  1, Y = -1, Z = 0, W = 1, U = 1, V = 1 },
-            new Vertex { X =  1, Y =  1, Z = 0, W = 1, U = 1, V = 0 },
-        };
-
-        int vbSize = 4 * sizeof(Vertex);
-        _vertexBuffer = CreateBuffer(
-            data: vertices,
-            size: vbSize,
-            bindFlags: 0,
-            usage: D3D11_USAGE_DEFAULT);
-
-        // ── 8. Create sampler state (linear clamp) ──
-        CreateSamplerState();
 
         // ── 9. Create Y and UV default textures + staging textures ──
         // Y plane: full resolution, 8-bit single channel
@@ -992,7 +1001,7 @@ float4 main(PS_IN input) : SV_TARGET
                 var context = (ID3D11DeviceContext)Marshal.GetObjectForIUnknown(_context);
 
                 hr = context.Map(_bgraStagingTex, Subresource: 0,
-                    MapType: D3D11_MAP_WRITE_DISCARD, MapFlags: 0, out mapped);
+                    MapType: D3D11_MAP_WRITE, MapFlags: 0, out mapped);
                 if (hr < 0) return;
 
                 try
@@ -1022,7 +1031,7 @@ float4 main(PS_IN input) : SV_TARGET
                 // Actually, let's use the shader quad to render it if we want scaling/aspect ratio.
                 // But for now, let's just CopyResource if it matches, otherwise we need a shader path for BGRA too.
                 // Given the requirement for aspect ratio preservation, using the quad is better.
-
+                
                 RenderQuad(_bgraStagingTex);
 
                 // Apply post-process filter pipeline if any filters are active
@@ -1095,7 +1104,7 @@ float4 main(PS_IN input) : SV_TARGET
         // Calculate letterboxing/pillarboxing
         float videoAspect = (float)_videoWidth / _videoHeight;
         float windowAspect = (float)BackBufferWidth / BackBufferHeight;
-
+        
         float drawW, drawH;
         if (videoAspect > windowAspect)
         {
@@ -1107,7 +1116,7 @@ float4 main(PS_IN input) : SV_TARGET
             drawH = BackBufferHeight;
             drawW = BackBufferHeight * videoAspect;
         }
-
+        
         float x = (BackBufferWidth - drawW) / 2;
         float y = (BackBufferHeight - drawH) / 2;
 
@@ -1136,7 +1145,7 @@ float4 main(PS_IN input) : SV_TARGET
         // 1. Create BGRA Default Texture
         SafeRelease(ref _bgraDefaultTex);
         CreateTexture2D(_videoWidth, _videoHeight, DXGI_FORMAT_B8G8R8A8_UNORM, D3D11_BIND_SHADER_RESOURCE, out _bgraDefaultTex);
-
+        
         // 2. Create SRV
         SafeRelease(ref _bgraSrv);
         CreateTextureSRV(_bgraDefaultTex, DXGI_FORMAT_B8G8R8A8_UNORM, out _bgraSrv);
@@ -1155,7 +1164,7 @@ float4 main(PS_IN input) : SV_TARGET {
     return InputTex.Sample(Sampler, input.uv);
 }";
         _psBlob = CompileShader(psSource, "ps_5_0", "main");
-
+        
         Marshal.ThrowExceptionForHR(device.CreatePixelShader(
             pShaderBytecode: GetBlobPointer(_psBlob),
             BytecodeLength: GetBlobSize(_psBlob),
@@ -1186,7 +1195,7 @@ float4 main(PS_IN input) : SV_TARGET {
 
                 // Map Y staging texture
                 hr = context.Map(_yStagingTex, Subresource: 0,
-                    MapType: D3D11_MAP_WRITE_DISCARD, MapFlags: 0, out mapped);
+                    MapType: D3D11_MAP_WRITE, MapFlags: 0, out mapped);
                 if (hr < 0) return;
 
                 try
@@ -1212,7 +1221,7 @@ float4 main(PS_IN input) : SV_TARGET {
 
                 // Map UV staging texture
                 hr = context.Map(_uvStagingTex, Subresource: 0,
-                    MapType: D3D11_MAP_WRITE_DISCARD, MapFlags: 0, out mapped);
+                    MapType: D3D11_MAP_WRITE, MapFlags: 0, out mapped);
                 if (hr < 0) return;
 
                 try
