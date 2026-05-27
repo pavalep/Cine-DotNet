@@ -59,15 +59,8 @@
         <Border x:Name="UiControlsOverlay"
                 HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                 Opacity="1" IsVisible="True"
-                IsHitTestVisible="False">
-
-            <Border.Background>
-                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                    <GradientStop Offset="0" Color="#CC000000" />
-                    <GradientStop Offset="0.7" Color="#4D000000" />
-                    <GradientStop Offset="1" Color="#00000000" />
-                </LinearGradientBrush>
-            </Border.Background>
+                IsHitTestVisible="False"
+                Background="{x:Null}">
 
             <Grid x:Name="MainGrid" Margin="0">
                 <Grid.RowDefinitions>
@@ -80,6 +73,12 @@
                 <!--  HEADER BAR              -->
                 <!-- ======================== -->
                 <Border Grid.Row="0" x:Name="HeaderBar" Classes="header-bar" IsHitTestVisible="True">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Offset="0" Color="#CC000000" />
+                            <GradientStop Offset="1" Color="#00000000" />
+                        </LinearGradientBrush>
+                    </Border.Background>
                     <Grid x:Name="HeaderGrid" Margin="12,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
@@ -134,11 +133,11 @@
                                   Fill="{StaticResource OsdForeground}" />
                             <Button.Flyout>
                                 <MenuFlyout Placement="Bottom">
-                                    <MenuItem Header="New Window" />
-                                    <MenuItem Header="Preferences" />
+                                    <MenuItem Header="New Window" Click="OnNewWindowClick" />
+                                    <MenuItem Header="Preferences" Click="OnPreferencesClick" />
                                     <Separator />
-                                    <MenuItem Header="Keyboard Shortcuts" />
-                                    <MenuItem Header="About Cine" />
+                                    <MenuItem Header="Keyboard Shortcuts" Click="OnShortcutsClick" />
+                                    <MenuItem Header="About Cine" Click="OnAboutClick" />
                                 </MenuFlyout>
                             </Button.Flyout>
                         </Button>
@@ -154,6 +153,33 @@
                                   Width="16" Height="16" Stretch="Uniform"
                                   Fill="{StaticResource OsdForeground}" />
                         </Button>
+
+                        <!-- Window Controls (Minimize, Maximize, Close) -->
+                        <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="4"
+                                    IsVisible="True" x:Name="WindowControlsPanel">
+                            <!-- Minimize -->
+                            <Button x:Name="BtnMinimize" Classes="circular-menu"
+                                    ToolTip.Tip="Minimize" Click="OnMinimizeClick">
+                                <Path Data="M 4 11H 20V 13H 4V 11 Z"
+                                      Width="12" Height="12" Stretch="Uniform"
+                                      Fill="{StaticResource OsdForeground}" />
+                            </Button>
+                            <!-- Maximize / Restore -->
+                            <Button x:Name="BtnMaximizeRestore" Classes="circular-menu"
+                                    ToolTip.Tip="Maximize" Click="OnMaximizeRestoreClick">
+                                <Path x:Name="MaximizeRestoreIconPath"
+                                      Data="M 4 4H 20V 20H 4V 4 Z M 6 6V 18H 18V 6H 6 Z"
+                                      Width="12" Height="12" Stretch="Uniform"
+                                      Fill="{StaticResource OsdForeground}" />
+                            </Button>
+                            <!-- Close -->
+                            <Button x:Name="BtnClose" Classes="circular-menu"
+                                    ToolTip.Tip="Close" Click="OnCloseClick">
+                                <Path Data="M 12 10.586L 16.95 6.636L 18.364 8.05L 13.414 12L 18.364 15.95L 16.95 17.364L 12 13.414L 7.05 17.364L 5.636 15.95L 10.586 12L 5.636 8.05L 7.05 6.636L 12 10.586 Z"
+                                      Width="12" Height="12" Stretch="Uniform"
+                                      Fill="{StaticResource OsdForeground}" />
+                            </Button>
+                        </StackPanel>
                     </Grid>
                 </Border>
 
@@ -165,6 +191,12 @@
                 <!-- ======================== -->
                 <Border Grid.Row="2" x:Name="ControlsBox" Classes="controls-box"
                         IsVisible="False" IsHitTestVisible="True">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,1" EndPoint="0,0">
+                            <GradientStop Offset="0" Color="#CC000000" />
+                            <GradientStop Offset="1" Color="#00000000" />
+                        </LinearGradientBrush>
+                    </Border.Background>
                     <Grid x:Name="ControlsGrid" Margin="12,0">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />

@@ -799,6 +799,13 @@ public partial class MainWindow : Window
     // ========================
     private void OnPlayPause(object? sender, RoutedEventArgs e) => _viewModel?.PlayPause();
     private void OnStop(object? sender, RoutedEventArgs e) => _viewModel?.Stop();
+    private void OnMinimizeClick(object? sender, RoutedEventArgs e) => WindowState = global::Avalonia.Controls.WindowState.Minimized;
+    private void OnMaximizeRestoreClick(object? sender, RoutedEventArgs e) => WindowState = WindowState == global::Avalonia.Controls.WindowState.Maximized ? global::Avalonia.Controls.WindowState.Normal : global::Avalonia.Controls.WindowState.Maximized;
+    private void OnCloseClick(object? sender, RoutedEventArgs e) => Close();
+    private void OnNewWindowClick(object? sender, RoutedEventArgs e) => new MainWindow().Show();
+    private void OnPreferencesClick(object? sender, RoutedEventArgs e) => _viewModel?.Screenshot(); // Placeholder action
+    private void OnShortcutsClick(object? sender, RoutedEventArgs e) { } // Placeholder
+    private void OnAboutClick(object? sender, RoutedEventArgs e) { } // Placeholder
     private void OnSeekBack(object? sender, RoutedEventArgs e) => _viewModel?.SeekBackward();
     private void OnSeekForward(object? sender, RoutedEventArgs e) => _viewModel?.SeekForward();
     private void OnToggleMute(object? sender, RoutedEventArgs e) => _viewModel?.ToggleMute();
@@ -868,6 +875,7 @@ public partial class MainWindow : Window
             FullscreenIconPath.Data = (global::Avalonia.Media.Geometry)exitIcon!;
             global::Avalonia.Controls.ToolTip.SetTip(BtnFullscreen, "Exit Fullscreen (F)");
             if (BtnFullscreenClose != null) BtnFullscreenClose.IsVisible = true;
+            if (WindowControlsPanel != null) WindowControlsPanel.IsVisible = false;
             if (TitleText != null) TitleText.IsVisible = false;
             if (BtnPrimaryMenu != null) BtnPrimaryMenu.IsVisible = false;
             if (BtnPip != null) BtnPip.IsVisible = false;
@@ -879,10 +887,27 @@ public partial class MainWindow : Window
             FullscreenIconPath.Data = (global::Avalonia.Media.Geometry)enterIcon!;
             global::Avalonia.Controls.ToolTip.SetTip(BtnFullscreen, "Fullscreen (F)");
             if (BtnFullscreenClose != null) BtnFullscreenClose.IsVisible = false;
+            if (WindowControlsPanel != null) WindowControlsPanel.IsVisible = true;
             if (TitleText != null) TitleText.IsVisible = true;
             if (BtnPrimaryMenu != null) BtnPrimaryMenu.IsVisible = true;
             if (BtnPip != null) BtnPip.IsVisible = Bounds.Width >= MediumBreakpoint;
             if (BtnOpenMenu != null) BtnOpenMenu.IsVisible = !string.IsNullOrEmpty(_viewModel?.FilePath);
+            UpdateMaximizeIcon();
+        }
+    }
+
+    private void UpdateMaximizeIcon()
+    {
+        if (MaximizeRestoreIconPath == null) return;
+        if (WindowState == global::Avalonia.Controls.WindowState.Maximized)
+        {
+            MaximizeRestoreIconPath.Data = Geometry.Parse("M 6 4H 18V 6H 20V 18H 18V 20H 6V 18H 4V 6H 6V 4 Z M 6 8V 18H 16V 8H 6 Z M 18 6V 16H 16V 6H 8V 4H 18V 6 Z");
+            if (BtnMaximizeRestore != null) global::Avalonia.Controls.ToolTip.SetTip(BtnMaximizeRestore, "Restore");
+        }
+        else
+        {
+            MaximizeRestoreIconPath.Data = Geometry.Parse("M 4 4H 20V 20H 4V 4 Z M 6 6V 18H 18V 6H 6 Z");
+            if (BtnMaximizeRestore != null) global::Avalonia.Controls.ToolTip.SetTip(BtnMaximizeRestore, "Maximize");
         }
     }
 

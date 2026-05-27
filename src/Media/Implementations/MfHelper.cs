@@ -643,7 +643,7 @@ internal sealed class MfHelper : IDisposable
             }
 
             if (videoSample is not null)
-                OnSampleReady(videoSample);
+                OnSampleReady(videoSample, timestamp);
 
             // ── Read audio sample (non-blocking) ──
             if (_audioStreamIndex >= 0)
@@ -685,8 +685,8 @@ internal sealed class MfHelper : IDisposable
         MediaOpened?.Invoke(this, args);
     }
 
-    private void OnSampleReady(IMFSample sample)
-        => SampleReady?.Invoke(this, new SampleReadyEventArgs(sample));
+    private void OnSampleReady(IMFSample sample, long timestamp)
+        => SampleReady?.Invoke(this, new SampleReadyEventArgs(sample, timestamp));
 
     private void OnAudioSampleReady(IMFSample sample)
         => AudioSampleReady?.Invoke(this, new AudioSampleReadyEventArgs(sample));
@@ -767,7 +767,12 @@ internal class MediaOpenedEventArgs : EventArgs
 internal class SampleReadyEventArgs : EventArgs
 {
     public IMFSample? Sample;
-    public SampleReadyEventArgs(IMFSample sample) => Sample = sample;
+    public long Timestamp;
+    public SampleReadyEventArgs(IMFSample sample, long timestamp)
+    {
+        Sample = sample;
+        Timestamp = timestamp;
+    }
 }
 
 internal class AudioSampleReadyEventArgs : EventArgs
