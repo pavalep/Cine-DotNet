@@ -2,8 +2,7 @@
 // Ported from Python mpv wrapper (Reference/src/window.py:1186-1345)
 // 100% feature parity with Python version
 //
-// Phase 1: WPF MediaElement (retained as fallback)
-// Phase 2: Native MF Source Reader + D3D11 rendering (new)
+// Native MF Source Reader + D3D11 rendering for Avalonia.
 //
 // References:
 // - Python main.py:145-198 (file opening, ffprobe integration)
@@ -20,10 +19,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Media;
-using System.Windows.Threading;
+using System.Threading;
 using Cine.Media.Events;
 using Cine.Media.Interfaces;
 using Cine.Media.Implementations;
@@ -35,10 +31,9 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
 {
     #region Private Fields
 
-    // === WPF MediaElement path (Phase 1) ===
+    // === Playback state ===
     private PlaybackState _currentState = PlaybackState.Stopped;
-    private MediaElement? _mediaElement;
-    private DispatcherTimer? _positionTimer;
+    private System.Threading.Timer? _positionTimer;
 
     // === Native D3D11 path (Phase 2) ===
     private D3D11Renderer? _renderer;
@@ -88,7 +83,6 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
     private LoopMode _loopMode = LoopMode.NoLoop;
     private bool _isShuffled;
     private HwdecMode _hardwareDecoding = HwdecMode.Automatic;
-    private bool _openedFired;
 
     // === Chapter support ===
     private ChapterInfo[] _chapters = Array.Empty<ChapterInfo>();
@@ -230,23 +224,17 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
         get => _hardwareDecoding; set { _hardwareDecoding = value; ApplyHardwareDecoding(); }
     }
 
-    /// <summary>
-    /// Switches between WPF MediaElement and native D3D11 rendering.
-    /// Must be set BEFORE opening a file.
-    /// </summary>
+    /// <summary>Native D3D11 rendering is the only supported Avalonia path.</summary>
     public bool UseNativeRendering
     {
         get => _nativeRendering;
         set
         {
-            if (_currentState != PlaybackState.Stopped)
-                throw new InvalidOperationException("Cannot change rendering mode while playback is active.");
-            _nativeRendering = value;
+            if (!value)
+                throw new NotSupportedException("WPF MediaElement fallback is disabled; Cine uses Avalonia + native D3D11 only.");
+            _nativeRendering = true;
         }
     }
-
-    /// <summary>Exposes the MediaElement for WPF interop (Phase 1 path only). May be null in Avalonia-only mode.</summary>
-    public MediaElement? MediaElement => _mediaElement;
 
     #endregion
 
@@ -281,43 +269,13 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
 
     public MediaFoundationPlayer()
     {
-        // WPF objects are only created on demand when non-native rendering is used.
-        // In Avalonia-only apps, no WPF Dispatcher exists, so we defer creation.
-    }
-
-    private void EnsureMediaElement()
-    {
-        if (_mediaElement != null) return;
-        try
-        {
-            _mediaElement = new MediaElement
-            {
-                LoadedBehavior = MediaState.Manual,
-                UnloadedBehavior = MediaState.Close,
-                Stretch = Stretch.Uniform
-            };
-            _mediaElement.MediaOpened += OnMediaOpened;
-            _mediaElement.MediaEnded += OnMediaEnded;
-            _mediaElement.MediaFailed += OnMediaFailed;
-        }
-        catch (Exception ex)
-        {
-            Error?.Invoke(this, $"Failed to create WPF MediaElement: {ex.Message}");
-        }
+        _nativeRendering = true;
     }
 
     private void EnsurePositionTimer()
     {
         if (_positionTimer != null) return;
-        try
-        {
-            _positionTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
-            _positionTimer.Tick += OnPositionTimerTick;
-        }
-        catch (Exception ex)
-        {
-            Error?.Invoke(this, $"Failed to create DispatcherTimer: {ex.Message}");
-        }
+        _positionTimer = new System.Threading.Timer(OnPositionTimerTick, null, Timeout.InfiniteTimeSpan, TimeSpan.FromMilliseconds(100));
     }
 
     #endregion
@@ -401,6 +359,8 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
                 }
             }
             
+            Duration = e.Duration;
+            EnsureChaptersGenerated();
             var info = _mfHelper?.GetVideoStreamInfo();
             if (info != null && info.Value.Width > 0)
             {
@@ -408,7 +368,6 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
             }
             // Forward native open events to the player's own events
             FileLoaded?.Invoke(this, new MediaEventArgs(_currentFilePath));
-            _openedFired = true;
             Opened?.Invoke(this, EventArgs.Empty);
             
             // Auto-play when media is loaded
@@ -496,7 +455,10 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
             throw new InvalidOperationException("Call InitializeRenderer(hwnd) first.");
 
         if (_currentState == PlaybackState.Playing)
+        {
             InternalPause();
+            _currentState = PlaybackState.Stopped;
+        }
 
         StartFile?.Invoke(this, new MediaEventArgs(path));
 
@@ -509,16 +471,6 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
             if (_nativeRendering)
             {
                 _mfHelper!.OpenFile(path);
-            }
-            else
-            {
-                EnsureMediaElement();
-                EnsurePositionTimer();
-                if (_mediaElement is not null && _mediaElement.IsEnabled)
-                {
-                    _mediaElement.Source = new Uri(path);
-                    _mediaElement.Position = TimeSpan.Zero;
-                }
             }
 
             SetLoopMode(mode == "append" ? LoopMode.File : LoopMode.NoLoop);
@@ -575,14 +527,7 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
         }
         else
         {
-            if (_currentState == PlaybackState.Stopped && _mediaElement?.Source is not null)
-                _mediaElement.Position = TimeSpan.Zero;
-            _mediaElement?.Play();
-            _currentState = PlaybackState.Playing;
-            StartPositionTracking();
-            PlaybackResumed?.Invoke(this,
-                new PlaybackStateEventArgs(PlaybackState.Playing, PlaybackState.Paused));
-            PlaybackStateChangedEvent?.Invoke(this, new PlaybackStateChangedEventArgs(false));
+            Error?.Invoke(this, "Native renderer is not initialized; playback requires an Avalonia HWND.");
         }
     }
 
@@ -597,7 +542,7 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
         }
         else
         {
-            _mediaElement?.Pause();
+            Error?.Invoke(this, "Native renderer is not initialized; cannot pause playback.");
         }
 
         var previous = _currentState;
@@ -618,11 +563,7 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
         }
         else
         {
-            if (_mediaElement is not null)
-            {
-                _mediaElement.Stop();
-                _mediaElement.Source = null;
-            }
+            Error?.Invoke(this, "Native renderer is not initialized; cannot stop playback.");
         }
 
         _position = TimeSpan.Zero;
@@ -648,12 +589,6 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
             if (_currentState == PlaybackState.Playing)
                 _audioRenderer?.Start();
         }
-        else if (_mediaElement != null)
-        {
-            var adjusted = position + TimeSpan.FromSeconds(_subtitleDelay);
-            if (_mediaElement.NaturalDuration.HasTimeSpan && position <= _mediaElement.NaturalDuration.TimeSpan)
-                _mediaElement.Position = adjusted;
-        }
     }
 
     public void SetSpeed(double speed) => Speed = speed;
@@ -662,8 +597,7 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
 
     private void UpdateSpeed()
     {
-        if (!_nativeRendering && _mediaElement is not null)
-            _mediaElement.SpeedRatio = _speed;
+        // Native Media Foundation playback speed is not implemented yet.
     }
 
     public void AddSubtitle(string path)
@@ -877,50 +811,18 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
 
     #region Position Tracking
 
-    private void StartPositionTracking() => _positionTimer?.Start();
-    private void StopPositionTracking() => _positionTimer?.Stop();
+    private void StartPositionTracking() =>
+        _positionTimer?.Change(TimeSpan.Zero, TimeSpan.FromMilliseconds(100));
 
-    private void OnPositionTimerTick(object? sender, EventArgs e)
+    private void StopPositionTracking() =>
+        _positionTimer?.Change(Timeout.InfiniteTimeSpan, TimeSpan.FromMilliseconds(100));
+
+    private void OnPositionTimerTick(object? state)
     {
-        if (_nativeRendering)
+        if (_currentState == PlaybackState.Playing)
         {
-            if (_currentState == PlaybackState.Playing)
-            {
-                Position = TimeSpan.FromTicks(_lastNativeTimestamp);
-            }
+            Position = TimeSpan.FromTicks(_lastNativeTimestamp);
         }
-        else if (_mediaElement?.NaturalDuration.HasTimeSpan == true)
-        {
-            Position = _mediaElement.Position;
-        }
-    }
-
-    #endregion
-
-    #region WPF MediaElement Handlers
-
-    private void OnMediaOpened(object sender, RoutedEventArgs e)
-    {
-        if (_mediaElement?.NaturalDuration.HasTimeSpan == true)
-            Duration = _mediaElement.NaturalDuration.TimeSpan;
-        FileLoaded?.Invoke(this, new MediaEventArgs(_currentFilePath));
-        if (!_openedFired) { _openedFired = true; Opened?.Invoke(this, EventArgs.Empty); }
-    }
-
-    private void OnMediaEnded(object sender, RoutedEventArgs e)
-    {
-        _currentState = PlaybackState.Stopped;
-        StopPositionTracking();
-        MediaEnded?.Invoke(this, EventArgs.Empty);
-        EndFile?.Invoke(this, new MediaEventArgs(_currentFilePath));
-    }
-
-    private void OnMediaFailed(object? sender, ExceptionRoutedEventArgs e)
-    {
-        EndFile?.Invoke(this, new MediaEventArgs(_currentFilePath)
-        {
-            ErrorMessage = e.ErrorException?.Message ?? "Unknown error"
-        });
     }
 
     #endregion
@@ -929,15 +831,11 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
 
     private void InternalPause()
     {
-        if (_nativeRendering) _mfHelper?.Pause();
-        else _mediaElement?.Pause();
+        _mfHelper?.Pause();
     }
 
     private void UpdateVolume()
     {
-        float volume = IsMuted ? 0.0f : (float)(_volume / 100.0);
-        if (_mediaElement is not null)
-            _mediaElement.Volume = Math.Min(1.0, volume);
         VolumeChanged?.Invoke(this, new VolumeChangedEventArgs(_volume));
     }
 
@@ -975,7 +873,7 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
     {
         if (!disposing) return;
 
-        _positionTimer?.Stop();
+        _positionTimer?.Dispose();
         _positionTimer = null;
         Stop();
 
@@ -1002,13 +900,6 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
         _renderer?.Dispose();
         _renderer = null;
         _nativeInitialized = false;
-
-        if (_mediaElement is not null)
-        {
-            _mediaElement.MediaOpened -= OnMediaOpened;
-            _mediaElement.MediaEnded -= OnMediaEnded;
-            _mediaElement.MediaFailed -= OnMediaFailed;
-        }
 
         Closed?.Invoke(this, EventArgs.Empty);
     }

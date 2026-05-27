@@ -12,6 +12,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using Avalonia.Styling;
 using Avalonia.Platform.Storage;
+using Avalonia.Platform;
 using Avalonia.Media;
 using Cine.Avalonia.Controls;
 using Cine.Avalonia.ViewModels;
@@ -1141,19 +1142,17 @@ public partial class MainWindow : Window
     {
         try
         {
-#if WINDOWS
-            if (PlatformImpl is not null)
+            var platformHandle = TryGetPlatformHandle();
+            if (platformHandle is { Handle: not 0 })
             {
-                var handleProp = PlatformImpl.GetType().GetProperty("Handle");
-                if (handleProp is not null)
-                {
-                    var val = handleProp.GetValue(PlatformImpl);
-                    if (val is IntPtr ptr) return ptr;
-                }
+                DebugLog($"TryGetPlatformHandle descriptor={platformHandle.HandleDescriptor}");
+                return platformHandle.Handle;
             }
-#endif
         }
-        catch { }
+        catch (Exception ex)
+        {
+            DebugLog($"TryGetPlatformHandle failed: {ex.Message}");
+        }
         return IntPtr.Zero;
     }
 

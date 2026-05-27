@@ -483,6 +483,9 @@ internal sealed class MfHelper : IDisposable
 
         _stopRequested = false;
         _isPlaying = true;
+        if (_readingTask != null && !_readingTask.IsCompleted)
+            return;
+
         _cts = new CancellationTokenSource();
         _readingTask = Task.Run(() => ReadingLoop(_cts.Token), _cts.Token);
     }
