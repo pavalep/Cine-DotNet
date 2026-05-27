@@ -997,8 +997,7 @@ internal struct DXGI_RATIONAL
 [StructLayout(LayoutKind.Sequential)]
 internal struct D3D11_INPUT_ELEMENT_DESC
 {
-    [MarshalAs(UnmanagedType.LPStr)]
-    public string SemanticName;
+    public IntPtr SemanticName;
     public uint SemanticIndex;
     public uint Format;
     public uint InputSlot;
