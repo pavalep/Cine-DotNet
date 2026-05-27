@@ -183,7 +183,7 @@ public partial class MainWindow : Window
             {
                 _viewModel?.OpenFiles(videoFiles.ToArray());
             }
-
+            
             if (subtitleFiles.Any() && _viewModel != null && !string.IsNullOrEmpty(_viewModel.FilePath))
             {
                 foreach (var subFile in subtitleFiles)
@@ -1043,9 +1043,9 @@ public partial class MainWindow : Window
             Handle(() => _viewModel?.IncreaseVolume());
         else if (key == Key.Down || key == Key.VolumeDown) 
             Handle(() => _viewModel?.DecreaseVolume());
-        else if (ctrl && (key == Key.OemMinus || key == Key.Subtract))
+        else if (ctrl && (key == Key.OemMinus || key == Key.Subtract)) 
             Handle(() => { _playerService?.Player?.DecreaseAudioDelay(); });
-        else if (ctrl && (key == Key.OemPlus || key == Key.Add))
+        else if (ctrl && (key == Key.OemPlus || key == Key.Add)) 
             Handle(() => { _playerService?.Player?.IncreaseAudioDelay(); });
 
         // Navigation
@@ -1079,9 +1079,9 @@ public partial class MainWindow : Window
             Handle(() => _playerService?.Player?.SetSubtitlePosition((_playerService?.Player?.SubtitlePosition ?? 50) + 1));
 
         // Video / Display
-        else if ((key == Key.OemPlus || key == Key.Add) && !ctrl)
+        else if ((key == Key.OemPlus || key == Key.Add) && !ctrl) 
             Handle(() => { if (_playerService?.Player != null) _playerService.Player.Zoom += 0.05; });
-        else if ((key == Key.OemMinus || key == Key.Subtract) && !ctrl)
+        else if ((key == Key.OemMinus || key == Key.Subtract) && !ctrl) 
             Handle(() => { if (_playerService?.Player != null) _playerService.Player.Zoom -= 0.05; });
         else if (key == Key.D1) 
             Handle(() => _playerService?.Player?.DecreaseContrast());

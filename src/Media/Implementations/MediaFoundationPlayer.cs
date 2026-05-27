@@ -941,7 +941,7 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
         VolumeChanged?.Invoke(this, new VolumeChangedEventArgs(_volume));
     }
 
-    private void ApplyVideoFilters()
+    private void ApplyVideoFilters() 
     {
         if (_renderer != null)
         {
