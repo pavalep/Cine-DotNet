@@ -10,40 +10,51 @@
             Background="{DynamicResource StartPageBackground}"
             CornerRadius="0">
 
-        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Spacing="12" Margin="0,48,0,0">
+        <Grid>
+            <!-- Drop Target Overlay Visuals -->
+            <Border x:Name="DropTarget"
+                    Margin="12"
+                    BorderThickness="2"
+                    CornerRadius="12"
+                    BorderBrush="#40FFFFFF"
+                    Background="#20FFFFFF"
+                    IsHitTestVisible="False" />
 
-            <!-- Icon -->
-            <Path Data="M 12 2C 6.48 2 2 6.48 2 12C 2 17.52 6.48 22 12 22C 17.52 22 22 17.52 22 12C 22 6.48 17.52 2 12 2 Z M 10 16.5V 7.5L 16 12L 10 16.5 Z"
-                  Width="96" Height="96" Stretch="Uniform"
-                  Fill="#80E5E5E5"
-                  HorizontalAlignment="Center"
-                  Margin="0,0,0,16" />
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Spacing="12" Margin="0,48,0,0">
 
-            <!-- Drop text -->
-            <TextBlock Text="Drag and Drop Files Here"
-                       FontFamily="{StaticResource SystemFont}"
-                       FontSize="24"
-                       FontWeight="Bold"
-                       Foreground="#E5E5E5"
-                       HorizontalAlignment="Center"
-                       Margin="0,0,0,12" />
+                <!-- Icon (Cine app icon style) -->
+                <Path Data="M 12 2C 6.48 2 2 6.48 2 12C 2 17.52 6.48 22 12 22C 17.52 22 22 17.52 22 12C 22 6.48 17.52 2 12 2 Z M 10 16.5V 7.5L 16 12L 10 16.5 Z"
+                      Width="128" Height="128" Stretch="Uniform"
+                      Fill="#E5E5E5"
+                      HorizontalAlignment="Center"
+                      Margin="0,0,0,16" />
 
-            <!-- Open button -->
-            <Button x:Name="BtnOpenFile"
-                    Classes="start-page-button start-page-suggested-action"
-                    Content="Open…"
-                    Width="140"
-                    HorizontalAlignment="Center"
-                    Click="BtnOpenFile_Click" />
+                <!-- Drop text -->
+                <TextBlock Text="Drag and Drop Files Here"
+                           FontFamily="{StaticResource SystemFont}"
+                           FontSize="28"
+                           FontWeight="Bold"
+                           Foreground="#E5E5E5"
+                           HorizontalAlignment="Center"
+                           Margin="0,0,0,12" />
 
-            <!-- Open Folder button -->
-            <Button x:Name="BtnOpenFolder"
-                    Classes="start-page-button"
-                    Content="Open Folder"
-                    Width="140"
-                    HorizontalAlignment="Center"
-                    Click="BtnOpenFolder_Click" />
-        </StackPanel>
+                <!-- Open button (suggested-action pill) -->
+                <Button x:Name="BtnOpenFile"
+                        Classes="start-page-button start-page-suggested-action"
+                        Content="Open…"
+                        Padding="32,0"
+                        HorizontalAlignment="Center"
+                        Click="BtnOpenFile_Click" />
+
+                <!-- Open Folder button (pill) -->
+                <Button x:Name="BtnOpenFolder"
+                        Classes="start-page-button"
+                        Content="Open Folder"
+                        Padding="32,0"
+                        HorizontalAlignment="Center"
+                        Click="BtnOpenFolder_Click" />
+            </StackPanel>
+        </Grid>
     </Border>
 </UserControl>

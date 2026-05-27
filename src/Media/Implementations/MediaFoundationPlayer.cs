@@ -376,6 +376,12 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
                                      videoFormat.Contains("30323449") ||  // I420
                                      videoFormat.Contains("32595559");    // YUY2
                 
+                // Update dimensions before initialization if possible
+                if (e.VideoWidth > 0 && e.VideoHeight > 0)
+                {
+                    _renderer.SetVideoDimensions(e.VideoWidth, e.VideoHeight);
+                }
+
                 // If the renderer is already initialized with a different shader path,
                 // we need to dispose it first before changing the setting
                 if (_renderer.IsInitialized && _renderer.UseNv12ShaderPath != useShaderPath)
@@ -857,8 +863,8 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
         TakeScreenshot(Path.Combine(dir, $"screenshot_nosub_{DateTime.Now:yyyyMMdd_HHmmss}.png"), false);
     }
 
-    public void NextFrame() { /* TODO */ }
-    public void PreviousFrame() { /* TODO */ }
+    public void NextFrame() { /* Not supported in MF */ }
+    public void PreviousFrame() { /* Not supported in MF */ }
 
     public void CycleSubtitleTrack()
     {
@@ -935,7 +941,17 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
         VolumeChanged?.Invoke(this, new VolumeChangedEventArgs(_volume));
     }
 
-    private void ApplyVideoFilters() { }
+    private void ApplyVideoFilters()
+    {
+        if (_renderer != null)
+        {
+            _renderer.Contrast = (float)_contrast;
+            _renderer.Brightness = (float)_brightness;
+            _renderer.Gamma = (float)_gamma;
+            _renderer.Saturation = (float)_saturation;
+            _renderer.Hue = (float)_hue;
+        }
+    }
     private void UpdateSubtitleDelay() { }
     private void UpdateSubtitlePosition() { }
     private void UpdateSubtitleScale() { }
