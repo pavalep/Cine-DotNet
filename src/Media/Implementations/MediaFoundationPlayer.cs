@@ -36,6 +36,7 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
     private System.Threading.Timer? _positionTimer;
 
     // === Native D3D11 path (Phase 2) ===
+    private IntPtr _hwnd;
     private D3D11Renderer? _renderer;
     private AudioRenderer? _audioRenderer;
     private MfHelper? _mfHelper;
@@ -288,6 +289,8 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
 
         try
         {
+            _hwnd = hwnd;
+
             // Enable native rendering since we now have a valid HWND
             _nativeRendering = true;
 
@@ -321,7 +324,7 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
             string? videoFormat = e.VideoFormat;
             
             // Configure the renderer based on the video format
-            if (_renderer != null && videoFormat != null)
+            if (videoFormat != null)
             {
                 // Check if the format requires the NV12 shader path
                 // Common YUV formats that need shader conversion:
@@ -334,28 +337,29 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
                                      videoFormat.Contains("30323449") ||  // I420
                                      videoFormat.Contains("32595559");    // YUY2
                 
-                // Update dimensions before initialization if possible
-                if (e.VideoWidth > 0 && e.VideoHeight > 0)
+                if (_renderer != null)
                 {
-                    _renderer.SetVideoDimensions(e.VideoWidth, e.VideoHeight);
-                }
+                    // If the renderer is already initialized with a different shader path,
+                    // we need to create a fresh one
+                    if (_renderer.IsInitialized && _renderer.UseNv12ShaderPath != useShaderPath)
+                    {
+                        _renderer.Dispose();
+                        _renderer = new D3D11Renderer(_hwnd);
+                    }
 
-                // If the renderer is already initialized with a different shader path,
-                // we need to dispose it first before changing the setting
-                if (_renderer.IsInitialized && _renderer.UseNv12ShaderPath != useShaderPath)
-                {
-                    _renderer.Dispose();
-                }
-                
-                // Set the shader path (this will work because either:
-                // 1. Renderer is not initialized yet, or
-                // 2. We just disposed it, so IsInitialized is false)
-                _renderer.UseNv12ShaderPath = useShaderPath;
-                
-                // Initialize if not already initialized
-                if (!_renderer.IsInitialized)
-                {
-                    _renderer.Initialize();
+                    // Update dimensions before initialization if possible
+                    if (e.VideoWidth > 0 && e.VideoHeight > 0)
+                    {
+                        _renderer.SetVideoDimensions(e.VideoWidth, e.VideoHeight);
+                    }
+
+                    _renderer.UseNv12ShaderPath = useShaderPath;
+
+                    // Initialize if not already initialized
+                    if (!_renderer.IsInitialized)
+                    {
+                        _renderer.Initialize();
+                    }
                 }
             }
             
@@ -393,12 +397,21 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
                     int hr = e.Sample.ConvertToContiguousBuffer(out IMFMediaBuffer? buffer);
                     if (hr >= 0 && buffer != null)
                     {
-                        var locked = new MfLockedBuffer(buffer);
-                        if (locked.Data != IntPtr.Zero && locked.Length > 0)
+                        try
                         {
-                            byte[] chunk = new byte[locked.Length];
-                            Marshal.Copy(locked.Data, chunk, 0, locked.Length);
-                            _audioRenderer.Write(chunk, 0, locked.Length);
+                            using (var locked = new MfLockedBuffer(buffer))
+                            {
+                                if (locked.Data != IntPtr.Zero && locked.Length > 0)
+                                {
+                                    byte[] chunk = new byte[locked.Length];
+                                    Marshal.Copy(locked.Data, chunk, 0, locked.Length);
+                                    _audioRenderer.Write(chunk, 0, locked.Length);
+                                }
+                            }
+                        }
+                        finally
+                        {
+                            Marshal.ReleaseComObject(buffer);
                         }
                     }
                 }

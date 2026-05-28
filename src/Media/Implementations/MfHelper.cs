@@ -649,7 +649,10 @@ internal sealed class MfHelper : IDisposable
             }
 
             if (videoSample is not null)
-                OnSampleReady(videoSample, timestamp);
+            {
+                try { OnSampleReady(videoSample, timestamp); }
+                finally { Marshal.ReleaseComObject(videoSample); }
+            }
 
             // ── Read audio sample (non-blocking) ──
             if (_audioStreamIndex >= 0)
@@ -664,7 +667,8 @@ internal sealed class MfHelper : IDisposable
 
                 if (hr == 0 && audioSample is not null)
                 {
-                    OnAudioSampleReady(audioSample);
+                    try { OnAudioSampleReady(audioSample); }
+                    finally { Marshal.ReleaseComObject(audioSample); }
                 }
             }
         }

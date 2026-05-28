@@ -55,6 +55,17 @@ public class D3D11VideoHost : global::Avalonia.Controls.Control
         set { _parentHwnd = value; TryCreateNow(); }
     }
 
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+
+        if (change.Property == IsVisibleProperty && _childHwnd != IntPtr.Zero)
+        {
+            bool isVisible = change.GetNewValue<bool>();
+            ShowWindow(_childHwnd, isVisible ? ShowWindowCommand.Show : ShowWindowCommand.Hide);
+        }
+    }
+
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         // Do NOT call base — NativeControlHost.OnAttachedToVisualTree
@@ -136,14 +147,18 @@ public class D3D11VideoHost : global::Avalonia.Controls.Control
 
         _childHwnd = CreateWindowEx(
             0, windowClass, "CineD3D11",
-            WindowStyles.WS_CHILD | WindowStyles.WS_VISIBLE,
+            WindowStyles.WS_CHILD,
             0, 0, width, height,
             _parentHwnd, IntPtr.Zero,
             GetModuleHandle(null), IntPtr.Zero);
 
         if (_childHwnd != IntPtr.Zero)
         {
-            ShowWindow(_childHwnd, ShowWindowCommand.Show);
+            if (IsVisible)
+            {
+                ShowWindow(_childHwnd, ShowWindowCommand.Show);
+            }
+
             #region debug-point videohost-create-success
             DebugLog($"CreateChildWindow success hwnd={_childHwnd} size={width}x{height}");
             #endregion

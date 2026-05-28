@@ -55,9 +55,9 @@
         <GradientStop Offset="1" Color="#00000000" />   <!-- transparent - bottom -->
     </LinearGradientBrush>
 
-    <!-- Start page gradient -->
+    <!-- Start page gradient (opaque to prevent transparency issues) -->
     <LinearGradientBrush x:Key="StartPageBackground" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Offset="0" Color="#00000000" />
+        <GradientStop Offset="0" Color="#FF1E1E1E" />
         <GradientStop Offset="1" Color="#FF0C0C0E" />
     </LinearGradientBrush>
     
