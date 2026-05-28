@@ -40,7 +40,7 @@ internal unsafe class D3D11Renderer : IDisposable
     private const uint D3D_DRIVER_TYPE_WARP = 3;
     private const uint DXGI_FORMAT_B8G8R8A8_UNORM = 87;
     private const uint DXGI_FORMAT_R8_UNORM = 61;
-    private const uint DXGI_FORMAT_R8G8_UNORM = 62;
+    private const uint DXGI_FORMAT_R8G8_UNORM = 49;
     private const uint DXGI_USAGE_RENDER_TARGET_OUTPUT = 0x20;
     private const uint DXGI_SWAP_EFFECT_DISCARD = 0;
     public const uint D3D11_SDK_VERSION = 7;
@@ -52,7 +52,7 @@ internal unsafe class D3D11Renderer : IDisposable
     private const uint D3D11_CPU_ACCESS_READ = 0x20000;
     private const uint D3D11_USAGE_DEFAULT = 0;
     private const uint D3D11_USAGE_DYNAMIC = 2;
-    private const uint D3D11_USAGE_STAGING = 4;
+    private const uint D3D11_USAGE_STAGING = 3;
     private const uint D3D11_SRV_DIMENSION_TEXTURE2D = 8;
     private const uint D3D11_APPEND_ALIGNED_ELEMENT = 0xFFFFFFFF;
     private const uint D3D11_MAP_WRITE_DISCARD = 4;
@@ -78,7 +78,8 @@ internal unsafe class D3D11Renderer : IDisposable
     // --- Core D3D11 ---
     private IntPtr _device;        // ID3D11Device
     private IntPtr _context;       // ID3D11DeviceContext
-    private IntPtr _swapChain;     // IDXGISwapChain1
+    private uint _featureLevel;    // D3D_FEATURE_LEVEL (as uint)
+    private IntPtr _swapChain;     // IDXGISwapChain
     private IntPtr _rtv;           // ID3D11RenderTargetView
     private IntPtr _backBuffer;    // ID3D11Texture2D (back buffer)
 
@@ -204,6 +205,12 @@ internal unsafe class D3D11Renderer : IDisposable
         _hwnd = hwnd != IntPtr.Zero
             ? hwnd
             : throw new ArgumentException("Window handle cannot be zero.", nameof(hwnd));
+
+        _brightness = 0f;
+        _contrast = 1f;
+        _gamma = 1f;
+        _saturation = 1f;
+        _hue = 0f;
     }
 
     ~D3D11Renderer() => ReleaseUnmanaged();
@@ -220,10 +227,32 @@ internal unsafe class D3D11Renderer : IDisposable
     /// </summary>
     public void Initialize()
     {
-        // ── 1. Create D3D11 device + immediate context ──
         uint flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
 
-        int hr = NativeMethods.D3D11CreateDevice(
+        var swapDesc = new DXGI_SWAP_CHAIN_DESC
+        {
+            BufferDesc = new DXGI_MODE_DESC
+            {
+                Width = 0,
+                Height = 0,
+                RefreshRate_Numerator = 0,
+                RefreshRate_Denominator = 0,
+                Format = DXGI_FORMAT_B8G8R8A8_UNORM,
+                ScanlineOrdering = 0,
+                Scaling = 0
+            },
+            SampleDesc_Count = 1,
+            SampleDesc_Quality = 0,
+            BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
+            BufferCount = 2,
+            OutputWindow = _hwnd,
+            Windowed = 1,
+            SwapEffect = DXGI_SWAP_EFFECT_DISCARD,
+            Flags = 0
+        };
+
+        int createdFeatureLevel;
+        int hr = NativeMethods.D3D11CreateDeviceAndSwapChain(
             pAdapter: IntPtr.Zero,
             DriverType: (int)D3D_DRIVER_TYPE_HARDWARE,
             Software: IntPtr.Zero,
@@ -231,16 +260,19 @@ internal unsafe class D3D11Renderer : IDisposable
             pFeatureLevels: IntPtr.Zero,
             FeatureLevels: 0,
             SDKVersion: D3D11_SDK_VERSION,
+            pSwapChainDesc: ref swapDesc,
+            ppSwapChain: out _swapChain,
             ppDevice: out _device,
-            pFeatureLevel: out _,
+            pFeatureLevel: out createdFeatureLevel,
             ppImmediateContext: out _context);
 
         if (hr < 0)
         {
+            _swapChain = IntPtr.Zero;
             _device = IntPtr.Zero;
             _context = IntPtr.Zero;
 
-            hr = NativeMethods.D3D11CreateDevice(
+            hr = NativeMethods.D3D11CreateDeviceAndSwapChain(
                 pAdapter: IntPtr.Zero,
                 DriverType: (int)D3D_DRIVER_TYPE_WARP,
                 Software: IntPtr.Zero,
@@ -248,50 +280,17 @@ internal unsafe class D3D11Renderer : IDisposable
                 pFeatureLevels: IntPtr.Zero,
                 FeatureLevels: 0,
                 SDKVersion: D3D11_SDK_VERSION,
-                out _device,
-                out _,
-                out _context);
-
-            Marshal.ThrowExceptionForHR(hr);
+                pSwapChainDesc: ref swapDesc,
+                ppSwapChain: out _swapChain,
+                ppDevice: out _device,
+                pFeatureLevel: out createdFeatureLevel,
+                ppImmediateContext: out _context);
         }
 
-        // ── 2. Create DXGI factory ──
-        Guid factoryGuid = MfGuids.IID_IDXGIFactory2;
-        IntPtr dxgiFactory = IntPtr.Zero;
-
-        hr = NativeMethods.CreateDXGIFactory2(Flags: 0, riid: ref factoryGuid, ppFactory: out dxgiFactory);
-        if (hr < 0)
-        {
-            hr = NativeMethods.CreateDXGIFactory1(ref factoryGuid, out dxgiFactory);
-            Marshal.ThrowExceptionForHR(hr);
-        }
-
-        try
-        {
-            var desc = new DXGI_SWAP_CHAIN_DESC1
-            {
-                Width = 0,
-                Height = 0,
-                Format = DXGI_FORMAT_B8G8R8A8_UNORM,
-                Stereo = 0,
-                SampleDesc_Count = 1,
-                SampleDesc_Quality = 0,
-                BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
-                BufferCount = 2,
-                Scaling = 0,
-                SwapEffect = DXGI_SWAP_EFFECT_DISCARD,
-                AlphaMode = 0,
-                Flags = 0
-            };
-
-            var factory = (IDXGIFactory2)Marshal.GetObjectForIUnknown(dxgiFactory);
-            hr = factory.CreateSwapChainForHwnd(_device, _hwnd, ref desc, IntPtr.Zero, IntPtr.Zero, out _swapChain);
-            Marshal.ThrowExceptionForHR(hr);
-        }
-        finally
-        {
-            SafeRelease(ref dxgiFactory);
-        }
+        Marshal.ThrowExceptionForHR(hr);
+        _featureLevel = (uint)createdFeatureLevel;
+        if (_useShaderPath && _featureLevel < 0xA000)
+            _useShaderPath = false;
 
         // ── 3. Create render target view ──
         CreateRenderTarget();
@@ -308,7 +307,18 @@ internal unsafe class D3D11Renderer : IDisposable
 
         // ── 6. Compile shader pipeline (if NV12 mode) ──
         if (_useShaderPath)
-            CreateNv12Pipeline();
+        {
+            try
+            {
+                CreateNv12Pipeline();
+            }
+            catch
+            {
+                _useShaderPath = false;
+                DestroyNv12Textures();
+                EnsureBgraResources();
+            }
+        }
 
         // ── 7. Compile post-process filter pipeline (if filters active) ──
         if (HasActiveFilters)
@@ -320,17 +330,16 @@ internal unsafe class D3D11Renderer : IDisposable
     {
         Guid texGuid = MfGuids.IID_ID3D11Texture2D;
 
-        var swapChain = (IDXGISwapChain1)Marshal.GetObjectForIUnknown(_swapChain);
+        var swapChain = (IDXGISwapChain)Marshal.GetObjectForIUnknown(_swapChain);
         Marshal.ThrowExceptionForHR(swapChain.GetBuffer(Buffer: 0, ref texGuid, out _backBuffer));
 
         var device = (ID3D11Device)Marshal.GetObjectForIUnknown(_device);
         Marshal.ThrowExceptionForHR(device.CreateRenderTargetView(pResource: _backBuffer, pDesc: IntPtr.Zero, out _rtv));
 
-        var dxgiDesc = new DXGI_SWAP_CHAIN_DESC1();
-        if (swapChain.GetDesc(out dxgiDesc) >= 0)
+        if (swapChain.GetDesc(out var dxgiDesc) >= 0)
         {
-            BackBufferWidth = (int)dxgiDesc.Width;
-            BackBufferHeight = (int)dxgiDesc.Height;
+            BackBufferWidth = (int)dxgiDesc.BufferDesc.Width;
+            BackBufferHeight = (int)dxgiDesc.BufferDesc.Height;
         }
 
         Marshal.ReleaseComObject(device);
@@ -366,7 +375,7 @@ VS_OUT main(VS_IN input) {
     o.uv  = input.uv;
     return o;
 }";
-        _vsBlob = CompileShader(vsSource, "vs_5_0", "main");
+        _vsBlob = CompileShader(vsSource, GetVsTarget(), "main");
 
         // ── 2. Create vertex shader ──
         Marshal.ThrowExceptionForHR(device.CreateVertexShader(
@@ -453,9 +462,9 @@ VS_OUT main(VS_IN input) {
 
         // ── 4. Compile pixel shader ──
         string psSource = @"
-Texture2D<float> YTex  : register(t0);
-Texture2D<float> UVTex : register(t1);
-SamplerState    Sampler : register(s0);
+Texture2D     YTex  : register(t0);
+Texture2D     UVTex : register(t1);
+SamplerState  Sampler : register(s0);
 
 struct PS_IN {
     float4 pos : SV_POSITION;
@@ -464,8 +473,9 @@ struct PS_IN {
 
 float4 main(PS_IN input) : SV_TARGET {
     float y  = YTex.Sample(Sampler, input.uv).r;
-    float u  = UVTex.Sample(Sampler, input.uv).r - 0.5;
-    float v  = UVTex.Sample(Sampler, input.uv).g - 0.5;
+    float2 uv = UVTex.Sample(Sampler, input.uv).rg - float2(0.5, 0.5);
+    float u = uv.x;
+    float v = uv.y;
 
     float r = y + 1.402 * v;
     float g = y - 0.344 * u - 0.714 * v;
@@ -473,7 +483,7 @@ float4 main(PS_IN input) : SV_TARGET {
 
     return float4(b, g, r, 1.0);
 }";
-        _psBlob = CompileShader(psSource, "ps_5_0", "main");
+        _psBlob = CompileShader(psSource, GetPsTarget(), "main");
 
         // ── 5. Create pixel shader ──
         Marshal.ThrowExceptionForHR(device.CreatePixelShader(
@@ -542,14 +552,7 @@ float4 main(PS_IN input) : SV_TARGET {
             Marshal.ThrowExceptionForHR(device.CreateRenderTargetView(_filterTexture, IntPtr.Zero, out _filterRenderTarget));
 
             // 3. Create shader resource view for sampling the intermediate texture
-            var srvDesc = new D3D11_SHADER_RESOURCE_VIEW_DESC
-            {
-                Format = DXGI_FORMAT_B8G8R8A8_UNORM,
-                ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D,
-                MostDetailedMip = 0,
-                MipLevels = 1
-            };
-            Marshal.ThrowExceptionForHR(device.CreateShaderResourceView(_filterTexture, ref srvDesc, out _filterSRV));
+            Marshal.ThrowExceptionForHR(device.CreateShaderResourceView(_filterTexture, IntPtr.Zero, out _filterSRV));
 
             // 4. Create a second sampler state for the filter pass
             var sampDesc = new D3D11_SAMPLER_DESC
@@ -622,7 +625,7 @@ float4 main(PS_IN input) : SV_TARGET
     return color;
 }
 ";
-            IntPtr psBlob = CompileShader(filterPsSource, "ps_5_0", "main");
+            IntPtr psBlob = CompileShader(filterPsSource, GetPsTarget(), "main");
 
             Marshal.ThrowExceptionForHR(device.CreatePixelShader(
                 pShaderBytecode: GetBlobPointer(psBlob),
@@ -784,7 +787,29 @@ float4 main(PS_IN input) : SV_TARGET
             SampleDesc_Quality = 0,
             Usage = bindFlags == 0 ? D3D11_USAGE_STAGING : D3D11_USAGE_DEFAULT,
             BindFlags = bindFlags,
-            CPUAccessFlags = bindFlags == 0 ? D3D11_CPU_ACCESS_READ : 0,
+            CPUAccessFlags = bindFlags == 0 ? D3D11_CPU_ACCESS_WRITE : 0,
+            MiscFlags = 0
+        };
+
+        var device = (ID3D11Device)Marshal.GetObjectForIUnknown(_device);
+        Marshal.ThrowExceptionForHR(device.CreateTexture2D(ref desc, IntPtr.Zero, out texture));
+        Marshal.ReleaseComObject(device);
+    }
+
+    private void CreateReadbackTexture2D(int width, int height, uint format, out IntPtr texture)
+    {
+        var desc = new D3D11_TEXTURE2D_DESC
+        {
+            Width = (uint)width,
+            Height = (uint)height,
+            MipLevels = 1,
+            ArraySize = 1,
+            Format = format,
+            SampleDesc_Count = 1,
+            SampleDesc_Quality = 0,
+            Usage = D3D11_USAGE_STAGING,
+            BindFlags = 0,
+            CPUAccessFlags = D3D11_CPU_ACCESS_READ,
             MiscFlags = 0
         };
 
@@ -809,10 +834,20 @@ float4 main(PS_IN input) : SV_TARGET
                 StructureByteStride = 0
             };
 
-            IntPtr pInitialData = handle.AddrOfPinnedObject();
+            var init = new D3D11_SUBRESOURCE_DATA
+            {
+                pSysMem = handle.AddrOfPinnedObject(),
+                SysMemPitch = 0,
+                SysMemSlicePitch = 0
+            };
 
             var device = (ID3D11Device)Marshal.GetObjectForIUnknown(_device);
-            Marshal.ThrowExceptionForHR(device.CreateBuffer(ref desc, pInitialData, out IntPtr buffer));
+            IntPtr buffer;
+            unsafe
+            {
+                D3D11_SUBRESOURCE_DATA* pInit = &init;
+                Marshal.ThrowExceptionForHR(device.CreateBuffer(ref desc, (IntPtr)pInit, out buffer));
+            }
             Marshal.ReleaseComObject(device);
             return buffer;
         }
@@ -847,16 +882,8 @@ float4 main(PS_IN input) : SV_TARGET
     /// <summary>Creates a shader resource view for a 2D texture.</summary>
     private void CreateTextureSRV(IntPtr texture, uint format, out IntPtr srv)
     {
-        var desc = new D3D11_SHADER_RESOURCE_VIEW_DESC
-        {
-            Format = format,
-            ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D,
-            MostDetailedMip = 0,
-            MipLevels = 1
-        };
-
         var device = (ID3D11Device)Marshal.GetObjectForIUnknown(_device);
-        Marshal.ThrowExceptionForHR(device.CreateShaderResourceView(texture, ref desc, out srv));
+        Marshal.ThrowExceptionForHR(device.CreateShaderResourceView(texture, IntPtr.Zero, out srv));
         Marshal.ReleaseComObject(device);
     }
 
@@ -886,6 +913,22 @@ float4 main(PS_IN input) : SV_TARGET
         {
             Marshal.FreeHGlobal(pSource);
         }
+    }
+
+    private string GetVsTarget()
+    {
+        if (_featureLevel >= 0xB000) return "vs_5_0";
+        if (_featureLevel >= 0xA000) return "vs_4_0";
+        if (_featureLevel >= 0x9300) return "vs_4_0_level_9_3";
+        return "vs_4_0_level_9_1";
+    }
+
+    private string GetPsTarget()
+    {
+        if (_featureLevel >= 0xB000) return "ps_5_0";
+        if (_featureLevel >= 0xA000) return "ps_4_0";
+        if (_featureLevel >= 0x9300) return "ps_4_0_level_9_3";
+        return "ps_4_0_level_9_1";
     }
 
     /// <summary>Releases all NV12 shader pipeline COM objects.</summary>
@@ -922,7 +965,7 @@ float4 main(PS_IN input) : SV_TARGET
 
         DestroyRenderTarget();
 
-        var swapChain = (IDXGISwapChain1)Marshal.GetObjectForIUnknown(_swapChain);
+        var swapChain = (IDXGISwapChain)Marshal.GetObjectForIUnknown(_swapChain);
         Marshal.ThrowExceptionForHR(swapChain.ResizeBuffers(
             BufferCount: 2,
             Width: (uint)width,
@@ -938,7 +981,16 @@ float4 main(PS_IN input) : SV_TARGET
             DestroyNv12Textures();
             _videoWidth = width;
             _videoHeight = height;
-            CreateNv12Pipeline();
+            try
+            {
+                CreateNv12Pipeline();
+            }
+            catch
+            {
+                _useShaderPath = false;
+                DestroyNv12Textures();
+                EnsureBgraResources();
+            }
         }
         else if (_videoWidth > 0 && _videoHeight > 0)
         {
@@ -958,7 +1010,16 @@ float4 main(PS_IN input) : SV_TARGET
             if (_useShaderPath)
             {
                 DestroyNv12Textures();
-                CreateNv12Pipeline();
+                try
+                {
+                    CreateNv12Pipeline();
+                }
+                catch
+                {
+                    _useShaderPath = false;
+                    DestroyNv12Textures();
+                    EnsureBgraResources();
+                }
             }
             else
             {
@@ -978,13 +1039,9 @@ float4 main(PS_IN input) : SV_TARGET
         if (sample == null || _rtv == IntPtr.Zero || _context == IntPtr.Zero)
             return;
 
-        if (_useShaderPath)
-        {
-            PresentNv12(sample);
+        if (_videoWidth <= 0 || _videoHeight <= 0)
             return;
-        }
 
-        // ── BGRA-direct path ──
         int hr = sample.ConvertToContiguousBuffer(out IMFMediaBuffer? buffer);
         if (hr < 0 || buffer == null) return;
 
@@ -995,52 +1052,64 @@ float4 main(PS_IN input) : SV_TARGET
 
             try
             {
-                if (_bgraStagingTex == IntPtr.Zero) return;
+                ulong requiredBgra = (ulong)_videoWidth * (ulong)_videoHeight * 4UL;
+                ulong requiredNv12 = (ulong)_videoWidth * (ulong)_videoHeight * 3UL / 2UL;
 
-                var mapped = new MappedSubresource();
-                var context = (ID3D11DeviceContext)Marshal.GetObjectForIUnknown(_context);
-
-                hr = context.Map(_bgraStagingTex, Subresource: 0,
-                    MapType: D3D11_MAP_WRITE, MapFlags: 0, out mapped);
-                if (hr < 0) return;
-
-                try
+                if ((ulong)srcLen >= requiredBgra)
                 {
-                    uint srcPitch = (uint)_videoWidth * 4;
-                    uint dstPitch = mapped.RowPitch;
-                    uint rows = (uint)_videoHeight;
+                    EnsureBgraResources();
+                    if (_bgraStagingTex == IntPtr.Zero) return;
 
-                    byte* dst = (byte*)mapped.pData;
-                    byte* src = (byte*)srcPtr;
-                    uint copyBytes = Math.Min(srcPitch, dstPitch);
+                    var mapped = new MappedSubresource();
+                    var context = (ID3D11DeviceContext)Marshal.GetObjectForIUnknown(_context);
 
-                    for (uint y = 0; y < rows; y++)
+                    try
                     {
-                        Buffer.MemoryCopy(src, dst, copyBytes, copyBytes);
-                        src += srcPitch;
-                        dst += dstPitch;
+                        hr = context.Map(_bgraStagingTex, Subresource: 0,
+                            MapType: D3D11_MAP_WRITE, MapFlags: 0, out mapped);
+                        if (hr < 0) return;
+
+                        try
+                        {
+                            uint srcPitch = (uint)_videoWidth * 4;
+                            uint dstPitch = mapped.RowPitch;
+                            uint rows = (uint)_videoHeight;
+
+                            byte* dst = (byte*)mapped.pData;
+                            byte* src = (byte*)srcPtr;
+                            uint copyBytes = Math.Min(srcPitch, dstPitch);
+
+                            for (uint y = 0; y < rows; y++)
+                            {
+                                Buffer.MemoryCopy(src, dst, copyBytes, copyBytes);
+                                src += srcPitch;
+                                dst += dstPitch;
+                            }
+                        }
+                        finally
+                        {
+                            context.Unmap(_bgraStagingTex, Subresource: 0);
+                        }
                     }
+                    finally
+                    {
+                        Marshal.ReleaseComObject(context);
+                    }
+
+                    RenderQuad(_bgraStagingTex);
+                    ApplyFilter();
+                    PresentSwapChain();
+                    return;
                 }
-                finally
+
+                if ((ulong)srcLen >= requiredNv12)
                 {
-                    context.Unmap(_bgraStagingTex, Subresource: 0);
+                    EnsureBgraResources();
+                    if (_bgraStagingTex == IntPtr.Zero) return;
+
+                    PresentNv12Cpu(srcPtr, srcLen);
+                    return;
                 }
-
-                // Copy from staging to intermediate or back buffer
-                // For simplicity, we'll use StretchRect behavior or just copy if sizes match
-                // Actually, let's use the shader quad to render it if we want scaling/aspect ratio.
-                // But for now, let's just CopyResource if it matches, otherwise we need a shader path for BGRA too.
-                // Given the requirement for aspect ratio preservation, using the quad is better.
-                
-                RenderQuad(_bgraStagingTex);
-
-                // Apply post-process filter pipeline if any filters are active
-                ApplyFilter();
-
-                var swapChain = (IDXGISwapChain1)Marshal.GetObjectForIUnknown(_swapChain);
-                swapChain.Present(SyncInterval: 1, Flags: 0);
-                Marshal.ReleaseComObject(swapChain);
-                Marshal.ReleaseComObject(context);
             }
             finally
             {
@@ -1051,6 +1120,95 @@ float4 main(PS_IN input) : SV_TARGET
         {
             if (buffer != null) Marshal.ReleaseComObject(buffer);
         }
+    }
+
+    private void PresentSwapChain()
+    {
+        var swapChain = (IDXGISwapChain)Marshal.GetObjectForIUnknown(_swapChain);
+        swapChain.Present(SyncInterval: 1, Flags: 0);
+        Marshal.ReleaseComObject(swapChain);
+    }
+
+    private void EnsureBgraResources()
+    {
+        if (_videoWidth <= 0 || _videoHeight <= 0) return;
+
+        if (_bgraStagingTex == IntPtr.Zero)
+            CreateTexture2D(_videoWidth, _videoHeight, DXGI_FORMAT_B8G8R8A8_UNORM, 0, out _bgraStagingTex);
+
+        if (_bgraPixelShader == IntPtr.Zero || _bgraSrv == IntPtr.Zero || _bgraDefaultTex == IntPtr.Zero)
+            CreateBgraPipeline();
+    }
+
+    private void PresentNv12Cpu(IntPtr srcPtr, uint srcLen)
+    {
+        ulong required = (ulong)_videoWidth * (ulong)_videoHeight * 3UL / 2UL;
+        if ((ulong)srcLen < required) return;
+
+        var context = (ID3D11DeviceContext)Marshal.GetObjectForIUnknown(_context);
+        try
+        {
+            var mapped = new MappedSubresource();
+            int hr = context.Map(_bgraStagingTex, Subresource: 0,
+                MapType: D3D11_MAP_WRITE, MapFlags: 0, out mapped);
+            if (hr < 0) return;
+
+            try
+            {
+                int w = _videoWidth;
+                int h = _videoHeight;
+
+                byte* yPlane = (byte*)srcPtr;
+                byte* uvPlane = (byte*)srcPtr + (uint)(w * h);
+                byte* dstRow = (byte*)mapped.pData;
+
+                for (int y = 0; y < h; y++)
+                {
+                    byte* yRow = yPlane + (uint)(y * w);
+                    byte* uvRow = uvPlane + (uint)((y >> 1) * w);
+                    byte* dst = dstRow;
+
+                    for (int x = 0; x < w; x++)
+                    {
+                        int yy = yRow[x];
+                        int uvIndex = (x & ~1);
+                        int u = uvRow[uvIndex] - 128;
+                        int v = uvRow[uvIndex + 1] - 128;
+
+                        int c = yy - 16;
+                        if (c < 0) c = 0;
+
+                        int r = (298 * c + 409 * v + 128) >> 8;
+                        int g = (298 * c - 100 * u - 208 * v + 128) >> 8;
+                        int b = (298 * c + 516 * u + 128) >> 8;
+
+                        if ((uint)r > 255) r = r < 0 ? 0 : 255;
+                        if ((uint)g > 255) g = g < 0 ? 0 : 255;
+                        if ((uint)b > 255) b = b < 0 ? 0 : 255;
+
+                        dst[0] = (byte)b;
+                        dst[1] = (byte)g;
+                        dst[2] = (byte)r;
+                        dst[3] = 255;
+                        dst += 4;
+                    }
+
+                    dstRow += mapped.RowPitch;
+                }
+            }
+            finally
+            {
+                context.Unmap(_bgraStagingTex, Subresource: 0);
+            }
+        }
+        finally
+        {
+            Marshal.ReleaseComObject(context);
+        }
+
+        RenderQuad(_bgraStagingTex);
+        ApplyFilter();
+        PresentSwapChain();
     }
 
     private void RenderQuad(IntPtr texture)
@@ -1161,9 +1319,11 @@ struct PS_IN {
 };
 
 float4 main(PS_IN input) : SV_TARGET {
-    return InputTex.Sample(Sampler, input.uv);
+    float4 c = InputTex.Sample(Sampler, input.uv);
+    c.a = 1.0;
+    return c;
 }";
-        _psBlob = CompileShader(psSource, "ps_5_0", "main");
+        _psBlob = CompileShader(psSource, GetPsTarget(), "main");
         
         Marshal.ThrowExceptionForHR(device.CreatePixelShader(
             pShaderBytecode: GetBlobPointer(_psBlob),
@@ -1189,6 +1349,17 @@ float4 main(PS_IN input) : SV_TARGET {
 
             try
             {
+                if (_videoWidth <= 0 || _videoHeight <= 0)
+                    return;
+
+                if (_yStagingTex == IntPtr.Zero || _uvStagingTex == IntPtr.Zero || _yDefaultTex == IntPtr.Zero || _uvDefaultTex == IntPtr.Zero)
+                    return;
+
+                ulong required = (ulong)_videoWidth * (ulong)_videoHeight;
+                required += required / 2UL;
+                if ((ulong)srcLen < required)
+                    return;
+
                 var context = (ID3D11DeviceContext)Marshal.GetObjectForIUnknown(_context);
 
                 var mapped = new MappedSubresource();
@@ -1308,7 +1479,7 @@ float4 main(PS_IN input) : SV_TARGET {
                 context.ClearRenderTargetView(_rtv, new float[4] { 0, 0, 0, 1 });
                 context.Draw(4, 0);
 
-                var swapChain = (IDXGISwapChain1)Marshal.GetObjectForIUnknown(_swapChain);
+                var swapChain = (IDXGISwapChain)Marshal.GetObjectForIUnknown(_swapChain);
                 swapChain.Present(SyncInterval: 1, Flags: 0);
                 Marshal.ReleaseComObject(swapChain);
 
@@ -1344,9 +1515,7 @@ float4 main(PS_IN input) : SV_TARGET {
                 return false;
 
             IntPtr stagingTex = IntPtr.Zero;
-            CreateTexture2D(width, height, DXGI_FORMAT_B8G8R8A8_UNORM,
-                0, // No bind flags for staging
-                out stagingTex);
+            CreateReadbackTexture2D(width, height, DXGI_FORMAT_B8G8R8A8_UNORM, out stagingTex);
 
             if (stagingTex == IntPtr.Zero)
                 return false;
@@ -1430,7 +1599,7 @@ float4 main(PS_IN input) : SV_TARGET {
         float[] black = new float[4] { 0f, 0f, 0f, 1f };
         context.ClearRenderTargetView(_rtv, black);
 
-        var swapChain = (IDXGISwapChain1)Marshal.GetObjectForIUnknown(_swapChain);
+        var swapChain = (IDXGISwapChain)Marshal.GetObjectForIUnknown(_swapChain);
         swapChain.Present(SyncInterval: 1, Flags: 0);
 
         Marshal.ReleaseComObject(context);
@@ -1440,12 +1609,24 @@ float4 main(PS_IN input) : SV_TARGET {
     #region Helpers
 
     /// <summary>Helper to get pointer from blob.</summary>
-    private static IntPtr GetBlobPointer(IntPtr blob) =>
-        Marshal.GetObjectForIUnknown(blob) is ID3DBlob b ? b.GetBufferPointer() : IntPtr.Zero;
+    private static IntPtr GetBlobPointer(IntPtr blob)
+    {
+        if (blob == IntPtr.Zero) return IntPtr.Zero;
+
+        var b = (ID3DBlob)Marshal.GetTypedObjectForIUnknown(blob, typeof(ID3DBlob));
+        try { return b.GetBufferPointer(); }
+        finally { Marshal.ReleaseComObject(b); }
+    }
 
     /// <summary>Helper to get size from blob.</summary>
-    private static uint GetBlobSize(IntPtr blob) =>
-        (uint)(Marshal.GetObjectForIUnknown(blob) is ID3DBlob b ? b.GetBufferSize() : 0);
+    private static nuint GetBlobSize(IntPtr blob)
+    {
+        if (blob == IntPtr.Zero) return 0;
+
+        var b = (ID3DBlob)Marshal.GetTypedObjectForIUnknown(blob, typeof(ID3DBlob));
+        try { return b.GetBufferSize(); }
+        finally { Marshal.ReleaseComObject(b); }
+    }
 
     /// <summary>Releases a COM pointer and zeros the field.</summary>
     private static void SafeRelease(ref IntPtr ptr)

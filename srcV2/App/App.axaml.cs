@@ -81,9 +81,9 @@ public class App : global::Avalonia.Application
                 var dir = new DirectoryInfo(root);
                 while (dir != null)
                 {
-                    var envPath = Path.Combine(dir.FullName, ".dbg", "no-playback.env");
+                    var envPath = Path.Combine(dir.FullName, ".dbg", "video-transparent.env");
                     if (!File.Exists(envPath))
-                        envPath = Path.Combine(dir.FullName, ".dbg", "video-transparent.env");
+                        envPath = Path.Combine(dir.FullName, ".dbg", "no-playback.env");
                     if (!File.Exists(envPath))
                         envPath = Path.Combine(dir.FullName, ".dbg", "transparent-window.env");
 
@@ -208,11 +208,6 @@ public class App : global::Avalonia.Application
                     });
                     desktop.MainWindow = mainWindow;
                     Log("MainWindow created and assigned successfully.");
-
-                    if (desktop.Args is { Length: > 0 } && !string.IsNullOrWhiteSpace(desktop.Args[0]) && File.Exists(desktop.Args[0]))
-                    {
-                        mainWindow.QueueStartupOpen(desktop.Args[0]);
-                    }
                 }
                 catch (Exception ex)
                 {

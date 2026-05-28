@@ -13,7 +13,8 @@
         Background="#FF0C0C0E"
         TransparencyLevelHint="None"
         WindowStartupLocation="CenterScreen"
-        ExtendClientAreaToDecorationsHint="False"
+        ExtendClientAreaToDecorationsHint="True"
+        WindowDecorations="None"
         DragDrop.AllowDrop="True">
 
     <Window.Resources>
@@ -22,21 +23,63 @@
         <conv:ChapterMarginConverter x:Key="ChapterMarginConverter" />
     </Window.Resources>
 
-    <!-- Main Overlay Container - Video is a native HWND, so UI must live outside its bounds -->
-    <Grid x:Name="MainOverlay" Background="Black"
-          HorizontalAlignment="Stretch"
-          VerticalAlignment="Stretch">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+    <!-- Main Overlay Container - Grid overlays children like Python's GtkOverlay -->
+        <Grid x:Name="MainOverlay" Background="Black"
+              HorizontalAlignment="Stretch"
+              VerticalAlignment="Stretch">
 
-        <!-- ======================== -->
-        <!--  HEADER BAR              -->
-        <!-- ======================== -->
-        <Border Grid.Row="0" x:Name="HeaderBar" Classes="header-bar" IsHitTestVisible="True"
-                PointerPressed="OnHeaderPointerPressed">
+        <!-- Video Host (Native HWND sits above Avalonia rendering; keep hidden until playback starts) -->
+        <ctrl:D3D11VideoHost x:Name="VideoHost"
+                             IsVideoSurfaceVisible="False"
+                             HorizontalAlignment="Stretch"
+                             VerticalAlignment="Stretch" />
+
+        <!-- Start Page / Welcome Screen (Placed above video but below UI controls) -->
+        <local:StartPage x:Name="StartPage" ZIndex="10" />
+
+        <!-- Loading Spinner (centered overlay - custom since ProgressRing unavailable) -->
+        <Border x:Name="LoadingSpinner"
+                Classes="loading-spinner"
+                Width="48" Height="48"
+                HorizontalAlignment="Center" VerticalAlignment="Center"
+                IsVisible="False"
+                CornerRadius="24"
+                BorderThickness="3"
+                BorderBrush="{StaticResource OsdForeground}"
+                Background="Transparent"
+                Opacity="0.7">
+        </Border>
+
+        <!-- Pause Indicator (centered overlay with revealer behavior) -->
+        <Border x:Name="PauseIndicator"
+                HorizontalAlignment="Center" VerticalAlignment="Center"
+                Opacity="0" IsVisible="False"
+                CornerRadius="8" Padding="16"
+                Background="#80000000">
+            <Path Data="{StaticResource PauseIcon}"
+                  Width="48" Height="48" Stretch="Uniform"
+                  Fill="White" />
+        </Border>
+
+        <!-- UI Controls Container (overlay with auto-hide behavior) -->
+        <Border x:Name="UiControlsOverlay"
+                HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                Opacity="1" IsVisible="True"
+                IsHitTestVisible="False"
+                Background="{x:Null}">
+
+            <Grid x:Name="MainGrid" Margin="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <!-- ======================== -->
+                <!--  HEADER BAR              -->
+                <!-- ======================== -->
+                <Border Grid.Row="0" x:Name="HeaderBar" Classes="header-bar" IsHitTestVisible="True"
+                        WindowDecorationProperties.ElementRole="TitleBar">
                     <Border.Background>
                         <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                             <GradientStop Offset="0" Color="#CC000000" />
@@ -147,107 +190,16 @@
                             </Button>
                         </StackPanel>
                     </Grid>
-        </Border>
+                </Border>
 
-        <Grid Grid.Row="1" Background="Black"
-              HorizontalAlignment="Stretch"
-              VerticalAlignment="Stretch">
-            <!-- Video Host (Native HWND sits above Avalonia rendering; keep hidden until playback starts) -->
-            <ctrl:D3D11VideoHost x:Name="VideoHost"
-                                 IsVideoSurfaceVisible="False"
-                                 HorizontalAlignment="Stretch"
-                                 VerticalAlignment="Stretch" />
+                <!-- Spacer between header and controls -->
+                <Rectangle Grid.Row="1" Height="1" Opacity="0" />
 
-            <!-- Start Page / Welcome Screen -->
-            <local:StartPage x:Name="StartPage" ZIndex="10" />
-
-            <!-- Loading Spinner -->
-            <Border x:Name="LoadingSpinner"
-                    Classes="loading-spinner"
-                    Width="48" Height="48"
-                    HorizontalAlignment="Center" VerticalAlignment="Center"
-                    IsVisible="False"
-                    CornerRadius="24"
-                    BorderThickness="3"
-                    BorderBrush="{StaticResource OsdForeground}"
-                    Background="Transparent"
-                    Opacity="0.7" />
-
-            <!-- Pause Indicator -->
-            <Border x:Name="PauseIndicator"
-                    HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Opacity="0" IsVisible="False"
-                    CornerRadius="8" Padding="16"
-                    Background="#80000000">
-                <Path Data="{StaticResource PauseIcon}"
-                      Width="48" Height="48" Stretch="Uniform"
-                      Fill="White" />
-            </Border>
-
-            <!-- Video Info Overlay (bottom-left) -->
-            <Border Classes="video-position-overlay">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Classes="time-elapsed"
-                               Text="{Binding PositionText, Mode=OneWay}" />
-                    <TextBlock Text=" / "
-                               Foreground="#DDDDDD"
-                               FontFamily="{StaticResource NumericFont}"
-                               FontSize="13"
-                               VerticalAlignment="Center" />
-                    <TextBlock Classes="time-duration"
-                               Text="{Binding DurationText, Mode=OneWay}" />
-                </StackPanel>
-            </Border>
-
-            <!-- Chapter Badge Overlay (top-right) -->
-            <Border Classes="chapter-badge-overlay">
-                <TextBlock Classes="chapter-badge"
-                           Text="{Binding ChapterTitle, Mode=OneWay}" />
-            </Border>
-
-            <!-- OSD Notifications -->
-            <Border x:Name="OsdNotification"
-                    Classes="OsdNotificationStyle">
-                <TextBlock x:Name="OsdText"
-                           Foreground="{StaticResource OsdForeground}"
-                           FontSize="13"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center" />
-            </Border>
-
-            <!-- Drop indicator overlay -->
-            <Border x:Name="DropIndicatorOverlay"
-                    IsVisible="False"
-                    Opacity="0"
-                    IsHitTestVisible="False"
-                    Background="#C6000000"
-                    BorderBrush="#FF4AA3FF"
-                    BorderThickness="2"
-                    CornerRadius="8"
-                    Margin="12">
-                <StackPanel HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            Spacing="10">
-                    <Path x:Name="DropIndicatorIcon"
-                          Data="{StaticResource PlayIcon}"
-                          Width="56" Height="56"
-                          Stretch="Uniform"
-                          Fill="#FF4AA3FF" />
-                    <TextBlock x:Name="DropIndicatorText"
-                               Text="Play"
-                               FontSize="28"
-                               FontWeight="SemiBold"
-                               Foreground="#FF4AA3FF"
-                               HorizontalAlignment="Center" />
-                </StackPanel>
-            </Border>
-        </Grid>
-
-        <!-- ======================== -->
-        <!--  CONTROLS BOX            -->
-        <!-- ======================== -->
-        <Border Grid.Row="2" x:Name="ControlsBox" Classes="controls-box"
-                IsVisible="False" IsHitTestVisible="True">
+                <!-- ======================== -->
+                <!--  CONTROLS BOX            -->
+                <!-- ======================== -->
+                <Border Grid.Row="2" x:Name="ControlsBox" Classes="controls-box"
+                        IsVisible="False" IsHitTestVisible="True">
                     <Border.Background>
                         <LinearGradientBrush StartPoint="0,1" EndPoint="0,0">
                             <GradientStop Offset="0" Color="#CC000000" />
@@ -341,7 +293,7 @@
                                                 <Slider x:Name="VolumeSlider"
                                                         Classes="volume-slider"
                                                         Minimum="0" Maximum="130"
-                                                        Value="{Binding VolumeValue}" />
+                                                        Value="{Binding Volume}" />
                                             </StackPanel>
                                         </Border>
                                     </Flyout>
@@ -556,6 +508,66 @@
                                        HorizontalAlignment="Right" />
                         </Grid>
                     </Grid>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- Video Info Overlay (bottom-left) -->
+        <Border Classes="video-position-overlay">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Classes="time-elapsed"
+                           Text="{Binding PositionText, Mode=OneWay}" />
+                <TextBlock Text=" / "
+                           Foreground="#DDDDDD"
+                           FontFamily="{StaticResource NumericFont}"
+                           FontSize="13"
+                           VerticalAlignment="Center" />
+                <TextBlock Classes="time-duration"
+                           Text="{Binding DurationText, Mode=OneWay}" />
+            </StackPanel>
+        </Border>
+
+        <!-- Chapter Badge Overlay (top-right) -->
+        <Border Classes="chapter-badge-overlay">
+            <TextBlock Classes="chapter-badge"
+                       Text="{Binding ChapterTitle, Mode=OneWay}" />
+        </Border>
+
+        <!-- OSD Notifications -->
+        <Border x:Name="OsdNotification"
+                Classes="OsdNotificationStyle">
+            <TextBlock x:Name="OsdText"
+                       Foreground="{StaticResource OsdForeground}"
+                       FontSize="13"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />
+        </Border>
+
+        <!-- Drop indicator overlay -->
+        <Border x:Name="DropIndicatorOverlay"
+                IsVisible="False"
+                Opacity="0"
+                IsHitTestVisible="False"
+                Background="#C6000000"
+                BorderBrush="#FF4AA3FF"
+                BorderThickness="2"
+                CornerRadius="8"
+                Margin="12">
+            <StackPanel HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="10">
+                <Path x:Name="DropIndicatorIcon"
+                      Data="{StaticResource PlayIcon}"
+                      Width="56" Height="56"
+                      Stretch="Uniform"
+                      Fill="#FF4AA3FF" />
+                <TextBlock x:Name="DropIndicatorText"
+                           Text="Play"
+                           FontSize="28"
+                           FontWeight="SemiBold"
+                           Foreground="#FF4AA3FF"
+                           HorizontalAlignment="Center" />
+            </StackPanel>
         </Border>
     </Grid>
 </Window>

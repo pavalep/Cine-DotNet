@@ -17,18 +17,18 @@ internal static class MfGuids
     public static readonly Guid CLSID_MFMediaSource      = new Guid("6A963014-1CDC-4DF3-8D4C-9DFB68183E11");
 
     // IIDs
-    public static readonly Guid IID_IMFSourceReader        = new Guid("DEEC8D99-FA1D-4D82-84C2-2A5DE92B126C");
+    public static readonly Guid IID_IMFSourceReader        = new Guid("70AE66F2-C809-4E4F-8915-BDCB406B7993");
     public static readonly Guid IID_IMFMediaSession        = new Guid("927E4E0C-E3A5-4658-B56B-19D4E9ED3E34");
     public static readonly Guid IID_IMFMediaEventGenerator = new Guid("2CD0BD52-BCD5-4B89-B62C-EB1F79D166FF");
-    public static readonly Guid IID_IMFAttributes          = new Guid("2CD0BD52-BCD5-4B89-B62C-EB1F79D166FF");
+    public static readonly Guid IID_IMFAttributes          = new Guid("2CD2D921-C447-44A7-A13C-4ADABFC247E3");
     public static readonly Guid IID_IMFActivate            = new Guid("58722D43-7ABB-4EE5-8F1B-685B7A4E4DE9");
     public static readonly Guid IID_IMFTransform           = new Guid("BF94C121-5B05-4662-AFDA-7A4E4DC0B9E2");
-    public static readonly Guid IID_ID3D11Device           = new Guid("DB6F6D46-D8FA-4285-A54B-AD0260FED5EC");
-    public static readonly Guid IID_ID3D11DeviceContext    = new Guid("BB2C6FAA-B5FB-4082-876F-E879428B7647");
-    public static readonly Guid IID_ID3D11Texture2D        = new Guid("091EF1C0-D2C2-4BA9-ACBE-213990D74582");
+    public static readonly Guid IID_ID3D11Device           = new Guid("DB6F6DDB-AC77-4E88-8253-819DF9BBF140");
+    public static readonly Guid IID_ID3D11DeviceContext    = new Guid("C0BFA96C-E089-44FB-8EAF-26F8796190DA");
+    public static readonly Guid IID_ID3D11Texture2D        = new Guid("6F15AAF2-D208-4E89-9AB4-489535D34F9C");
     public static readonly Guid IID_IDXGIDevice            = new Guid("54EC77FA-1377-44E6-9867-B87D78477247");
     public static readonly Guid IID_IDXGIFactory2          = new Guid("50C83A1C-E072-4C48-87B0-3630FA36A6D0");
-    public static readonly Guid IID_IDXGISwapChain1        = new Guid("790A45F7-0DDF-4782-A291-9974D5898B71");
+    public static readonly Guid IID_IDXGISwapChain1        = new Guid("790A45F7-0D42-4876-983A-0A55CFE6F4AA");
     public static readonly Guid IID_IMFSourceReaderCallback = new Guid("DEEC8D99-FA1D-4D82-84C2-2A5DE92B126D");
     public static readonly Guid IID_IMFMediaType           = new Guid("C49A51E4-BDBF-4EF9-8DA6-DE805C58FB4F");
     public static readonly Guid IID_IMFSample              = new Guid("C40A00F2-B93A-4D80-AE83-10A4943828AA");
@@ -55,10 +55,10 @@ internal static class MfGuids
     public static readonly Guid MFMediaType_AUDIO = new Guid(0x73647561, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71);
 
     // Attribute / format key GUIDs
-    public static readonly Guid MF_MT_MAJOR_TYPE            = new Guid("49E6A19A-9C55-4D4A-AF6C-711FB20A655D");
-    public static readonly Guid MF_MT_SUBTYPE             = new Guid("F7E34C9F-41B8-4B7D-A165-538A87FCB55B");
-    public static readonly Guid MF_MT_FRAME_SIZE          = new Guid("1652C33D-D6B2-4012-B834-72030D6E9F73");
-    public static readonly Guid MF_MT_FRAME_RATE          = new Guid("C459A2E8-2711-42E0-8214-FB946F4B151C");
+    public static readonly Guid MF_MT_MAJOR_TYPE            = new Guid("48EBA18E-F8C9-4687-BF11-0A74C9F96A8F");
+    public static readonly Guid MF_MT_SUBTYPE             = new Guid("F7E34C9A-42E8-4714-B74B-CB29D72C35E5");
+    public static readonly Guid MF_MT_FRAME_SIZE          = new Guid("1652C33D-D6B2-4012-B834-72030849A37D");
+    public static readonly Guid MF_MT_FRAME_RATE          = new Guid("C459A2E8-3D2C-4E44-B132-FEE5156C7BB0");
     public static readonly Guid MF_MT_PIXEL_ASPECT_RATIO  = new Guid("3AB58A87-AFD7-4A8E-8F73-D3D216B6B580");
 
     // Audio-specific MF attribute GUIDs (Phase 2)
@@ -71,13 +71,15 @@ internal static class MfGuids
 
     // Presentation descriptor GUIDs (Phase 2: duration + seeking)
     public static readonly Guid MF_PD_START_TIME                 = new Guid("C831E049-6B64-4CAB-875A-741BA7047C0C");
-    public static readonly Guid MF_PD_DURATION                   = new Guid("279A824D-A0CB-4DE0-81BE-5A0B51413D80");
+    public static readonly Guid MF_PD_DURATION                   = new Guid("6C990D33-BB8E-477A-8598-0D5D96FCD88A");
 
     // IMFSourceReader settable attributes (Phase 2: seeking)
     public static readonly Guid MF_SOURCE_READER_MEDIASOURCE     = new Guid("27E58F2E-5D3B-4E11-8B4D-2DE03F7941B3");
+    public static readonly Guid MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING = new Guid("FB394F3D-CCF1-42EE-BBB3-F9B845D5681D");
+    public static readonly Guid MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS  = new Guid("A634A91C-822B-41FA-B0CF-7F62F8CF7702");
 
-    // Media source stream GUID (for GetServiceForStream)
-    public static readonly Guid MR_STREAM_MEDIASOURCE            = new Guid("C6399CF4-8B8A-48DA-ADA8-E6B5D70BA04F");
+    // Service GUID for GetServiceForStream: MF_MEDIASOURCE_SERVICE
+    public static readonly Guid MF_MEDIASOURCE_SERVICE           = new Guid("F09992F7-9FBA-4C4A-A37F-8C47B4E1DFE7");
 
     // Time format GUID for seeking
     public static readonly Guid MF_TIME_FORMAT_MEDIA_TIME_GUID   = new Guid("449A51A0-5E2B-4F69-BF56-E0343A9A9D9C");
@@ -216,111 +218,85 @@ internal unsafe interface IAudioRenderClient
 #endregion
 
 // -------------------------------------------------------------------------
-// IMFAttribute  (base of IMFAttributes → base of IMFMediaType)
-//  VTable:
-//   0: QueryInterface    (from IUnknown, handled by CLR)
-//   1: AddRef            (from IUnknown)
-//   2: Release           (from IUnknown)
-//   3: GetItem
-//   4: GetItemType
-//   5: CompareItem
-//   6: SetItem
-//   7: DeleteItem
-//   8: DeleteAllItems
+// IMFAttributes
 // -------------------------------------------------------------------------
-[ComImport, Guid("2CD0BD52-BCD5-4B89-B62C-EB1F79D166FF"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-internal unsafe interface IMFAttribute
-{
-    int GetItem(ref Guid key, out IntPtr pvValue);
-    int GetItemType(ref Guid key, out uint pType);
-    int CompareItem(ref Guid key, IntPtr value, out int pbResult);
-    int SetItem(ref Guid key, IntPtr value);
-    int DeleteItem(ref Guid key);
-    int DeleteAllItems();
-}
-
-// -------------------------------------------------------------------------
-// IMFAttributes  (extends IMFAttribute)
-//  Adds: GetCount, GetItemByIndex, Compare, then all Get/Set methods
-// -------------------------------------------------------------------------
-[ComImport, Guid("2CD0BD52-BCD5-4B89-B62C-EB1F79D166FF"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+[ComImport, Guid("2CD2D921-C447-44A7-A13C-4ADABFC247E3"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
 internal unsafe interface IMFAttributes
 {
-    // -- inherited from IMFAttribute --
-    int GetItem(ref Guid key, out IntPtr pvValue);
-    int GetItemType(ref Guid key, out uint pType);
-    int CompareItem(ref Guid key, IntPtr value, out int pbResult);
-    int SetItem(ref Guid key, IntPtr value);
-    int DeleteItem(ref Guid key);
+    int GetItem([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, IntPtr pValue);
+    int GetItemType([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, out uint pType);
+    int CompareItem([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, IntPtr value, [MarshalAs(UnmanagedType.Bool)] out int pbResult);
+    int Compare(IMFAttributes? pTheirs, uint MatchType, [MarshalAs(UnmanagedType.Bool)] out int pbResult);
+    int GetUINT32([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, out uint punValue);
+    int GetUINT64([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, out ulong punValue);
+    int GetDouble([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, out double pfValue);
+    int GetGUID([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, out Guid pguidValue);
+    int GetStringLength([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, out uint pcchLength);
+    int GetString([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, [MarshalAs(UnmanagedType.LPWStr)] string pwszValue, uint cchBufSize, out uint pcchLength);
+    int GetAllocatedString([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, out IntPtr ppwszValue, out uint pcchLength);
+    int GetBlobSize([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, out uint pcbBlobSize);
+    int GetBlob([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, [Out, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)] byte[] pBuf, uint cbBufSize, out uint pcbBlobSize);
+    int GetAllocatedBlob([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, out IntPtr ppBuf, out uint pcbSize);
+    int GetUnknown([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, [In, MarshalAs(UnmanagedType.LPStruct)] Guid riid, out IntPtr ppv);
+    int SetItem([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, IntPtr value);
+    int DeleteItem([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey);
     int DeleteAllItems();
-
-    // -- own methods --
+    int SetUINT32([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, uint unValue);
+    int SetUINT64([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, ulong unValue);
+    int SetDouble([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, double fValue);
+    int SetGUID([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, [In, MarshalAs(UnmanagedType.LPStruct)] Guid guidValue);
+    int SetString([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, [MarshalAs(UnmanagedType.LPWStr)] string wszValue);
+    int SetBlob([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, [In, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)] byte[] pBuf, uint cbBufSize);
+    int SetUnknown([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, [MarshalAs(UnmanagedType.IUnknown)] object? pUnknown);
+    int LockStore();
+    int UnlockStore();
     int GetCount(out uint pcItems);
-    int GetItemByIndex(uint unIndex, out Guid pKey, out IntPtr ppValue);
-    int Compare(IMFAttributes? pTheirs, uint dwMatchType, out int pbResult);
-    int GetUINT32([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, out uint punValue);
-    int GetUINT64([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, out ulong punValue);
-    int GetDouble([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, out double pfValue);
-    int GetGUID([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, out Guid pguid);
-    int GetStringLength([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, out uint pcchLength);
-    int GetString([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, [MarshalAs(UnmanagedType.LPWStr)] out string? wszValue);
-    int GetAllocatedString([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, out IntPtr ppwszValue, out uint pcchLength);
-    int GetBlobSize([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, out uint pcbBlobSize);
-    int GetBlob([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)] byte[]? pBuf, uint cbBufSize, out uint pcbBlobSize);
-    int GetAllocatedBlob([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, out IntPtr ip, out uint pcbSize);
-    int GetUnknown([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, ref Guid riid, out IntPtr ppv);
-    int SetUINT32([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, uint unValue);
-    int SetUINT64([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, ulong unValue);
-    int SetDouble([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, double fValue);
-    int SetGUID([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, [In, MarshalAs(UnmanagedType.LPStruct)] Guid guid);
-    int SetString([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, [MarshalAs(UnmanagedType.LPWStr)] string wszValue);
-    int SetBlob([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)] byte[]? pBuf, uint cbBufSize);
-    int SetUnknown([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, [MarshalAs(UnmanagedType.IUnknown)] object? pUnknown);
+    int GetItemByIndex(uint unIndex, out Guid pguidKey, IntPtr pValue);
+    int CopyAllItems(IMFAttributes? pDest);
 }
 
 // -------------------------------------------------------------------------
 // IMFMediaType  (extends IMFAttributes)
 // -------------------------------------------------------------------------
-[ComImport, Guid("C49A51E4-BDBF-4EF9-8DA6-DE805C58FB4F"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+[ComImport, Guid("44AE0FA8-EA31-4109-8D2E-4CAE4997C555"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
 internal unsafe interface IMFMediaType
 {
-    // -- inherited from IMFAttribute --
-    int GetItem(ref Guid key, out IntPtr pvValue);
-    int GetItemType(ref Guid key, out uint pType);
-    int CompareItem(ref Guid key, IntPtr value, out int pbResult);
-    int SetItem(ref Guid key, IntPtr value);
-    int DeleteItem(ref Guid key);
+    int GetItem([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, IntPtr pValue);
+    int GetItemType([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, out uint pType);
+    int CompareItem([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, IntPtr value, [MarshalAs(UnmanagedType.Bool)] out int pbResult);
+    int Compare(IMFAttributes? pTheirs, uint MatchType, [MarshalAs(UnmanagedType.Bool)] out int pbResult);
+    int GetUINT32([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, out uint punValue);
+    int GetUINT64([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, out ulong punValue);
+    int GetDouble([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, out double pfValue);
+    int GetGUID([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, out Guid pguidValue);
+    int GetStringLength([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, out uint pcchLength);
+    int GetString([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, [MarshalAs(UnmanagedType.LPWStr)] string pwszValue, uint cchBufSize, out uint pcchLength);
+    int GetAllocatedString([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, out IntPtr ppwszValue, out uint pcchLength);
+    int GetBlobSize([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, out uint pcbBlobSize);
+    int GetBlob([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, [Out, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)] byte[] pBuf, uint cbBufSize, out uint pcbBlobSize);
+    int GetAllocatedBlob([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, out IntPtr ppBuf, out uint pcbSize);
+    int GetUnknown([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, [In, MarshalAs(UnmanagedType.LPStruct)] Guid riid, out IntPtr ppv);
+    int SetItem([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, IntPtr value);
+    int DeleteItem([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey);
     int DeleteAllItems();
-
-    // -- inherited from IMFAttributes --
+    int SetUINT32([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, uint unValue);
+    int SetUINT64([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, ulong unValue);
+    int SetDouble([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, double fValue);
+    int SetGUID([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, [In, MarshalAs(UnmanagedType.LPStruct)] Guid guidValue);
+    int SetString([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, [MarshalAs(UnmanagedType.LPWStr)] string wszValue);
+    int SetBlob([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, [In, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)] byte[] pBuf, uint cbBufSize);
+    int SetUnknown([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, [MarshalAs(UnmanagedType.IUnknown)] object? pUnknown);
+    int LockStore();
+    int UnlockStore();
     int GetCount(out uint pcItems);
-    int GetItemByIndex(uint unIndex, out Guid pKey, out IntPtr ppValue);
-    int Compare(IMFAttributes? pTheirs, uint dwMatchType, out int pbResult);
-    int GetUINT32([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, out uint punValue);
-    int GetUINT64([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, out ulong punValue);
-    int GetDouble([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, out double pfValue);
-    int GetGUID([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, out Guid pguid);
-    int GetStringLength([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, out uint pcchLength);
-    int GetString([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, [MarshalAs(UnmanagedType.LPWStr)] out string? wszValue);
-    int GetAllocatedString([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, out IntPtr ppwszValue, out uint pcchLength);
-    int GetBlobSize([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, out uint pcbBlobSize);
-    int GetBlob([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)] byte[]? pBuf, uint cbBufSize, out uint pcbBlobSize);
-    int GetAllocatedBlob([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, out IntPtr ip, out uint pcbSize);
-    int GetUnknown([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, ref Guid riid, out IntPtr ppv);
-    int SetUINT32([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, uint unValue);
-    int SetUINT64([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, ulong unValue);
-    int SetDouble([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, double fValue);
-    int SetGUID([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, [In, MarshalAs(UnmanagedType.LPStruct)] Guid guid);
-    int SetString([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, [MarshalAs(UnmanagedType.LPWStr)] string wszValue);
-    int SetBlob([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)] byte[]? pBuf, uint cbBufSize);
-    int SetUnknown([In, MarshalAs(UnmanagedType.LPStruct)] Guid key, [MarshalAs(UnmanagedType.IUnknown)] object? pUnknown);
+    int GetItemByIndex(uint unIndex, out Guid pguidKey, IntPtr pValue);
+    int CopyAllItems(IMFAttributes? pDest);
 
-    // -- own methods --
     int GetMajorType(out Guid pguidMajorType);
-    int IsCompressedFormat(out int pfCompressed);
+    int IsCompressedFormat([MarshalAs(UnmanagedType.Bool)] out int pfCompressed);
     int IsEqual(IMFMediaType? pIMediaType, out uint pdwFlags);
-    int GetRepresentation(Guid guidRepresentation, out IntPtr ppvRepresentation);
-    void FreeRepresentation(Guid guidRepresentation, IntPtr pvRepresentation);
+    int GetRepresentation([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidRepresentation, out IntPtr ppvRepresentation);
+    void FreeRepresentation([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidRepresentation, IntPtr pvRepresentation);
 }
 
 // -------------------------------------------------------------------------
@@ -337,20 +313,19 @@ internal interface IMFSourceReaderCallback
 // -------------------------------------------------------------------------
 // IMFSourceReader
 // -------------------------------------------------------------------------
-[ComImport, Guid("DEEC8D99-FA1D-4D82-84C2-2A5DE92B126C"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+[ComImport, Guid("70AE66F2-C809-4E4F-8915-BDCB406B7993"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
 internal unsafe interface IMFSourceReader
 {
-    int GetNativeMediaType(uint dwStreamIndex, uint dwTypeIndex, out IMFMediaType? ppMediaType);
-    int GetCurrentMediaType(uint dwStreamIndex, out IMFMediaType? ppMediaType);
-    int SetCurrentMediaType(uint dwStreamIndex, uint pReserved, IMFMediaType? pMediaType);
-    int SetStreamSelection(uint dwStreamIndex, [MarshalAs(UnmanagedType.Bool)] int fSelected);
-    int GetStreamSelection(uint dwStreamIndex, [MarshalAs(UnmanagedType.Bool)] out int pfSelected);
-    int GetServiceForStream(uint dwStreamIndex, ref Guid guidService, ref Guid riid, out IntPtr ppvObject);
-    int ProcessMessage(uint eMessage, ulong ulParam);
-    int ReadSample(uint dwStreamIndex, uint dwFlags, out int pdwActualStreamIndex, out uint pdwFlags, out long pTimestamp, out IMFSample? ppSample);
-    int Flush(uint dwStreamIndex);
-    int ShutDown();
-    int NotifyReadSample(IMFSourceReaderCallback? pCallback);
+    [PreserveSig] int GetStreamSelection(uint dwStreamIndex, [MarshalAs(UnmanagedType.Bool)] out bool pfSelected);
+    [PreserveSig] int SetStreamSelection(uint dwStreamIndex, [MarshalAs(UnmanagedType.Bool)] bool fSelected);
+    [PreserveSig] int GetNativeMediaType(uint dwStreamIndex, uint dwMediaTypeIndex, out IntPtr ppMediaType);
+    [PreserveSig] int GetCurrentMediaType(uint dwStreamIndex, out IntPtr ppMediaType);
+    [PreserveSig] int SetCurrentMediaType(uint dwStreamIndex, IntPtr pdwFlags, IMFMediaType? pMediaType);
+    [PreserveSig] int SetCurrentPosition([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidTimeFormat, IntPtr varPosition);
+    [PreserveSig] int ReadSample(uint dwStreamIndex, uint dwControlFlags, out uint pdwActualStreamIndex, out uint pdwStreamFlags, out long pllTimestamp, out IntPtr ppSample);
+    [PreserveSig] int Flush(uint dwStreamIndex);
+    [PreserveSig] int GetServiceForStream(uint dwStreamIndex, ref Guid guidService, ref Guid riid, out IntPtr ppvObject);
+    [PreserveSig] int GetPresentationAttribute(uint dwStreamIndex, [In, MarshalAs(UnmanagedType.LPStruct)] Guid guidAttribute, IntPtr pvarAttribute);
 }
 
 // -------------------------------------------------------------------------
@@ -400,12 +375,46 @@ internal unsafe interface IMFMediaEvent
 // -------------------------------------------------------------------------
 // IMFSample
 // -------------------------------------------------------------------------
-[ComImport, Guid("C40A00F2-B93A-4D80-AE83-10A4943828AA"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+[ComImport, Guid("C40A00F2-B93A-4D80-AE8C-5A1C634F58E4"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
 internal unsafe interface IMFSample
 {
+    int GetItem([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, IntPtr pValue);
+    int GetItemType([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, out uint pType);
+    int CompareItem([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, IntPtr value, [MarshalAs(UnmanagedType.Bool)] out int pbResult);
+    int Compare(IMFAttributes? pTheirs, uint MatchType, [MarshalAs(UnmanagedType.Bool)] out int pbResult);
+    int GetUINT32([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, out uint punValue);
+    int GetUINT64([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, out ulong punValue);
+    int GetDouble([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, out double pfValue);
+    int GetGUID([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, out Guid pguidValue);
+    int GetStringLength([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, out uint pcchLength);
+    int GetString([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, [MarshalAs(UnmanagedType.LPWStr)] string pwszValue, uint cchBufSize, out uint pcchLength);
+    int GetAllocatedString([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, out IntPtr ppwszValue, out uint pcchLength);
+    int GetBlobSize([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, out uint pcbBlobSize);
+    int GetBlob([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, [Out, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)] byte[] pBuf, uint cbBufSize, out uint pcbBlobSize);
+    int GetAllocatedBlob([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, out IntPtr ppBuf, out uint pcbSize);
+    int GetUnknown([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, [In, MarshalAs(UnmanagedType.LPStruct)] Guid riid, out IntPtr ppv);
+    int SetItem([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, IntPtr value);
+    int DeleteItem([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey);
+    int DeleteAllItems();
+    int SetUINT32([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, uint unValue);
+    int SetUINT64([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, ulong unValue);
+    int SetDouble([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, double fValue);
+    int SetGUID([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, [In, MarshalAs(UnmanagedType.LPStruct)] Guid guidValue);
+    int SetString([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, [MarshalAs(UnmanagedType.LPWStr)] string wszValue);
+    int SetBlob([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, [In, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)] byte[] pBuf, uint cbBufSize);
+    int SetUnknown([In, MarshalAs(UnmanagedType.LPStruct)] Guid guidKey, [MarshalAs(UnmanagedType.IUnknown)] object? pUnknown);
+    int LockStore();
+    int UnlockStore();
+    int GetCount(out uint pcItems);
+    int GetItemByIndex(uint unIndex, out Guid pguidKey, IntPtr pValue);
+    int CopyAllItems(IMFAttributes? pDest);
+
     int GetSampleFlags(out uint pdwSampleFlags);
+    int SetSampleFlags(uint dwSampleFlags);
     int GetSampleTime(out long phnsSampleTime);
+    int SetSampleTime(long hnsSampleTime);
     int GetSampleDuration(out long phnsSampleDuration);
+    int SetSampleDuration(long hnsSampleDuration);
     int GetBufferCount(out uint pdwBufferCount);
     int GetBufferByIndex(uint dwIndex, out IMFMediaBuffer? ppBuffer);
     int ConvertToContiguousBuffer(out IMFMediaBuffer? ppBuffer);
@@ -419,7 +428,7 @@ internal unsafe interface IMFSample
 // -------------------------------------------------------------------------
 // IMFMediaBuffer
 // -------------------------------------------------------------------------
-[ComImport, Guid("35FE3BBE-2EE0-4393-8BC6-E78C77FDB003"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+[ComImport, Guid("045FA593-8799-42B8-BC8D-8968C6453507"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
 internal unsafe interface IMFMediaBuffer
 {
     int Lock(out IntPtr ppbBuffer, out uint pcbMaxLength, out uint pcbCurrentLength);
@@ -501,7 +510,7 @@ internal unsafe interface IMFPresentationDescriptor
 // -------------------------------------------------------------------------
 // IMFMediaSource  (needed for seeking via presentation descriptor)
 // -------------------------------------------------------------------------
-[ComImport, Guid("279A824D-A0CB-4DE0-81BE-5A0B51413D80"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+[ComImport, Guid("279A808D-AEC7-40C8-9C6B-A6B492C78A66"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
 internal unsafe interface IMFMediaSource
 {
     int GetCharacteristics(out uint pdwCharacteristics);
@@ -521,87 +530,263 @@ internal interface IMFVideoDisplayControl { }
 // -------------------------------------------------------------------------
 // DXGI interfaces
 // -------------------------------------------------------------------------
-[ComImport, Guid("54EC77FA-1377-44E6-9867-B87D78477247"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-internal interface IDXGIDevice
+[ComImport, Guid("AEC22FB8-76F3-4639-9BE0-28EB43A67A2E"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+internal interface IDXGIObject
 {
-    int SetGPUThreadPriority(int Priority);
-    int GetGPUThreadPriority(out int pPriority);
+    [PreserveSig] int SetPrivateData([In] ref Guid Name, uint DataSize, IntPtr pData);
+    [PreserveSig] int SetPrivateDataInterface([In] ref Guid Name, [MarshalAs(UnmanagedType.IUnknown)] object? pUnknown);
+    [PreserveSig] int GetPrivateData([In] ref Guid Name, ref uint pDataSize, IntPtr pData);
+    [PreserveSig] int GetParent([In] ref Guid riid, out IntPtr ppParent);
 }
 
-[ComImport, Guid("2411E7E1-12AC-4FCF-BD14-979828264082"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-internal interface IDXGIAdapter
+[ComImport, Guid("3D3E0379-F9DE-4D58-BB6C-18D62992F1A6"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+internal interface IDXGIDeviceSubObject : IDXGIObject
 {
-    int EnumOutputs(uint Output, out IntPtr ppOutput);
-    int GetDesc(out DXGI_ADAPTER_DESC pDesc);
-    int CheckInterfaceSupport([In, MarshalAs(UnmanagedType.LPStruct)] Guid InterfaceName, out long pUMDVersion);
+    [PreserveSig] int GetDevice([In] ref Guid riid, out IntPtr ppDevice);
+}
+
+[ComImport, Guid("310D36A0-D2E7-4C0A-AA04-6A9D23B8886A"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+internal interface IDXGISwapChain
+{
+    [PreserveSig] int SetPrivateData([In] ref Guid Name, uint DataSize, IntPtr pData);
+    [PreserveSig] int SetPrivateDataInterface([In] ref Guid Name, [MarshalAs(UnmanagedType.IUnknown)] object? pUnknown);
+    [PreserveSig] int GetPrivateData([In] ref Guid Name, ref uint pDataSize, IntPtr pData);
+    [PreserveSig] int GetParent([In] ref Guid riid, out IntPtr ppParent);
+
+    [PreserveSig] int GetDevice([In] ref Guid riid, out IntPtr ppDevice);
+
+    [PreserveSig] int Present(uint SyncInterval, uint Flags);
+    [PreserveSig] int GetBuffer(uint Buffer, [In] ref Guid riid, out IntPtr ppSurface);
+    [PreserveSig] int SetFullscreenState([MarshalAs(UnmanagedType.Bool)] bool Fullscreen, IntPtr pTarget);
+    [PreserveSig] int GetFullscreenState([MarshalAs(UnmanagedType.Bool)] out bool pFullscreen, out IntPtr ppTarget);
+    [PreserveSig] int GetDesc(out DXGI_SWAP_CHAIN_DESC pDesc);
+    [PreserveSig] int ResizeBuffers(uint BufferCount, uint Width, uint Height, uint NewFormat, uint SwapChainFlags);
+    [PreserveSig] int ResizeTarget(ref DXGI_MODE_DESC pNewTargetParameters);
+    [PreserveSig] int GetContainingOutput(out IntPtr ppOutput);
+    [PreserveSig] int GetFrameStatistics(out DXGI_FRAME_STATISTICS pStats);
+    [PreserveSig] int GetLastPresentCount(out uint pLastPresentCount);
+}
+
+[ComImport, Guid("790A45F7-0D42-4876-983A-0A55CFE6F4AA"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+internal interface IDXGISwapChain1 : IDXGISwapChain
+{
+    [PreserveSig] int GetDesc1(out DXGI_SWAP_CHAIN_DESC1 pDesc);
+}
+
+[ComImport, Guid("2411E7E1-12AC-4CCF-BD14-9798E8534DC0"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+internal interface IDXGIAdapter1 : IDXGIObject
+{
+    [PreserveSig] int EnumOutputs(uint Output, out IntPtr ppOutput);
+    [PreserveSig] int GetDesc1(out DXGI_ADAPTER_DESC1 pDesc);
+    [PreserveSig] int CheckInterfaceSupport([In, MarshalAs(UnmanagedType.LPStruct)] Guid InterfaceName, out long pUMDVersion);
+}
+
+[ComImport, Guid("7B7166EC-21C7-44AE-B21A-C9AE321AE369"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+internal interface IDXGIFactory : IDXGIObject
+{
+    [PreserveSig] int EnumAdapters(uint Adapter, out IntPtr ppAdapter);
+    [PreserveSig] int MakeWindowAssociation(IntPtr WindowHandle, uint Flags);
+    [PreserveSig] int GetWindowAssociation(out IntPtr pWindowHandle);
+    [PreserveSig] int CreateSwapChain(IntPtr pDevice, ref DXGI_SWAP_CHAIN_DESC pDesc, out IntPtr ppSwapChain);
+    [PreserveSig] int CreateSoftwareAdapter(IntPtr Module, out IntPtr ppAdapter);
+}
+
+[ComImport, Guid("770AAE78-F26F-4DBA-A829-253C83D1B387"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+internal interface IDXGIFactory1 : IDXGIFactory
+{
+    [PreserveSig] int EnumAdapters1(uint Adapter, out IntPtr ppAdapter);
+    [PreserveSig] int IsCurrent();
 }
 
 [ComImport, Guid("50C83A1C-E072-4C48-87B0-3630FA36A6D0"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-internal interface IDXGIFactory2
+internal interface IDXGIFactory2 : IDXGIFactory1
 {
-    int EnumAdapters(uint Adapter, out IntPtr ppAdapter);
-    int CreateSwapChain(IntPtr pDevice, ref DXGI_SWAP_CHAIN_DESC1 pDesc, out IntPtr ppSwapChain);
-    int CreateSwapChainForHwnd(IntPtr pDevice, IntPtr hWnd, ref DXGI_SWAP_CHAIN_DESC1 pDesc, IntPtr pFullscreenDesc, IntPtr pRestrictToOutput, out IntPtr ppSwapChain);
-}
-
-[ComImport, Guid("790A45F7-0DDF-4782-A291-9974D5898B71"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-internal interface IDXGISwapChain1
-{
-    int Present(uint SyncInterval, uint Flags);
-    int GetBuffer(uint Buffer, ref Guid riid, out IntPtr ppSurface);
-    int SetFullscreenState([MarshalAs(UnmanagedType.Bool)] int Fullscreen, IntPtr pTarget);
-    int GetFullscreenState([MarshalAs(UnmanagedType.Bool)] out int pFullscreen, out IntPtr ppTarget);
-    int GetDesc(out DXGI_SWAP_CHAIN_DESC1 pDesc);
-    int ResizeBuffers(uint BufferCount, uint Width, uint Height, uint NewFormat, uint SwapChainFlags);
-    int ResizeTarget(ref DXGI_MODE_DESC pNewTargetParameters);
-    int GetContainingOutput(out IntPtr ppOutput);
-    int GetFrameStatistics(out DXGI_FRAME_STATISTICS pStats);
-    int GetLastPresentCount(out uint pLastPresentCount);
+    [PreserveSig] bool IsWindowedStereoEnabled();
+    [PreserveSig] int CreateSwapChainForHwnd(IntPtr pDevice, IntPtr hWnd, ref DXGI_SWAP_CHAIN_DESC1 pDesc, IntPtr pFullscreenDesc, IntPtr pRestrictToOutput, out IntPtr ppSwapChain);
 }
 
 // -------------------------------------------------------------------------
 // D3D11 interfaces
 // -------------------------------------------------------------------------
-[ComImport, Guid("DB6F6D46-D8FA-4285-A54B-AD0260FED5EC"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+[ComImport, Guid("DB6F6DDB-AC77-4E88-8253-819DF9BBF140"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
 internal interface ID3D11Device
 {
-    int CreateBuffer(ref D3D11_BUFFER_DESC pDesc, IntPtr pInitialData, out IntPtr ppBuffer);
-    int CreateTexture2D(ref D3D11_TEXTURE2D_DESC pDesc, IntPtr pInitialData, out IntPtr ppTexture2D);
-    int CreateRenderTargetView(IntPtr pResource, IntPtr pDesc, out IntPtr ppRTView);
-    int CreateDepthStencilView(IntPtr pResource, IntPtr pDesc, out IntPtr ppDepthStencilView);
-    int CreateShaderResourceView(IntPtr pResource, ref D3D11_SHADER_RESOURCE_VIEW_DESC pDesc, out IntPtr ppSRView);
-    int CreateInputLayout(IntPtr pInputElementDescs, uint NumElements, IntPtr pShaderBytecodeWithInputSignature, nuint BytecodeLength, out IntPtr ppInputLayout);
-    int CreateVertexShader(IntPtr pShaderBytecode, nuint BytecodeLength, IntPtr pClassLinkage, out IntPtr ppVertexShader);
-    int CreatePixelShader(IntPtr pShaderBytecode, nuint BytecodeLength, IntPtr pClassLinkage, out IntPtr ppPixelShader);
-    int CreateSamplerState(ref D3D11_SAMPLER_DESC pSamplerDesc, out IntPtr ppSamplerState);
-    int CreateBlendState(ref D3D11_BLEND_DESC pBlendStateDesc, out IntPtr ppBlendState);
-    int CreateRasterizerState(ref D3D11_RASTERIZER_DESC pRasterizerDesc, out IntPtr ppRasterizerState);
-    int CreateDepthStencilState(ref D3D11_DEPTH_STENCIL_DESC pDepthStencilDesc, out IntPtr ppDepthStencilState);
-    int GetImmediateContext(out IntPtr ppImmediateContext);
+    [PreserveSig] int CreateBuffer(ref D3D11_BUFFER_DESC pDesc, IntPtr pInitialData, out IntPtr ppBuffer);
+    [PreserveSig] int CreateTexture1D(IntPtr pDesc, IntPtr pInitialData, out IntPtr ppTexture1D);
+    [PreserveSig] int CreateTexture2D(ref D3D11_TEXTURE2D_DESC pDesc, IntPtr pInitialData, out IntPtr ppTexture2D);
+    [PreserveSig] int CreateTexture3D(IntPtr pDesc, IntPtr pInitialData, out IntPtr ppTexture3D);
+    [PreserveSig] int CreateShaderResourceView(IntPtr pResource, IntPtr pDesc, out IntPtr ppSRView);
+    [PreserveSig] int CreateUnorderedAccessView(IntPtr pResource, IntPtr pDesc, out IntPtr ppUAView);
+    [PreserveSig] int CreateRenderTargetView(IntPtr pResource, IntPtr pDesc, out IntPtr ppRTView);
+    [PreserveSig] int CreateDepthStencilView(IntPtr pResource, IntPtr pDesc, out IntPtr ppDepthStencilView);
+    [PreserveSig] int CreateInputLayout(IntPtr pInputElementDescs, uint NumElements, IntPtr pShaderBytecodeWithInputSignature, nuint BytecodeLength, out IntPtr ppInputLayout);
+    [PreserveSig] int CreateVertexShader(IntPtr pShaderBytecode, nuint BytecodeLength, IntPtr pClassLinkage, out IntPtr ppVertexShader);
+    [PreserveSig] int CreateGeometryShader(IntPtr pShaderBytecode, nuint BytecodeLength, IntPtr pClassLinkage, out IntPtr ppGeometryShader);
+    [PreserveSig] int CreateGeometryShaderWithStreamOutput(
+        IntPtr pShaderBytecode,
+        nuint BytecodeLength,
+        IntPtr pSODeclaration,
+        uint NumEntries,
+        IntPtr pBufferStrides,
+        uint NumStrides,
+        uint RasterizedStream,
+        IntPtr pClassLinkage,
+        out IntPtr ppGeometryShader);
+    [PreserveSig] int CreatePixelShader(IntPtr pShaderBytecode, nuint BytecodeLength, IntPtr pClassLinkage, out IntPtr ppPixelShader);
+    [PreserveSig] int CreateHullShader(IntPtr pShaderBytecode, nuint BytecodeLength, IntPtr pClassLinkage, out IntPtr ppHullShader);
+    [PreserveSig] int CreateDomainShader(IntPtr pShaderBytecode, nuint BytecodeLength, IntPtr pClassLinkage, out IntPtr ppDomainShader);
+    [PreserveSig] int CreateComputeShader(IntPtr pShaderBytecode, nuint BytecodeLength, IntPtr pClassLinkage, out IntPtr ppComputeShader);
+    [PreserveSig] int CreateClassLinkage(out IntPtr ppLinkage);
+    [PreserveSig] int CreateBlendState(ref D3D11_BLEND_DESC pBlendStateDesc, out IntPtr ppBlendState);
+    [PreserveSig] int CreateDepthStencilState(ref D3D11_DEPTH_STENCIL_DESC pDepthStencilDesc, out IntPtr ppDepthStencilState);
+    [PreserveSig] int CreateRasterizerState(ref D3D11_RASTERIZER_DESC pRasterizerDesc, out IntPtr ppRasterizerState);
+    [PreserveSig] int CreateSamplerState(ref D3D11_SAMPLER_DESC pSamplerDesc, out IntPtr ppSamplerState);
+    [PreserveSig] int CreateQuery(IntPtr pQueryDesc, out IntPtr ppQuery);
+    [PreserveSig] int CreatePredicate(IntPtr pPredicateDesc, out IntPtr ppPredicate);
+    [PreserveSig] int CreateCounter(IntPtr pCounterDesc, out IntPtr ppCounter);
+    [PreserveSig] int CreateDeferredContext(uint ContextFlags, out IntPtr ppDeferredContext);
+    [PreserveSig] int OpenSharedResource(IntPtr hResource, ref Guid ReturnedInterface, out IntPtr ppResource);
+    [PreserveSig] int CheckFormatSupport(uint Format, out uint pFormatSupport);
+    [PreserveSig] int CheckMultisampleQualityLevels(uint Format, uint SampleCount, out uint pNumQualityLevels);
+    void CheckCounterInfo(out IntPtr pCounterInfo);
+    [PreserveSig] int CheckCounter(
+        IntPtr pDesc,
+        out uint pType,
+        out uint pActiveCounters,
+        IntPtr szName,
+        ref uint pNameLength,
+        IntPtr szUnits,
+        ref uint pUnitsLength,
+        IntPtr szDescription,
+        ref uint pDescriptionLength);
+    [PreserveSig] int CheckFeatureSupport(uint Feature, IntPtr pFeatureSupportData, uint FeatureSupportDataSize);
+    [PreserveSig] int GetPrivateData(ref Guid guid, ref uint pDataSize, IntPtr pData);
+    [PreserveSig] int SetPrivateData(ref Guid guid, uint DataSize, IntPtr pData);
+    [PreserveSig] int SetPrivateDataInterface(ref Guid guid, IntPtr pData);
+    uint GetFeatureLevel();
+    uint GetCreationFlags();
+    [PreserveSig] int GetDeviceRemovedReason();
+    void GetImmediateContext(out IntPtr ppImmediateContext);
+    [PreserveSig] int SetExceptionMode(uint RaiseFlags);
+    uint GetExceptionMode();
 }
 
-[ComImport, Guid("E707DCDE-D1CD-41CF-B4C5-51842004F539"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+[ComImport, Guid("C0BFA96C-E089-44FB-8EAF-26F8796190DA"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
 internal unsafe interface ID3D11DeviceContext
 {
-    void VSSetConstantBuffers(uint StartSlot, uint NumBuffers, IntPtr ppConstantBuffers);
-    void VSSetShader(IntPtr pVertexShader, IntPtr pClassInstances, uint NumClassInstances);
-    void PSSetShaderResources(uint StartSlot, uint NumViews, IntPtr ppShaderResourceViews);
-    void PSSetShader(IntPtr pPixelShader, IntPtr pClassInstances, uint NumClassInstances);
-    void PSSetSamplers(uint StartSlot, uint NumSamplers, IntPtr ppSamplers);
-    void PSSetConstantBuffers(uint StartSlot, uint NumBuffers, IntPtr ppConstantBuffers);
-    void Draw(uint VertexCount, uint StartVertexLocation);
-    void ClearRenderTargetView(IntPtr pRenderTargetView, [MarshalAs(UnmanagedType.LPArray, SizeConst = 4)] float[] ColorRGBA);
-    void ClearDepthStencilView(IntPtr pDepthStencilView, uint ClearFlags, float Depth, byte Stencil);
-    void CopyResource(IntPtr pDstResource, IntPtr pSrcResource);
-    void OMSetRenderTargets(uint NumViews, IntPtr ppRenderTargetViews, IntPtr pDepthStencilView);
-    void OMSetBlendState(IntPtr pBlendState, float[] BlendFactor, uint SampleMask);
-    void RSSetState(IntPtr pRasterizerState);
-    void RSSetViewports(uint NumViewports, IntPtr pViewports);
-    void IASetInputLayout(IntPtr pInputLayout);
-    void IASetPrimitiveTopology(uint Topology);
-    void IASetVertexBuffers(uint StartSlot, uint NumBuffers, IntPtr ppVertexBuffers, IntPtr pStrides, IntPtr pOffsets);
-    int Map(IntPtr pResource, uint Subresource, uint MapType, uint MapFlags, out MappedSubresource pMappedResource);
-    void Unmap(IntPtr pResource, uint Subresource);
+    [PreserveSig] void GetDevice(out IntPtr ppDevice);
+    [PreserveSig] int GetPrivateData(ref Guid guid, ref uint pDataSize, IntPtr pData);
+    [PreserveSig] int SetPrivateData(ref Guid guid, uint DataSize, IntPtr pData);
+    [PreserveSig] int SetPrivateDataInterface(ref Guid guid, IntPtr pData);
+
+    [PreserveSig] void VSSetConstantBuffers(uint StartSlot, uint NumBuffers, IntPtr ppConstantBuffers);
+    [PreserveSig] void PSSetShaderResources(uint StartSlot, uint NumViews, IntPtr ppShaderResourceViews);
+    [PreserveSig] void PSSetShader(IntPtr pPixelShader, IntPtr pClassInstances, uint NumClassInstances);
+    [PreserveSig] void PSSetSamplers(uint StartSlot, uint NumSamplers, IntPtr ppSamplers);
+    [PreserveSig] void VSSetShader(IntPtr pVertexShader, IntPtr pClassInstances, uint NumClassInstances);
+    [PreserveSig] void DrawIndexed(uint IndexCount, uint StartIndexLocation, int BaseVertexLocation);
+    [PreserveSig] void Draw(uint VertexCount, uint StartVertexLocation);
+    [PreserveSig] int Map(IntPtr pResource, uint Subresource, uint MapType, uint MapFlags, out MappedSubresource pMappedResource);
+    [PreserveSig] void Unmap(IntPtr pResource, uint Subresource);
+    [PreserveSig] void PSSetConstantBuffers(uint StartSlot, uint NumBuffers, IntPtr ppConstantBuffers);
+    [PreserveSig] void IASetInputLayout(IntPtr pInputLayout);
+    [PreserveSig] void IASetVertexBuffers(uint StartSlot, uint NumBuffers, IntPtr ppVertexBuffers, IntPtr pStrides, IntPtr pOffsets);
+    [PreserveSig] void IASetIndexBuffer(IntPtr pIndexBuffer, uint Format, uint Offset);
+    [PreserveSig] void DrawIndexedInstanced(uint IndexCountPerInstance, uint InstanceCount, uint StartIndexLocation, int BaseVertexLocation, uint StartInstanceLocation);
+    [PreserveSig] void DrawInstanced(uint VertexCountPerInstance, uint InstanceCount, uint StartVertexLocation, uint StartInstanceLocation);
+    [PreserveSig] void GSSetConstantBuffers(uint StartSlot, uint NumBuffers, IntPtr ppConstantBuffers);
+    [PreserveSig] void GSSetShader(IntPtr pShader, IntPtr pClassInstances, uint NumClassInstances);
+    [PreserveSig] void IASetPrimitiveTopology(uint Topology);
+    [PreserveSig] void VSSetShaderResources(uint StartSlot, uint NumViews, IntPtr ppShaderResourceViews);
+    [PreserveSig] void VSSetSamplers(uint StartSlot, uint NumSamplers, IntPtr ppSamplers);
+    [PreserveSig] void Begin(IntPtr pAsync);
+    [PreserveSig] void End(IntPtr pAsync);
+    [PreserveSig] int GetData(IntPtr pAsync, IntPtr pData, uint DataSize, uint GetDataFlags);
+    [PreserveSig] void SetPredication(IntPtr pPredicate, [MarshalAs(UnmanagedType.Bool)] bool PredicateValue);
+    [PreserveSig] void GSSetShaderResources(uint StartSlot, uint NumViews, IntPtr ppShaderResourceViews);
+    [PreserveSig] void GSSetSamplers(uint StartSlot, uint NumSamplers, IntPtr ppSamplers);
+    [PreserveSig] void OMSetRenderTargets(uint NumViews, IntPtr ppRenderTargetViews, IntPtr pDepthStencilView);
+    [PreserveSig] void OMSetRenderTargetsAndUnorderedAccessViews(uint NumRTVs, IntPtr ppRenderTargetViews, IntPtr pDepthStencilView, uint UAVStartSlot, uint NumUAVs, IntPtr ppUnorderedAccessViews, IntPtr pUAVInitialCounts);
+    [PreserveSig] void OMSetBlendState(IntPtr pBlendState, [MarshalAs(UnmanagedType.LPArray, SizeConst = 4)] float[] BlendFactor, uint SampleMask);
+    [PreserveSig] void OMSetDepthStencilState(IntPtr pDepthStencilState, uint StencilRef);
+    [PreserveSig] void SOSetTargets(uint NumBuffers, IntPtr ppSOTargets, IntPtr pOffsets);
+    [PreserveSig] void DrawAuto();
+    [PreserveSig] void DrawIndexedInstancedIndirect(IntPtr pBufferForArgs, uint AlignedByteOffsetForArgs);
+    [PreserveSig] void DrawInstancedIndirect(IntPtr pBufferForArgs, uint AlignedByteOffsetForArgs);
+    [PreserveSig] void Dispatch(uint ThreadGroupCountX, uint ThreadGroupCountY, uint ThreadGroupCountZ);
+    [PreserveSig] void DispatchIndirect(IntPtr pBufferForArgs, uint AlignedByteOffsetForArgs);
+    [PreserveSig] void RSSetState(IntPtr pRasterizerState);
+    [PreserveSig] void RSSetViewports(uint NumViewports, IntPtr pViewports);
+    [PreserveSig] void RSSetScissorRects(uint NumRects, IntPtr pRects);
+    [PreserveSig] void CopySubresourceRegion(IntPtr pDstResource, uint DstSubresource, uint DstX, uint DstY, uint DstZ, IntPtr pSrcResource, uint SrcSubresource, IntPtr pSrcBox);
+    [PreserveSig] void CopyResource(IntPtr pDstResource, IntPtr pSrcResource);
+    [PreserveSig] void UpdateSubresource(IntPtr pDstResource, uint DstSubresource, IntPtr pDstBox, IntPtr pSrcData, uint SrcRowPitch, uint SrcDepthPitch);
+    [PreserveSig] void CopyStructureCount(IntPtr pDstBuffer, uint DstAlignedByteOffset, IntPtr pSrcView);
+    [PreserveSig] void ClearRenderTargetView(IntPtr pRenderTargetView, [MarshalAs(UnmanagedType.LPArray, SizeConst = 4)] float[] ColorRGBA);
+    [PreserveSig] void ClearUnorderedAccessViewUint(IntPtr pUnorderedAccessView, IntPtr Values);
+    [PreserveSig] void ClearUnorderedAccessViewFloat(IntPtr pUnorderedAccessView, IntPtr Values);
+    [PreserveSig] void ClearDepthStencilView(IntPtr pDepthStencilView, uint ClearFlags, float Depth, byte Stencil);
+    [PreserveSig] void GenerateMips(IntPtr pShaderResourceView);
+    [PreserveSig] void SetResourceMinLOD(IntPtr pResource, float MinLOD);
+    [PreserveSig] float GetResourceMinLOD(IntPtr pResource);
+    [PreserveSig] void ResolveSubresource(IntPtr pDstResource, uint DstSubresource, IntPtr pSrcResource, uint SrcSubresource, uint Format);
+    [PreserveSig] void ExecuteCommandList(IntPtr pCommandList, [MarshalAs(UnmanagedType.Bool)] bool RestoreContextState);
+    [PreserveSig] void HSSetShaderResources(uint StartSlot, uint NumViews, IntPtr ppShaderResourceViews);
+    [PreserveSig] void HSSetShader(IntPtr pHullShader, IntPtr pClassInstances, uint NumClassInstances);
+    [PreserveSig] void HSSetSamplers(uint StartSlot, uint NumSamplers, IntPtr ppSamplers);
+    [PreserveSig] void HSSetConstantBuffers(uint StartSlot, uint NumBuffers, IntPtr ppConstantBuffers);
+    [PreserveSig] void DSSetShaderResources(uint StartSlot, uint NumViews, IntPtr ppShaderResourceViews);
+    [PreserveSig] void DSSetShader(IntPtr pDomainShader, IntPtr pClassInstances, uint NumClassInstances);
+    [PreserveSig] void DSSetSamplers(uint StartSlot, uint NumSamplers, IntPtr ppSamplers);
+    [PreserveSig] void DSSetConstantBuffers(uint StartSlot, uint NumBuffers, IntPtr ppConstantBuffers);
+    [PreserveSig] void CSSetShaderResources(uint StartSlot, uint NumViews, IntPtr ppShaderResourceViews);
+    [PreserveSig] void CSSetUnorderedAccessViews(uint StartSlot, uint NumUAVs, IntPtr ppUnorderedAccessViews, IntPtr pUAVInitialCounts);
+    [PreserveSig] void CSSetShader(IntPtr pComputeShader, IntPtr pClassInstances, uint NumClassInstances);
+    [PreserveSig] void CSSetSamplers(uint StartSlot, uint NumSamplers, IntPtr ppSamplers);
+    [PreserveSig] void CSSetConstantBuffers(uint StartSlot, uint NumBuffers, IntPtr ppConstantBuffers);
+    [PreserveSig] void VSGetConstantBuffers(uint StartSlot, uint NumBuffers, IntPtr ppConstantBuffers);
+    [PreserveSig] void PSGetShaderResources(uint StartSlot, uint NumViews, IntPtr ppShaderResourceViews);
+    [PreserveSig] void PSGetShader(out IntPtr ppPixelShader, IntPtr ppClassInstances, ref uint pNumClassInstances);
+    [PreserveSig] void PSGetSamplers(uint StartSlot, uint NumSamplers, IntPtr ppSamplers);
+    [PreserveSig] void VSGetShader(out IntPtr ppVertexShader, IntPtr ppClassInstances, ref uint pNumClassInstances);
+    [PreserveSig] void PSGetConstantBuffers(uint StartSlot, uint NumBuffers, IntPtr ppConstantBuffers);
+    [PreserveSig] void IAGetInputLayout(out IntPtr ppInputLayout);
+    [PreserveSig] void IAGetVertexBuffers(uint StartSlot, uint NumBuffers, IntPtr ppVertexBuffers, IntPtr pStrides, IntPtr pOffsets);
+    [PreserveSig] void IAGetIndexBuffer(out IntPtr ppIndexBuffer, out uint Format, out uint Offset);
+    [PreserveSig] void GSGetConstantBuffers(uint StartSlot, uint NumBuffers, IntPtr ppConstantBuffers);
+    [PreserveSig] void GSGetShader(out IntPtr ppGeometryShader, IntPtr ppClassInstances, ref uint pNumClassInstances);
+    [PreserveSig] void IAGetPrimitiveTopology(out uint pTopology);
+    [PreserveSig] void VSGetShaderResources(uint StartSlot, uint NumViews, IntPtr ppShaderResourceViews);
+    [PreserveSig] void VSGetSamplers(uint StartSlot, uint NumSamplers, IntPtr ppSamplers);
+    [PreserveSig] void GetPredication(out IntPtr ppPredicate, [MarshalAs(UnmanagedType.Bool)] out bool pPredicateValue);
+    [PreserveSig] void GSGetShaderResources(uint StartSlot, uint NumViews, IntPtr ppShaderResourceViews);
+    [PreserveSig] void GSGetSamplers(uint StartSlot, uint NumSamplers, IntPtr ppSamplers);
+    [PreserveSig] void OMGetRenderTargets(uint NumViews, IntPtr ppRenderTargetViews, out IntPtr ppDepthStencilView);
+    [PreserveSig] void OMGetRenderTargetsAndUnorderedAccessViews(uint NumRTVs, IntPtr ppRenderTargetViews, out IntPtr ppDepthStencilView, uint UAVStartSlot, uint NumUAVs, IntPtr ppUnorderedAccessViews);
+    [PreserveSig] void OMGetBlendState(out IntPtr ppBlendState, [MarshalAs(UnmanagedType.LPArray, SizeConst = 4)] float[] BlendFactor, out uint pSampleMask);
+    [PreserveSig] void OMGetDepthStencilState(out IntPtr ppDepthStencilState, out uint pStencilRef);
+    [PreserveSig] void SOGetTargets(uint NumBuffers, IntPtr ppSOTargets);
+    [PreserveSig] void RSGetState(out IntPtr ppRasterizerState);
+    [PreserveSig] void RSGetViewports(ref uint pNumViewports, IntPtr pViewports);
+    [PreserveSig] void RSGetScissorRects(ref uint pNumRects, IntPtr pRects);
+    [PreserveSig] void HSGetShaderResources(uint StartSlot, uint NumViews, IntPtr ppShaderResourceViews);
+    [PreserveSig] void HSGetShader(out IntPtr ppHullShader, IntPtr ppClassInstances, ref uint pNumClassInstances);
+    [PreserveSig] void HSGetSamplers(uint StartSlot, uint NumSamplers, IntPtr ppSamplers);
+    [PreserveSig] void HSGetConstantBuffers(uint StartSlot, uint NumBuffers, IntPtr ppConstantBuffers);
+    [PreserveSig] void DSGetShaderResources(uint StartSlot, uint NumViews, IntPtr ppShaderResourceViews);
+    [PreserveSig] void DSGetShader(out IntPtr ppDomainShader, IntPtr ppClassInstances, ref uint pNumClassInstances);
+    [PreserveSig] void DSGetSamplers(uint StartSlot, uint NumSamplers, IntPtr ppSamplers);
+    [PreserveSig] void DSGetConstantBuffers(uint StartSlot, uint NumBuffers, IntPtr ppConstantBuffers);
+    [PreserveSig] void CSGetShaderResources(uint StartSlot, uint NumViews, IntPtr ppShaderResourceViews);
+    [PreserveSig] void CSGetUnorderedAccessViews(uint StartSlot, uint NumUAVs, IntPtr ppUnorderedAccessViews);
+    [PreserveSig] void CSGetShader(out IntPtr ppComputeShader, IntPtr ppClassInstances, ref uint pNumClassInstances);
+    [PreserveSig] void CSGetSamplers(uint StartSlot, uint NumSamplers, IntPtr ppSamplers);
+    [PreserveSig] void CSGetConstantBuffers(uint StartSlot, uint NumBuffers, IntPtr ppConstantBuffers);
+    [PreserveSig] void ClearState();
+    [PreserveSig] void Flush();
+    [PreserveSig] uint GetType();
+    [PreserveSig] uint GetContextFlags();
+    [PreserveSig] int FinishCommandList([MarshalAs(UnmanagedType.Bool)] bool RestoreDeferredContextState, out IntPtr ppCommandList);
 }
 
 // -------------------------------------------------------------------------
@@ -680,8 +865,8 @@ internal interface ID3D11SamplerState
 [ComImport, Guid("8BA5FB08-5195-40E2-AC58-0D989C3A0102"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
 internal interface ID3DBlob
 {
-    IntPtr GetBufferPointer();
-    nuint GetBufferSize();
+    [PreserveSig] IntPtr GetBufferPointer();
+    [PreserveSig] nuint GetBufferSize();
 }
 
 // -------------------------------------------------------------------------
@@ -799,6 +984,20 @@ internal struct DXGI_SWAP_CHAIN_DESC1
 }
 
 [StructLayout(LayoutKind.Sequential)]
+internal struct DXGI_SWAP_CHAIN_DESC
+{
+    public DXGI_MODE_DESC BufferDesc;
+    public uint SampleDesc_Count;
+    public uint SampleDesc_Quality;
+    public uint BufferUsage;
+    public uint BufferCount;
+    public IntPtr OutputWindow;
+    public int Windowed;
+    public uint SwapEffect;
+    public uint Flags;
+}
+
+[StructLayout(LayoutKind.Sequential)]
 internal struct DXGI_MODE_DESC
 {
     public uint Width;
@@ -808,6 +1007,22 @@ internal struct DXGI_MODE_DESC
     public uint Format;
     public uint ScanlineOrdering;
     public uint Scaling;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct DXGI_ADAPTER_DESC1
+{
+    [MarshalAs(UnmanagedType.ByValArray, SizeConst = 128)]
+    public char[] Description;
+    public uint VendorId;
+    public uint DeviceId;
+    public uint SubSysId;
+    public uint Revision;
+    public nuint DedicatedVideoMemory;
+    public nuint DedicatedSystemMemory;
+    public nuint SharedSystemMemory;
+    public long AdapterLuid;
+    public uint Flags;
 }
 
 [StructLayout(LayoutKind.Sequential)]
@@ -861,7 +1076,7 @@ internal struct MappedSubresource
 }
 #pragma warning restore CS0649
 
-[StructLayout(LayoutKind.Sequential)]
+[StructLayout(LayoutKind.Sequential, Pack = 4)]
 internal struct D3D11_BUFFER_DESC
 {
     public uint ByteWidth;
@@ -872,7 +1087,7 @@ internal struct D3D11_BUFFER_DESC
     public uint StructureByteStride;
 }
 
-[StructLayout(LayoutKind.Sequential)]
+[StructLayout(LayoutKind.Sequential, Pack = 4)]
 internal struct D3D11_TEXTURE2D_DESC
 {
     public uint Width;
@@ -1134,10 +1349,10 @@ internal static class NativeMethods
         out IntPtr ppSourceReader);
 
     // ---- Media Foundation Core ----
-    [DllImport("mf.dll", SetLastError = true, PreserveSig = false)]
+    [DllImport("mfplat.dll", SetLastError = true, PreserveSig = false)]
     internal static extern int MFCreateAttributes(out IntPtr ppMFAttributes, uint cInitialSize);
 
-    [DllImport("mf.dll", SetLastError = true, PreserveSig = false)]
+    [DllImport("mfplat.dll", SetLastError = true, PreserveSig = false)]
     internal static extern int MFCreateMediaType(out IntPtr ppMFMediaType);
 
     [DllImport("mf.dll", SetLastError = true, PreserveSig = false)]
@@ -1146,13 +1361,13 @@ internal static class NativeMethods
     [DllImport("mf.dll", SetLastError = true, PreserveSig = false)]
     internal static extern int MFCreateMediaSession(IntPtr pConfiguration, out IntPtr ppSession);
 
-    [DllImport("mf.dll", SetLastError = true, PreserveSig = false)]
+    [DllImport("mfplat.dll", SetLastError = true, PreserveSig = false)]
     internal static extern int MFCreateSample(out IntPtr ppIMFSample);
 
-    [DllImport("mf.dll", SetLastError = true, PreserveSig = false)]
+    [DllImport("mfplat.dll", SetLastError = true, PreserveSig = false)]
     internal static extern int MFCreateMemoryBuffer(uint cbMaxLength, out IntPtr ppBuffer);
 
-    [DllImport("mf.dll", SetLastError = true, PreserveSig = false)]
+    [DllImport("mfplat.dll", SetLastError = true, PreserveSig = false)]
     internal static extern int MFCreateDXGISurfaceBuffer(
         [In, MarshalAs(UnmanagedType.LPStruct)] Guid riid,
         IntPtr punkSurface,
@@ -1176,6 +1391,21 @@ internal static class NativeMethods
         IntPtr pFeatureLevels,
         uint FeatureLevels,
         uint SDKVersion,
+        out IntPtr ppDevice,
+        out int pFeatureLevel,
+        out IntPtr ppImmediateContext);
+
+    [DllImport("d3d11.dll", SetLastError = true, PreserveSig = true)]
+    internal static extern int D3D11CreateDeviceAndSwapChain(
+        IntPtr pAdapter,
+        int DriverType,
+        IntPtr Software,
+        uint Flags,
+        IntPtr pFeatureLevels,
+        uint FeatureLevels,
+        uint SDKVersion,
+        ref DXGI_SWAP_CHAIN_DESC pSwapChainDesc,
+        out IntPtr ppSwapChain,
         out IntPtr ppDevice,
         out int pFeatureLevel,
         out IntPtr ppImmediateContext);

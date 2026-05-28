@@ -18,6 +18,9 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Cine.Media.Events;
@@ -29,11 +32,92 @@ namespace Cine.Media.Implementations;
 
 public class MediaFoundationPlayer : IMediaPlayer, IDisposable
 {
+    #region debug-point MF0:runtime-reporter
+    private static readonly HttpClient DebugHttpClient = new();
+    private static readonly object DebugEnvLock = new();
+    private static string? _debugServerUrl;
+    private static string? _debugSessionId;
+
+    private static void DebugReport(string hypothesisId, string location, string msg, object? data = null, string runId = "pre-fix")
+    {
+        try
+        {
+            EnsureDebugEnvLoaded();
+            var payload = JsonSerializer.Serialize(new
+            {
+                sessionId = _debugSessionId ?? "video-transparent",
+                runId,
+                hypothesisId,
+                location,
+                msg = $"[DEBUG] {msg}",
+                data,
+                ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+            });
+            _ = DebugHttpClient.PostAsync(
+                _debugServerUrl ?? "http://127.0.0.1:7777/event",
+                new StringContent(payload, Encoding.UTF8, "application/json"))
+                .ContinueWith(t => { _ = t.Exception; }, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously);
+        }
+        catch
+        {
+        }
+    }
+
+    private static void EnsureDebugEnvLoaded()
+    {
+        if (!string.IsNullOrWhiteSpace(_debugServerUrl) && !string.IsNullOrWhiteSpace(_debugSessionId))
+            return;
+
+        lock (DebugEnvLock)
+        {
+            if (!string.IsNullOrWhiteSpace(_debugServerUrl) && !string.IsNullOrWhiteSpace(_debugSessionId))
+                return;
+
+            foreach (var root in EnumerateDebugRoots())
+            {
+                var dir = new DirectoryInfo(root);
+                while (dir != null)
+                {
+                    var envPath = Path.Combine(dir.FullName, ".dbg", "no-playback.env");
+                    if (!File.Exists(envPath))
+                        envPath = Path.Combine(dir.FullName, ".dbg", "video-transparent.env");
+                    if (!File.Exists(envPath))
+                        envPath = Path.Combine(dir.FullName, ".dbg", "video-open-crash.env");
+                    if (!File.Exists(envPath))
+                        envPath = Path.Combine(dir.FullName, ".dbg", "video-no-playback.env");
+
+                    if (File.Exists(envPath))
+                    {
+                        foreach (var line in File.ReadAllLines(envPath))
+                        {
+                            if (line.StartsWith("DEBUG_SERVER_URL=", StringComparison.Ordinal))
+                                _debugServerUrl = line["DEBUG_SERVER_URL=".Length..].Trim();
+                            else if (line.StartsWith("DEBUG_SESSION_ID=", StringComparison.Ordinal))
+                                _debugSessionId = line["DEBUG_SESSION_ID=".Length..].Trim();
+                        }
+                        return;
+                    }
+
+                    dir = dir.Parent;
+                }
+            }
+        }
+    }
+
+    private static IEnumerable<string> EnumerateDebugRoots()
+    {
+        yield return AppContext.BaseDirectory;
+        yield return Environment.CurrentDirectory;
+    }
+    #endregion
+
     #region Private Fields
 
     // === Playback state ===
     private PlaybackState _currentState = PlaybackState.Stopped;
     private System.Threading.Timer? _positionTimer;
+    private int _stopInProgress;
+    private bool _disposing;
 
     // === Native D3D11 path (Phase 2) ===
     private IntPtr _hwnd;
@@ -42,6 +126,8 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
     private MfHelper? _mfHelper;
     private bool _nativeRendering;
     private bool _nativeInitialized;
+    private string? _pendingOpenPath;
+    private string _pendingOpenMode = "replace";
 
     // Stored delegates so unsubscribe works correctly in Dispose
     private EventHandler<MediaOpenedEventArgs>? _mfMediaOpenedHandler;
@@ -49,6 +135,14 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
     private EventHandler<AudioSampleReadyEventArgs>? _mfAudioSampleReadyHandler;
     private EventHandler? _mfPlaybackEndedHandler;
     private EventHandler<ErrorEventArgs>? _mfErrorHandler;
+
+    #region debug-point MF1:counters
+    private long _videoSamplesReceived;
+    private long _videoPresentOk;
+    private long _videoPresentFail;
+    private int _videoW;
+    private int _videoH;
+    #endregion
 
     // === Shared state ===
     private TimeSpan _position = TimeSpan.Zero;
@@ -296,6 +390,9 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
 
             // Create the renderer but don't initialize it yet - we need to know the video format first
             _renderer = new D3D11Renderer(hwnd);
+            _renderer.UseNv12ShaderPath = false;
+            _renderer.Initialize();
+            _renderer.ClearToBlack();
 
             _mfHelper = new MfHelper();
             _mfHelper.Initialize();
@@ -306,6 +403,9 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
         catch (Exception ex)
         {
             Error?.Invoke(this, $"Failed to initialize native renderer: {ex.Message}");
+            #region debug-point MF2
+            DebugReport("MF", "MediaFoundationPlayer.InitializeRenderer", "InitializeRenderer failed.", new { exception = ex.ToString(), hwnd = hwnd.ToInt64() });
+            #endregion
             _nativeRendering = false;
             _nativeInitialized = false;
             _renderer?.Dispose();
@@ -317,49 +417,51 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
             return;
         }
 
+        #region debug-point MF2
+        DebugReport("MF", "MediaFoundationPlayer.InitializeRenderer", "InitializeRenderer success.", new { hwnd = hwnd.ToInt64() });
+        #endregion
+
         // Store delegates so we can unsubscribe them in Dispose
         _mfMediaOpenedHandler = (s, e) =>
         {
-            // Get the video format from the event args
-            string? videoFormat = e.VideoFormat;
-            
-            // Configure the renderer based on the video format
-            if (videoFormat != null)
+            #region debug-point MF3
+            DebugReport("MF", "MediaFoundationPlayer.MfMediaOpened", "MfHelper.MediaOpened received.", new
             {
-                // Check if the format requires the NV12 shader path
-                // Common YUV formats that need shader conversion:
-                // - NV12: {3231564E-0000-0010-8000-00AA00389B71}
-                // - I420: {30323449-0000-0010-8000-00AA00389B71}
-                // - YUY2: {32595559-0000-0010-8000-00AA00389B71}
-                // RGB32/BGRA format: {00000016-0000-0010-8000-00AA00389B71}
-                
-                bool useShaderPath = videoFormat.Contains("3231564E") ||  // NV12
-                                     videoFormat.Contains("30323449") ||  // I420
-                                     videoFormat.Contains("32595559");    // YUY2
-                
-                if (_renderer != null)
+                videoW = e.VideoWidth,
+                videoH = e.VideoHeight,
+                videoFormat = e.VideoFormat,
+                videoStream = e.VideoStreamIndex,
+                audioStream = e.AudioStreamIndex,
+                duration = e.Duration.ToString()
+            });
+            #endregion
+            if (_renderer != null)
+            {
+                int w = e.VideoWidth;
+                int h = e.VideoHeight;
+                if (w <= 0 || h <= 0)
                 {
-                    // If the renderer is already initialized with a different shader path,
-                    // we need to create a fresh one
-                    if (_renderer.IsInitialized && _renderer.UseNv12ShaderPath != useShaderPath)
+                    var streamInfo = _mfHelper?.GetVideoStreamInfo();
+                    if (streamInfo != null)
                     {
-                        _renderer.Dispose();
-                        _renderer = new D3D11Renderer(_hwnd);
+                        w = streamInfo.Value.Width;
+                        h = streamInfo.Value.Height;
+                        #region debug-point MF3
+                        DebugReport("MF", "MediaFoundationPlayer.MfMediaOpened", "Recovered video size via GetVideoStreamInfo().", new { w, h, subtype = streamInfo.Value.Subtype, fps = streamInfo.Value.FrameRate });
+                        #endregion
                     }
+                }
+                if (w > 0 && h > 0)
+                {
+                    _renderer.SetVideoDimensions(w, h);
+                    _videoW = w;
+                    _videoH = h;
+                }
 
-                    // Update dimensions before initialization if possible
-                    if (e.VideoWidth > 0 && e.VideoHeight > 0)
-                    {
-                        _renderer.SetVideoDimensions(e.VideoWidth, e.VideoHeight);
-                    }
-
-                    _renderer.UseNv12ShaderPath = useShaderPath;
-
-                    // Initialize if not already initialized
-                    if (!_renderer.IsInitialized)
-                    {
-                        _renderer.Initialize();
-                    }
+                if (!_renderer.IsInitialized)
+                {
+                    _renderer.UseNv12ShaderPath = false;
+                    _renderer.Initialize();
                 }
             }
             
@@ -382,8 +484,38 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
             if (_renderer != null && _currentState == PlaybackState.Playing)
             {
                 _lastNativeTimestamp = e.Timestamp;
-                try { _renderer.Present(e.Sample); }
-                catch { /* Drop corrupted frame */ }
+                #region debug-point MF4
+                var received = System.Threading.Interlocked.Increment(ref _videoSamplesReceived);
+                #endregion
+                try
+                {
+                    if (_videoW <= 0 || _videoH <= 0)
+                    {
+                        if (TryInferVideoSizeFromSample(e.Sample, out int w, out int h, out string fmt))
+                        {
+                            _renderer.SetVideoDimensions(w, h);
+                            _videoW = w;
+                            _videoH = h;
+                            #region debug-point MF4
+                            DebugReport("MF", "MediaFoundationPlayer.SampleReady", "Inferred video size from sample buffer.", new { w, h, fmt });
+                            #endregion
+                        }
+                    }
+                    _renderer.Present(e.Sample);
+                    #region debug-point MF4
+                    var ok = System.Threading.Interlocked.Increment(ref _videoPresentOk);
+                    if (ok == 1 || ok % 60 == 0)
+                        DebugReport("MF", "MediaFoundationPlayer.SampleReady", "Presented frame.", new { received, ok, ts = e.Timestamp, state = _currentState.ToString(), videoW = _videoW, videoH = _videoH });
+                    #endregion
+                }
+                catch (Exception ex)
+                {
+                    #region debug-point MF4
+                    var fail = System.Threading.Interlocked.Increment(ref _videoPresentFail);
+                    if (fail <= 5)
+                        DebugReport("MF", "MediaFoundationPlayer.SampleReady", "Present failed.", new { received, ok = _videoPresentOk, fail, ts = e.Timestamp, exception = ex.ToString() });
+                    #endregion
+                }
             }
         };
         _mfAudioSampleReadyHandler = (s, e) =>
@@ -428,6 +560,9 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
         {
             _currentState = PlaybackState.Stopped;
             StopPositionTracking();
+            #region debug-point MF5
+            DebugReport("MF", "MediaFoundationPlayer.MfError", "MfHelper.Error received.", new { error = e.Error?.ToString() });
+            #endregion
             EndFile?.Invoke(this, new MediaEventArgs(_currentFilePath)
             {
                 ErrorMessage = e.Error?.Message ?? "Unknown error"
@@ -441,6 +576,15 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
         _mfHelper.Error += _mfErrorHandler;
 
         _nativeInitialized = true;
+
+        if (!string.IsNullOrWhiteSpace(_pendingOpenPath))
+        {
+            var path = _pendingOpenPath;
+            var mode = _pendingOpenMode;
+            _pendingOpenPath = null;
+            _pendingOpenMode = "replace";
+            Open(path, mode);
+        }
     }
 
     public void NotifyResize(int width, int height)
@@ -465,7 +609,11 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
         if (string.IsNullOrEmpty(path))
             throw new ArgumentNullException(nameof(path));
         if (_nativeRendering && !_nativeInitialized)
-            throw new InvalidOperationException("Call InitializeRenderer(hwnd) first.");
+        {
+            _pendingOpenPath = path;
+            _pendingOpenMode = mode;
+            return;
+        }
 
         if (_currentState == PlaybackState.Playing)
         {
@@ -506,7 +654,8 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
         {
             var errorArgs = new MediaEventArgs(path) { ErrorMessage = ex.Message };
             EndFile?.Invoke(this, errorArgs);
-            throw;
+            Error?.Invoke(this, ex.ToString());
+            return;
         }
     }
 
@@ -529,6 +678,7 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
         if (_nativeRendering)
         {
             if (!_nativeInitialized) return;
+            _renderer?.ClearToBlack();
             _mfHelper!.StartPlayback();
             _audioRenderer?.Start();
             _playbackStartTime = DateTime.UtcNow;
@@ -568,23 +718,44 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
 
     public void Stop()
     {
-        if (_nativeRendering)
-        {
-            _mfHelper!.StopPlayback();
-            _renderer?.ClearToBlack();
-            _audioRenderer?.Pause();
-        }
-        else
-        {
-            Error?.Invoke(this, "Native renderer is not initialized; cannot stop playback.");
-        }
+        StopInternal(raiseEvents: true);
+    }
 
-        _position = TimeSpan.Zero;
-        _currentState = PlaybackState.Stopped;
-        StopPositionTracking();
-        PlaybackStopped?.Invoke(this,
-            new PlaybackStateEventArgs(PlaybackState.Stopped, PlaybackState.Stopped));
-        EndFile?.Invoke(this, new MediaEventArgs(_currentFilePath));
+    private void StopInternal(bool raiseEvents)
+    {
+        if (Interlocked.Exchange(ref _stopInProgress, 1) == 1)
+            return;
+
+        try
+        {
+            try { _mfHelper?.StopPlayback(); } catch { }
+            try { _audioRenderer?.Pause(); } catch { }
+            try { _renderer?.ClearToBlack(); } catch { }
+
+            _position = TimeSpan.Zero;
+            _currentState = PlaybackState.Stopped;
+            try { StopPositionTracking(); } catch { }
+
+            if (!raiseEvents || _disposing)
+                return;
+
+            try
+            {
+                PlaybackStopped?.Invoke(this,
+                    new PlaybackStateEventArgs(PlaybackState.Stopped, PlaybackState.Stopped));
+            }
+            catch { }
+
+            var path = _currentFilePath;
+            if (!string.IsNullOrWhiteSpace(path))
+            {
+                try { EndFile?.Invoke(this, new MediaEventArgs(path)); } catch { }
+            }
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _stopInProgress, 0);
+        }
     }
 
     public void Seek(TimeSpan position)
@@ -611,6 +782,76 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
     private void UpdateSpeed()
     {
         // Native Media Foundation playback speed is not implemented yet.
+    }
+
+    private static bool TryInferVideoSizeFromSample(IMFSample? sample, out int width, out int height, out string fmt)
+    {
+        width = 0;
+        height = 0;
+        fmt = "unknown";
+        if (sample == null) return false;
+
+        int hr = sample.ConvertToContiguousBuffer(out IMFMediaBuffer? buffer);
+        if (hr < 0 || buffer == null) return false;
+
+        try
+        {
+            hr = buffer.Lock(out IntPtr _, out _, out uint srcLen);
+            if (hr < 0) return false;
+
+            try
+            {
+                (int w, int h)[] common =
+                [
+                    (3840, 2160),
+                    (2560, 1440),
+                    (1920, 1080),
+                    (1920, 800),
+                    (1600, 900),
+                    (1366, 768),
+                    (1280, 720),
+                    (1024, 768),
+                    (1024, 576),
+                    (854, 480),
+                    (800, 600),
+                    (720, 576),
+                    (720, 480),
+                    (640, 480),
+                    (640, 360)
+                ];
+
+                foreach (var (w, h) in common)
+                {
+                    ulong bgra = (ulong)w * (ulong)h * 4UL;
+                    if ((ulong)srcLen == bgra)
+                    {
+                        width = w;
+                        height = h;
+                        fmt = "bgra";
+                        return true;
+                    }
+
+                    ulong nv12 = (ulong)w * (ulong)h * 3UL / 2UL;
+                    if ((ulong)srcLen == nv12)
+                    {
+                        width = w;
+                        height = h;
+                        fmt = "nv12";
+                        return true;
+                    }
+                }
+            }
+            finally
+            {
+                buffer.Unlock();
+            }
+        }
+        finally
+        {
+            Marshal.ReleaseComObject(buffer);
+        }
+
+        return false;
     }
 
     public void AddSubtitle(string path)
@@ -886,9 +1127,10 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
     {
         if (!disposing) return;
 
+        _disposing = true;
         _positionTimer?.Dispose();
         _positionTimer = null;
-        Stop();
+        StopInternal(raiseEvents: false);
 
         // Unsubscribe native MF helpers
         if (_mfHelper != null)

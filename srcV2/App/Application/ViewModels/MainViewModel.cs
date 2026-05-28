@@ -53,7 +53,7 @@ public class MainViewModel : INotifyPropertyChanged
     private PlaybackState _state = PlaybackState.Stopped;
     private string _positionText = string.Empty;
     private string _durationText = string.Empty;
-    private double _volumeValue = 50;
+    private double _volumeValue = 100;
     private double _speedValue;
     private double _seekValue;
     private bool _isMuted;
@@ -97,7 +97,6 @@ public class MainViewModel : INotifyPropertyChanged
     public MainViewModel(IMediaPlayer player)
     {
         _player = player ?? throw new ArgumentNullException(nameof(player));
-        _player.Volume = _volumeValue;
 
         // Wire player events
         _player.Opened += OnMediaOpened;
@@ -262,8 +261,8 @@ public class MainViewModel : INotifyPropertyChanged
     public void SeekBackward() => _player.Seek(Position - TimeSpan.FromSeconds(5));
     public void SeekLargeForward() => _player.Seek(Position + TimeSpan.FromSeconds(60));
     public void SeekLargeBackward() => _player.Seek(Position - TimeSpan.FromSeconds(60));
-    public void IncreaseVolume() => VolumeValue = Math.Min(150, VolumeValue + 10);
-    public void DecreaseVolume() => VolumeValue = Math.Max(0, VolumeValue - 10);
+    public void IncreaseVolume() => _player.Volume = Math.Min(150, VolumeValue + 10);
+    public void DecreaseVolume() => _player.Volume = Math.Max(0, VolumeValue - 10);
     public void ToggleMute() => IsMuted = !_player.IsMuted;
     public void ToggleFullscreen() => _player.SetFullscreen(!_player.IsFullscreen);
     public void NextChapter() => _player.NextChapter();
@@ -308,7 +307,7 @@ public class MainViewModel : INotifyPropertyChanged
     public double Volume
     {
         get => _volumeValue;
-        set => VolumeValue = value;
+        set { _volumeValue = value; OnPropertyChanged(); }
     }
 
     public TimeSpan Position
@@ -334,13 +333,7 @@ public class MainViewModel : INotifyPropertyChanged
     public double VolumeValue
     {
         get => _volumeValue;
-        set
-        {
-            _volumeValue = value;
-            _player.Volume = value;
-            OnPropertyChanged();
-            OnPropertyChanged(nameof(Volume));
-        }
+        set { _volumeValue = value; _player.Volume = value; OnPropertyChanged(); }
     }
 
     public double SpeedValue

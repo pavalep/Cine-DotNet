@@ -35,7 +35,6 @@ public partial class MainWindow : Window
     private PlayerService? _playerService;
     private MainViewModel? _viewModel;
     private D3D11VideoHost? _videoHost;
-    private string? _queuedOpenPath;
 
     // UI Auto-hide
     private DispatcherTimer? _autoHideTimer;
@@ -88,7 +87,7 @@ public partial class MainWindow : Window
             var mainOverlay = this.FindControl<AvaloniaControl>("MainOverlay");
             var videoHost = this.FindControl<AvaloniaControl>("VideoHost");
             var controlsBox = this.FindControl<AvaloniaControl>("ControlsBox");
-            var headerBar = this.FindControl<AvaloniaControl>("HeaderBar");
+            var uiControlsOverlay = this.FindControl<AvaloniaControl>("UiControlsOverlay");
             App.DebugReport(hypothesisId, location, "Window startup state snapshot.", new
             {
                 title = Title,
@@ -110,8 +109,8 @@ public partial class MainWindow : Window
                 videoHostBounds = videoHost?.Bounds.ToString(),
                 controlsFound = controlsBox is not null,
                 controlsVisible = controlsBox?.IsVisible,
-                headerFound = headerBar is not null,
-                headerVisible = headerBar?.IsVisible
+                uiOverlayFound = uiControlsOverlay is not null,
+                controlsOpacity = uiControlsOverlay?.Opacity
             });
         }
         catch
@@ -125,18 +124,12 @@ public partial class MainWindow : Window
         InitializeComponent();
     }
 
-    public void QueueStartupOpen(string path)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-            return;
-        _queuedOpenPath = path;
-    }
-
     private void ResolveNamedControls()
     {
         VideoHost = this.FindControl<D3D11VideoHost>("VideoHost");
         StartPage = this.FindControl<StartPage>("StartPage");
         PauseIndicator = this.FindControl<Border>("PauseIndicator");
+        UiControlsOverlay = this.FindControl<Border>("UiControlsOverlay");
         HeaderBar = this.FindControl<Border>("HeaderBar");
         BtnOpenMenu = this.FindControl<global::Avalonia.Controls.Button>("BtnOpenMenu");
         TitleText = this.FindControl<TextBlock>("TitleText");
@@ -577,20 +570,15 @@ public partial class MainWindow : Window
         var pos = e.GetCurrentPoint(this).Position;
 
         // Check if mouse is over the controls overlay using bounds
-        _isMouseOverControls =
-            (HeaderBar != null && IsPositionOverElement(pos, HeaderBar)) ||
-            (ControlsBox != null && IsPositionOverElement(pos, ControlsBox));
+        if (UiControlsOverlay != null)
+            _isMouseOverControls = IsPositionOverElement(pos, UiControlsOverlay);
 
         if (Math.Abs(pos.X - _lastMousePosition.X) > 1 ||
             Math.Abs(pos.Y - _lastMousePosition.Y) > 1)
         {
             _lastMousePosition = pos;
             if (!_uiVisible)
-            {
-                if (pos.Y >= Math.Max(0, Bounds.Height - 90))
-                    ShowUiControls();
-                return;
-            }
+                ShowUiControls();
             else
             {
                 _autoHideTimer?.Stop();
@@ -617,41 +605,26 @@ public partial class MainWindow : Window
 
     private async void ShowUiControls()
     {
-        if (_uiVisible) return;
-        if (HeaderBar == null && ControlsBox == null) return;
+        if (_uiVisible || UiControlsOverlay == null) return;
         _uiVisible = true;
         _autoHideTimer?.Stop();
-        if (HeaderBar != null)
-        {
-            HeaderBar.IsVisible = true;
-            await FadeVisual(HeaderBar, 0, 1, 350, true);
-        }
-        if (ControlsBox != null && !string.IsNullOrEmpty(_viewModel?.FilePath))
-        {
-            ControlsBox.IsVisible = true;
-            await FadeVisual(ControlsBox, 0, 1, 350, true);
-        }
+        UiControlsOverlay.IsVisible = true;
+        await FadeVisual(UiControlsOverlay, 0, 1, 350, true);
         _autoHideTimer?.Start();
     }
 
     private async void HideUiControls()
     {
         bool hasMedia = !string.IsNullOrEmpty(_viewModel?.FilePath);
-        if (!_uiVisible || !hasMedia) return;
+        if (!_uiVisible || UiControlsOverlay == null || !hasMedia) return;
         if (_activeFlyouts > 0 || (DropIndicatorOverlay?.IsVisible ?? false)) return;
         
         _uiVisible = false;
         _autoHideTimer?.Stop();
-        if (HeaderBar != null)
-            await FadeVisual(HeaderBar, 1, 0, 300, false);
-        if (ControlsBox != null)
-            await FadeVisual(ControlsBox, 1, 0, 300, false);
+        await FadeVisual(UiControlsOverlay, 1, 0, 300, false);
         await Task.Delay(50);
-        if (!_uiVisible)
-        {
-            if (HeaderBar != null) HeaderBar.IsVisible = false;
-            if (ControlsBox != null) ControlsBox.IsVisible = false;
-        }
+        if (!_uiVisible && UiControlsOverlay != null)
+            UiControlsOverlay.IsVisible = false;
     }
 
     private async Task FadeVisual(Visual visual, double from, double to, double durationMs, bool easeOut)
@@ -672,17 +645,10 @@ public partial class MainWindow : Window
 
     private void SetUiControlsVisibility(bool visible)
     {
+        if (UiControlsOverlay == null) return;
         _uiVisible = visible;
-        if (HeaderBar != null)
-        {
-            HeaderBar.IsVisible = visible;
-            HeaderBar.Opacity = visible ? 1 : 0;
-        }
-        if (ControlsBox != null)
-        {
-            ControlsBox.IsVisible = visible && !string.IsNullOrEmpty(_viewModel?.FilePath);
-            ControlsBox.Opacity = visible ? 1 : 0;
-        }
+        UiControlsOverlay.IsVisible = visible;
+        UiControlsOverlay.Opacity = visible ? 1 : 0;
     }
 
     private void ToggleUiControls()
@@ -896,13 +862,6 @@ public partial class MainWindow : Window
             mfPlayer.InitializeRenderer(videoHwnd);
             DebugLog("InitializeRenderer returned");
         }
-
-        if (!string.IsNullOrWhiteSpace(_queuedOpenPath) && File.Exists(_queuedOpenPath))
-        {
-            var path = _queuedOpenPath;
-            _queuedOpenPath = null;
-            Dispatcher.UIThread.Post(() => _viewModel?.OpenFile(path));
-        }
     }
 
     // ========================
@@ -955,11 +914,6 @@ public partial class MainWindow : Window
     private void OnToggleMute(object? sender, RoutedEventArgs e) => _viewModel?.ToggleMute();
     private void OnToggleFullscreen(object? sender, RoutedEventArgs e) => _viewModel?.ToggleFullscreen();
     private void OnFullscreenCloseClick(object? sender, RoutedEventArgs e) => Close();
-    private void OnHeaderPointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
-            BeginMoveDrag(e);
-    }
     private void OnToggleShuffle(object? sender, RoutedEventArgs e) => _viewModel?.ToggleShuffle();
     private void OnNextChapter(object? sender, RoutedEventArgs e) => _viewModel?.NextChapter();
     private void OnPrevChapter(object? sender, RoutedEventArgs e) => _viewModel?.PreviousChapter();
@@ -1319,30 +1273,6 @@ public partial class MainWindow : Window
         base.OnOpened(e);
         DebugLog("OnOpened enter");
         ReportWindowState("MainWindow.OnOpened.Enter");
-
-        try
-        {
-            if (WindowState == global::Avalonia.Controls.WindowState.Minimized)
-                WindowState = global::Avalonia.Controls.WindowState.Normal;
-
-            var primary = Screens?.Primary;
-            if (primary != null)
-            {
-                var work = primary.WorkingArea;
-                double scale = RenderScaling;
-                int w = (int)Math.Max(332 * scale, Bounds.Width * scale);
-                int h = (int)Math.Max(187 * scale, Bounds.Height * scale);
-                int x = work.X + Math.Max(0, (work.Width - w) / 2);
-                int y = work.Y + Math.Max(0, (work.Height - h) / 2);
-                Position = new PixelPoint(x, y);
-            }
-
-            Activate();
-        }
-        catch
-        {
-        }
-
         var handle = PlatformImplHandle();
         DebugLog($"Platform handle has value={handle.HasValue} value={handle.GetValueOrDefault()}");
         if (handle.HasValue && handle.Value != IntPtr.Zero && _videoHost != null)

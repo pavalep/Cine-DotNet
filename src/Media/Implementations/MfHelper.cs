@@ -38,7 +38,11 @@
 // ============================================================================
 
 using System;
+using System.Diagnostics;
 using System.IO;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -47,6 +51,108 @@ namespace Cine.Media.Implementations;
 
 internal sealed class MfHelper : IDisposable
 {
+    #region debug-point V0:runtime-reporter
+    private static readonly HttpClient DebugHttpClient = new();
+    private static readonly object DebugEnvLock = new();
+    private static string? _debugServerUrl;
+    private static string? _debugSessionId;
+
+    private static void DebugReport(string hypothesisId, string location, string msg, object? data = null, string runId = "pre-fix")
+    {
+        try
+        {
+            EnsureDebugEnvLoaded();
+            var payload = JsonSerializer.Serialize(new
+            {
+                sessionId = _debugSessionId ?? "video-open-crash",
+                runId,
+                hypothesisId,
+                location,
+                msg = $"[DEBUG] {msg}",
+                data,
+                ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+            });
+            _ = DebugHttpClient.PostAsync(
+                _debugServerUrl ?? "http://127.0.0.1:7777/event",
+                new StringContent(payload, Encoding.UTF8, "application/json"))
+                .ContinueWith(t => { _ = t.Exception; }, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously);
+        }
+        catch
+        {
+        }
+    }
+
+    private static void EnsureDebugEnvLoaded()
+    {
+        if (!string.IsNullOrWhiteSpace(_debugServerUrl) && !string.IsNullOrWhiteSpace(_debugSessionId))
+            return;
+
+        lock (DebugEnvLock)
+        {
+            if (!string.IsNullOrWhiteSpace(_debugServerUrl) && !string.IsNullOrWhiteSpace(_debugSessionId))
+                return;
+
+            foreach (var root in EnumerateDebugRoots())
+            {
+                var dir = new DirectoryInfo(root);
+                while (dir != null)
+                {
+                    var envPath = Path.Combine(dir.FullName, ".dbg", "no-playback.env");
+                    if (!File.Exists(envPath))
+                        envPath = Path.Combine(dir.FullName, ".dbg", "video-transparent.env");
+                    if (!File.Exists(envPath))
+                        envPath = Path.Combine(dir.FullName, ".dbg", "video-open-crash.env");
+                    if (!File.Exists(envPath))
+                        envPath = Path.Combine(dir.FullName, ".dbg", "video-no-playback.env");
+
+                    if (File.Exists(envPath))
+                    {
+                        foreach (var line in File.ReadAllLines(envPath))
+                        {
+                            if (line.StartsWith("DEBUG_SERVER_URL=", StringComparison.Ordinal))
+                                _debugServerUrl = line["DEBUG_SERVER_URL=".Length..].Trim();
+                            else if (line.StartsWith("DEBUG_SESSION_ID=", StringComparison.Ordinal))
+                                _debugSessionId = line["DEBUG_SESSION_ID=".Length..].Trim();
+                        }
+                        return;
+                    }
+
+                    dir = dir.Parent;
+                }
+            }
+        }
+    }
+
+    private static System.Collections.Generic.IEnumerable<string> EnumerateDebugRoots()
+    {
+        yield return AppContext.BaseDirectory;
+        yield return Environment.CurrentDirectory;
+    }
+
+    private static int TryQueryInterface(IntPtr unk, Guid iid, out IntPtr ppv)
+    {
+        ppv = IntPtr.Zero;
+        if (unk == IntPtr.Zero) return unchecked((int)0x80004003);
+        return Marshal.QueryInterface(unk, ref iid, out ppv);
+    }
+    #endregion
+
+    #region debug-point V0:propvariant
+    [StructLayout(LayoutKind.Sequential)]
+    private struct PropVariant
+    {
+        public ushort vt;
+        public ushort wReserved1;
+        public ushort wReserved2;
+        public ushort wReserved3;
+        public IntPtr p;
+        public int p2;
+    }
+
+    [DllImport("ole32.dll")]
+    private static extern int PropVariantClear(IntPtr pvar);
+    #endregion
+
     #region Constants
 
     private const uint COINIT_MULTITHREADED = 0x0;
@@ -71,6 +177,7 @@ internal sealed class MfHelper : IDisposable
     private Task? _readingTask;
     private volatile bool _isPlaying;
     private volatile bool _stopRequested;
+    private int _timingResetRequested;
     private string? _currentFilePath;
 
     private bool _disposed;
@@ -125,6 +232,8 @@ internal sealed class MfHelper : IDisposable
             pvReserved: IntPtr.Zero,
             dwCoInit: COINIT_MULTITHREADED);
 
+        DebugReport("V0", "MfHelper.Initialize", "CoInitializeEx result.", new { hr = hr, hrHex = $"0x{hr:X8}" });
+
         // RPC_E_CHANGED_MODE (0x80010106) means someone else already initialized
         // COM in a different apartment type. That's OK  -  we can still proceed.
         if (hr < 0 && hr != unchecked((int)0x80010106))
@@ -134,6 +243,7 @@ internal sealed class MfHelper : IDisposable
 
         // Start Media Foundation  -  version 1.0
         hr = NativeMethods.MFStartup(MfGuids.MF_VERSION_1_0, dwFlags: 0);
+        DebugReport("V0", "MfHelper.Initialize", "MFStartup result.", new { hr = hr, hrHex = $"0x{hr:X8}", version = MfGuids.MF_VERSION_1_0 });
         Marshal.ThrowExceptionForHR(hr);
 
         _mfInitialized = true;
@@ -174,14 +284,67 @@ internal sealed class MfHelper : IDisposable
         _currentFilePath = path;
         _duration100ns = -1;
 
-        // Create the source reader from a file URL.
-        int hr = NativeMethods.MFCreateSourceReaderFromURL(
-            pwszURL: path,
-            pAttributes: IntPtr.Zero,
-            out IntPtr ppSourceReader);
+        IntPtr sourceReaderAttributes = IntPtr.Zero;
+        try
+        {
+            NativeMethods.MFCreateAttributes(out sourceReaderAttributes, 4);
+            var attrs = (IMFAttributes)Marshal.GetObjectForIUnknown(sourceReaderAttributes);
+            try
+            {
+                attrs.SetUINT32(MfGuids.MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, 1);
+                attrs.SetUINT32(MfGuids.MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS, 1);
+            }
+            finally
+            {
+                Marshal.ReleaseComObject(attrs);
+            }
 
-        Marshal.ThrowExceptionForHR(hr);
-        _sourceReader = ppSourceReader;
+            // Create the source reader from a file URL.
+            int hr = NativeMethods.MFCreateSourceReaderFromURL(
+                pwszURL: path,
+                pAttributes: sourceReaderAttributes,
+                out IntPtr ppSourceReader);
+
+            DebugReport("V1", "MfHelper.OpenFile", "MFCreateSourceReaderFromURL result.", new
+            {
+                path,
+                hr,
+                hrHex = $"0x{hr:X8}",
+                ppSourceReader = ppSourceReader.ToInt64()
+            });
+
+            Marshal.ThrowExceptionForHR(hr);
+            _sourceReader = ppSourceReader;
+        }
+        finally
+        {
+            if (sourceReaderAttributes != IntPtr.Zero)
+                Marshal.Release(sourceReaderAttributes);
+        }
+
+        try
+        {
+            var iidFromInterop = MfGuids.IID_IMFSourceReader;
+            int q1 = TryQueryInterface(_sourceReader, iidFromInterop, out IntPtr p1);
+            if (p1 != IntPtr.Zero) Marshal.Release(p1);
+
+            var iidKnown = new Guid("70AE66F2-C809-4E4F-8915-BDCB406B7993");
+            int q2 = TryQueryInterface(_sourceReader, iidKnown, out IntPtr p2);
+            if (p2 != IntPtr.Zero) Marshal.Release(p2);
+
+            DebugReport("V1", "MfHelper.OpenFile", "QueryInterface probes for IMFSourceReader.", new
+            {
+                iidFromInterop,
+                qiFromInteropHr = q1,
+                qiFromInteropHrHex = $"0x{q1:X8}",
+                iidKnown,
+                qiKnownHr = q2,
+                qiKnownHrHex = $"0x{q2:X8}"
+            });
+        }
+        catch
+        {
+        }
 
         // Discover which streams contain video and audio
         EnumerateStreams();
@@ -233,14 +396,24 @@ internal sealed class MfHelper : IDisposable
         try
         {
             // Get the underlying IMFMediaSource via GetServiceForStream
-            Guid guidService = MfGuids.MR_STREAM_MEDIASOURCE;
+            Guid guidService = MfGuids.MF_MEDIASOURCE_SERVICE;
             Guid iidMediaSource = typeof(IMFMediaSource).GUID;
 
             int hr = reader.GetServiceForStream(
-                (uint)MfGuids.MF_SOURCE_READER_FIRST_SOURCE_STREAM_IDX,
+                0xFFFFFFFF,
                 ref guidService,
                 ref iidMediaSource,
                 out IntPtr ppMediaSourceObj);
+
+            DebugReport("VDUR", "MfHelper.QueryDuration", "GetServiceForStream for media source.", new
+            {
+                hr,
+                hrHex = $"0x{hr:X8}",
+                streamIndex = 0xFFFFFFFF,
+                service = guidService.ToString("B").ToUpper(),
+                iid = iidMediaSource.ToString("B").ToUpper(),
+                ptr = ppMediaSourceObj.ToInt64()
+            });
 
             if (hr >= 0 && ppMediaSourceObj != IntPtr.Zero)
             {
@@ -256,6 +429,13 @@ internal sealed class MfHelper : IDisposable
                     {
                         Guid pdDuration = MfGuids.MF_PD_DURATION;
                         hr = ppd.GetUINT64(ref pdDuration, out ulong duration);
+                        DebugReport("VDUR", "MfHelper.QueryDuration", "IMFPresentationDescriptor.GetUINT64(MF_PD_DURATION).", new
+                        {
+                            hr,
+                            hrHex = $"0x{hr:X8}",
+                            duration,
+                            duration100ns = (long)duration
+                        });
                         if (hr >= 0 && duration > 0)
                         {
                             _duration100ns = (long)duration;
@@ -267,6 +447,53 @@ internal sealed class MfHelper : IDisposable
                 finally
                 {
                     Marshal.ReleaseComObject(mediaSource);
+                }
+            }
+
+            if (_duration100ns <= 0)
+            {
+                uint[] streamCandidates = _videoStreamIndex >= 0
+                    ? new[] { (uint)_videoStreamIndex, (uint)MfGuids.MF_SOURCE_READER_FIRST_SOURCE_STREAM_IDX, 0xFFFFFFFF, 0xFFFFFFFC, 0xFFFFFFFD }
+                    : new[] { (uint)MfGuids.MF_SOURCE_READER_FIRST_SOURCE_STREAM_IDX, 0xFFFFFFFF, 0xFFFFFFFC, 0xFFFFFFFD };
+
+                int size = Marshal.SizeOf<PropVariant>();
+                IntPtr pvPtr = Marshal.AllocHGlobal(size);
+                try
+                {
+                    const ushort VT_I8 = 20;
+                    const ushort VT_UI8 = 21;
+
+                    foreach (var streamIndex in streamCandidates)
+                    {
+                        Marshal.StructureToPtr(new PropVariant(), pvPtr, fDeleteOld: false);
+                        hr = reader.GetPresentationAttribute(streamIndex, MfGuids.MF_PD_DURATION, pvPtr);
+                        var pv0 = Marshal.PtrToStructure<PropVariant>(pvPtr);
+                        DebugReport("VDUR", "MfHelper.QueryDuration", "IMFSourceReader.GetPresentationAttribute(MF_PD_DURATION).", new
+                        {
+                            streamIndex,
+                            hr,
+                            hrHex = $"0x{hr:X8}",
+                            vt = pv0.vt,
+                            valueI64 = pv0.p.ToInt64()
+                        });
+
+                        if (hr >= 0 && (pv0.vt == VT_I8 || pv0.vt == VT_UI8))
+                        {
+                            long d = pv0.p.ToInt64();
+                            if (d > 0)
+                            {
+                                _duration100ns = d;
+                                break;
+                            }
+                        }
+
+                        try { PropVariantClear(pvPtr); } catch { }
+                    }
+                }
+                finally
+                {
+                    try { PropVariantClear(pvPtr); } catch { }
+                    Marshal.FreeHGlobal(pvPtr);
                 }
             }
         }
@@ -290,14 +517,47 @@ internal sealed class MfHelper : IDisposable
     /// </summary>
     private unsafe void EnumerateStreams()
     {
-        var reader = (IMFSourceReader)Marshal.GetObjectForIUnknown(_sourceReader);
+        DebugReport("V2", "MfHelper.EnumerateStreams", "Enter EnumerateStreams.", new
+        {
+            sourceReaderPtr = _sourceReader.ToInt64(),
+            iidFromInterop = MfGuids.IID_IMFSourceReader
+        });
+
+        IMFSourceReader reader;
+        try
+        {
+            reader = (IMFSourceReader)Marshal.GetObjectForIUnknown(_sourceReader);
+        }
+        catch (Exception ex)
+        {
+            DebugReport("V2", "MfHelper.EnumerateStreams", "Marshal.GetObjectForIUnknown cast failed.", new
+            {
+                exception = ex.ToString(),
+                iidFromInterop = MfGuids.IID_IMFSourceReader
+            });
+            throw;
+        }
 
         for (uint streamIdx = 0; streamIdx < 16; streamIdx++)
         {
-            int hr = reader.GetNativeMediaType(streamIdx, 0, out IMFMediaType? mediaType);
+            int hr = reader.GetNativeMediaType(streamIdx, 0, out IntPtr mediaTypePtr);
+
+            if (streamIdx == 0 || streamIdx == 1)
+            {
+                DebugReport("V2", "MfHelper.EnumerateStreams", "GetNativeMediaType probe.", new
+                {
+                    streamIdx,
+                    hr,
+                    hrHex = $"0x{hr:X8}",
+                    mediaTypePtr = mediaTypePtr.ToInt64()
+                });
+            }
 
             if (hr < 0) break;
-            if (mediaType is null) continue;
+            if (mediaTypePtr == IntPtr.Zero) continue;
+
+            IMFMediaType mediaType = (IMFMediaType)Marshal.GetObjectForIUnknown(mediaTypePtr);
+            Marshal.Release(mediaTypePtr);
 
             try
             {
@@ -318,8 +578,7 @@ internal sealed class MfHelper : IDisposable
             }
             finally
             {
-                if (mediaType != null)
-                    Marshal.ReleaseComObject(mediaType);
+                Marshal.ReleaseComObject(mediaType);
             }
         }
     }
@@ -343,7 +602,7 @@ internal sealed class MfHelper : IDisposable
         // Enable video AND audio streams
         for (uint i = 0; i < 16; i++)
         {
-            int enable = ((i == _videoStreamIndex || i == _audioStreamIndex) ? 1 : 0);
+            bool enable = (i == _videoStreamIndex || i == _audioStreamIndex);
             reader.SetStreamSelection(i, enable);
         }
     }
@@ -354,45 +613,20 @@ internal sealed class MfHelper : IDisposable
     /// </summary>
     private unsafe void SetVideoOutputType(IMFSourceReader reader, Guid desiredSubtype)
     {
-        // Get the current media type so we can clone its attributes
-        int hr = reader.GetCurrentMediaType((uint)_videoStreamIndex, out IMFMediaType? currentType);
-        if (hr < 0 || currentType is null) return;
+        int hr = NativeMethods.MFCreateMediaType(out IntPtr newTypePtr);
+        if (hr < 0 || newTypePtr == IntPtr.Zero) return;
 
+        var newType = (IMFMediaType)Marshal.GetObjectForIUnknown(newTypePtr);
         try
         {
-            // Create a blank media type via MFCreateMediaType
-            hr = NativeMethods.MFCreateMediaType(out IntPtr newTypePtr);
-            if (hr < 0) return;
+            newType.SetGUID(MfGuids.MF_MT_MAJOR_TYPE, MfGuids.MFMediaType_VIDEO);
+            newType.SetGUID(MfGuids.MF_MT_SUBTYPE, desiredSubtype);
 
-            var newType = (IMFMediaType)Marshal.GetObjectForIUnknown(newTypePtr);
-
-            try
-            {
-                // Clone all attributes from the current type
-                currentType.GetCount(out uint itemCount);
-
-                for (uint i = 0; i < itemCount; i++)
-                {
-                    currentType.GetItemByIndex(i, out Guid key, out IntPtr value);
-                    newType.SetItem(ref key, value);
-                }
-
-                // Override just the subtype (pixel format) to RGB32/BGRA
-                newType.SetGUID(MfGuids.MF_MT_SUBTYPE, desiredSubtype);
-
-                // Apply the new output type to the stream
-                hr = reader.SetCurrentMediaType((uint)_videoStreamIndex, 0, newType);
-                // If this fails the decoder doesn't support RGB32  -  keep native format
-            }
-            finally
-            {
-                Marshal.ReleaseComObject(newType);
-            }
+            hr = reader.SetCurrentMediaType((uint)_videoStreamIndex, IntPtr.Zero, newType);
         }
         finally
         {
-            if (currentType is not null)
-                Marshal.ReleaseComObject(currentType);
+            Marshal.ReleaseComObject(newType);
         }
     }
 
@@ -414,53 +648,27 @@ internal sealed class MfHelper : IDisposable
 
         try
         {
+            Interlocked.Exchange(ref _timingResetRequested, 1);
             var reader = (IMFSourceReader)Marshal.GetObjectForIUnknown(_sourceReader);
-
-            // Get the underlying IMFMediaSource
-            Guid guidService = MfGuids.MR_STREAM_MEDIASOURCE;
-            Guid iidMediaSource = typeof(IMFMediaSource).GUID;
-
-            int hr = reader.GetServiceForStream(
-                (uint)MfGuids.MF_SOURCE_READER_FIRST_SOURCE_STREAM_IDX,
-                ref guidService,
-                ref iidMediaSource,
-                out IntPtr ppMediaSourceObj);
-
-            if (hr < 0 || ppMediaSourceObj == IntPtr.Zero) return;
-
-            var mediaSource = (IMFMediaSource)Marshal.GetObjectForIUnknown(ppMediaSourceObj);
-            Marshal.Release(ppMediaSourceObj);
-
+            var pv = new PropVariant();
+            int size = Marshal.SizeOf<PropVariant>();
+            IntPtr pvPtr = Marshal.AllocHGlobal(size);
             try
             {
-                // Create a new presentation descriptor
-                hr = mediaSource.CreatePresentationDescriptor(out IMFPresentationDescriptor? ppd);
-                if (hr < 0 || ppd == null) return;
+                Marshal.StructureToPtr(pv, pvPtr, fDeleteOld: false);
+                int hr = NativeMethods.InitPropVariantFromInt64(position, pvPtr);
+                Marshal.ThrowExceptionForHR(hr);
 
-                try
-                {
-                    // Set the start time
-                    Guid pdStartTime = MfGuids.MF_PD_START_TIME;
-                    ppd.SetUINT64(ref pdStartTime, (ulong)position);
+                hr = reader.SetCurrentPosition(MfGuids.MF_TIME_FORMAT_MEDIA_TIME_GUID, pvPtr);
+                Marshal.ThrowExceptionForHR(hr);
 
-                    // Restart the media source at the new position
-                    Guid timeFormat = MfGuids.MF_TIME_FORMAT_MEDIA_TIME_GUID;
-                    hr = mediaSource.Start(ppd, ref timeFormat, ref position);
-                    Marshal.ThrowExceptionForHR(hr);
-                }
-                finally
-                {
-                    Marshal.ReleaseComObject(ppd);
-                }
+                reader.Flush(MfGuids.MF_SOURCE_READER_FIRST_SOURCE_STREAM_IDX);
             }
             finally
             {
-                Marshal.ReleaseComObject(mediaSource);
+                try { PropVariantClear(pvPtr); } catch { }
+                Marshal.FreeHGlobal(pvPtr);
             }
-
-            // Notify the reader about the seek
-            uint mfsParam = (uint)MfGuids.MF_SOURCE_READER_FIRST_SOURCE_STREAM_IDX;
-            reader.ProcessMessage((uint)MfGuids.MFSessionMessage.NotifySeek, (ulong)mfsParam);
         }
         catch (Exception ex)
         {
@@ -530,22 +738,85 @@ internal sealed class MfHelper : IDisposable
 
         var reader = (IMFSourceReader)Marshal.GetObjectForIUnknown(_sourceReader);
 
-        int hr = reader.GetCurrentMediaType((uint)_videoStreamIndex, out IMFMediaType? mediaType);
-        if (hr < 0 || mediaType is null)
+        int hr = reader.GetCurrentMediaType((uint)_videoStreamIndex, out IntPtr mediaTypePtr);
+        if (hr < 0 || mediaTypePtr == IntPtr.Zero)
             return null;
+
+        var mediaType = (IMFMediaType)Marshal.GetObjectForIUnknown(mediaTypePtr);
+        Marshal.Release(mediaTypePtr);
 
         try
         {
-            mediaType.GetGUID(MfGuids.MF_MT_SUBTYPE, out Guid subtype);
+            Guid subtype = Guid.Empty;
+            ulong frameSize = 0;
+            ulong frameRate = 0;
 
-            mediaType.GetUINT64(MfGuids.MF_MT_FRAME_SIZE, out ulong frameSize);
-            uint width  = (uint)(frameSize & 0xFFFFFFFF);
-            uint height = (uint)(frameSize >> 32);
+            try { mediaType.GetGUID(MfGuids.MF_MT_SUBTYPE, out subtype); } catch { }
+            try { mediaType.GetUINT64(MfGuids.MF_MT_FRAME_SIZE, out frameSize); } catch { }
+            try { mediaType.GetUINT64(MfGuids.MF_MT_FRAME_RATE, out frameRate); } catch { }
 
-            mediaType.GetUINT64(MfGuids.MF_MT_FRAME_RATE, out ulong frameRate);
-            uint fpsNum = (uint)(frameRate & 0xFFFFFFFF);
-            uint fpsDen = (uint)(frameRate >> 32);
+            uint width = (uint)(frameSize >> 32);
+            uint height = (uint)(frameSize & 0xFFFFFFFF);
+
+            uint fpsNum = (uint)(frameRate >> 32);
+            uint fpsDen = (uint)(frameRate & 0xFFFFFFFF);
             double frameRateValue = fpsDen > 0 ? (double)fpsNum / fpsDen : 0;
+
+            if (width == 0 || height == 0)
+            {
+                int hr2 = reader.GetNativeMediaType((uint)_videoStreamIndex, 0, out IntPtr nativeTypePtr);
+                if (hr2 >= 0 && nativeTypePtr != IntPtr.Zero)
+                {
+                    var nativeType = (IMFMediaType)Marshal.GetObjectForIUnknown(nativeTypePtr);
+                    Marshal.Release(nativeTypePtr);
+                    try
+                    {
+                        Guid nativeSubtype = Guid.Empty;
+                        ulong nativeFrameSize = 0;
+                        ulong nativeFrameRate = 0;
+                        try { nativeType.GetGUID(MfGuids.MF_MT_SUBTYPE, out nativeSubtype); } catch { }
+                        try { nativeType.GetUINT64(MfGuids.MF_MT_FRAME_SIZE, out nativeFrameSize); } catch { }
+                        try { nativeType.GetUINT64(MfGuids.MF_MT_FRAME_RATE, out nativeFrameRate); } catch { }
+
+                        uint nativeW = (uint)(nativeFrameSize >> 32);
+                        uint nativeH = (uint)(nativeFrameSize & 0xFFFFFFFF);
+                        uint nFpsNum = (uint)(nativeFrameRate >> 32);
+                        uint nFpsDen = (uint)(nativeFrameRate & 0xFFFFFFFF);
+                        double nativeFps = nFpsDen > 0 ? (double)nFpsNum / nFpsDen : 0;
+
+                        if (nativeW > 0 && nativeH > 0)
+                        {
+                            DebugReport("V2", "MfHelper.GetVideoStreamInfo", "Frame size recovered from native media type.", new
+                            {
+                                stream = _videoStreamIndex,
+                                recovered = $"{nativeW}x{nativeH}",
+                                fps = nativeFps,
+                                subtype = nativeSubtype == Guid.Empty ? "Unknown" : nativeSubtype.ToString("B").ToUpper()
+                            });
+                            width = nativeW;
+                            height = nativeH;
+                            frameRateValue = nativeFps;
+                            if (subtype == Guid.Empty && nativeSubtype != Guid.Empty)
+                                subtype = nativeSubtype;
+                        }
+                        else
+                        {
+                            DebugReport("V2", "MfHelper.GetVideoStreamInfo", "Frame size still unknown after native media type probe.", new
+                            {
+                                stream = _videoStreamIndex,
+                                currentFrameSize = frameSize,
+                                nativeFrameSize,
+                                currentSubtype = subtype == Guid.Empty ? "Unknown" : subtype.ToString("B").ToUpper(),
+                                nativeSubtype = nativeSubtype == Guid.Empty ? "Unknown" : nativeSubtype.ToString("B").ToUpper()
+                            });
+                        }
+                    }
+                    finally
+                    {
+                        Marshal.ReleaseComObject(nativeType);
+                    }
+                }
+            }
 
             return new VideoStreamInfo
             {
@@ -553,13 +824,12 @@ internal sealed class MfHelper : IDisposable
                 Width       = (int)width,
                 Height      = (int)height,
                 FrameRate   = frameRateValue,
-                Subtype     = subtype.ToString("B").ToUpper()
+                Subtype     = subtype == Guid.Empty ? "Unknown" : subtype.ToString("B").ToUpper()
             };
         }
         finally
         {
-            if (mediaType is not null)
-                Marshal.ReleaseComObject(mediaType);
+            Marshal.ReleaseComObject(mediaType);
         }
     }
 
@@ -570,9 +840,12 @@ internal sealed class MfHelper : IDisposable
 
         var reader = (IMFSourceReader)Marshal.GetObjectForIUnknown(_sourceReader);
 
-        int hr = reader.GetCurrentMediaType((uint)_audioStreamIndex, out IMFMediaType? mediaType);
-        if (hr < 0 || mediaType is null)
+        int hr = reader.GetCurrentMediaType((uint)_audioStreamIndex, out IntPtr mediaTypePtr);
+        if (hr < 0 || mediaTypePtr == IntPtr.Zero)
             return null;
+
+        var mediaType = (IMFMediaType)Marshal.GetObjectForIUnknown(mediaTypePtr);
+        Marshal.Release(mediaTypePtr);
 
         try
         {
@@ -600,8 +873,7 @@ internal sealed class MfHelper : IDisposable
         }
         finally
         {
-            if (mediaType is not null)
-                Marshal.ReleaseComObject(mediaType);
+            Marshal.ReleaseComObject(mediaType);
         }
     }
 
@@ -612,23 +884,43 @@ internal sealed class MfHelper : IDisposable
     private unsafe void ReadingLoop(CancellationToken token)
     {
         var reader = (IMFSourceReader)Marshal.GetObjectForIUnknown(_sourceReader);
+        long baseTimestamp = -1;
+        long baseTicks = 0;
+        long pauseStartTicks = 0;
+        bool wasPaused = false;
 
         while (!token.IsCancellationRequested && !_stopRequested)
         {
             while (!_isPlaying && !_stopRequested && !token.IsCancellationRequested)
             {
-                Thread.Yield();
+                if (!wasPaused)
+                {
+                    pauseStartTicks = Stopwatch.GetTimestamp();
+                    wasPaused = true;
+                }
+                Thread.Sleep(10);
             }
             if (_stopRequested || token.IsCancellationRequested) break;
+            if (wasPaused)
+            {
+                long nowTicks = Stopwatch.GetTimestamp();
+                baseTicks += (nowTicks - pauseStartTicks);
+                wasPaused = false;
+            }
+            if (Interlocked.Exchange(ref _timingResetRequested, 0) == 1)
+            {
+                baseTimestamp = -1;
+                baseTicks = 0;
+            }
 
             // ── Read video sample ──
             int hr = reader.ReadSample(
                 (uint)_videoStreamIndex,
                 0,
-                out int actualStream,
+                out uint actualStream,
                 out uint flags,
                 out long timestamp,
-                out IMFSample? videoSample);
+                out IntPtr videoSamplePtr);
 
             if ((flags & MFSOURCE_READERF_ENDOFSTREAM) != 0)
             {
@@ -648,8 +940,31 @@ internal sealed class MfHelper : IDisposable
                 break;
             }
 
-            if (videoSample is not null)
+            if (videoSamplePtr != IntPtr.Zero)
             {
+                var videoSample = (IMFSample)Marshal.GetObjectForIUnknown(videoSamplePtr);
+                Marshal.Release(videoSamplePtr);
+                if (baseTimestamp < 0)
+                {
+                    baseTimestamp = timestamp;
+                    baseTicks = Stopwatch.GetTimestamp();
+                }
+                else
+                {
+                    long targetTicks = baseTicks + (long)((timestamp - baseTimestamp) * (Stopwatch.Frequency / 10_000_000.0));
+                    while (true)
+                    {
+                        long nowTicks = Stopwatch.GetTimestamp();
+                        long remaining = targetTicks - nowTicks;
+                        if (remaining <= 0)
+                            break;
+                        double remainingMs = remaining * 1000.0 / Stopwatch.Frequency;
+                        if (remainingMs > 2)
+                            Thread.Sleep((int)Math.Min(50, remainingMs - 1));
+                        else
+                            Thread.SpinWait(200);
+                    }
+                }
                 try { OnSampleReady(videoSample, timestamp); }
                 finally { Marshal.ReleaseComObject(videoSample); }
             }
@@ -660,13 +975,15 @@ internal sealed class MfHelper : IDisposable
                 hr = reader.ReadSample(
                     (uint)_audioStreamIndex,
                     0,
-                    out int actualAudioStream,
+                    out uint actualAudioStream,
                     out uint audioFlags,
                     out long audioTimestamp,
-                    out IMFSample? audioSample);
+                    out IntPtr audioSamplePtr);
 
-                if (hr == 0 && audioSample is not null)
+                if (hr == 0 && audioSamplePtr != IntPtr.Zero)
                 {
+                    var audioSample = (IMFSample)Marshal.GetObjectForIUnknown(audioSamplePtr);
+                    Marshal.Release(audioSamplePtr);
                     try { OnAudioSampleReady(audioSample); }
                     finally { Marshal.ReleaseComObject(audioSample); }
                 }

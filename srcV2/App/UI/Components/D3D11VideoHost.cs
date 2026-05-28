@@ -99,13 +99,7 @@ public class D3D11VideoHost : global::Avalonia.Controls.Control
                 child = _childHwnd.ToInt64()
             }, runId: "pre-fix");
             #endregion
-            bool show = IsVisible && IsVideoSurfaceVisible;
-            ShowWindow(_childHwnd, show ? ShowWindowCommand.Show : ShowWindowCommand.Hide);
-            if (show)
-            {
-                InvalidateRect(_childHwnd, IntPtr.Zero, true);
-                UpdateWindow(_childHwnd);
-            }
+            ShowWindow(_childHwnd, IsVisible && IsVideoSurfaceVisible ? ShowWindowCommand.Show : ShowWindowCommand.Hide);
         }
     }
 
@@ -133,10 +127,6 @@ public class D3D11VideoHost : global::Avalonia.Controls.Control
         if (_childHwnd != IntPtr.Zero && _parentHwnd != IntPtr.Zero)
         {
             double scaling = GetScaling();
-            var root = this.VisualRoot as Visual;
-            var pt = root != null ? this.TranslatePoint(new global::Avalonia.Point(0, 0), root) : null;
-            int x = (int)((pt?.X ?? 0) * scaling);
-            int y = (int)((pt?.Y ?? 0) * scaling);
             int w = (int)(finalSize.Width * scaling);
             int h = (int)(finalSize.Height * scaling);
             #region debug-point VT-E
@@ -146,13 +136,12 @@ public class D3D11VideoHost : global::Avalonia.Controls.Control
                 child = _childHwnd.ToInt64(),
                 finalSize = finalSize.ToString(),
                 scaled = $"{w}x{h}",
-                xy = $"{x},{y}",
                 isVisible = IsVisible,
                 surfaceVisible = IsVideoSurfaceVisible
             }, runId: "pre-fix");
             #endregion
             SetWindowPos(_childHwnd, IntPtr.Zero,
-                x, y, w, h,
+                0, 0, w, h,
                 SetWindowPosFlags.SWP_NOZORDER | SetWindowPosFlags.SWP_NOACTIVATE);
         }
         return result;
@@ -216,17 +205,13 @@ public class D3D11VideoHost : global::Avalonia.Controls.Control
         RegisterClassEx(ref wc);
 
         double scaling = GetScaling();
-        var root = this.VisualRoot as Visual;
-        var pt = root != null ? this.TranslatePoint(new global::Avalonia.Point(0, 0), root) : null;
-        int x = (int)((pt?.X ?? 0) * scaling);
-        int y = (int)((pt?.Y ?? 0) * scaling);
         int width = Math.Max(1, (int)(Bounds.Width * scaling));
         int height = Math.Max(1, (int)(Bounds.Height * scaling));
 
         _childHwnd = CreateWindowEx(
             0, windowClass, "CineD3D11",
             WindowStyles.WS_CHILD,
-            x, y, width, height,
+            0, 0, width, height,
             _parentHwnd, IntPtr.Zero,
             GetModuleHandle(null), IntPtr.Zero);
 
@@ -240,7 +225,6 @@ public class D3D11VideoHost : global::Avalonia.Controls.Control
             {
                 hwnd = _childHwnd.ToInt64(),
                 size = $"{width}x{height}",
-                xy = $"{x},{y}",
                 isVisible = IsVisible,
                 surfaceVisible = IsVideoSurfaceVisible
             }, runId: "pre-fix");
@@ -396,12 +380,6 @@ public class D3D11VideoHost : global::Avalonia.Controls.Control
 
     [DllImport("user32.dll")]
     private static extern bool ShowWindow(IntPtr hWnd, ShowWindowCommand nCmdShow);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool InvalidateRect(IntPtr hWnd, IntPtr lpRect, bool bErase);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool UpdateWindow(IntPtr hWnd);
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
     private static extern IntPtr GetModuleHandle(string? lpModuleName);
