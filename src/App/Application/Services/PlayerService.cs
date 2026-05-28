@@ -6,7 +6,7 @@ using Cine.Media.Implementations;
 namespace Cine.Avalonia.ViewModels
 {
     /// <summary>
-    /// Service that wraps the native MediaFoundationPlayer for use by Avalonia ViewModels.
+    /// Service that wraps the active player backend for use by Avalonia ViewModels.
     /// Provides lifecycle management and exposes platform-agnostic playback functionality.
     /// </summary>
     public class PlayerService : IDisposable
@@ -43,9 +43,9 @@ namespace Cine.Avalonia.ViewModels
                 #region debug-point player-service-init-start
                 DebugLog("Initialize start");
                 #endregion
-                _player = new MediaFoundationPlayer();
+                _player = new MpvPlayer();
                 #region debug-point player-service-player-created
-                DebugLog("MediaFoundationPlayer created");
+                DebugLog($"{_player.GetType().Name} created");
                 #endregion
                 _player.Error += OnError;
                 #region debug-point player-service-init-finish
@@ -57,7 +57,7 @@ namespace Cine.Avalonia.ViewModels
                 #region debug-point player-service-init-fail
                 DebugLog($"Initialize failed: {ex}");
                 #endregion
-                System.Diagnostics.Debug.WriteLine($"[PlayerService] MediaFoundationPlayer creation FAILED: {ex}");
+                System.Diagnostics.Debug.WriteLine($"[PlayerService] Player creation FAILED: {ex}");
                 throw;
             }
         }
@@ -78,7 +78,9 @@ namespace Cine.Avalonia.ViewModels
 
         private void OnError(object? sender, string error)
         {
+            DebugLog($"[Error] {error}");
             System.Diagnostics.Debug.WriteLine($"[PlayerService Error] {error}");
+            System.Diagnostics.Trace.WriteLine($"[PlayerService Error] {error}");
         }
     }
 }

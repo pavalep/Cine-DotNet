@@ -69,6 +69,7 @@ public interface IMediaPlayer
 
     // === Video filters ===
     double Zoom { get; set; }
+    double AspectRatio { get; set; }
     double Contrast { get; set; }
     double Brightness { get; set; }
     double Gamma { get; set; }

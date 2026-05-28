@@ -24,6 +24,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="..\..\resources\libmpv-2_x86-64\libmpv-2.dll" Link="libmpv-2.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <AvaloniaResource Include="UI\Resources\**\*" />
   </ItemGroup>
 </Project>

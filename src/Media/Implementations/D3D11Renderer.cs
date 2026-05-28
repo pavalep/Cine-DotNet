@@ -61,6 +61,7 @@ internal unsafe class D3D11Renderer : IDisposable
 
     // Filter: MIN_MAG_MIP_LINEAR
     private const uint D3D11_FILTER_MIN_MAG_MIP_LINEAR = 0x15;
+    private const uint D3D11_FILTER_MIN_MAG_MIP_POINT = 0x0;
     // Address mode: CLAMP
     private const uint D3D11_TEXTURE_ADDRESS_CLAMP = 1;
     // Comparison: NEVER
@@ -99,6 +100,7 @@ internal unsafe class D3D11Renderer : IDisposable
     private IntPtr _inputLayout;   // ID3D11InputLayout
     private IntPtr _vertexBuffer;  // ID3D11Buffer — fullscreen quad VB
     private IntPtr _samplerState;  // ID3D11SamplerState — linear clamp
+    private IntPtr _bgraSamplerState;
     private IntPtr _psBlob;        // ID3DBlob — pixel shader bytecode (needed for input layout)
     private IntPtr _vsBlob;        // ID3DBlob — vertex shader bytecode (needed for input layout)
 
@@ -949,6 +951,7 @@ float4 main(PS_IN input) : SV_TARGET
         SafeRelease(ref _inputLayout);
         SafeRelease(ref _vertexBuffer);
         SafeRelease(ref _samplerState);
+        SafeRelease(ref _bgraSamplerState);
         SafeRelease(ref _psBlob);
         SafeRelease(ref _vsBlob);
     }
@@ -1072,6 +1075,12 @@ float4 main(PS_IN input) : SV_TARGET
                         try
                         {
                             uint srcPitch = (uint)_videoWidth * 4;
+                            if (_videoHeight > 0)
+                            {
+                                uint candidate = srcLen / (uint)_videoHeight;
+                                if (candidate >= srcPitch && (candidate % 4) == 0 && (srcLen % (uint)_videoHeight) == 0)
+                                    srcPitch = candidate;
+                            }
                             uint dstPitch = mapped.RowPitch;
                             uint rows = (uint)_videoHeight;
 
@@ -1236,7 +1245,7 @@ float4 main(PS_IN input) : SV_TARGET
             context.PSSetShaderResources(0, 1, (IntPtr)pSrvs);
         }
 
-        IntPtr[] samplers = new IntPtr[] { _samplerState };
+        IntPtr[] samplers = new IntPtr[] { _bgraSamplerState != IntPtr.Zero ? _bgraSamplerState : _samplerState };
         fixed (IntPtr* pSamplers = samplers)
         {
             context.PSSetSamplers(0, 1, (IntPtr)pSamplers);
@@ -1318,8 +1327,44 @@ struct PS_IN {
     float2 uv  : TEXCOORD0;
 };
 
+float catmullRom(float x)
+{
+    x = abs(x);
+    if (x < 1.0) return 1.5 * x * x * x - 2.5 * x * x + 1.0;
+    if (x < 2.0) return -0.5 * x * x * x + 2.5 * x * x - 4.0 * x + 2.0;
+    return 0.0;
+}
+
+float4 sampleBicubic(Texture2D tex, SamplerState samp, float2 uv)
+{
+    uint w, h;
+    tex.GetDimensions(w, h);
+    float2 texSize = float2((float)w, (float)h);
+    float2 pos = uv * texSize - 0.5;
+    float2 base = floor(pos);
+    float2 f = pos - base;
+
+    float4 sum = 0;
+    float wsum = 0;
+
+    [unroll] for (int j = -1; j <= 2; j++)
+    {
+        [unroll] for (int i = -1; i <= 2; i++)
+        {
+            float wx = catmullRom((float)i - f.x);
+            float wy = catmullRom((float)j - f.y);
+            float wxy = wx * wy;
+            float2 p = (base + float2((float)i, (float)j) + 0.5) / texSize;
+            sum += tex.SampleLevel(samp, p, 0) * wxy;
+            wsum += wxy;
+        }
+    }
+
+    return sum / max(wsum, 1e-6);
+}
+
 float4 main(PS_IN input) : SV_TARGET {
-    float4 c = InputTex.Sample(Sampler, input.uv);
+    float4 c = sampleBicubic(InputTex, Sampler, input.uv);
     c.a = 1.0;
     return c;
 }";
@@ -1330,6 +1375,24 @@ float4 main(PS_IN input) : SV_TARGET {
             BytecodeLength: GetBlobSize(_psBlob),
             pClassLinkage: IntPtr.Zero,
             out _bgraPixelShader));
+
+        if (_bgraSamplerState == IntPtr.Zero)
+        {
+            var desc = new D3D11_SAMPLER_DESC
+            {
+                Filter = D3D11_FILTER_MIN_MAG_MIP_POINT,
+                AddressU = D3D11_TEXTURE_ADDRESS_CLAMP,
+                AddressV = D3D11_TEXTURE_ADDRESS_CLAMP,
+                AddressW = D3D11_TEXTURE_ADDRESS_CLAMP,
+                MipLODBias = 0,
+                MaxAnisotropy = 1,
+                ComparisonFunc = D3D11_COMPARISON_NEVER,
+                BorderColor = new float[4] { 0, 0, 0, 0 },
+                MinLOD = 0,
+                MaxLOD = float.MaxValue
+            };
+            Marshal.ThrowExceptionForHR(device.CreateSamplerState(ref desc, out _bgraSamplerState));
+        }
 
         Marshal.ReleaseComObject(device);
     }

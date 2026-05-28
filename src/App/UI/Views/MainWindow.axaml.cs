@@ -19,7 +19,6 @@ using Cine.Avalonia.ViewModels;
 using Cine.Avalonia.Views;
 using Cine.Media.Events;
 using Cine.Media.Interfaces;
-using Cine.Media.Implementations;
 
 // Resolve type ambiguities with System.Windows.Forms by aliasing conflicting types
 using App = global::Avalonia.Application;
@@ -215,13 +214,6 @@ public partial class MainWindow : Window
         player.PositionChanged += OnPositionChanged;
         player.ChapterListChanged += OnChapterListChanged;
         player.FullscreenChangedEvent += OnPlayerFullscreenChanged;
-        
-        // Setup new observer parity events
-        if (player is MediaFoundationPlayer mfPlayer)
-        {
-            mfPlayer.PlaybackStateChangedEvent += OnPlaybackStateChanged;
-            mfPlayer.MediaEnded += OnMediaEnded;
-        }
 
         _videoHost.ChildWindowCreated += OnVideoHostChildCreated;
         KeyDown += OnKeyDown;
@@ -468,12 +460,12 @@ public partial class MainWindow : Window
             videoSurfaceVisible = _videoHost?.IsVideoSurfaceVisible
         }, runId: "pre-fix");
         #endregion
-        if (_videoHost != null && _videoHost.IsVideoSurfaceVisible && _playerService?.Player is MediaFoundationPlayer mf)
+        if (_videoHost != null && _videoHost.IsVideoSurfaceVisible && _playerService?.Player is { } player)
         {
             int w = (int)(_videoHost.Bounds.Width * RenderScaling);
             int h = (int)(_videoHost.Bounds.Height * RenderScaling);
             if (w > 0 && h > 0)
-                mf.NotifyResize(w, h);
+                player.NotifyResize(w, h);
         }
     }
 
@@ -890,10 +882,10 @@ public partial class MainWindow : Window
         DebugLog($"OnVideoHostChildCreated hwnd={videoHwnd}");
         if (videoHwnd == IntPtr.Zero) return;
         var player = _playerService?.Player;
-        if (player is MediaFoundationPlayer mfPlayer)
+        if (player != null)
         {
             DebugLog("Calling InitializeRenderer");
-            mfPlayer.InitializeRenderer(videoHwnd);
+            player.InitializeRenderer(videoHwnd);
             DebugLog("InitializeRenderer returned");
         }
 
@@ -1385,8 +1377,6 @@ public partial class MainWindow : Window
     {
         _autoHideTimer?.Stop();
         _autoHideTimer = null;
-        if (_playerService?.Player is MediaFoundationPlayer mfPlayer)
-            mfPlayer.Dispose();
         _playerService?.Dispose();
         base.OnClosed(e);
     }

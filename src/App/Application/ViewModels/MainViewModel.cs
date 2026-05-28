@@ -12,7 +12,6 @@ using Avalonia.Threading;
 using Cine.Media.Interfaces;
 using Cine.Media.Models;
 using Cine.Media.Events;
-using Cine.Media.Implementations;
 
 namespace Cine.Avalonia.ViewModels;
 
@@ -105,11 +104,6 @@ public class MainViewModel : INotifyPropertyChanged
         _player.PlaylistChanged += OnPlaylistChanged;
         _player.LoopChangedEvent += OnLoopChanged;
         _player.PositionChanged += OnPositionChanged;
-
-        if (_player is MediaFoundationPlayer mfPlayer)
-        {
-            mfPlayer.PlaybackStateChangedEvent += OnPlaybackStateChanged;
-        }
 
         // Initialize commands
         OpenFilesCommand = new RelayCommand(async _ => await OnOpenFiles());
@@ -236,10 +230,11 @@ public class MainViewModel : INotifyPropertyChanged
     // --- Playback commands ---
     public void PlayPause()
     {
-        if (_state == PlaybackState.Playing)
+        if (_player.IsPlaying)
             _player.Pause();
         else
             _player.Play();
+        State = _player.State;
     }
 
     public void Stop() => _player.Stop();
@@ -524,6 +519,7 @@ public class MainViewModel : INotifyPropertyChanged
             _isUpdatingPositionFromPlayer = true;
             try
             {
+                State = _player.State;
                 PositionText = FormatTime(e.Position);
                 DurationText = FormatTime(_player.Duration);
                 SeekValue = Duration.TotalSeconds > 0

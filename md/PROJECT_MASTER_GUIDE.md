@@ -247,6 +247,45 @@ Windows-Native/
 - [ ] Comprehensive testing and validation against Python reference
 
 ## Phase 6: Final Polish & Ship 📝
+- This phase is now split:
+- **Phase 6** focuses on premium playback parity (MPV/libmpv backend).
+- **Phase 7** remains packaging/shipping polish.
+
+## Phase 6: Premium Playback Parity (MPV/libmpv) 🟦
+
+### Goal
+Replace the current MF→RGB32→custom D3D11 rendering path with **MPV/libmpv** (same engine as the Python reference) to achieve **sellable/premium quality**:
+- High-quality up/downscaling (mpv scalers)
+- Correct colorspace/range handling (BT.709/BT.2020, limited/full)
+- Correct aspect ratio (DAR/SAR) behavior and overrides
+- Robust format support and playback behavior parity
+
+### Approach (Windows)
+- Implement a new `IMediaPlayer` backend: `MpvPlayer` using **libmpv**.
+- Embed playback into the existing native child HWND from `D3D11VideoHost`:
+  - `InitializeRenderer(hwnd)` will configure MPV to render into the provided HWND.
+- Keep Avalonia UI logic unchanged by targeting the existing `IMediaPlayer` API; switch backend via `PlayerService`.
+
+### Implementation Checklist
+- [ ] Add a dynamic libmpv loader + minimal interop surface (no hard DllImport dependency).
+- [ ] Implement `MpvPlayer : IMediaPlayer` with:
+  - Open/Play/Pause/Stop/Seek
+  - Volume (with `VolumeMax=150` parity)
+  - Property observers (`time-pos`, `duration`, `pause`, `volume`) and event mapping
+  - Shutdown/Dispose safety (no crash-on-close)
+- [ ] Update `PlayerService` to use `MpvPlayer`.
+- [ ] Update `MainWindow` video init to call `IMediaPlayer.InitializeRenderer(hwnd)` without backend-specific checks.
+- [ ] Port MPV options from Python reference:
+  - `vo=libmpv` in Python (render API); Windows embedding will use MPV GPU output into HWND
+  - Parity defaults: `keep-open=yes`, `osc=no`, subtitle/OSD styling, language prefs, hwdec toggle
+  - HQ scalers baseline: `scale=spline36`, `dscale=mitchell`, `cscale=spline36` (tune later)
+
+### Distribution & Licensing Notes
+- Open-source is feasible, but **license choice depends on the exact libmpv/ffmpeg builds shipped**.
+- Many Windows MPV distributions are GPL; distributing those generally implies GPL obligations for the app distribution.
+- If the project is intended to be open source, GPL compliance becomes straightforward; for permissive/proprietary distribution, treat licensing as a first-class requirement.
+
+## Phase 7: Final Polish & Ship 📝
 - [ ] Single-file publish: `dotnet publish -c Release -r win-x64 --self-contained true`
 - [ ] MSIX or Inno Setup installer
 - [ ] Integration tests (all 50+ keybindings)
