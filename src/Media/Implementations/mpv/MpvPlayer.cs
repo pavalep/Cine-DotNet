@@ -317,7 +317,11 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
     public void ToggleLoopFile() => LoopMode = _loopMode == LoopMode.File ? LoopMode.NoLoop : LoopMode.File;
     public void ToggleLoopPlaylist() => LoopMode = _loopMode == LoopMode.Playlist ? LoopMode.NoLoop : LoopMode.Playlist;
 
-    public int CurrentSubtitleTrack { get; set; }
+    public int CurrentSubtitleTrack
+    {
+        get => (int)GetInt64("sid");
+        set => SetInt64("sid", value);
+    }
     public SubtitleSource[] SubtitleSources
     {
         get

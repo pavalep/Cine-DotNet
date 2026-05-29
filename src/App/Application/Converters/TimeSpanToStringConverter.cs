@@ -32,12 +32,18 @@ public class PercentConverter : IValueConverter
     {
         if (value is double d)
         {
+            double clamped = Math.Clamp(d, 0.0, 1.0);
             // If target is Thickness (for thumb margin), return the pixel offset
             if (targetType == typeof(Thickness))
             {
-                return new Thickness(d * 100, 0, 0, 0);
+                return new Thickness(clamped * 100, 0, 0, 0);
             }
-            return $"{(int)(d * 100)}%";
+            // If target is Rect (for RectangleGeometry clip), return a proportional rect
+            if (targetType == typeof(Rect))
+            {
+                return new Rect(0, 0, clamped, 1);
+            }
+            return $"{(int)(clamped * 100)}%";
         }
         return "0%";
     }

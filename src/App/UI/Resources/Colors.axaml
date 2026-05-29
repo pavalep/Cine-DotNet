@@ -30,52 +30,73 @@
     
     <!-- ======================== -->
     <!--  OSD (On-Screen Display)  -->
+    <!--  Matches reference       -->
+    <!--  code_for_reference/     -->
+    <!--  src/style.css exactly   -->
     <!-- ======================== -->
     <SolidColorBrush x:Key="OsdForeground" Color="{StaticResource White}" />
     <SolidColorBrush x:Key="OsdBackground" Color="#CC000000" />
     
-    <!-- Header Gradient (top bar) -->
+    <!-- Reference: linear-gradient(180deg, rgba(0,0,0,0.14) 0%, rgba(0,0,0,0.08) 40%, rgba(0,0,0,0) 100%) -->
     <LinearGradientBrush x:Key="HeaderGradient" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Offset="0" Color="#24000000" />   <!-- rgba(0,0,0,0.14) -->
-        <GradientStop Offset="0.4" Color="#14000000" /> <!-- rgba(0,0,0,0.08) -->
-        <GradientStop Offset="1" Color="#00000000" />   <!-- transparent -->
+        <GradientStop Offset="0" Color="#24000000" />
+        <GradientStop Offset="0.4" Color="#14000000" />
+        <GradientStop Offset="1" Color="#00000000" />
     </LinearGradientBrush>
     
-    <!-- Controls Gradient (bottom area) -->
+    <!-- Reference: linear-gradient(0deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.1) 40%, rgba(0,0,0,0) 100%) -->
     <LinearGradientBrush x:Key="ControlsGradient" StartPoint="0,1" EndPoint="0,0">
-        <GradientStop Offset="0" Color="#33000000" />   <!-- rgba(0,0,0,0.2) -->
-        <GradientStop Offset="0.4" Color="#1A000000" /> <!-- rgba(0,0,0,0.1) -->
-        <GradientStop Offset="1" Color="#00000000" />   <!-- transparent -->
-    </LinearGradientBrush>
-    
-    <!-- Combined Header + Controls Gradient -->
-    <LinearGradientBrush x:Key="HeaderAndControlsGradient" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Offset="0" Color="#CC000000" />   <!-- rgba(0,0,0,0.8) - top -->
-        <GradientStop Offset="0.7" Color="#4D000000" /> <!-- rgba(0,0,0,0.3) - middle -->
-        <GradientStop Offset="1" Color="#00000000" />   <!-- transparent - bottom -->
+        <GradientStop Offset="0" Color="#33000000" />
+        <GradientStop Offset="0.4" Color="#19000000" />
+        <GradientStop Offset="1" Color="#00000000" />
     </LinearGradientBrush>
 
-    <!-- Start page gradient (opaque to prevent transparency issues) -->
+    <!-- Reference: header+controls combined gradient from style.css -->
+    <LinearGradientBrush x:Key="HeaderAndControlsGradient" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Offset="0" Color="#4D000000" />
+        <GradientStop Offset="0.05" Color="#26000000" />
+        <GradientStop Offset="0.17" Color="#00000000" />
+        <GradientStop Offset="0.65" Color="#00000000" />
+        <GradientStop Offset="0.9" Color="#3B000000" />
+        <GradientStop Offset="1" Color="#66000000" />
+    </LinearGradientBrush>
+
+    <!-- Start page background: linear-gradient(180deg, transparent 0%, #0c0c0e 100%) -->
     <LinearGradientBrush x:Key="StartPageBackground" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Offset="0" Color="#FF1E1E1E" />
+        <GradientStop Offset="0" Color="#FF000000" />
         <GradientStop Offset="1" Color="#FF0C0C0E" />
     </LinearGradientBrush>
     
     <!-- ======================== -->
     <!--  BUTTON STATES           -->
+    <!--  Matches reference       -->
     <!-- ======================== -->
     <SolidColorBrush x:Key="ButtonBackground" Color="Transparent" />
-    <SolidColorBrush x:Key="ButtonHoverBackground" Color="#2BFFFFFF" /> <!-- rgba(255,255,255,0.17) -->
-    <SolidColorBrush x:Key="ButtonActiveBackground" Color="#40FFFFFF" /> <!-- rgba(255,255,255,0.25) -->
+    <!-- Reference: rgba(255,255,255,0.17) -->
+    <SolidColorBrush x:Key="ButtonHoverBackground" Color="#2BFFFFFF" />
+    <!-- Reference: rgba(255,255,255,0.25) -->
+    <SolidColorBrush x:Key="ButtonActiveBackground" Color="#40FFFFFF" />
     
     <SolidColorBrush x:Key="ToggleButtonUncheckedBackground" Color="Transparent" />
     <SolidColorBrush x:Key="ToggleButtonCheckedBackground" Color="{StaticResource White}" />
     <SolidColorBrush x:Key="ToggleButtonCheckedForeground" Color="{StaticResource Black}" />
     
     <!-- ======================== -->
+    <!--  TEXT / ICON SHADOW      -->
+    <!--  Reference: 0px 1px 6px  -->
+    <!--  rgba(0,0,0,0.6)        -->
+    <!-- ======================== -->
+    <BoxShadows x:Key="OsdTextShadow">0 1 6 #99000000</BoxShadows>
+    <BoxShadows x:Key="OsdIconShadow">0 1 6 #99000000</BoxShadows>
+    
+    <!-- Big play/pause icon shadow: 0px 1px 8px rgba(0,0,0,0.55) -->
+    <BoxShadows x:Key="BigPlayIconShadow">0 1 8 #8C000000</BoxShadows>
+    
+    <!-- ======================== -->
     <!--  PROGRESS / SEEK BAR     -->
     <!-- ======================== -->
-    <SolidColorBrush x:Key="ProgressTroughBackground" Color="#39FFFFFF" /> <!-- rgba(255,255,255,0.225) -->
+    <!-- Reference: rgba(255,255,255,0.225) -->
+    <SolidColorBrush x:Key="ProgressTroughBackground" Color="#39FFFFFF" />
     <SolidColorBrush x:Key="ProgressSliderBackground" Color="{StaticResource White}" />
     <SolidColorBrush x:Key="ProgressSliderForeground" Color="{StaticResource Accent}" />
     
@@ -88,6 +109,7 @@
     <!-- ======================== -->
     <!--  POPOVER / MENU          -->
     <!-- ======================== -->
+    <!-- Reference: rgba(25,25,27,0.95) border #202021 -->
     <SolidColorBrush x:Key="PopoverBackground" Color="#F219191B" />
     <SolidColorBrush x:Key="PopoverBorder" Color="#FF202021" />
     
@@ -98,5 +120,11 @@
     
     <!-- Time separator -->
     <SolidColorBrush x:Key="TimeSeparatorBackground" Color="#DDDDDD" />
+
+    <!-- ======================== -->
+    <!--  WINDOW SYSTEM BUTTONS   -->
+    <!-- ======================== -->
+    <SolidColorBrush x:Key="WindowButtonHoverBackground" Color="#2BFFFFFF" />
+    <SolidColorBrush x:Key="WindowCloseButtonHoverBackground" Color="#E81123" />
 </Styles.Resources>
 </Styles>

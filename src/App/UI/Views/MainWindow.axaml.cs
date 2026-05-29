@@ -159,7 +159,6 @@ public partial class MainWindow : Window
         BtnAudioMenu = this.FindControl<global::Avalonia.Controls.Button>("BtnAudioMenu");
         AudioIconPath = this.FindControl<global::Avalonia.Controls.Shapes.Path>("AudioIconPath");
         BtnVideoMenu = this.FindControl<global::Avalonia.Controls.Button>("BtnVideoMenu");
-        BtnLoopPlaylist = this.FindControl<global::Avalonia.Controls.Primitives.ToggleButton>("BtnLoopPlaylist");
         BtnLoopFile = this.FindControl<global::Avalonia.Controls.Primitives.ToggleButton>("BtnLoopFile");
         BtnOptionsMenu = this.FindControl<global::Cine.Avalonia.Components.OptionsMenuButton>("BtnOptionsMenu");
         BtnFullscreen = this.FindControl<global::Avalonia.Controls.Primitives.ToggleButton>("BtnFullscreen");
@@ -510,7 +509,8 @@ public partial class MainWindow : Window
         SetButtonSize(BtnVolumeMenu, btnSize);
         SetButtonSize(BtnFullscreen, btnSize);
         SetButtonSize(BtnLoopFile, btnSize);
-        SetButtonSize(BtnLoopPlaylist, btnSize);
+        SetButtonSize(BtnShufflePlaylist != null ? BtnShufflePlaylist : null, btnSize);
+        SetButtonSize(BtnPlaylistDialog != null ? BtnPlaylistDialog : null, btnSize);
 
         if (ControlsBox != null)
             ControlsBox.Height = isNarrow ? 90 : 120;
@@ -1101,6 +1101,13 @@ public partial class MainWindow : Window
         #endregion
         Dispatcher.UIThread.Post(() =>
         {
+            if (PlayPauseIconPath != null)
+            {
+                global::Avalonia.Application.Current!.TryGetResource(e.IsPaused ? "PlayIcon" : "PauseIcon", global::Avalonia.Styling.ThemeVariant.Default, out var icon);
+                if (icon is global::Avalonia.Media.Geometry geo)
+                    PlayPauseIconPath.Data = geo;
+            }
+
             if (e.IsPaused)
             {
                 // Show pause indicator briefly

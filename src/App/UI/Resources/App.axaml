@@ -22,23 +22,24 @@
         <Setter Property="Background" Value="#FF0C0C0E" />
         <Setter Property="FontSize" Value="14" />
         <Setter Property="FontFamily" Value="{StaticResource SystemFont}" />
-        <Setter Property="ExtendClientAreaToDecorationsHint" Value="False" />
+        <Setter Property="ExtendClientAreaToDecorationsHint" Value="True" />
+        <Setter Property="ExtendClientAreaTitleBarHeightHint" Value="-1" />
     </Style>
     
     <!-- ======================== -->
     <!--  TRANSPORT BUTTONS       -->
     <!-- ======================== -->
     
-    <!-- Circular Transport Button -->
+    <!-- Circular Transport Button (matches reference) -->
     <Style Selector="Button.circular-transport">
-        <Setter Property="Width" Value="40" />
-        <Setter Property="Height" Value="40" />
+        <Setter Property="Width" Value="34" />
+        <Setter Property="Height" Value="34" />
         <Setter Property="Padding" Value="0" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="20" />
+        <Setter Property="CornerRadius" Value="17" />
         <Setter Property="Template">
             <ControlTemplate TargetType="Button">
                 <Border x:Name="RootBorder"
@@ -64,16 +65,16 @@
         </Style>
     </Style>
     
-    <!-- Circular Menu Button -->
+    <!-- Circular Menu Button (matches reference) -->
     <Style Selector="Button.circular-menu">
-        <Setter Property="Width" Value="40" />
-        <Setter Property="Height" Value="40" />
+        <Setter Property="Width" Value="34" />
+        <Setter Property="Height" Value="34" />
         <Setter Property="Padding" Value="0" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="20" />
+        <Setter Property="CornerRadius" Value="17" />
         <Setter Property="Template">
             <ControlTemplate TargetType="Button">
                 <Border x:Name="RootBorder"
@@ -99,18 +100,18 @@
         </Style>
     </Style>
     
-    <!-- Circular Toggle Button -->
+    <!-- Circular Toggle Button (matches reference) -->
     <Style Selector="ToggleButton.circular-toggle">
-        <Setter Property="Width" Value="40" />
-        <Setter Property="Height" Value="40" />
+        <Setter Property="Width" Value="34" />
+        <Setter Property="Height" Value="34" />
         <Setter Property="Padding" Value="0" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="20" />
+        <Setter Property="CornerRadius" Value="17" />
         <Setter Property="Template">
-            <ControlTemplate TargetType="Button">
+            <ControlTemplate TargetType="ToggleButton">
                 <Border x:Name="RootBorder"
                         Background="{TemplateBinding Background}"
                         CornerRadius="{TemplateBinding CornerRadius}"
@@ -282,8 +283,8 @@
         </Style.Animations>
     </Style>
     
-    <!-- OSD Text & Icon Shadows -->
-    <Style Selector="Border.header-bar Path, Border.header-bar TextBlock, Border.controls-box Path, Border.controls-box TextBlock">
+    <!-- OSD Text & Icon Shadows — matches reference: text-shadow 0 1 6 rgba(0,0,0,0.6), icon-shadow same -->
+    <Style Selector="Border.header-bar Path, Border.header-bar TextBlock, Border.controls-box Path, Border.controls-box TextBlock, Border.header-and-controls Path, Border.header-and-controls TextBlock">
         <Setter Property="Effect" Value="drop-shadow(0 1 6 #99000000)" />
     </Style>
 
@@ -310,21 +311,24 @@
     
     <!-- Header Bar -->
     <Style Selector="Border.header-bar">
-        <Setter Property="Height" Value="50" />
+        <Setter Property="Height" Value="56" />
         <Setter Property="VerticalAlignment" Value="Top" />
         <Setter Property="Background" Value="{StaticResource HeaderGradient}" />
     </Style>
 
-    <Style Selector="Border.osd">
-        <!-- Any shared OSD styles can go here -->
+    <!-- Header + Controls combined overlay (matches reference .header-and-controls) -->
+    <Style Selector="Border.header-and-controls">
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="IsHitTestVisible" Value="False" />
+        <Setter Property="Background" Value="{StaticResource HeaderAndControlsGradient}" />
     </Style>
     
     <!-- Controls Box (bottom area with gradient) -->
     <Style Selector="Border.controls-box">
-        <Setter Property="Height" Value="120" />
         <Setter Property="VerticalAlignment" Value="Bottom" />
         <Setter Property="Background" Value="{StaticResource ControlsGradient}" />
-        <Setter Property="Padding" Value="0,0,0,20" />
+        <Setter Property="Padding" Value="0,0,0,12" />
     </Style>
     
     <!-- ======================== -->

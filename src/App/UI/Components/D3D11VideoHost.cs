@@ -16,9 +16,6 @@ public class D3D11VideoHost : global::Avalonia.Controls.Control
 {
     private IntPtr _childHwnd = IntPtr.Zero;
     private IntPtr _parentHwnd;
-    #region debug-point vt-paint-counter
-    private static int _wmPaintCount;
-    #endregion
     #region debug-point videohost-log
     private static readonly string DebugLogFile = CreateLogFilePath();
 
@@ -154,6 +151,7 @@ public class D3D11VideoHost : global::Avalonia.Controls.Control
             SetWindowPos(_childHwnd, IntPtr.Zero,
                 x, y, w, h,
                 SetWindowPosFlags.SWP_NOZORDER | SetWindowPosFlags.SWP_NOACTIVATE);
+            UpdateVideoRegion(w, h);
         }
         return result;
     }
@@ -224,15 +222,15 @@ public class D3D11VideoHost : global::Avalonia.Controls.Control
         int height = Math.Max(1, (int)(Bounds.Height * scaling));
 
         _childHwnd = CreateWindowEx(
-            0, windowClass, "CineD3D11",
-            WindowStyles.WS_CHILD,
+            (int)WindowStylesEx.WS_EX_TRANSPARENT, windowClass, "CineD3D11",
+            WindowStyles.WS_CHILD | WindowStyles.WS_VISIBLE,
             x, y, width, height,
             _parentHwnd, IntPtr.Zero,
             GetModuleHandle(null), IntPtr.Zero);
 
         if (_childHwnd != IntPtr.Zero)
         {
-            ShowWindow(_childHwnd, IsVisible && IsVideoSurfaceVisible ? ShowWindowCommand.Show : ShowWindowCommand.Hide);
+            UpdateVideoRegion(width, height);
 
             #region debug-point videohost-create-success
             DebugLog($"CreateChildWindow success hwnd={_childHwnd} size={width}x{height}");
@@ -279,40 +277,39 @@ public class D3D11VideoHost : global::Avalonia.Controls.Control
         return 1.0;
     }
 
+    private void UpdateVideoRegion(int w, int h)
+    {
+        if (_childHwnd == IntPtr.Zero || w <= 0 || h <= 0)
+            return;
+
+        double scaling = GetScaling();
+        int headerH = (int)(56 * scaling);
+        int controlsH = (int)(120 * scaling);
+
+        int topY = Math.Min(headerH, h);
+        int bottomY = Math.Max(0, h - controlsH);
+        int clipH = Math.Max(0, bottomY - topY);
+
+        if (clipH <= 0)
+        {
+            SetWindowRgn(_childHwnd, IntPtr.Zero, true);
+            return;
+        }
+
+        var region = CreateRectRgn(0, topY, w, bottomY);
+        SetWindowRgn(_childHwnd, region, true);
+    }
+
     private static readonly WndProcDelegate _wndProcDelegate = WndProc;
 
     private static IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
     {
         const uint WM_NCHITTEST = 0x0084;
-        const uint WM_PAINT = 0x000F;
-        const int HTTRANSPARENT = -1;
+        const uint WM_ERASEBKGND = 0x0014;
         if (msg == WM_NCHITTEST)
-            return new IntPtr(HTTRANSPARENT);
-        if (msg == WM_PAINT)
-        {
-            #region debug-point VT-F
-            int c = System.Threading.Interlocked.Increment(ref _wmPaintCount);
-            if (c <= 10)
-            {
-                global::Cine.Avalonia.App.DebugReport("VT", "VideoHost.WM_PAINT", "WM_PAINT received.", new
-                {
-                    hwnd = hWnd.ToInt64(),
-                    count = c
-                }, runId: "pre-fix");
-            }
-            #endregion
-            var hdc = BeginPaint(hWnd, out var ps);
-            try
-            {
-                GetClientRect(hWnd, out var rc);
-                FillRect(hdc, ref rc, GetStockObject(BLACK_BRUSH));
-            }
-            finally
-            {
-                EndPaint(hWnd, ref ps);
-            }
-            return IntPtr.Zero;
-        }
+            return new IntPtr(-1);
+        if (msg == WM_ERASEBKGND)
+            return new IntPtr(1);
         return DefWindowProc(hWnd, msg, wParam, lParam);
     }
 
@@ -333,6 +330,12 @@ public class D3D11VideoHost : global::Avalonia.Controls.Control
         WS_CLIPSIBLINGS = 0x4000000,
         WS_CLIPCHILDREN = 0x2000000,
         WS_MAXIMIZE = 0x1000000,
+    }
+
+    [Flags]
+    private enum WindowStylesEx : uint
+    {
+        WS_EX_TRANSPARENT = 0x00000020,
     }
 
     [Flags]
@@ -369,6 +372,12 @@ public class D3D11VideoHost : global::Avalonia.Controls.Control
 
     [DllImport("gdi32.dll")]
     private static extern IntPtr GetStockObject(int fnObject);
+
+    [DllImport("gdi32.dll")]
+    private static extern IntPtr CreateRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect);
+
+    [DllImport("user32.dll")]
+    private static extern int SetWindowRgn(IntPtr hWnd, IntPtr hRgn, bool bRedraw);
 
     [DllImport("user32.dll")]
     private static extern IntPtr BeginPaint(IntPtr hWnd, out PAINTSTRUCT lpPaint);
