@@ -91,7 +91,19 @@ public class MainViewModel : INotifyPropertyChanged
     public Func<Task<string?>>? RequestSubtitleFileAsync { get; set; }
     public Func<Task<string?>>? RequestAudioFileAsync { get; set; }
 
-    public string Title => Path.GetFileName(_filePath) ?? "Cine";
+    public string Title => !string.IsNullOrEmpty(_filePath)
+        ? TruncateFilename(Path.GetFileName(_filePath))
+        : "Cine";
+
+    private static string TruncateFilename(string name, int maxLen = 48)
+    {
+        if (string.IsNullOrEmpty(name) || name.Length <= maxLen)
+            return name;
+        var ext = Path.GetExtension(name);
+        var nameOnly = Path.GetFileNameWithoutExtension(name);
+        var avail = maxLen - ext.Length - 3;
+        return nameOnly[..Math.Max(0, avail)] + "..." + ext;
+    }
 
     public MainViewModel(IMediaPlayer player)
     {
@@ -386,6 +398,31 @@ public class MainViewModel : INotifyPropertyChanged
         set { _player.AudioDelay = value; OnPropertyChanged(); }
     }
 
+    // --- Zoom ---
+    public double ZoomValue
+    {
+        get => _player.Zoom;
+        set { _player.Zoom = value; OnPropertyChanged(); }
+    }
+
+    // --- Aspect Ratio ---
+    public double AspectRatioValue
+    {
+        get => _player.AspectRatio;
+        set { _player.AspectRatio = value; OnPropertyChanged(); }
+    }
+
+    // --- Rotation & Flip ---
+    public void ResetAspectRatio() => AspectRatioValue = -1;
+    public void SetAspectRatio(double ratio) => AspectRatioValue = ratio;
+    public void RotateLeft() => _player.Command("set", "video-rotate", "90");
+    public void RotateRight() => _player.Command("set", "video-rotate", "270");
+    public void ResetRotation() => _player.Command("set", "video-rotate", "0");
+    public void FlipHorizontal() => _player.Command("vf", "toggle", "hflip");
+    public void FlipVertical() => _player.Command("vf", "toggle", "vflip");
+    public void ResetFlip() => _player.Command("vf", "del", "@hflip", "@vflip");
+    public void ResetZoom() => ZoomValue = 0;
+
     // --- Reset Commands ---
     public void ResetContrast() => ContrastValue = 0;
     public void ResetBrightness() => BrightnessValue = 0;
@@ -404,6 +441,10 @@ public class MainViewModel : INotifyPropertyChanged
         ResetSubtitleDelay();
         ResetAudioDelay();
         ResetSpeed();
+        ResetZoom();
+        ResetAspectRatio();
+        ResetRotation();
+        ResetFlip();
     }
 
     private bool _isUpdatingPositionFromPlayer;
@@ -424,7 +465,12 @@ public class MainViewModel : INotifyPropertyChanged
     public bool IsMuted
     {
         get => _isMuted;
-        set { _isMuted = value; OnPropertyChanged(); }
+        set
+        {
+            _isMuted = value;
+            _player.Mute(value);
+            OnPropertyChanged();
+        }
     }
 
     public string FilePath

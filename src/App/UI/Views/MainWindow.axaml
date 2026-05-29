@@ -311,7 +311,7 @@
             <!--  Row 0 = buttons (WrapBox equivalent) -->
             <!--  Row 1 = seek bar + time labels        -->
             <!-- ======================== -->
-            <Border x:Name="ControlsBox" Classes="osd controls"
+            <Border x:Name="ControlsBox" Classes="controls-box"
                     Background="{StaticResource ControlsGradient}"
                     VerticalAlignment="Bottom"
                     HorizontalAlignment="Stretch"

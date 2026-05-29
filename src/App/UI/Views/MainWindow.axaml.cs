@@ -1166,6 +1166,7 @@ public partial class MainWindow : Window
                 if (StartPage?.IsVisible == true) StartPage.IsVisible = false;
                 if (ControlsBox != null) ControlsBox.IsVisible = true;
                 if (BtnOpenMenu != null) BtnOpenMenu.IsVisible = true;
+                if (TitleText != null) TitleText.Text = _viewModel.Title;
                 
                 // Restart auto-hide timer now that media is playing
                 _autoHideTimer?.Stop();

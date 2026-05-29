@@ -33,4 +33,29 @@ public partial class OptionsMenuButton : global::Avalonia.Controls.UserControl
     private void OnResetAudioDelayClick(object? sender, RoutedEventArgs e) => ViewModel?.ResetAudioDelay();
     private void OnResetSpeedClick(object? sender, RoutedEventArgs e) => ViewModel?.ResetSpeed();
     private void OnScreenshotClick(object? sender, RoutedEventArgs e) => ViewModel?.Screenshot();
+
+    // --- Aspect Ratio ---
+    private void OnAspectResetClick(object? sender, RoutedEventArgs e) => ViewModel?.ResetAspectRatio();
+
+    private void OnAspectRatioChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (e.AddedItems.Count > 0 && e.AddedItems[0] is ComboBoxItem item && item.Tag is string tag)
+        {
+            if (double.TryParse(tag, out var ratio))
+                ViewModel?.SetAspectRatio(ratio);
+        }
+    }
+
+    // --- Rotate ---
+    private void OnRotateResetClick(object? sender, RoutedEventArgs e) => ViewModel?.ResetRotation();
+    private void OnRotateLeftClick(object? sender, RoutedEventArgs e) => ViewModel?.RotateLeft();
+    private void OnRotateRightClick(object? sender, RoutedEventArgs e) => ViewModel?.RotateRight();
+
+    // --- Flip ---
+    private void OnFlipResetClick(object? sender, RoutedEventArgs e) => ViewModel?.ResetFlip();
+    private void OnFlipHorizontalClick(object? sender, RoutedEventArgs e) => ViewModel?.FlipHorizontal();
+    private void OnFlipVerticalClick(object? sender, RoutedEventArgs e) => ViewModel?.FlipVertical();
+
+    // --- Zoom ---
+    private void OnZoomResetClick(object? sender, RoutedEventArgs e) => ViewModel?.ResetZoom();
 }
