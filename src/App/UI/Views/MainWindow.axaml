@@ -141,8 +141,7 @@
 
             <!-- ======================== -->
             <!--  HEADER + CONTROLS OVERLAY  -->
-            <!--  Matches reference        -->
-            <!--  header-and-controls      -->
+            <!--  Matches reference header-and-controls -->
             <!-- ======================== -->
             <Border x:Name="HeaderAndControlsOverlay"
                     Classes="header-and-controls"
@@ -168,21 +167,69 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
-                    <!-- Window Title + Icon (Left) -->
-                    <StackPanel Grid.Column="0" Orientation="Horizontal"
-                                Margin="84,0,0,0"
-                                VerticalAlignment="Center"
-                                Spacing="8">
-                        <TextBlock x:Name="TitleText" Text="Cine"
-                                   Foreground="{StaticResource OsdForeground}"
-                                   FontSize="15" FontWeight="SemiBold"
-                                   VerticalAlignment="Center" />
-                    </StackPanel>
+                    <!-- ======================== -->
+                    <!-- Col 0: Open Menu Button  -->
+                    <!-- ALIGNED: Python reference open_menu_button -->
+                    <!-- visible: bind start_page.visible inverted    -->
+                    <!-- (controlled by code-behind on media open/close) -->
+                    <!-- ======================== -->
+                    <Button Grid.Column="0"
+                            x:Name="BtnOpenMenu"
+                            IsVisible="False"
+                            VerticalAlignment="Center"
+                            Margin="8,0,4,0"
+                            Background="rgba(255,255,255,0.12)"
+                            CornerRadius="99"
+                            BorderThickness="0"
+                            Padding="14,7">
+                        <Button.Styles>
+                            <Style Selector="Button#BtnOpenMenu /template/ ContentPresenter">
+                                <Setter Property="Background" Value="Transparent" />
+                            </Style>
+                            <Style Selector="Button#BtnOpenMenu:pointerover">
+                                <Setter Property="Background" Value="rgba(255,255,255,0.17)" />
+                            </Style>
+                            <Style Selector="Button#BtnOpenMenu:pressed">
+                                <Setter Property="Background" Value="rgba(255,255,255,0.25)" />
+                            </Style>
+                        </Button.Styles>
+                        <StackPanel Orientation="Horizontal" Spacing="5">
+                            <TextBlock Text="Open"
+                                       Foreground="{StaticResource OsdForeground}"
+                                       FontSize="13" FontWeight="Medium"
+                                       VerticalAlignment="Center" />
+                            <Path Data="M 1 2 L 4 5 L 7 2"
+                                  Width="8" Height="5" Stretch="Uniform"
+                                  Fill="{StaticResource OsdForeground}"
+                                  Opacity="0.7"
+                                  VerticalAlignment="Center" />
+                        </StackPanel>
+                        <Button.Flyout>
+                            <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                                <MenuItem Header="Open Files"
+                                          Command="{Binding OpenFilesCommand}" />
+                                <MenuItem Header="Open Folder"
+                                          Command="{Binding OpenFolderCommand}" />
+                                <Separator />
+                                <MenuItem Header="Add Files"
+                                          Command="{Binding AddFilesCommand}" />
+                                <MenuItem Header="Add Subtitle Track"
+                                          Command="{Binding AddSubtitleCommand}" />
+                                <MenuItem Header="Add Audio Track"
+                                          Command="{Binding AddAudioCommand}" />
+                            </MenuFlyout>
+                        </Button.Flyout>
+                    </Button>
 
-                    <!-- Hidden BtnOpenMenu placeholder (used by code-behind) -->
-                    <Button x:Name="BtnOpenMenu" IsVisible="False" Width="0" Height="0" />
+                    <!-- Col 1: Window Title (centered) -->
+                    <TextBlock Grid.Column="1"
+                               x:Name="TitleText" Text="Cine"
+                               Foreground="{StaticResource OsdForeground}"
+                               FontSize="14" FontWeight="SemiBold"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center" />
 
-                    <!-- Right side: PIP + Menu + Window Controls -->
+                    <!-- Col 2: PIP + Menu + Window Controls -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal"
                                 VerticalAlignment="Center"
                                 Spacing="0">
@@ -198,7 +245,7 @@
                                   Fill="{StaticResource OsdForeground}" />
                         </ToggleButton>
 
-                        <!-- Primary Menu Button (kebab menu) -->
+                        <!-- Primary Menu Button -->
                         <Button x:Name="BtnPrimaryMenu"
                                 Classes="circular-menu"
                                 ToolTip.Tip="Main Menu"
@@ -218,7 +265,7 @@
                             </Button.Flyout>
                         </Button>
 
-                        <!-- Fullscreen Close Button (only visible in fullscreen) -->
+                        <!-- Fullscreen Close Button (only in fullscreen) -->
                         <Button x:Name="BtnFullscreenClose"
                                 Classes="circular-menu"
                                 ToolTip.Tip="Close"
@@ -259,9 +306,10 @@
             </Border>
 
             <!-- ======================== -->
-            <!--  CONTROLS BOX (bottom)    -->
-            <!--  Matches reference        -->
-            <!--  style.css .osd.controls   -->
+            <!--  CONTROLS BOX (bottom)   -->
+            <!--  ALIGNED to Python reference:          -->
+            <!--  Row 0 = buttons (WrapBox equivalent) -->
+            <!--  Row 1 = seek bar + time labels        -->
             <!-- ======================== -->
             <Border x:Name="ControlsBox" Classes="osd controls"
                     Background="{StaticResource ControlsGradient}"
@@ -269,100 +317,42 @@
                     HorizontalAlignment="Stretch"
                     IsVisible="False"
                     IsHitTestVisible="True">
-                <Grid x:Name="ControlsGrid" Margin="24,0,24,12">
+                <Grid x:Name="ControlsGrid">
                     <Grid.RowDefinitions>
+                        <!-- Row 0: Transport buttons (ALIGNED: above seek bar, matches Python WrapBox) -->
                         <RowDefinition Height="Auto" />
+                        <!-- Row 1: Seek bar + time labels (ALIGNED: below buttons) -->
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
-                    <!-- Progress/Seek Bar Row -->
+                    <!-- ======================== -->
+                    <!--  ROW 0: TRANSPORT BUTTONS -->
+                    <!--  ALIGNED button order:    -->
+                    <!--  prev|play|next|vol|subs|audio|[video]|[spacer*]|[shuffle]|[loopList]|loopFile|playlist|options|fullscreen -->
+                    <!--  REMOVED: BtnRewind, BtnForward (not in Python reference)   -->
+                    <!--  ADDED: BtnLoopPlaylist between Shuffle and LoopFile        -->
+                    <!--  ADDED: * spacer column between audio/video and shuffle groups -->
+                    <!-- ======================== -->
                     <Grid Grid.Row="0"
-                          x:Name="SeekArea"
-                          Height="32"
-                          Margin="0,0,0,4"
-                          PointerMoved="OnSeekAreaPointerMoved"
-                          PointerExited="OnSeekAreaPointerExited"
-                          PointerWheelChanged="OnSeekAreaPointerWheelChanged"
-                          PointerPressed="OnSeekAreaPointerPressed"
-                          Background="Transparent">
+                          Margin="13,10,13,4"
+                          VerticalAlignment="Center">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />  <!-- 0: Previous -->
+                            <ColumnDefinition Width="Auto" />  <!-- 1: Play/Pause -->
+                            <ColumnDefinition Width="Auto" />  <!-- 2: Next -->
+                            <ColumnDefinition Width="Auto" />  <!-- 3: Volume -->
+                            <ColumnDefinition Width="Auto" />  <!-- 4: Subtitles -->
+                            <ColumnDefinition Width="Auto" />  <!-- 5: Audio -->
+                            <ColumnDefinition Width="Auto" />  <!-- 6: Video (conditional) -->
+                            <ColumnDefinition Width="*" />     <!-- 7: Spacer (hexpand, matches Python Separator hexpand) -->
+                            <ColumnDefinition Width="Auto" />  <!-- 8: Shuffle (conditional) -->
+                            <ColumnDefinition Width="Auto" />  <!-- 9: LoopPlaylist (conditional) — NEWLY ADDED -->
+                            <ColumnDefinition Width="Auto" />  <!-- 10: LoopFile -->
+                            <ColumnDefinition Width="Auto" />  <!-- 11: Playlist -->
+                            <ColumnDefinition Width="Auto" />  <!-- 12: Options -->
+                            <ColumnDefinition Width="Auto" />  <!-- 13: Fullscreen -->
                         </Grid.ColumnDefinitions>
 
-                        <!-- Seek Slider Track -->
-                        <Border Background="{StaticResource ProgressTroughBackground}"
-                                CornerRadius="2"
-                                Height="4"
-                                VerticalAlignment="Center" 
-                                IsHitTestVisible="False" />
-
-                        <!-- Seek Slider Progress Fill -->
-                        <Border Background="{StaticResource ProgressSliderBackground}"
-                                CornerRadius="2"
-                                Height="4"
-                                VerticalAlignment="Center"
-                                IsHitTestVisible="False">
-                            <Border.Clip>
-                                <RectangleGeometry Rect="{Binding SeekValue, Converter={StaticResource PercentConverter}}" />
-                            </Border.Clip>
-                        </Border>
-
-                        <!-- Thumb (positioned via margin) -->
-                        <Border Width="16" Height="16"
-                                CornerRadius="8"
-                                Background="{StaticResource ProgressSliderBackground}"
-                                HorizontalAlignment="Left"
-                                VerticalAlignment="Center"
-                                IsHitTestVisible="False"
-                                Margin="{Binding SeekValue, Converter={StaticResource PercentConverter}}" />
-
-                        <!-- Chapter Markers -->
-                        <ItemsControl ItemsSource="{Binding ChapterMarkers}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <Canvas IsHitTestVisible="False" />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Rectangle Width="2" Height="12"
-                                               Fill="{StaticResource OsdForeground}"
-                                               Opacity="0.5" />
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                            <ItemsControl.Styles>
-                                <Style Selector="ContentPresenter">
-                                    <Setter Property="Canvas.Left"
-                                            Value="{Binding ., Converter={StaticResource ChapterMarginConverter}}" />
-                                </Style>
-                            </ItemsControl.Styles>
-                        </ItemsControl>
-
-                        <!-- Chapter preview tooltip -->
-                        <Border x:Name="ChapterPreviewPopover"
-                                IsVisible="False"
-                                HorizontalAlignment="Left"
-                                VerticalAlignment="Top"
-                                Background="{StaticResource PopoverBackground}"
-                                BorderBrush="{StaticResource PopoverBorder}"
-                                BorderThickness="1"
-                                CornerRadius="6"
-                                Padding="8,4"
-                                Margin="0,-34,0,0"
-                                BoxShadow="0 4 12 0 #80000000">
-                            <TextBlock x:Name="ChapterPreviewText"
-                                       Text="Chapter"
-                                       FontSize="12"
-                                       FontWeight="Medium"
-                                       Foreground="{StaticResource OsdForeground}" />
-                        </Border>
-                    </Grid>
-
-                    <!-- Transport Controls Row -->
-                    <Grid Grid.Row="1"
-                          HorizontalAlignment="Center"
-                          VerticalAlignment="Top"
-                          ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                         <Grid.Styles>
                             <Style Selector="Button, ToggleButton">
                                 <Setter Property="Width" Value="34" />
@@ -372,36 +362,18 @@
                             </Style>
                         </Grid.Styles>
 
-                        <!-- Time Elapsed -->
-                        <TextBlock Grid.Column="0"
-                                   x:Name="PositionTimeLabel"
-                                   Classes="time-label"
-                                   Text="{Binding PositionText, Mode=OneWay}"
-                                   VerticalAlignment="Center"
-                                   Margin="0,0,8,0" />
-
-                        <!-- Previous Button -->
-                        <Button Grid.Column="1" x:Name="BtnPrevious"
+                        <!-- Previous -->
+                        <Button Grid.Column="0" x:Name="BtnPrevious"
                                 Classes="circular-transport"
                                 Click="OnPrevious"
-                                ToolTip.Tip="Previous Chapter (Shift+P)">
+                                ToolTip.Tip="Previous (Shift+P)">
                             <Path Data="{StaticResource SkipBackwardIcon}"
                                   Width="16" Height="16" Stretch="Uniform"
                                   Fill="{StaticResource OsdForeground}" />
                         </Button>
 
-                        <!-- Rewind -->
-                        <Button Grid.Column="2" x:Name="BtnRewind"
-                                Classes="circular-transport"
-                                Click="OnRewind"
-                                ToolTip.Tip="Rewind (Shift+Left)">
-                            <Path Data="{StaticResource RewindIcon}"
-                                  Width="16" Height="16" Stretch="Uniform"
-                                  Fill="{StaticResource OsdForeground}" />
-                        </Button>
-
                         <!-- Play/Pause -->
-                        <Button Grid.Column="3" x:Name="BtnPlayPause"
+                        <Button Grid.Column="1" x:Name="BtnPlayPause"
                                 Classes="circular-transport"
                                 Click="OnPlayPause"
                                 ToolTip.Tip="Play/Pause (Space)">
@@ -411,45 +383,18 @@
                                   Fill="{StaticResource OsdForeground}" />
                         </Button>
 
-                        <!-- Forward -->
-                        <Button Grid.Column="4" x:Name="BtnForward"
-                                Classes="circular-transport"
-                                Click="OnForward"
-                                ToolTip.Tip="Forward (Shift+Right)">
-                            <Path Data="{StaticResource FastForwardIcon}"
-                                  Width="16" Height="16" Stretch="Uniform"
-                                  Fill="{StaticResource OsdForeground}" />
-                        </Button>
-
                         <!-- Next -->
-                        <Button Grid.Column="5" x:Name="BtnNext"
+                        <Button Grid.Column="2" x:Name="BtnNext"
                                 Classes="circular-transport"
                                 Click="OnNext"
-                                ToolTip.Tip="Next Chapter (P)">
+                                ToolTip.Tip="Next (P)">
                             <Path Data="{StaticResource SkipForwardIcon}"
                                   Width="16" Height="16" Stretch="Uniform"
                                   Fill="{StaticResource OsdForeground}" />
                         </Button>
 
-                        <!-- Time Separator -->
-                        <Border Grid.Column="6"
-                                Width="2" Height="16"
-                                Margin="8,0"
-                                CornerRadius="2"
-                                Background="{StaticResource TimeSeparatorBackground}"
-                                Opacity="0.4"
-                                VerticalAlignment="Center" />
-
-                        <!-- Total Duration -->
-                        <TextBlock Grid.Column="7"
-                                   x:Name="DurationTimeLabel"
-                                   Classes="time-label"
-                                   Text="{Binding DurationText, Mode=OneWay}"
-                                   VerticalAlignment="Center"
-                                   Margin="0,0,12,0" />
-
                         <!-- Volume -->
-                        <Button Grid.Column="8" x:Name="BtnVolumeMenu"
+                        <Button Grid.Column="3" x:Name="BtnVolumeMenu"
                                 Classes="circular-menu"
                                 ToolTip.Tip="Volume (M)">
                             <Path x:Name="VolumeIconPath"
@@ -457,19 +402,28 @@
                                   Width="16" Height="16" Stretch="Uniform"
                                   Fill="{StaticResource OsdForeground}" />
                             <Button.Flyout>
+                                <!-- ALIGNED: horizontal Box matching Python reference volume popover -->
                                 <Flyout Placement="Top">
                                     <Border Classes="volume-popover-content"
                                             Background="{StaticResource PopoverBackground}"
                                             BorderBrush="{StaticResource PopoverBorder}"
                                             BorderThickness="1"
                                             CornerRadius="6"
-                                            Padding="12">
-                                        <StackPanel Spacing="8" Width="180">
+                                            Padding="12,10">
+                                        <!-- ALIGNED: horizontal layout (mute toggle + slider side by side) -->
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <!-- Mute Toggle — ALIGNED: VolumeMuteIcon + IsChecked binding -->
                                             <ToggleButton x:Name="BtnMuteToggle"
                                                           Classes="circular-toggle"
-                                                          Content="M"
+                                                          IsChecked="{Binding IsMuted}"
                                                           Click="OnToggleMute"
-                                                          HorizontalAlignment="Center" />
+                                                          ToolTip.Tip="Mute"
+                                                          Width="34" Height="34">
+                                                <Path Data="{StaticResource VolumeMuteIcon}"
+                                                      Width="16" Height="16" Stretch="Uniform"
+                                                      Fill="{StaticResource OsdForeground}" />
+                                            </ToggleButton>
+                                            <!-- Volume Slider -->
                                             <Slider x:Name="VolumeSlider"
                                                     Classes="volume-slider"
                                                     Minimum="0" Maximum="130"
@@ -481,7 +435,7 @@
                         </Button>
 
                         <!-- Subtitles -->
-                        <Button Grid.Column="9" x:Name="BtnSubtitlesMenu"
+                        <Button Grid.Column="4" x:Name="BtnSubtitlesMenu"
                                 Classes="circular-menu"
                                 ToolTip.Tip="Subtitles"
                                 Click="OnSubtitlesMenuClick">
@@ -491,7 +445,7 @@
                         </Button>
 
                         <!-- Audio Tracks -->
-                        <Button Grid.Column="10" x:Name="BtnAudioMenu"
+                        <Button Grid.Column="5" x:Name="BtnAudioMenu"
                                 Classes="circular-menu"
                                 ToolTip.Tip="Audio Tracks"
                                 Click="OnAudioMenuClick">
@@ -500,8 +454,8 @@
                                   Fill="{StaticResource OsdForeground}" />
                         </Button>
 
-                        <!-- Video Tracks -->
-                        <Button Grid.Column="11" x:Name="BtnVideoMenu"
+                        <!-- Video Tracks (conditional) -->
+                        <Button Grid.Column="6" x:Name="BtnVideoMenu"
                                 Classes="circular-menu"
                                 ToolTip.Tip="Video Tracks"
                                 IsVisible="{Binding HasMultipleVideoTracks}"
@@ -511,8 +465,10 @@
                                   Fill="{StaticResource OsdForeground}" />
                         </Button>
 
-                        <!-- Shuffle -->
-                        <ToggleButton Grid.Column="12" x:Name="BtnShufflePlaylist"
+                        <!-- Col 7: invisible spacer (*) — matches Python "Separator hexpand opacity:0" -->
+
+                        <!-- Shuffle (conditional: HasMultiplePlaylistItems) -->
+                        <ToggleButton Grid.Column="8" x:Name="BtnShufflePlaylist"
                                       Classes="circular-toggle"
                                       IsChecked="{Binding IsShuffleEnabled}"
                                       IsVisible="{Binding HasMultiplePlaylistItems}"
@@ -523,8 +479,20 @@
                                   Fill="{StaticResource OsdForeground}" />
                         </ToggleButton>
 
+                        <!-- LoopPlaylist — NEWLY ADDED (was missing in previous version) -->
+                        <ToggleButton Grid.Column="9" x:Name="BtnLoopPlaylist"
+                                      Classes="circular-toggle"
+                                      IsChecked="{Binding IsLoopPlaylistEnabled}"
+                                      IsVisible="{Binding HasMultiplePlaylistItems}"
+                                      Click="OnToggleLoopPlaylist"
+                                      ToolTip.Tip="Loop Playlist">
+                            <Path Data="{StaticResource LoopPlaylistIcon}"
+                                  Width="16" Height="16" Stretch="Uniform"
+                                  Fill="{StaticResource OsdForeground}" />
+                        </ToggleButton>
+
                         <!-- Loop File -->
-                        <ToggleButton Grid.Column="13" x:Name="BtnLoopFile"
+                        <ToggleButton Grid.Column="10" x:Name="BtnLoopFile"
                                       Classes="circular-toggle"
                                       IsChecked="{Binding IsLoopFileEnabled}"
                                       Click="OnToggleLoopFile"
@@ -535,7 +503,7 @@
                         </ToggleButton>
 
                         <!-- Playlist -->
-                        <Button Grid.Column="14" x:Name="BtnPlaylistDialog"
+                        <Button Grid.Column="11" x:Name="BtnPlaylistDialog"
                                 Classes="circular-menu"
                                 Click="OnOpenPlaylistDialog"
                                 ToolTip.Tip="Playlist">
@@ -545,19 +513,141 @@
                         </Button>
 
                         <!-- Options -->
-                        <components:OptionsMenuButton Grid.Column="15" x:Name="BtnOptionsMenu" />
+                        <components:OptionsMenuButton Grid.Column="12" x:Name="BtnOptionsMenu" />
 
                         <!-- Fullscreen -->
-                        <ToggleButton Grid.Column="16" x:Name="BtnFullscreen"
+                        <ToggleButton Grid.Column="13" x:Name="BtnFullscreen"
                                       Classes="circular-toggle"
                                       Click="OnToggleFullscreen"
                                       ToolTip.Tip="Fullscreen (F)">
                             <Path x:Name="FullscreenIconPath"
-                                      Data="{StaticResource FullscreenEnterIcon}"
-                                      Width="16" Height="16" Stretch="Uniform"
-                                      Fill="{StaticResource OsdForeground}" />
+                                  Data="{StaticResource FullscreenEnterIcon}"
+                                  Width="16" Height="16" Stretch="Uniform"
+                                  Fill="{StaticResource OsdForeground}" />
                         </ToggleButton>
                     </Grid>
+
+                    <!-- ======================== -->
+                    <!--  ROW 1: SEEK BAR + TIME  -->
+                    <!--  ALIGNED: seek scale (hexpand) | elapsed | sep | total -->
+                    <!--  Matches Python reference bottom Box layout            -->
+                    <!--  Time labels MOVED here from old controls row          -->
+                    <!-- ======================== -->
+                    <Grid Grid.Row="1"
+                          Margin="3,0,20,5"
+                          Height="37"
+                          VerticalAlignment="Center">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />    <!-- Seek area (hexpand) -->
+                            <ColumnDefinition Width="Auto" /> <!-- Elapsed time -->
+                            <ColumnDefinition Width="Auto" /> <!-- Separator -->
+                            <ColumnDefinition Width="Auto" /> <!-- Total duration -->
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Seek Area (hexpand, with chapter markers) -->
+                        <Grid Grid.Column="0"
+                              x:Name="SeekArea"
+                              Margin="8,0,3,0"
+                              PointerMoved="OnSeekAreaPointerMoved"
+                              PointerExited="OnSeekAreaPointerExited"
+                              PointerWheelChanged="OnSeekAreaPointerWheelChanged"
+                              PointerPressed="OnSeekAreaPointerPressed"
+                              Background="Transparent">
+
+                            <!-- Seek Slider Track (trough) -->
+                            <Border Background="{StaticResource ProgressTroughBackground}"
+                                    CornerRadius="2"
+                                    Height="4"
+                                    VerticalAlignment="Center"
+                                    IsHitTestVisible="False" />
+
+                            <!-- Seek Slider Progress Fill -->
+                            <Border Background="{StaticResource ProgressSliderBackground}"
+                                    CornerRadius="2"
+                                    Height="4"
+                                    VerticalAlignment="Center"
+                                    IsHitTestVisible="False">
+                                <Border.Clip>
+                                    <RectangleGeometry Rect="{Binding SeekValue, Converter={StaticResource PercentConverter}}" />
+                                </Border.Clip>
+                            </Border>
+
+                            <!-- Thumb -->
+                            <Border Width="16" Height="16"
+                                    CornerRadius="8"
+                                    Background="{StaticResource ProgressSliderBackground}"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Center"
+                                    IsHitTestVisible="False"
+                                    Margin="{Binding SeekValue, Converter={StaticResource PercentConverter}}" />
+
+                            <!-- Chapter Markers -->
+                            <ItemsControl ItemsSource="{Binding ChapterMarkers}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <Canvas IsHitTestVisible="False" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Rectangle Width="2" Height="12"
+                                                   Fill="{StaticResource OsdForeground}"
+                                                   Opacity="0.5" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                                <ItemsControl.Styles>
+                                    <Style Selector="ContentPresenter">
+                                        <Setter Property="Canvas.Left"
+                                                Value="{Binding ., Converter={StaticResource ChapterMarginConverter}}" />
+                                    </Style>
+                                </ItemsControl.Styles>
+                            </ItemsControl>
+
+                            <!-- Chapter preview tooltip -->
+                            <Border x:Name="ChapterPreviewPopover"
+                                    IsVisible="False"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Top"
+                                    Background="{StaticResource PopoverBackground}"
+                                    BorderBrush="{StaticResource PopoverBorder}"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="8,4"
+                                    Margin="0,-34,0,0"
+                                    BoxShadow="0 4 12 0 #80000000">
+                                <TextBlock x:Name="ChapterPreviewText"
+                                           Text="Chapter"
+                                           FontSize="12"
+                                           FontWeight="Medium"
+                                           Foreground="{StaticResource OsdForeground}" />
+                            </Border>
+                        </Grid>
+
+                        <!-- Time Elapsed — ALIGNED: moved from old controls row, margin: 0 -7px -->
+                        <TextBlock Grid.Column="1"
+                                   x:Name="PositionTimeLabel"
+                                   Classes="time-label"
+                                   Text="{Binding PositionText, Mode=OneWay}"
+                                   VerticalAlignment="Center"
+                                   Margin="-7,0" />
+
+                        <!-- Time Separator (2×16px, #ddd, opacity 0.4) -->
+                        <Border Grid.Column="2"
+                                Width="2" Height="16"
+                                Margin="10,0"
+                                CornerRadius="2"
+                                Background="{StaticResource TimeSeparatorBackground}"
+                                Opacity="0.4"
+                                VerticalAlignment="Center" />
+
+                        <!-- Total Duration — ALIGNED: moved from old controls row -->
+                        <TextBlock Grid.Column="3"
+                                   x:Name="DurationTimeLabel"
+                                   Classes="time-label"
+                                   Text="{Binding DurationText, Mode=OneWay}"
+                                   VerticalAlignment="Center" />
+                    </Grid>
+
                 </Grid>
             </Border>
         </Grid>

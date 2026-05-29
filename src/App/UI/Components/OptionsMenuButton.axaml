@@ -1,12 +1,10 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Cine.Avalonia.ViewModels"
-             mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="600"
              x:Class="Cine.Avalonia.Components.OptionsMenuButton"
              x:DataType="vm:MainViewModel">
 
+    <!-- Options Menu Button — ALIGNED to Python reference options.blp -->
     <Button x:Name="BtnOptionsMenu"
             Classes="circular-menu"
             ToolTip.Tip="Options"
@@ -15,85 +13,378 @@
               Width="16" Height="16" Stretch="Uniform"
               Fill="{StaticResource OsdForeground}" />
         <Button.Flyout>
-            <Flyout Placement="Bottom">
-                <ScrollViewer MaxHeight="400" HorizontalScrollBarVisibility="Disabled">
-                    <StackPanel Spacing="16" Width="260" Margin="8">
-                        
-                        <Button Content="Reset All" 
-                                HorizontalAlignment="Stretch" 
-                                HorizontalContentAlignment="Center"
-                                Click="OnResetAllClick" />
+            <Flyout Placement="Top">
+                <Border Background="{StaticResource PopoverBackground}"
+                        BorderBrush="{StaticResource PopoverBorder}"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        Padding="0">
+                    <ScrollViewer MaxHeight="420"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Auto">
+                        <StackPanel Spacing="0" Width="280" Margin="8">
 
-                        <!-- Zoom -->
-                        <Grid ColumnDefinitions="Auto,*,Auto">
-                            <Label Grid.Column="0" Content="Zoom" Classes="heading" VerticalAlignment="Center"/>
-                            <!-- Assuming MPV handles this, but since we don't have it in IMediaPlayer yet we can leave it out or mock it -->
-                        </Grid>
+                            <!-- Reset All -->
+                            <Button Content="Reset All"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center"
+                                    Margin="0,4,0,8"
+                                    Padding="0,8"
+                                    Click="OnResetAllClick" />
 
-                        <!-- Contrast -->
-                        <Grid ColumnDefinitions="Auto,*,Auto">
-                            <Label Grid.Column="0" Content="Contrast" Classes="heading" VerticalAlignment="Center"/>
-                            <Slider Grid.Column="1" Minimum="-100" Maximum="100" Value="{Binding ContrastValue}" Margin="8,0" VerticalAlignment="Center"/>
-                            <Button Grid.Column="2" Content="↺" Click="OnResetContrastClick" Classes="flat" VerticalAlignment="Center" Padding="4"/>
-                        </Grid>
+                            <!-- ── ASPECT RATIO ── -->
+                            <Grid Margin="0,4,0,0" ColumnDefinitions="Auto,*,Auto">
+                                <!-- Reset + label -->
+                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <Button Classes="flat"
+                                            ToolTip.Tip="Reset Aspect Ratio"
+                                            Click="OnAspectResetClick"
+                                            Padding="4">
+                                        <Path Data="M 3 9 L 6 12 L 9 9 M 6 12 V 4 M 3 5 L 3 3 L 5 3"
+                                              Width="14" Height="14" Stretch="Uniform"
+                                              Fill="{StaticResource OsdForeground}" Stroke="{StaticResource OsdForeground}" StrokeThickness="1" />
+                                    </Button>
+                                    <TextBlock Text="Aspect Ratio"
+                                               FontWeight="SemiBold"
+                                               FontSize="12"
+                                               VerticalAlignment="Center"
+                                               Margin="4,0,0,0"
+                                               Foreground="{StaticResource OsdForeground}" />
+                                </StackPanel>
+                                <!-- Aspect ComboBox -->
+                                <ComboBox Grid.Column="2"
+                                          x:Name="AspectRatioCombo"
+                                          Width="110"
+                                          FontSize="12"
+                                          SelectionChanged="OnAspectRatioChanged">
+                                    <ComboBoxItem Tag="-1" Content="Original" IsSelected="True" />
+                                    <ComboBoxItem Tag="1.7778" Content="16:9" />
+                                    <ComboBoxItem Tag="1.3333" Content="4:3" />
+                                    <ComboBoxItem Tag="1.0" Content="1:1" />
+                                    <ComboBoxItem Tag="1.6" Content="16:10" />
+                                    <ComboBoxItem Tag="2.21" Content="2.21:1" />
+                                    <ComboBoxItem Tag="2.35" Content="2.35:1" />
+                                    <ComboBoxItem Tag="2.39" Content="2.39:1" />
+                                    <ComboBoxItem Tag="1.25" Content="5:4" />
+                                </ComboBox>
+                            </Grid>
 
-                        <!-- Brightness -->
-                        <Grid ColumnDefinitions="Auto,*,Auto">
-                            <Label Grid.Column="0" Content="Brightness" Classes="heading" VerticalAlignment="Center"/>
-                            <Slider Grid.Column="1" Minimum="-100" Maximum="100" Value="{Binding BrightnessValue}" Margin="8,0" VerticalAlignment="Center"/>
-                            <Button Grid.Column="2" Content="↺" Click="OnResetBrightnessClick" Classes="flat" VerticalAlignment="Center" Padding="4"/>
-                        </Grid>
+                            <!-- ── ROTATE ── -->
+                            <Grid Margin="0,8,0,0" ColumnDefinitions="Auto,*,Auto">
+                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <Button Classes="flat"
+                                            ToolTip.Tip="Reset Rotation"
+                                            Click="OnRotateResetClick"
+                                            Padding="4">
+                                        <Path Data="M 3 9 L 6 12 L 9 9 M 6 12 V 4 M 3 5 L 3 3 L 5 3"
+                                              Width="14" Height="14" Stretch="Uniform"
+                                              Fill="{StaticResource OsdForeground}" Stroke="{StaticResource OsdForeground}" StrokeThickness="1" />
+                                    </Button>
+                                    <TextBlock Text="Rotate"
+                                               FontWeight="SemiBold"
+                                               FontSize="12"
+                                               VerticalAlignment="Center"
+                                               Margin="4,0,0,0"
+                                               Foreground="{StaticResource OsdForeground}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
+                                    <Button Width="50" Height="30" FontSize="11"
+                                            Content="↺ L"
+                                            ToolTip.Tip="Rotate Left 90°"
+                                            Click="OnRotateLeftClick" />
+                                    <Button Width="50" Height="30" FontSize="11"
+                                            Content="R ↻"
+                                            ToolTip.Tip="Rotate Right 90°"
+                                            Click="OnRotateRightClick" />
+                                </StackPanel>
+                            </Grid>
 
-                        <!-- Gamma -->
-                        <Grid ColumnDefinitions="Auto,*,Auto">
-                            <Label Grid.Column="0" Content="Gamma" Classes="heading" VerticalAlignment="Center"/>
-                            <Slider Grid.Column="1" Minimum="-100" Maximum="100" Value="{Binding GammaValue}" Margin="8,0" VerticalAlignment="Center"/>
-                            <Button Grid.Column="2" Content="↺" Click="OnResetGammaClick" Classes="flat" VerticalAlignment="Center" Padding="4"/>
-                        </Grid>
+                            <!-- ── FLIP ── -->
+                            <Grid Margin="0,8,0,0" ColumnDefinitions="Auto,*,Auto">
+                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <Button Classes="flat"
+                                            ToolTip.Tip="Reset Flip"
+                                            Click="OnFlipResetClick"
+                                            Padding="4">
+                                        <Path Data="M 3 9 L 6 12 L 9 9 M 6 12 V 4 M 3 5 L 3 3 L 5 3"
+                                              Width="14" Height="14" Stretch="Uniform"
+                                              Fill="{StaticResource OsdForeground}" Stroke="{StaticResource OsdForeground}" StrokeThickness="1" />
+                                    </Button>
+                                    <TextBlock Text="Flip"
+                                               FontWeight="SemiBold"
+                                               FontSize="12"
+                                               VerticalAlignment="Center"
+                                               Margin="4,0,0,0"
+                                               Foreground="{StaticResource OsdForeground}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
+                                    <Button Width="50" Height="30" FontSize="11"
+                                            Content="⇔ H"
+                                            ToolTip.Tip="Flip Horizontally"
+                                            Click="OnFlipHorizontalClick" />
+                                    <Button Width="50" Height="30" FontSize="11"
+                                            Content="V ⇕"
+                                            ToolTip.Tip="Flip Vertically"
+                                            Click="OnFlipVerticalClick" />
+                                </StackPanel>
+                            </Grid>
 
-                        <!-- Saturation -->
-                        <Grid ColumnDefinitions="Auto,*,Auto">
-                            <Label Grid.Column="0" Content="Saturation" Classes="heading" VerticalAlignment="Center"/>
-                            <Slider Grid.Column="1" Minimum="-100" Maximum="100" Value="{Binding SaturationValue}" Margin="8,0" VerticalAlignment="Center"/>
-                            <Button Grid.Column="2" Content="↺" Click="OnResetSaturationClick" Classes="flat" VerticalAlignment="Center" Padding="4"/>
-                        </Grid>
+                            <!-- ── ZOOM ── -->
+                            <Grid Margin="0,8,0,0" ColumnDefinitions="Auto,*,Auto">
+                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <Button Classes="flat"
+                                            ToolTip.Tip="Reset Zoom"
+                                            Click="OnZoomResetClick"
+                                            Padding="4">
+                                        <Path Data="M 3 9 L 6 12 L 9 9 M 6 12 V 4 M 3 5 L 3 3 L 5 3"
+                                              Width="14" Height="14" Stretch="Uniform"
+                                              Fill="{StaticResource OsdForeground}" Stroke="{StaticResource OsdForeground}" StrokeThickness="1" />
+                                    </Button>
+                                    <TextBlock Text="Zoom"
+                                               FontWeight="SemiBold"
+                                               FontSize="12"
+                                               VerticalAlignment="Center"
+                                               Margin="4,0,0,0"
+                                               Foreground="{StaticResource OsdForeground}" />
+                                </StackPanel>
+                                <NumericUpDown Grid.Column="2"
+                                              x:Name="ZoomSpin"
+                                              Value="{Binding ZoomValue}"
+                                              Minimum="-3"
+                                              Maximum="3"
+                                              Increment="0.05"
+                                              FormatString="0.00"
+                                              Width="110"
+                                              FontSize="12" />
+                            </Grid>
 
-                        <!-- Hue -->
-                        <Grid ColumnDefinitions="Auto,*,Auto">
-                            <Label Grid.Column="0" Content="Hue" Classes="heading" VerticalAlignment="Center"/>
-                            <Slider Grid.Column="1" Minimum="-100" Maximum="100" Value="{Binding HueValue}" Margin="8,0" VerticalAlignment="Center"/>
-                            <Button Grid.Column="2" Content="↺" Click="OnResetHueClick" Classes="flat" VerticalAlignment="Center" Padding="4"/>
-                        </Grid>
+                            <!-- ── CONTRAST ── -->
+                            <Grid Margin="0,8,0,0" ColumnDefinitions="Auto,*,Auto">
+                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <Button Classes="flat"
+                                            ToolTip.Tip="Reset Contrast"
+                                            Click="OnResetContrastClick"
+                                            Padding="4">
+                                        <Path Data="M 3 9 L 6 12 L 9 9 M 6 12 V 4 M 3 5 L 3 3 L 5 3"
+                                              Width="14" Height="14" Stretch="Uniform"
+                                              Fill="{StaticResource OsdForeground}" Stroke="{StaticResource OsdForeground}" StrokeThickness="1" />
+                                    </Button>
+                                    <TextBlock Text="Contrast"
+                                               FontWeight="SemiBold"
+                                               FontSize="12"
+                                               VerticalAlignment="Center"
+                                               Margin="4,0,0,0"
+                                               Foreground="{StaticResource OsdForeground}" />
+                                </StackPanel>
+                                <NumericUpDown Grid.Column="2"
+                                              Value="{Binding ContrastValue}"
+                                              Minimum="-100"
+                                              Maximum="100"
+                                              Increment="1"
+                                              FormatString="0"
+                                              Width="110"
+                                              FontSize="12" />
+                            </Grid>
 
-                        <!-- Subtitle Delay -->
-                        <Grid ColumnDefinitions="Auto,*,Auto">
-                            <Label Grid.Column="0" Content="Subtitle Delay" Classes="heading" VerticalAlignment="Center"/>
-                            <Slider Grid.Column="1" Minimum="-10" Maximum="10" Value="{Binding SubtitleDelayValue}" Margin="8,0" VerticalAlignment="Center"/>
-                            <Button Grid.Column="2" Content="↺" Click="OnResetSubtitleDelayClick" Classes="flat" VerticalAlignment="Center" Padding="4"/>
-                        </Grid>
+                            <!-- ── BRIGHTNESS ── -->
+                            <Grid Margin="0,8,0,0" ColumnDefinitions="Auto,*,Auto">
+                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <Button Classes="flat"
+                                            ToolTip.Tip="Reset Brightness"
+                                            Click="OnResetBrightnessClick"
+                                            Padding="4">
+                                        <Path Data="M 3 9 L 6 12 L 9 9 M 6 12 V 4 M 3 5 L 3 3 L 5 3"
+                                              Width="14" Height="14" Stretch="Uniform"
+                                              Fill="{StaticResource OsdForeground}" Stroke="{StaticResource OsdForeground}" StrokeThickness="1" />
+                                    </Button>
+                                    <TextBlock Text="Brightness"
+                                               FontWeight="SemiBold"
+                                               FontSize="12"
+                                               VerticalAlignment="Center"
+                                               Margin="4,0,0,0"
+                                               Foreground="{StaticResource OsdForeground}" />
+                                </StackPanel>
+                                <NumericUpDown Grid.Column="2"
+                                              Value="{Binding BrightnessValue}"
+                                              Minimum="-100"
+                                              Maximum="100"
+                                              Increment="1"
+                                              FormatString="0"
+                                              Width="110"
+                                              FontSize="12" />
+                            </Grid>
 
-                        <!-- Audio Delay -->
-                        <Grid ColumnDefinitions="Auto,*,Auto">
-                            <Label Grid.Column="0" Content="Audio Delay" Classes="heading" VerticalAlignment="Center"/>
-                            <Slider Grid.Column="1" Minimum="-10" Maximum="10" Value="{Binding AudioDelayValue}" Margin="8,0" VerticalAlignment="Center"/>
-                            <Button Grid.Column="2" Content="↺" Click="OnResetAudioDelayClick" Classes="flat" VerticalAlignment="Center" Padding="4"/>
-                        </Grid>
+                            <!-- ── GAMMA ── -->
+                            <Grid Margin="0,8,0,0" ColumnDefinitions="Auto,*,Auto">
+                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <Button Classes="flat"
+                                            ToolTip.Tip="Reset Gamma"
+                                            Click="OnResetGammaClick"
+                                            Padding="4">
+                                        <Path Data="M 3 9 L 6 12 L 9 9 M 6 12 V 4 M 3 5 L 3 3 L 5 3"
+                                              Width="14" Height="14" Stretch="Uniform"
+                                              Fill="{StaticResource OsdForeground}" Stroke="{StaticResource OsdForeground}" StrokeThickness="1" />
+                                    </Button>
+                                    <TextBlock Text="Gamma"
+                                               FontWeight="SemiBold"
+                                               FontSize="12"
+                                               VerticalAlignment="Center"
+                                               Margin="4,0,0,0"
+                                               Foreground="{StaticResource OsdForeground}" />
+                                </StackPanel>
+                                <NumericUpDown Grid.Column="2"
+                                              Value="{Binding GammaValue}"
+                                              Minimum="-100"
+                                              Maximum="100"
+                                              Increment="1"
+                                              FormatString="0"
+                                              Width="110"
+                                              FontSize="12" />
+                            </Grid>
 
-                        <!-- Playback Speed -->
-                        <Grid ColumnDefinitions="Auto,*,Auto">
-                            <Label Grid.Column="0" Content="Speed" Classes="heading" VerticalAlignment="Center"/>
-                            <Slider Grid.Column="1" Minimum="0.25" Maximum="4" Value="{Binding SpeedValue}" Margin="8,0" VerticalAlignment="Center"/>
-                            <Button Grid.Column="2" Content="↺" Click="OnResetSpeedClick" Classes="flat" VerticalAlignment="Center" Padding="4"/>
-                        </Grid>
+                            <!-- ── SATURATION ── -->
+                            <Grid Margin="0,8,0,0" ColumnDefinitions="Auto,*,Auto">
+                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <Button Classes="flat"
+                                            ToolTip.Tip="Reset Saturation"
+                                            Click="OnResetSaturationClick"
+                                            Padding="4">
+                                        <Path Data="M 3 9 L 6 12 L 9 9 M 6 12 V 4 M 3 5 L 3 3 L 5 3"
+                                              Width="14" Height="14" Stretch="Uniform"
+                                              Fill="{StaticResource OsdForeground}" Stroke="{StaticResource OsdForeground}" StrokeThickness="1" />
+                                    </Button>
+                                    <TextBlock Text="Saturation"
+                                               FontWeight="SemiBold"
+                                               FontSize="12"
+                                               VerticalAlignment="Center"
+                                               Margin="4,0,0,0"
+                                               Foreground="{StaticResource OsdForeground}" />
+                                </StackPanel>
+                                <NumericUpDown Grid.Column="2"
+                                              Value="{Binding SaturationValue}"
+                                              Minimum="-100"
+                                              Maximum="100"
+                                              Increment="1"
+                                              FormatString="0"
+                                              Width="110"
+                                              FontSize="12" />
+                            </Grid>
 
-                        <Separator />
-                        <Button Content="Take Screenshot" 
-                                HorizontalAlignment="Stretch" 
-                                HorizontalContentAlignment="Center"
-                                Click="OnScreenshotClick" />
+                            <!-- ── HUE ── -->
+                            <Grid Margin="0,8,0,0" ColumnDefinitions="Auto,*,Auto">
+                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <Button Classes="flat"
+                                            ToolTip.Tip="Reset Hue"
+                                            Click="OnResetHueClick"
+                                            Padding="4">
+                                        <Path Data="M 3 9 L 6 12 L 9 9 M 6 12 V 4 M 3 5 L 3 3 L 5 3"
+                                              Width="14" Height="14" Stretch="Uniform"
+                                              Fill="{StaticResource OsdForeground}" Stroke="{StaticResource OsdForeground}" StrokeThickness="1" />
+                                    </Button>
+                                    <TextBlock Text="Hue"
+                                               FontWeight="SemiBold"
+                                               FontSize="12"
+                                               VerticalAlignment="Center"
+                                               Margin="4,0,0,0"
+                                               Foreground="{StaticResource OsdForeground}" />
+                                </StackPanel>
+                                <NumericUpDown Grid.Column="2"
+                                              Value="{Binding HueValue}"
+                                              Minimum="-100"
+                                              Maximum="100"
+                                              Increment="1"
+                                              FormatString="0"
+                                              Width="110"
+                                              FontSize="12" />
+                            </Grid>
 
-                    </StackPanel>
-                </ScrollViewer>
+                            <!-- ── SUBTITLE DELAY ── -->
+                            <Grid Margin="0,8,0,0" ColumnDefinitions="Auto,*,Auto">
+                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <Button Classes="flat"
+                                            ToolTip.Tip="Reset Subtitle Delay"
+                                            Click="OnResetSubtitleDelayClick"
+                                            Padding="4">
+                                        <Path Data="M 3 9 L 6 12 L 9 9 M 6 12 V 4 M 3 5 L 3 3 L 5 3"
+                                              Width="14" Height="14" Stretch="Uniform"
+                                              Fill="{StaticResource OsdForeground}" Stroke="{StaticResource OsdForeground}" StrokeThickness="1" />
+                                    </Button>
+                                    <TextBlock Text="Sub Delay"
+                                               FontWeight="SemiBold"
+                                               FontSize="12"
+                                               VerticalAlignment="Center"
+                                               Margin="4,0,0,0"
+                                               Foreground="{StaticResource OsdForeground}" />
+                                </StackPanel>
+                                <NumericUpDown Grid.Column="2"
+                                              Value="{Binding SubtitleDelayValue}"
+                                              Minimum="-999.9"
+                                              Maximum="999.9"
+                                              Increment="0.1"
+                                              FormatString="0.0"
+                                              Width="110"
+                                              FontSize="12" />
+                            </Grid>
+
+                            <!-- ── AUDIO DELAY ── -->
+                            <Grid Margin="0,8,0,0" ColumnDefinitions="Auto,*,Auto">
+                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <Button Classes="flat"
+                                            ToolTip.Tip="Reset Audio Delay"
+                                            Click="OnResetAudioDelayClick"
+                                            Padding="4">
+                                        <Path Data="M 3 9 L 6 12 L 9 9 M 6 12 V 4 M 3 5 L 3 3 L 5 3"
+                                              Width="14" Height="14" Stretch="Uniform"
+                                              Fill="{StaticResource OsdForeground}" Stroke="{StaticResource OsdForeground}" StrokeThickness="1" />
+                                    </Button>
+                                    <TextBlock Text="Audio Delay"
+                                               FontWeight="SemiBold"
+                                               FontSize="12"
+                                               VerticalAlignment="Center"
+                                               Margin="4,0,0,0"
+                                               Foreground="{StaticResource OsdForeground}" />
+                                </StackPanel>
+                                <NumericUpDown Grid.Column="2"
+                                              Value="{Binding AudioDelayValue}"
+                                              Minimum="-999.9"
+                                              Maximum="999.9"
+                                              Increment="0.1"
+                                              FormatString="0.0"
+                                              Width="110"
+                                              FontSize="12" />
+                            </Grid>
+
+                            <!-- ── PLAYBACK SPEED ── -->
+                            <Grid Margin="0,8,0,8" ColumnDefinitions="Auto,*,Auto">
+                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <Button Classes="flat"
+                                            ToolTip.Tip="Reset Speed"
+                                            Click="OnResetSpeedClick"
+                                            Padding="4">
+                                        <Path Data="M 3 9 L 6 12 L 9 9 M 6 12 V 4 M 3 5 L 3 3 L 5 3"
+                                              Width="14" Height="14" Stretch="Uniform"
+                                              Fill="{StaticResource OsdForeground}" Stroke="{StaticResource OsdForeground}" StrokeThickness="1" />
+                                    </Button>
+                                    <TextBlock Text="Speed"
+                                               FontWeight="SemiBold"
+                                               FontSize="12"
+                                               VerticalAlignment="Center"
+                                               Margin="4,0,0,0"
+                                               Foreground="{StaticResource OsdForeground}" />
+                                </StackPanel>
+                                <NumericUpDown Grid.Column="2"
+                                              Value="{Binding SpeedValue}"
+                                              Minimum="0.25"
+                                              Maximum="10"
+                                              Increment="0.25"
+                                              FormatString="0.00"
+                                              Width="110"
+                                              FontSize="12" />
+                            </Grid>
+
+                        </StackPanel>
+                    </ScrollViewer>
+                </Border>
             </Flyout>
         </Button.Flyout>
     </Button>

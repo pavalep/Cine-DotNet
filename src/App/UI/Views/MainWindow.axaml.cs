@@ -149,9 +149,7 @@ public partial class MainWindow : Window
         BtnClose = this.FindControl<global::Avalonia.Controls.Button>("BtnClose");
         ControlsBox = this.FindControl<Border>("ControlsBox");
         BtnPrevious = this.FindControl<global::Avalonia.Controls.Button>("BtnPrevious");
-        BtnRewind = this.FindControl<global::Avalonia.Controls.Button>("BtnRewind");
         BtnPlayPause = this.FindControl<global::Avalonia.Controls.Button>("BtnPlayPause");
-        BtnForward = this.FindControl<global::Avalonia.Controls.Button>("BtnForward");
         BtnNext = this.FindControl<global::Avalonia.Controls.Button>("BtnNext");
         BtnVolumeMenu = this.FindControl<global::Avalonia.Controls.Button>("BtnVolumeMenu");
         BtnSubtitlesMenu = this.FindControl<global::Avalonia.Controls.Button>("BtnSubtitlesMenu");
@@ -159,7 +157,9 @@ public partial class MainWindow : Window
         BtnAudioMenu = this.FindControl<global::Avalonia.Controls.Button>("BtnAudioMenu");
         AudioIconPath = this.FindControl<global::Avalonia.Controls.Shapes.Path>("AudioIconPath");
         BtnVideoMenu = this.FindControl<global::Avalonia.Controls.Button>("BtnVideoMenu");
+        BtnLoopPlaylist = this.FindControl<global::Avalonia.Controls.Primitives.ToggleButton>("BtnLoopPlaylist");
         BtnLoopFile = this.FindControl<global::Avalonia.Controls.Primitives.ToggleButton>("BtnLoopFile");
+        BtnMuteToggle = this.FindControl<global::Avalonia.Controls.Primitives.ToggleButton>("BtnMuteToggle");
         BtnOptionsMenu = this.FindControl<global::Cine.Avalonia.Components.OptionsMenuButton>("BtnOptionsMenu");
         BtnFullscreen = this.FindControl<global::Avalonia.Controls.Primitives.ToggleButton>("BtnFullscreen");
         FullscreenIconPath = this.FindControl<global::Avalonia.Controls.Shapes.Path>("FullscreenIconPath");
@@ -504,13 +504,12 @@ public partial class MainWindow : Window
         SetButtonSize(BtnPlayPause, btnSize);
         SetButtonSize(BtnPrevious, btnSize);
         SetButtonSize(BtnNext, btnSize);
-        SetButtonSize(BtnRewind, btnSize);
-        SetButtonSize(BtnForward, btnSize);
         SetButtonSize(BtnVolumeMenu, btnSize);
         SetButtonSize(BtnFullscreen, btnSize);
         SetButtonSize(BtnLoopFile, btnSize);
-        SetButtonSize(BtnShufflePlaylist != null ? BtnShufflePlaylist : null, btnSize);
-        SetButtonSize(BtnPlaylistDialog != null ? BtnPlaylistDialog : null, btnSize);
+        SetButtonSize(BtnLoopPlaylist, btnSize);
+        SetButtonSize(BtnShufflePlaylist, btnSize);
+        SetButtonSize(BtnPlaylistDialog, btnSize);
 
         if (ControlsBox != null)
             ControlsBox.Height = isNarrow ? 90 : 120;
@@ -1193,6 +1192,29 @@ public partial class MainWindow : Window
         {
             RefreshAudioIcon();
         }
+        else if (e.PropertyName == nameof(MainViewModel.IsMuted) ||
+                 e.PropertyName == nameof(MainViewModel.VolumeValue))
+        {
+            RefreshVolumeIcon();
+        }
+    }
+
+    /// <summary>
+    /// Updates the volume button icon based on current volume level and mute state.
+    /// Matches Python reference _update_volume_icon behavior.
+    /// </summary>
+    private void RefreshVolumeIcon()
+    {
+        if (VolumeIconPath == null || _viewModel == null) return;
+        bool isMuted = _viewModel.IsMuted;
+        double vol = _viewModel.VolumeValue;
+        string iconKey = (isMuted || vol == 0)
+            ? "VolumeMuteIcon"
+            : vol < 33 ? "VolumeMaxIcon"   // no low/mid icon in Icons.axaml, fall back to max
+            : "VolumeMaxIcon";
+        global::Avalonia.Application.Current!.TryGetResource(iconKey, global::Avalonia.Styling.ThemeVariant.Default, out var icon);
+        if (icon is global::Avalonia.Media.Geometry geo)
+            VolumeIconPath.Data = geo;
     }
 
     private void RefreshSubtitleIcon()
@@ -1358,6 +1380,7 @@ public partial class MainWindow : Window
         RefreshFullscreenUi();
         RefreshSubtitleIcon();
         RefreshAudioIcon();
+        RefreshVolumeIcon();
         ReportWindowState("MainWindow.OnOpened.AfterInitialState");
         Dispatcher.UIThread.Post(() => ReportWindowState("MainWindow.OnOpened.PostLayout"), DispatcherPriority.Background);
     }
