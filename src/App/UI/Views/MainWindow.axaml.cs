@@ -343,12 +343,12 @@ public partial class MainWindow : Window
             if (subtitleDrop && !string.IsNullOrWhiteSpace(_viewModel?.FilePath))
             {
                 DropIndicatorText.Text = "Add Subtitle Track";
-                DropIndicatorIcon.Data = Geometry.Parse("M 4 4H 20V 20H 4V 4 Z M 8 8H 12V 16H 8V 8 Z M 14 8H 18V 16H 14V 8 Z");
+                TrySetIcon(DropIndicatorIcon, "SubtitlesIcon");
             }
             else
             {
                 DropIndicatorText.Text = "Play";
-                DropIndicatorIcon.Data = Geometry.Parse("M 8 5V 19L 16 12L 8 5 Z");
+                TrySetIcon(DropIndicatorIcon, "PlayIcon");
             }
 
             DropIndicatorOverlay.IsVisible = true;
@@ -1050,12 +1050,12 @@ public partial class MainWindow : Window
         if (MaximizeRestoreIconPath == null) return;
         if (WindowState == global::Avalonia.Controls.WindowState.Maximized)
         {
-            MaximizeRestoreIconPath.Data = Geometry.Parse("M 6 4H 18V 6H 20V 18H 18V 20H 6V 18H 4V 6H 6V 4 Z M 6 8V 18H 16V 8H 6 Z M 18 6V 16H 16V 6H 8V 4H 18V 6 Z");
+            TrySetIcon(MaximizeRestoreIconPath, "MaxRestoreIcon");
             if (BtnMaximizeRestore != null) global::Avalonia.Controls.ToolTip.SetTip(BtnMaximizeRestore, "Restore");
         }
         else
         {
-            MaximizeRestoreIconPath.Data = Geometry.Parse("M 4 4H 20V 20H 4V 4 Z M 6 6V 18H 18V 6H 6 Z");
+            TrySetIcon(MaximizeRestoreIconPath, "MaximizeIcon");
             if (BtnMaximizeRestore != null) global::Avalonia.Controls.ToolTip.SetTip(BtnMaximizeRestore, "Maximize");
         }
     }
@@ -1221,17 +1221,20 @@ public partial class MainWindow : Window
     private void RefreshSubtitleIcon()
     {
         if (SubtitleIconPath == null || _viewModel == null) return;
-        SubtitleIconPath.Data = _viewModel.IsSubtitleEnabled
-            ? Geometry.Parse("M 4 4H 20V 20H 4V 4 Z M 8 8H 12V 16H 8V 8 Z M 14 8H 18V 16H 14V 8 Z")
-            : Geometry.Parse("M 4 4H 20V 20H 4V 4 Z M 7 7L17 17 M 17 7L7 17");
+        TrySetIcon(SubtitleIconPath, _viewModel.IsSubtitleEnabled ? "SubtitlesIcon" : "SubtitlesOffIcon");
     }
 
     private void RefreshAudioIcon()
     {
         if (AudioIconPath == null || _viewModel == null) return;
-        AudioIconPath.Data = _viewModel.IsAudioEnabled
-            ? Geometry.Parse("M 3 9H 5L 9 5H 11V 19H 9V 15H 5V 9 Z M 13 9L 15 7V 17L 13 15Z")
-            : Geometry.Parse("M 3 9H 5L 9 5H 11V 19H 9V 15H 5V 9 Z M 13 9L 17 5 M 17 19L 13 15");
+        TrySetIcon(AudioIconPath, _viewModel.IsAudioEnabled ? "AudioIcon" : "AudioOffIcon");
+    }
+
+    private static void TrySetIcon(global::Avalonia.Controls.Shapes.Path path, string resourceKey)
+    {
+        global::Avalonia.Application.Current!.TryGetResource(resourceKey, global::Avalonia.Styling.ThemeVariant.Default, out var icon);
+        if (icon is global::Avalonia.Media.Geometry geo)
+            path.Data = geo;
     }
 
     // ========================

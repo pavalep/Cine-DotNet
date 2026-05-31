@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using Avalonia;
 using Avalonia.Data.Converters;
@@ -23,6 +24,35 @@ public class TimeSpanToStringConverter : IValueConverter
     }
 }
 
+/// <summary>Converts SeekValue (0.0-1.0) × parent width to pixel width for the seek fill bar.</summary>
+public class SeekWidthConverter : IMultiValueConverter
+{
+    public static SeekWidthConverter Instance { get; } = new();
+
+    public object Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (values.Count >= 2 && values[0] is double seekValue && values[1] is double parentWidth && parentWidth > 0)
+            return Math.Clamp(seekValue * parentWidth, 0, parentWidth);
+        return 0d;
+    }
+}
+
+/// <summary>Converts SeekValue (0.0-1.0) × parent width to a Thickness margin for the seek thumb.</summary>
+public class SeekThumbMarginConverter : IMultiValueConverter
+{
+    public static SeekThumbMarginConverter Instance { get; } = new();
+
+    public object Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (values.Count >= 2 && values[0] is double seekValue && values[1] is double parentWidth && parentWidth > 0)
+        {
+            var x = seekValue * parentWidth - 8;
+            return new Thickness(x, 0, 0, 0);
+        }
+        return new Thickness(0);
+    }
+}
+
 /// <summary>Converts a double (0.0-1.0) to a percentage string like "75%".</summary>
 public class PercentConverter : IValueConverter
 {
@@ -33,16 +63,6 @@ public class PercentConverter : IValueConverter
         if (value is double d)
         {
             double clamped = Math.Clamp(d, 0.0, 1.0);
-            // If target is Thickness (for thumb margin), return the pixel offset
-            if (targetType == typeof(Thickness))
-            {
-                return new Thickness(clamped * 100, 0, 0, 0);
-            }
-            // If target is Rect (for RectangleGeometry clip), return a proportional rect
-            if (targetType == typeof(Rect))
-            {
-                return new Rect(0, 0, clamped, 1);
-            }
             return $"{(int)(clamped * 100)}%";
         }
         return "0%";
@@ -54,21 +74,16 @@ public class PercentConverter : IValueConverter
     }
 }
 
-/// <summary>Converts a chapter position (0.0-1.0) to a margin for the seek bar overlay.</summary>
+/// <summary>Converts a chapter position (0.0-1.0) to a Canvas.Left offset.</summary>
 public class ChapterMarginConverter : IValueConverter
 {
     public static ChapterMarginConverter Instance { get; } = new();
 
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        // Expects a double value representing position (0.0 to 1.0)
-        // Returns a Thickness with left margin as percentage of slider width
         if (value is double position)
-        {
-            var left = position * 100;
-            return new Thickness(left, 0, 0, 0);
-        }
-        return new Thickness(0);
+            return position * 100.0;
+        return 0.0;
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

@@ -1,9 +1,7 @@
 <Styles xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:conv="using:Cine.Avalonia.Converters">
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
         
     <Styles.Resources>
-        <conv:PercentConverter x:Key="PercentConverter" />
     </Styles.Resources>
     
     <!-- ======================== -->
@@ -23,7 +21,8 @@
         <Setter Property="FontSize" Value="14" />
         <Setter Property="FontFamily" Value="{StaticResource SystemFont}" />
         <Setter Property="ExtendClientAreaToDecorationsHint" Value="True" />
-        <Setter Property="ExtendClientAreaTitleBarHeightHint" Value="-1" />
+        <Setter Property="ExtendClientAreaTitleBarHeightHint" Value="0" />
+        <Setter Property="WindowDecorations" Value="BorderOnly" />
     </Style>
     
     <!-- ======================== -->
@@ -238,16 +237,6 @@
     <!--  VIDEO INFO OVERLAYS     -->
     <!-- ======================== -->
     
-    <!-- Position Overlay (bottom-left) -->
-    <Style Selector="Border.video-position-overlay">
-        <Setter Property="HorizontalAlignment" Value="Left" />
-        <Setter Property="VerticalAlignment" Value="Bottom" />
-        <Setter Property="Margin" Value="12" />
-        <Setter Property="Padding" Value="8,4" />
-        <Setter Property="CornerRadius" Value="4" />
-        <Setter Property="Background" Value="#BD000000" />
-    </Style>
-    
     <!-- Chapter Badge (top-right) -->
     <Style Selector="Border.chapter-badge-overlay">
         <Setter Property="HorizontalAlignment" Value="Right" />
@@ -361,45 +350,8 @@
     <!-- Seek Slider -->
     <Style Selector="Slider.seek-slider">
         <Setter Property="Height" Value="32" />
-        <Setter Property="Template">
-            <ControlTemplate TargetType="Slider">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    
-                    <!-- Track (trough) -->
-                    <Border Grid.Row="1"
-                            Background="{StaticResource ProgressTroughBackground}"
-                            CornerRadius="2"
-                            Height="4"
-                            VerticalAlignment="Center"
-                            Margin="0" />
-                    
-                    <!-- Filled portion -->
-                    <Border Grid.Row="1"
-                            Background="{StaticResource ProgressSliderBackground}"
-                            CornerRadius="2"
-                            Height="4"
-                            VerticalAlignment="Center"
-                            Margin="0">
-                        <Border.Clip>
-                            <RectangleGeometry Rect="{Binding Value, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource PercentConverter}}" />
-                        </Border.Clip>
-                    </Border>
-                    
-                    <!-- Thumb -->
-                    <Ellipse Grid.Row="1"
-                             Width="16" Height="16"
-                             Fill="{StaticResource ProgressSliderBackground}"
-                             HorizontalAlignment="Left"
-                             VerticalAlignment="Center"
-                             Margin="-8,0,0,0" />
-                </Grid>
-            </ControlTemplate>
-        </Setter>
+        <Setter Property="Background" Value="{StaticResource ProgressTroughBackground}" />
+        <Setter Property="Foreground" Value="{StaticResource ProgressSliderBackground}" />
     </Style>
     
     <!-- Volume Slider -->
@@ -408,32 +360,9 @@
         <Setter Property="Minimum" Value="0" />
         <Setter Property="Maximum" Value="130" />
         <Setter Property="VerticalAlignment" Value="Center" />
-        <Setter Property="Template">
-            <ControlTemplate TargetType="Slider">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-
-                    <!-- Track (trough) -->
-                    <Border Grid.Row="1"
-                            Background="{StaticResource VolumeTroughBackground}"
-                            CornerRadius="2"
-                            Height="4"
-                            VerticalAlignment="Center" />
-
-                    <!-- Thumb -->
-                    <Ellipse Grid.Row="1"
-                             Width="14" Height="14"
-                             Fill="{StaticResource VolumeSliderBackground}"
-                             HorizontalAlignment="Left"
-                             VerticalAlignment="Center"
-                             Margin="-7,0,0,0" />
-                </Grid>
-            </ControlTemplate>
-        </Setter>
+        <Setter Property="Height" Value="32" />
+        <Setter Property="Background" Value="{StaticResource VolumeTroughBackground}" />
+        <Setter Property="Foreground" Value="{StaticResource VolumeSliderBackground}" />
     </Style>
 
     <!-- ======================== -->

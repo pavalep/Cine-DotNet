@@ -14,7 +14,8 @@
         TransparencyLevelHint="None"
         WindowStartupLocation="CenterScreen"
         ExtendClientAreaToDecorationsHint="True"
-        ExtendClientAreaTitleBarHeightHint="-1"
+        ExtendClientAreaTitleBarHeightHint="0"
+         WindowDecorations="BorderOnly"
         DragDrop.AllowDrop="True">
 
     <Window.Styles>
@@ -31,8 +32,9 @@
 
     <Window.Resources>
         <conv:TimeSpanToStringConverter x:Key="TimeSpanToString" />
-        <conv:PercentConverter x:Key="PercentConverter" />
         <conv:ChapterMarginConverter x:Key="ChapterMarginConverter" />
+        <conv:SeekWidthConverter x:Key="SeekWidthConverter" />
+        <conv:SeekThumbMarginConverter x:Key="SeekThumbMarginConverter" />
     </Window.Resources>
 
     <!-- Main Overlay Container -->
@@ -79,21 +81,6 @@
                 <Path Data="{StaticResource PauseIcon}"
                       Width="48" Height="48" Stretch="Uniform"
                       Fill="White" />
-            </Border>
-
-            <!-- Video Info Overlay (bottom-left) -->
-            <Border Classes="video-position-overlay">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Classes="time-elapsed"
-                               Text="{Binding PositionText, Mode=OneWay}" />
-                    <TextBlock Text=" / "
-                               Foreground="#DDDDDD"
-                               FontFamily="{StaticResource NumericFont}"
-                               FontSize="13"
-                               VerticalAlignment="Center" />
-                    <TextBlock Classes="time-duration"
-                               Text="{Binding DurationText, Mode=OneWay}" />
-                </StackPanel>
             </Border>
 
             <!-- Chapter Badge Overlay (top-right) -->
@@ -554,32 +541,42 @@
                               PointerPressed="OnSeekAreaPointerPressed"
                               Background="Transparent">
 
-                            <!-- Seek Slider Track (trough) -->
+                            <!-- Seek Track (trough, full width) -->
                             <Border Background="{StaticResource ProgressTroughBackground}"
                                     CornerRadius="2"
                                     Height="4"
                                     VerticalAlignment="Center"
                                     IsHitTestVisible="False" />
 
-                            <!-- Seek Slider Progress Fill -->
+                            <!-- Seek Fill (proportional width from SeekValue) -->
                             <Border Background="{StaticResource ProgressSliderBackground}"
                                     CornerRadius="2"
                                     Height="4"
                                     VerticalAlignment="Center"
+                                    HorizontalAlignment="Left"
                                     IsHitTestVisible="False">
-                                <Border.Clip>
-                                    <RectangleGeometry Rect="{Binding SeekValue, Converter={StaticResource PercentConverter}}" />
-                                </Border.Clip>
+                                <Border.Width>
+                                    <MultiBinding Converter="{StaticResource SeekWidthConverter}">
+                                        <Binding Path="SeekValue" />
+                                        <Binding ElementName="SeekArea" Path="Bounds.Width" />
+                                    </MultiBinding>
+                                </Border.Width>
                             </Border>
 
-                            <!-- Thumb -->
+                            <!-- Seek Thumb (16×16 circle, positioned via SeekValue) -->
                             <Border Width="16" Height="16"
                                     CornerRadius="8"
                                     Background="{StaticResource ProgressSliderBackground}"
                                     HorizontalAlignment="Left"
                                     VerticalAlignment="Center"
-                                    IsHitTestVisible="False"
-                                    Margin="{Binding SeekValue, Converter={StaticResource PercentConverter}}" />
+                                    IsHitTestVisible="False">
+                                <Border.Margin>
+                                    <MultiBinding Converter="{StaticResource SeekThumbMarginConverter}">
+                                        <Binding Path="SeekValue" />
+                                        <Binding ElementName="SeekArea" Path="Bounds.Width" />
+                                    </MultiBinding>
+                                </Border.Margin>
+                            </Border>
 
                             <!-- Chapter Markers -->
                             <ItemsControl ItemsSource="{Binding ChapterMarkers}">
