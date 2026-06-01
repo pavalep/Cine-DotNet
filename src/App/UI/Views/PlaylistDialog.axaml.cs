@@ -28,20 +28,48 @@ public partial class PlaylistDialog : Window
         vm?.AddFilesCommand.Execute(null);
     }
 
-    private void OnDragEnter(object? sender, global::Avalonia.Input.DragEventArgs e)
+    private void OnCloseClick(object? sender, RoutedEventArgs e) => Close();
+
+    private void OnListBoxDoubleTapped(object? sender, global::Avalonia.Input.TappedEventArgs e)
+    {
+        var listBox = sender as global::Avalonia.Controls.ListBox;
+        if (listBox?.SelectedItem is PlaylistItemViewModel item)
+            item.Play();
+    }
+
+    private void OnListBoxKeyDown(object? sender, global::Avalonia.Input.KeyEventArgs e)
+    {
+        if (e.Key == global::Avalonia.Input.Key.Enter)
+        {
+            var listBox = sender as global::Avalonia.Controls.ListBox;
+            if (listBox?.SelectedItem is PlaylistItemViewModel item)
+                item.Play();
+        }
+    }
+
+    private async void OnDragEnter(object? sender, global::Avalonia.Input.DragEventArgs e)
     {
         if (e.DataTransfer != null && e.DataTransfer.Contains(global::Avalonia.Input.DataFormat.File))
         {
             e.DragEffects = global::Avalonia.Input.DragDropEffects.Copy;
             var revealer = this.FindControl<Border>("DropIndicatorRevealer");
-            if (revealer != null) revealer.IsVisible = true;
+            if (revealer != null)
+            {
+                revealer.IsVisible = true;
+                revealer.Opacity = 1;
+            }
         }
     }
 
-    private void OnDragLeave(object? sender, global::Avalonia.Input.DragEventArgs e)
+    private async void OnDragLeave(object? sender, global::Avalonia.Input.DragEventArgs e)
     {
         var revealer = this.FindControl<Border>("DropIndicatorRevealer");
-        if (revealer != null) revealer.IsVisible = false;
+        if (revealer != null)
+        {
+            revealer.Opacity = 0;
+            await Task.Delay(200);
+            revealer.IsVisible = false;
+        }
     }
 
     private void OnDrop(object? sender, global::Avalonia.Input.DragEventArgs e)

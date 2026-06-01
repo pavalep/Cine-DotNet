@@ -32,6 +32,12 @@ namespace Cine.Avalonia.ViewModels
 
         public IMediaPlayer? Player => _player;
 
+    public IMediaPlayer CreateSecondaryPlayer()
+    {
+        var secondary = new MpvPlayer();
+        return secondary;
+    }
+
         public PlayerService()
         {
         }

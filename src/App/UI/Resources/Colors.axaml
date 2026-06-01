@@ -37,18 +37,20 @@
     <SolidColorBrush x:Key="OsdForeground" Color="{StaticResource White}" />
     <SolidColorBrush x:Key="OsdBackground" Color="#CC000000" />
     
-    <!-- Reference: linear-gradient(180deg, rgba(0,0,0,0.14) 0%, rgba(0,0,0,0.08) 40%, rgba(0,0,0,0) 100%) -->
+    <!-- Reference: linear-gradient(180deg, rgba(0,0,0,0.14) 0%, rgba(0,0,0,0.08) 40%, rgba(0,0,0,0) 100%)
+         Canvas spec: rgba(0,0,0,.30)→.15→0 at 17%  -->
     <LinearGradientBrush x:Key="HeaderGradient" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Offset="0" Color="#24000000" />
-        <GradientStop Offset="0.4" Color="#14000000" />
-        <GradientStop Offset="1" Color="#00000000" />
+        <GradientStop Offset="0" Color="#4D000000" />
+        <GradientStop Offset="0.05" Color="#26000000" />
+        <GradientStop Offset="0.17" Color="#00000000" />
     </LinearGradientBrush>
     
-    <!-- Reference: linear-gradient(0deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.1) 40%, rgba(0,0,0,0) 100%) -->
+    <!-- Reference: linear-gradient(0deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.1) 40%, rgba(0,0,0,0) 100%)
+         Canvas spec: rgba(0,0,0,.40)→.23→0 at 35% -->
     <LinearGradientBrush x:Key="ControlsGradient" StartPoint="0,1" EndPoint="0,0">
-        <GradientStop Offset="0" Color="#33000000" />
-        <GradientStop Offset="0.4" Color="#19000000" />
-        <GradientStop Offset="1" Color="#00000000" />
+        <GradientStop Offset="0" Color="#66000000" />
+        <GradientStop Offset="0.1" Color="#3B000000" />
+        <GradientStop Offset="0.35" Color="#00000000" />
     </LinearGradientBrush>
 
     <!-- Reference: header+controls combined gradient from style.css -->
@@ -60,6 +62,20 @@
         <GradientStop Offset="0.9" Color="#3B000000" />
         <GradientStop Offset="1" Color="#66000000" />
     </LinearGradientBrush>
+
+    <!-- Playback background: radial-gradient(ellipse at 58% 42%, #192848→#090e1d→#000) -->
+    <RadialGradientBrush x:Key="PlaybackRadialBackground" Center="0.58,0.42" GradientOrigin="0.58,0.42">
+        <GradientStop Offset="0" Color="#FF192848" />
+        <GradientStop Offset="0.55" Color="#FF090E1D" />
+        <GradientStop Offset="1" Color="#FF000000" />
+    </RadialGradientBrush>
+
+    <!-- Vignette: radial-gradient(center, transparent 40%, rgba(0,0,0,.45)) -->
+    <RadialGradientBrush x:Key="VignetteOverlay" Center="0.5,0.5" GradientOrigin="0.5,0.5">
+        <GradientStop Offset="0" Color="#00000000" />
+        <GradientStop Offset="0.4" Color="#00000000" />
+        <GradientStop Offset="1" Color="#73000000" />
+    </RadialGradientBrush>
 
     <!-- Start page background: linear-gradient(180deg, transparent 0%, #0c0c0e 100%) -->
     <LinearGradientBrush x:Key="StartPageBackground" StartPoint="0,0" EndPoint="0,1">

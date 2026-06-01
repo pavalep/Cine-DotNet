@@ -18,17 +18,21 @@
                     CornerRadius="12"
                     BorderBrush="#40FFFFFF"
                     Background="#20FFFFFF"
-                    IsHitTestVisible="False" />
+                    IsHitTestVisible="False"
+                    IsVisible="False" />
 
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
                         Spacing="12" Margin="0,48,0,0">
 
-                <!-- Icon (Cine app icon style) -->
-                <Path Data="M 12 2C 6.48 2 2 6.48 2 12C 2 17.52 6.48 22 12 22C 17.52 22 22 17.52 22 12C 22 6.48 17.52 2 12 2 Z M 10 16.5V 7.5L 16 12L 10 16.5 Z"
-                      Width="128" Height="128" Stretch="Uniform"
-                      Fill="#E5E5E5"
-                      HorizontalAlignment="Center"
-                      Margin="0,0,0,16" />
+                <!-- Icon (Cine app icon — circle + triangle per canvas) -->
+                <Panel Width="128" Height="128" Margin="0,0,0,24" HorizontalAlignment="Center">
+                    <Path Data="M 64 4 A 60 60 0 1 1 64 124 A 60 60 0 1 1 64 4 Z"
+                          Fill="#14FFFFFF"
+                          Stroke="#26FFFFFF"
+                          StrokeThickness="2" />
+                    <Path Data="M 50 40 L 90 64 L 50 88 Z"
+                          Fill="#E5E5E5" />
+                </Panel>
 
                 <!-- Drop text -->
                 <TextBlock Text="Drag and Drop Files Here"
@@ -37,7 +41,8 @@
                            FontWeight="Bold"
                            Foreground="#E5E5E5"
                            HorizontalAlignment="Center"
-                           Margin="0,0,0,12" />
+                           LetterSpacing="-0.01"
+                           Margin="0,0,0,24" />
 
                 <!-- Open button (suggested-action pill) -->
                 <Button x:Name="BtnOpenFile"

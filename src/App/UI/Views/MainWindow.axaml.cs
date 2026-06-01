@@ -45,9 +45,18 @@ public partial class MainWindow : Window
     private DateTime _lastSeekWheel = DateTime.MinValue;
     private int _activeFlyouts;
 
+    // Seek bar
+    private bool _isSeeking;
+    private const double SeekThumbHalf = 8.0; // half of 16px thumb
+
     // Responsive breakpoints
     private const double NarrowBreakpoint = 600.0;
     private const double MediumBreakpoint = 1024.0;
+
+    // PIP / compact mini-player mode
+    private bool _isPipMode;
+    private PipWindow? _pipWindow;
+    private IMediaPlayer? _pipPlayer;
 
     #region debug-log
     private static readonly string DebugLogFile = CreateLogFilePath();
@@ -224,6 +233,9 @@ public partial class MainWindow : Window
         InitializeAutoHide();
         InitializeResponsiveLayout();
         InitializeFlyoutTracking();
+
+        // Seek bar — track resize to update positions
+        SeekArea.SizeChanged += OnSeekAreaSizeChanged;
 
         // Drag and Drop
         AddHandler(global::Avalonia.Input.DragDrop.DragEnterEvent, OnWindowDragEnter);
@@ -468,11 +480,6 @@ public partial class MainWindow : Window
         }
     }
 
-    /// <summary>
-    /// Updates the layout based on current window width.
-    /// Breakpoints: Narrow (&lt;495px)
-    /// Matches Python Adw.Breakpoint in window.blp.
-    /// </summary>
     private void UpdateResponsiveLayout(double width)
     {
         if (!this.IsInitialized) return;
@@ -498,8 +505,8 @@ public partial class MainWindow : Window
             SetFont(DurationTimeLabel, 13);
         }
 
-        // Button sizes are generally constant in the reference but we can tweak if needed
-        double btnSize = isNarrow ? 36 : 40;
+        // Canvas spec: all circular buttons fixed at 34×34
+        const double btnSize = 34;
         SetButtonSize(BtnPrimaryMenu, btnSize);
         SetButtonSize(BtnPlayPause, btnSize);
         SetButtonSize(BtnPrevious, btnSize);
@@ -510,13 +517,6 @@ public partial class MainWindow : Window
         SetButtonSize(BtnLoopPlaylist, btnSize);
         SetButtonSize(BtnShufflePlaylist, btnSize);
         SetButtonSize(BtnPlaylistDialog, btnSize);
-
-        if (ControlsBox != null)
-            ControlsBox.Height = isNarrow ? 90 : 120;
-        if (HeaderBar != null)
-            HeaderBar.Height = isNarrow ? 40 : 50;
-        if (TitleText != null)
-            TitleText.FontSize = isNarrow ? 12 : 14;
     }
 
     /// <summary>Sets button size and corner radius directly for responsive layout.</summary>
@@ -612,7 +612,9 @@ public partial class MainWindow : Window
         if (HeaderBar == null && ControlsBox == null) return;
         _uiVisible = true;
         _autoHideTimer?.Stop();
-        if (HeaderBar != null)
+        // In fullscreen, only show controls at bottom — header stays hidden for edge-to-edge video
+        bool isFullscreen = WindowState == global::Avalonia.Controls.WindowState.FullScreen;
+        if (HeaderBar != null && !isFullscreen)
         {
             HeaderBar.IsVisible = true;
             await FadeVisual(HeaderBar, 0, 1, 350, true);
@@ -637,12 +639,44 @@ public partial class MainWindow : Window
             await FadeVisual(HeaderBar, 1, 0, 300, false);
         if (ControlsBox != null)
             await FadeVisual(ControlsBox, 1, 0, 300, false);
-        await Task.Delay(50);
+        // Fade complete — now safe to hide
         if (!_uiVisible)
         {
             if (HeaderBar != null) HeaderBar.IsVisible = false;
             if (ControlsBox != null) ControlsBox.IsVisible = false;
         }
+    }
+
+    private CancellationTokenSource? _osdCts;
+
+    private async void ShowOsdNotification(string text, double durationMs = 2000)
+    {
+        if (OsdNotificationBorder == null || OsdNotificationText == null) return;
+
+        _osdCts?.Cancel();
+        _osdCts = new CancellationTokenSource();
+        var ct = _osdCts.Token;
+
+        OsdNotificationText.Text = text;
+        OsdNotificationBorder.IsVisible = true;
+        OsdNotificationBorder.Opacity = 0;
+
+        try
+        {
+            // Fade in
+            await FadeVisual(OsdNotificationBorder, 0, 1, 200, true);
+            if (ct.IsCancellationRequested) return;
+
+            // Hold
+            await Task.Delay((int)durationMs, ct);
+            if (ct.IsCancellationRequested) return;
+
+            // Fade out
+            await FadeVisual(OsdNotificationBorder, 1, 0, 300, false);
+            if (!ct.IsCancellationRequested)
+                OsdNotificationBorder.IsVisible = false;
+        }
+        catch (TaskCanceledException) { }
     }
 
     private async Task FadeVisual(Visual visual, double from, double to, double durationMs, bool easeOut)
@@ -702,39 +736,137 @@ public partial class MainWindow : Window
         }
     }
 
+    private void OnSeekAreaSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        UpdateSeekBar();
+        UpdateChapterMarkers();
+    }
+
     // ========================
-    //  Seek hover / wheel parity
+    //  Seek bar — code-behind positioning for reliability
     // ========================
+
+    private void UpdateSeekBar()
+    {
+        if (SeekArea == null || SeekFill == null || SeekThumb == null ||
+            _viewModel == null || _viewModel.Duration.TotalSeconds <= 0)
+            return;
+
+        var w = SeekArea.Bounds.Width;
+        if (w <= 0) return;
+
+        var seekValue = _isSeeking
+            ? _lastSeekNormalized
+            : Math.Clamp(_viewModel.SeekValue, 0.0, 1.0);
+
+        var fillWidth = seekValue * w;
+        SeekFill.Width = fillWidth;
+
+        var thumbLeft = seekValue * w - SeekThumbHalf;
+        SeekThumb.Margin = new Thickness(thumbLeft, 0, 0, 0);
+    }
+
+    private void UpdateChapterMarkers()
+    {
+        if (ChapterMarkersControl == null || SeekArea == null ||
+            _viewModel == null || _viewModel.Chapters.Count == 0)
+            return;
+
+        var w = SeekArea.Bounds.Width;
+        if (w <= 0) return;
+
+        var container = ChapterMarkersControl.ItemsPanelRoot as Canvas;
+        if (container == null) return;
+
+        for (int i = 0; i < container.Children.Count && i < _viewModel.Chapters.Count; i++)
+        {
+            var ch = _viewModel.Chapters[i];
+            var pos = _viewModel.Duration.TotalSeconds > 0
+                ? ch.Time / _viewModel.Duration.TotalSeconds
+                : 0.0;
+            Canvas.SetLeft(container.Children[i], pos * w);
+        }
+    }
+
+    private static string FormatTimeSpan(TimeSpan ts)
+    {
+        if (ts < TimeSpan.Zero)
+            return "-" + TimeSpan.FromTicks(-ts.Ticks).ToString("hh\\:mm\\:ss");
+        return ts.ToString("hh\\:mm\\:ss");
+    }
+
+    // ========================
+    //  Seek hover / wheel / drag parity
+    // ========================
+
+    private double _lastSeekNormalized;
+
+    private void OnSeekAreaPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (_viewModel == null || SeekArea == null || _viewModel.Duration.TotalSeconds <= 0) return;
+
+        var p = e.GetPosition(SeekArea);
+        var trackWidth = Math.Max(1.0, SeekArea.Bounds.Width);
+        _lastSeekNormalized = Math.Clamp(p.X / trackWidth, 0, 1);
+
+        var target = TimeSpan.FromSeconds(_lastSeekNormalized * _viewModel.Duration.TotalSeconds);
+        _viewModel.Position = target;
+        _isSeeking = true;
+        UpdateSeekBar();
+        e.Handled = true;
+    }
+
+    private void OnSeekAreaPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (!_isSeeking) return;
+        _isSeeking = false;
+        UpdateSeekBar();
+        e.Handled = true;
+    }
 
     private void OnSeekAreaPointerMoved(object? sender, PointerEventArgs e)
     {
-        if (_viewModel == null || SeekArea == null || ChapterPreviewPopover == null || ChapterPreviewText == null)
-            return;
-        if (_viewModel.Duration.TotalSeconds <= 0 || _viewModel.Chapters.Count == 0)
-            return;
+        if (_viewModel == null || SeekArea == null) return;
 
         var p = e.GetPosition(SeekArea);
-        var trackStart = 0.0;
         var trackWidth = Math.Max(1.0, SeekArea.Bounds.Width);
-        var normalized = Math.Clamp((p.X - trackStart) / trackWidth, 0, 1);
-        var seconds = normalized * _viewModel.Duration.TotalSeconds;
+        var normalized = Math.Clamp(p.X / trackWidth, 0, 1);
 
-        var chapter = _viewModel.Chapters
-            .Where(c => c.Time <= seconds)
-            .OrderByDescending(c => c.Time)
-            .FirstOrDefault();
+        if (_isSeeking)
+        {
+            // Drag-to-seek
+            _lastSeekNormalized = normalized;
+            var target = TimeSpan.FromSeconds(normalized * _viewModel.Duration.TotalSeconds);
+            _viewModel.Position = target;
+            UpdateSeekBar();
+        }
 
-        if (chapter == null) return;
-        ChapterPreviewText.Text = $"{chapter.Title}  ({FormatChapterTime(seconds)})";
-        ChapterPreviewPopover.IsVisible = true;
-        
-        ChapterPreviewPopover.Measure(new global::Avalonia.Size(double.PositiveInfinity, double.PositiveInfinity));
-        var popoverWidth = ChapterPreviewPopover.DesiredSize.Width;
-        
-        var xPos = trackStart + (normalized * trackWidth) - (popoverWidth / 2);
-        xPos = Math.Clamp(xPos, 0, Math.Max(0, SeekArea.Bounds.Width - popoverWidth));
+        // Chapter preview popover
+        if (_viewModel.Duration.TotalSeconds > 0 && _viewModel.Chapters.Count > 0 &&
+            ChapterPreviewPopover != null && ChapterPreviewText != null)
+        {
+            var seconds = normalized * _viewModel.Duration.TotalSeconds;
+            var chapter = _viewModel.Chapters
+                .Where(c => c.Time <= seconds)
+                .OrderByDescending(c => c.Time)
+                .FirstOrDefault();
 
-        ChapterPreviewPopover.Margin = new Thickness(xPos, -34, 0, 0);
+            if (chapter != null && Math.Abs(seconds - chapter.Time) < 3.0)
+            {
+                ChapterPreviewText.Text = $"{chapter.Title}  ({FormatChapterTime(seconds)})";
+                ChapterPreviewPopover.IsVisible = true;
+
+                ChapterPreviewPopover.Measure(new global::Avalonia.Size(double.PositiveInfinity, double.PositiveInfinity));
+                var popoverWidth = ChapterPreviewPopover.DesiredSize.Width;
+                var xPos = (normalized * trackWidth) - (popoverWidth / 2);
+                xPos = Math.Clamp(xPos, 0, Math.Max(0, SeekArea.Bounds.Width - popoverWidth));
+                ChapterPreviewPopover.Margin = new Thickness(xPos, -34, 0, 0);
+            }
+            else
+            {
+                ChapterPreviewPopover.IsVisible = false;
+            }
+        }
     }
 
     private void OnSeekAreaPointerExited(object? sender, PointerEventArgs e)
@@ -756,18 +888,6 @@ public partial class MainWindow : Window
             _viewModel.SeekForward();
         else if (e.Delta.Y < 0)
             _viewModel.SeekBackward();
-        e.Handled = true;
-    }
-
-    private void OnSeekAreaPointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (_viewModel == null || SeekArea == null || _viewModel.Duration.TotalSeconds <= 0) return;
-        var p = e.GetPosition(SeekArea);
-        var trackStart = 0.0;
-        var trackWidth = Math.Max(1.0, SeekArea.Bounds.Width);
-        var normalized = Math.Clamp((p.X - trackStart) / trackWidth, 0, 1);
-        var target = TimeSpan.FromSeconds(normalized * _viewModel.Duration.TotalSeconds);
-        _viewModel.Position = target;
         e.Handled = true;
     }
 
@@ -905,46 +1025,78 @@ public partial class MainWindow : Window
     private void OnMaximizeRestoreClick(object? sender, RoutedEventArgs e) => WindowState = WindowState == global::Avalonia.Controls.WindowState.Maximized ? global::Avalonia.Controls.WindowState.Normal : global::Avalonia.Controls.WindowState.Maximized;
     private void OnCloseClick(object? sender, RoutedEventArgs e) => Close();
     private void OnNewWindowClick(object? sender, RoutedEventArgs e) => new MainWindow().Show();
-    private void OnPreferencesClick(object? sender, RoutedEventArgs e) { } // Placeholder
-    private void OnShortcutsClick(object? sender, RoutedEventArgs e) { } // Placeholder
-    private async void OnAboutClick(object? sender, RoutedEventArgs e)
+    private void OnPreferencesClick(object? sender, RoutedEventArgs e)
     {
-        var closeButton = new global::Avalonia.Controls.Button
-        {
-            Content = "Close",
-            HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Center,
-            Margin = new Thickness(0, 10, 0, 0)
-        };
-
-        var messageBox = new Window
-        {
-            Title = "About Cine",
-            Content = new StackPanel
-            {
-                Margin = new Thickness(20),
-                Spacing = 10,
-                Children =
-                {
-                    new TextBlock { Text = "Cine Media Player", FontSize = 20, FontWeight = FontWeight.Bold, HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Center },
-                    new TextBlock { Text = "A native Windows media player built with Avalonia UI.", HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Center },
-                    new TextBlock { Text = "Version 1.0.0", HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Center },
-                    closeButton
-                }
-            },
-            Width = 350,
-            Height = 200,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            CanResize = false,
-            WindowDecorations = global::Avalonia.Controls.WindowDecorations.Full
-        };
-
-        closeButton.Click += (s, a) => messageBox.Close();
-        await messageBox.ShowDialog(this);
+        var dlg = new PreferencesDialog { DataContext = _viewModel };
+        dlg.Show(this);
     }
+    private void OnShortcutsClick(object? sender, RoutedEventArgs e)
+    {
+        var dlg = new ShortcutsDialog { DataContext = _viewModel };
+        dlg.Show(this);
+    }
+    private void OnAboutClick(object? sender, RoutedEventArgs e)
+    {
+        var dlg = new AboutDialog { DataContext = _viewModel };
+        dlg.Show(this);
+    }
+
     private void OnSeekBack(object? sender, RoutedEventArgs e) => _viewModel?.SeekBackward();
     private void OnSeekForward(object? sender, RoutedEventArgs e) => _viewModel?.SeekForward();
     private void OnToggleMute(object? sender, RoutedEventArgs e) => _viewModel?.ToggleMute();
+    private void OnVolumeSliderPointerPressed(object? sender, PointerPressedEventArgs e) => e.Handled = true;
     private void OnToggleFullscreen(object? sender, RoutedEventArgs e) => _viewModel?.ToggleFullscreen();
+    private void OnTogglePip(object? sender, RoutedEventArgs e)
+    {
+        if (_isPipMode)
+        {
+            // Close PIP
+            _pipWindow?.Close();
+            _pipWindow = null;
+            _pipPlayer = null;
+            _isPipMode = false;
+            if (BtnPip != null) BtnPip.IsChecked = false;
+            ShowOsdNotification("PIP closed");
+        }
+        else
+        {
+            if (_viewModel == null || string.IsNullOrEmpty(_viewModel.FilePath))
+            {
+                ShowOsdNotification("No media loaded");
+                return;
+            }
+
+            // Create secondary player instance for PIP
+            try
+            {
+                _pipPlayer = _playerService!.CreateSecondaryPlayer();
+                _pipWindow = new PipWindow(_pipPlayer, _playerService.Player!, _viewModel!.FilePath!)
+                {
+                    DataContext = _viewModel
+                };
+
+                _pipWindow.Closed += (s, args) =>
+                {
+                    _pipWindow = null;
+                    _pipPlayer = null;
+                    _isPipMode = false;
+                    if (BtnPip != null) BtnPip.IsChecked = false;
+                };
+
+                _pipWindow.Show(this);
+                _isPipMode = true;
+                if (BtnPip != null) BtnPip.IsChecked = true;
+                ShowOsdNotification("PIP mode active");
+            }
+            catch (Exception ex)
+            {
+                _pipWindow = null;
+                _pipPlayer = null;
+                _isPipMode = false;
+                ShowOsdNotification($"PIP failed: {ex.Message}");
+            }
+        }
+    }
     private void OnFullscreenCloseClick(object? sender, RoutedEventArgs e) => Close();
     private void OnHeaderPointerPressed(object? sender, PointerPressedEventArgs e)
     {
@@ -954,10 +1106,28 @@ public partial class MainWindow : Window
     private void OnToggleShuffle(object? sender, RoutedEventArgs e) => _viewModel?.ToggleShuffle();
     private void OnNextChapter(object? sender, RoutedEventArgs e) => _viewModel?.NextChapter();
     private void OnPrevChapter(object? sender, RoutedEventArgs e) => _viewModel?.PreviousChapter();
-    private void OnPrevious(object? sender, RoutedEventArgs e) => _viewModel?.PreviousChapter();
+    private void OnPrevious(object? sender, RoutedEventArgs e)
+    {
+        if (_viewModel != null)
+        {
+            if (_viewModel.HasMultiplePlaylistItems)
+                _viewModel.PreviousItem();
+            else
+                _viewModel.PreviousChapter();
+        }
+    }
     private void OnRewind(object? sender, RoutedEventArgs e) => _viewModel?.SeekLargeBackward();
     private void OnForward(object? sender, RoutedEventArgs e) => _viewModel?.SeekLargeForward();
-    private void OnNext(object? sender, RoutedEventArgs e) => _viewModel?.NextChapter();
+    private void OnNext(object? sender, RoutedEventArgs e)
+    {
+        if (_viewModel != null)
+        {
+            if (_viewModel.HasMultiplePlaylistItems)
+                _viewModel.NextItem();
+            else
+                _viewModel.NextChapter();
+        }
+    }
     private void OnToggleLoopFile(object? sender, RoutedEventArgs e) => _viewModel?.ToggleLoopFile();
     private void OnToggleLoopPlaylist(object? sender, RoutedEventArgs e) => _viewModel?.ToggleLoopPlaylist();
     private void OnScreenshot(object? sender, RoutedEventArgs e) => _viewModel?.Screenshot();
@@ -1023,7 +1193,8 @@ public partial class MainWindow : Window
             global::Avalonia.Application.Current!.TryGetResource("FullscreenExitIcon", global::Avalonia.Styling.ThemeVariant.Default, out var exitIcon);
             FullscreenIconPath.Data = (global::Avalonia.Media.Geometry)exitIcon!;
             global::Avalonia.Controls.ToolTip.SetTip(BtnFullscreen, "Exit Fullscreen (F)");
-            if (BtnFullscreenClose != null) BtnFullscreenClose.IsVisible = true;
+            if (HeaderBar != null) { HeaderBar.IsVisible = false; HeaderBar.IsHitTestVisible = false; }
+            if (BtnFullscreenClose != null) BtnFullscreenClose.IsVisible = false;
             if (WindowControlsPanel != null) WindowControlsPanel.IsVisible = false;
             if (TitleText != null) TitleText.IsVisible = false;
             if (BtnPrimaryMenu != null) BtnPrimaryMenu.IsVisible = false;
@@ -1035,14 +1206,15 @@ public partial class MainWindow : Window
             global::Avalonia.Application.Current!.TryGetResource("FullscreenEnterIcon", global::Avalonia.Styling.ThemeVariant.Default, out var enterIcon);
             FullscreenIconPath.Data = (global::Avalonia.Media.Geometry)enterIcon!;
             global::Avalonia.Controls.ToolTip.SetTip(BtnFullscreen, "Fullscreen (F)");
+            if (HeaderBar != null) { HeaderBar.IsVisible = true; HeaderBar.IsHitTestVisible = true; }
             if (BtnFullscreenClose != null) BtnFullscreenClose.IsVisible = false;
             if (WindowControlsPanel != null) WindowControlsPanel.IsVisible = true;
             if (TitleText != null) TitleText.IsVisible = true;
             if (BtnPrimaryMenu != null) BtnPrimaryMenu.IsVisible = true;
             if (BtnPip != null) BtnPip.IsVisible = Bounds.Width >= MediumBreakpoint;
             if (BtnOpenMenu != null) BtnOpenMenu.IsVisible = !string.IsNullOrEmpty(_viewModel?.FilePath);
-            UpdateMaximizeIcon();
         }
+        UpdateMaximizeIcon();
     }
 
     private void UpdateMaximizeIcon()
@@ -1078,14 +1250,27 @@ public partial class MainWindow : Window
         #endregion
         Dispatcher.UIThread.Post(() =>
         {
+            if (LoadingSpinner != null) LoadingSpinner.IsVisible = false;
             if (StartPage != null) StartPage.IsVisible = false;
             if (ControlsBox != null) ControlsBox.IsVisible = true;
             if (VideoHost != null) VideoHost.IsVideoSurfaceVisible = true;
             if (BtnOpenMenu != null) BtnOpenMenu.IsVisible = true;
+            // Set initial time labels immediately
+            if (_viewModel != null)
+            {
+                var d = _viewModel.Duration;
+                if (d.TotalSeconds > 0)
+                {
+                    if (DurationTimeLabel != null) DurationTimeLabel.Text = FormatTimeSpan(d);
+                    if (PositionTimeLabel != null) PositionTimeLabel.Text = FormatTimeSpan(_viewModel.Position);
+                }
+            }
             _autoHideTimer?.Stop();
             _autoHideTimer?.Start();
         });
     }
+
+    private DispatcherTimer? _pauseIndicatorTimer;
 
     private void OnPlaybackStateChanged(object? sender, PlaybackStateChangedEventArgs e)
     {
@@ -1113,15 +1298,21 @@ public partial class MainWindow : Window
                 if (PauseIndicator != null)
                 {
                     PauseIndicator.IsVisible = true;
-                    _ = FadeVisual(PauseIndicator, 0, 1, 150, true).ContinueWith(async t =>
-                    {
-                        await Task.Delay(350);
-                        await Dispatcher.UIThread.InvokeAsync(async () =>
+                    PauseIndicator.Opacity = 1;
+                    _pauseIndicatorTimer?.Stop();
+                    _pauseIndicatorTimer = new DispatcherTimer(
+                        TimeSpan.FromMilliseconds(500),
+                        DispatcherPriority.Normal,
+                        async (s, args) =>
                         {
-                            await FadeVisual(PauseIndicator, 1, 0, 150, false);
-                            if (PauseIndicator != null) PauseIndicator.IsVisible = false;
+                            _pauseIndicatorTimer?.Stop();
+                            if (PauseIndicator != null)
+                            {
+                                await FadeVisual(PauseIndicator, 1, 0, 150, false);
+                                if (PauseIndicator != null) PauseIndicator.IsVisible = false;
+                            }
                         });
-                    });
+                    _pauseIndicatorTimer.Start();
                 }
                 
                 // Show UI when paused
@@ -1145,13 +1336,16 @@ public partial class MainWindow : Window
     {
         Dispatcher.UIThread.Post(() =>
         {
-            if (_viewModel?.Duration.TotalSeconds > 0)
+            var d = _viewModel?.Duration ?? TimeSpan.Zero;
+            if (d.TotalSeconds > 0)
             {
-                var chars = _viewModel.Duration.TotalSeconds >= 36000 ? 8 :
-                            _viewModel.Duration.TotalSeconds >= 3600 ? 7 :
-                            _viewModel.Duration.TotalSeconds >= 600 ? 6 : 5;
+                var chars = d.TotalSeconds >= 36000 ? 8 :
+                            d.TotalSeconds >= 3600 ? 7 :
+                            d.TotalSeconds >= 600 ? 6 : 5;
                 PositionTimeLabel.MinWidth = chars * 8;
             }
+            if (!_isSeeking)
+                UpdateSeekBar();
         });
     }
     private void OnChapterListChanged(object? sender, ChapterListChangedEventArgs e) => _viewModel?.RefreshState();
@@ -1162,6 +1356,8 @@ public partial class MainWindow : Window
         {
             if (!string.IsNullOrEmpty(_viewModel?.FilePath))
             {
+                // Show loading spinner while media opens
+                if (LoadingSpinner != null) LoadingSpinner.IsVisible = true;
                 // Media loaded: hide StartPage, show controls and Open button (matching Python)
                 if (StartPage?.IsVisible == true) StartPage.IsVisible = false;
                 if (ControlsBox != null) ControlsBox.IsVisible = true;
@@ -1197,25 +1393,31 @@ public partial class MainWindow : Window
                  e.PropertyName == nameof(MainViewModel.VolumeValue))
         {
             RefreshVolumeIcon();
+            if (_viewModel != null)
+            {
+                if (_viewModel.IsMuted || _viewModel.VolumeValue == 0)
+                    ShowOsdNotification("Muted");
+                else
+                    ShowOsdNotification($"Volume: {_viewModel.VolumeValue}%");
+            }
+        }
+        else if (e.PropertyName == nameof(MainViewModel.SpeedValue))
+        {
+            if (_viewModel != null)
+                ShowOsdNotification($"Speed: {_viewModel.SpeedValue:F1}x");
         }
     }
 
     /// <summary>
     /// Updates the volume button icon based on current volume level and mute state.
-    /// Matches Python reference _update_volume_icon behavior.
-    /// </summary>
     private void RefreshVolumeIcon()
     {
-        if (VolumeIconPath == null || _viewModel == null) return;
-        bool isMuted = _viewModel.IsMuted;
-        double vol = _viewModel.VolumeValue;
-        string iconKey = (isMuted || vol == 0)
-            ? "VolumeMuteIcon"
-            : vol < 33 ? "VolumeMaxIcon"   // no low/mid icon in Icons.axaml, fall back to max
-            : "VolumeMaxIcon";
-        global::Avalonia.Application.Current!.TryGetResource(iconKey, global::Avalonia.Styling.ThemeVariant.Default, out var icon);
-        if (icon is global::Avalonia.Media.Geometry geo)
-            VolumeIconPath.Data = geo;
+        if (_viewModel == null) return;
+        bool isMuted = _viewModel.IsMuted || _viewModel.VolumeValue == 0;
+        if (VolumeArcsPath != null)
+            VolumeArcsPath.IsVisible = !isMuted;
+        if (VolumeMuteCrossPath != null)
+            VolumeMuteCrossPath.IsVisible = isMuted;
     }
 
     private void RefreshSubtitleIcon()

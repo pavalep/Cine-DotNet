@@ -34,5 +34,10 @@ public class PlaylistItemViewModel : INotifyPropertyChanged
         _parent.PlayPlaylistItem(_index);
     }
 
+    public void Remove()
+    {
+        _parent.RemovePlaylistItem(_index);
+    }
+
     public event PropertyChangedEventHandler? PropertyChanged;
 }

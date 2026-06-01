@@ -36,16 +36,14 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
 
     private Task? _eventLoop;
     private CancellationTokenSource? _cts;
-    private double _lastPosSeconds = -1;
     private IntPtr _hwnd;
     private string? _pendingOpenPath;
 
+    // Track whether a file is loaded (guards position polling)
+    private bool _isFileLoaded;
+
     // Aspect ratio override (maps to mpv's video-aspect-override)
     private double _aspectOverride = -1; // -1 = auto/default
-
-    // Track/chapter state
-    private bool _tracksInitialized;
-    private bool _chaptersInitialized;
 
     private static readonly string DebugLogFile = Path.Combine(AppContext.BaseDirectory, "MpvPlayer.log");
 
@@ -546,6 +544,11 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
             _initialized = true;
         }
 
+        // Observe track-list and chapter-list via push-based events
+        // (time-pos uses polling instead — see event loop for details)
+        MpvNative.mpv_observe_property(_mpv, 0, "track-list", MpvNative.mpv_format.MPV_FORMAT_NODE);
+        MpvNative.mpv_observe_property(_mpv, 0, "chapter-list", MpvNative.mpv_format.MPV_FORMAT_NODE);
+
         SetDouble("volume", _volume);
         SetFlag("mute", _isMuted);
         SetDouble("speed", _speed);
@@ -648,16 +651,14 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
                         {
                             Play();
                         }
-                        _tracksInitialized = false;
-                        _chaptersInitialized = false;
+                        _isFileLoaded = true;
                         Opened?.Invoke(this, EventArgs.Empty);
                         break;
                     case MpvNative.mpv_event_id.MPV_EVENT_START_FILE:
-                        _tracksInitialized = false;
-                        _chaptersInitialized = false;
                         break;
                     case MpvNative.mpv_event_id.MPV_EVENT_END_FILE:
                         _state = PlaybackState.Stopped;
+                        _isFileLoaded = false;
                         break;
                     case MpvNative.mpv_event_id.MPV_EVENT_PAUSE:
                         _state = PlaybackState.Paused;
@@ -674,32 +675,18 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
                 }
             }
 
-            var pos = GetDouble("time-pos");
-            if (pos >= 0 && !double.IsNaN(pos))
+            // Poll time-pos every loop iteration (~100ms).
+            // mpv_observe_property("time-pos") is unreliable on Windows (known mpv bug #4195
+            // — property change coalescing causes frame-based updates to be skipped).
+            // Direct polling via GetDouble is the reliable cross-platform approach
+            // used by Mpv.NET-lib and other production C# mpv embeddings.
+            if (_isFileLoaded)
             {
-                if (_lastPosSeconds < 0 || Math.Abs(pos - _lastPosSeconds) >= 0.25)
+                var pos = GetDouble("time-pos");
+                if (pos >= 0 && !double.IsNaN(pos))
                 {
-                    _lastPosSeconds = pos;
                     PositionChanged?.Invoke(this, new PositionChangedEventArgs(TimeSpan.FromSeconds(pos)));
                 }
-            }
-
-            // Fire TrackListChanged once after file is loaded (tracks are available after FILE_LOADED)
-            if (!_tracksInitialized && _initialized)
-            {
-                _tracksInitialized = true;
-                TrackListChanged?.Invoke(this, new TrackListChangedEventArgs(
-                    Array.Empty<SubtitleSource>(),
-                    Array.Empty<SubtitleSource>(),
-                    SubtitleSources));
-            }
-
-            // Fire ChapterListChanged once after file is loaded
-            if (!_chaptersInitialized && _initialized)
-            {
-                _chaptersInitialized = true;
-                var ch = ChapterList;
-                ChapterListChanged?.Invoke(this, new ChapterListChangedEventArgs(ch));
             }
         }
     }
@@ -745,12 +732,10 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
                     Array.Empty<SubtitleSource>(),
                     Array.Empty<SubtitleSource>(),
                     SubtitleSources));
-                _tracksInitialized = true;
                 break;
             case "chapter-list":
                 var ch = ChapterList;
                 ChapterListChanged?.Invoke(this, new ChapterListChangedEventArgs(ch));
-                _chaptersInitialized = true;
                 break;
             case "pause":
                 var isPaused = GetFlag("pause");
@@ -1043,7 +1028,8 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
             MPV_FORMAT_STRING = 1,
             MPV_FORMAT_FLAG = 3,
             MPV_FORMAT_INT64 = 4,
-            MPV_FORMAT_DOUBLE = 5
+            MPV_FORMAT_DOUBLE = 5,
+            MPV_FORMAT_NODE = 6
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -1108,6 +1094,9 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
 
         [DllImport("libmpv-2.dll", CallingConvention = CallingConvention.Cdecl)]
         internal static extern int mpv_get_property(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string name, mpv_format format, ref long data);
+
+        [DllImport("libmpv-2.dll", CallingConvention = CallingConvention.Cdecl)]
+        internal static extern int mpv_observe_property(IntPtr ctx, ulong userdata, [MarshalAs(UnmanagedType.LPUTF8Str)] string name, mpv_format format);
 
         [DllImport("libmpv-2.dll", CallingConvention = CallingConvention.Cdecl)]
         private static extern IntPtr mpv_error_string(int error);

@@ -265,6 +265,15 @@ public class MainViewModel : INotifyPropertyChanged
     {
         PlaylistPosition = index;
     }
+    public void RemovePlaylistItem(int index)
+    {
+        if (index < 0 || index >= PlaylistItems.Count) return;
+        PlaylistItems.RemoveAt(index);
+        Playlist.RemoveAt(index);
+        for (int i = index; i < PlaylistItems.Count; i++)
+            PlaylistItems[i].NotifyPlayingChanged();
+        HasMultiplePlaylistItems = PlaylistItems.Count > 1;
+    }
     public void SeekForward() => _player.Seek(Position + TimeSpan.FromSeconds(5));
     public void SeekBackward() => _player.Seek(Position - TimeSpan.FromSeconds(5));
     public void SeekLargeForward() => _player.Seek(Position + TimeSpan.FromSeconds(60));
@@ -456,6 +465,7 @@ public class MainViewModel : INotifyPropertyChanged
             if (Math.Abs(_seekValue - value) > 0.001)
             {
                 _seekValue = value;
+                OnPropertyChanged(nameof(SeekValue));
                 if (!_isUpdatingPositionFromPlayer && Duration.TotalSeconds > 0)
                     _player.Seek(TimeSpan.FromSeconds(value * Duration.TotalSeconds));
             }
@@ -702,6 +712,10 @@ public class MainViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(Position));
         OnPropertyChanged(nameof(Duration));
         OnPropertyChanged(nameof(VolumeValue));
+
+        // Ensure time labels show immediately on media open
+        PositionText = FormatTime(_player.Position);
+        DurationText = FormatTime(_player.Duration);
 
         Chapters.Clear();
         ChapterMarkers.Clear();

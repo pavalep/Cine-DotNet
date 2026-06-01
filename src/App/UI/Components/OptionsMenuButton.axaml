@@ -11,7 +11,9 @@
             Margin="2">
         <Path Data="{StaticResource OptionsIcon}"
               Width="16" Height="16" Stretch="Uniform"
-              Fill="{StaticResource OsdForeground}" />
+              Stroke="{StaticResource OsdForeground}"
+              StrokeThickness="1.4"
+              StrokeLineCap="Round" />
         <Button.Flyout>
             <Flyout Placement="Top">
                 <Border Background="{StaticResource PopoverBackground}"

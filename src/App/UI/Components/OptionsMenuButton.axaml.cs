@@ -10,6 +10,30 @@ public partial class OptionsMenuButton : global::Avalonia.Controls.UserControl
     public OptionsMenuButton()
     {
         InitializeComponent();
+        if (BtnOptionsMenu?.Flyout is Flyout flyout)
+            flyout.Opened += OnOptionsFlyoutOpened;
+    }
+
+    private void OnOptionsFlyoutOpened(object? sender, EventArgs e)
+    {
+        SyncAspectRatioSelection();
+    }
+
+    private void SyncAspectRatioSelection()
+    {
+        if (ViewModel == null || AspectRatioCombo == null) return;
+        var current = ViewModel.AspectRatioValue;
+        for (int i = 0; i < AspectRatioCombo.Items.Count; i++)
+        {
+            if (AspectRatioCombo.ContainerFromIndex(i) is ComboBoxItem item &&
+                item.Tag is string tag && double.TryParse(tag, out var ratio) &&
+                Math.Abs(ratio - current) < 0.001)
+            {
+                AspectRatioCombo.SelectedIndex = i;
+                return;
+            }
+        }
+        AspectRatioCombo.SelectedIndex = 0;
     }
 
     private void InitializeComponent()
