@@ -39,9 +39,6 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
     private IntPtr _hwnd;
     private string? _pendingOpenPath;
 
-    // Track whether a file is loaded (guards position polling)
-    private bool _isFileLoaded;
-
     // Aspect ratio override (maps to mpv's video-aspect-override)
     private double _aspectOverride = -1; // -1 = auto/default
 
@@ -631,62 +628,64 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
     {
         while (!token.IsCancellationRequested && !_disposed)
         {
-            if (!_initialized || _mpv == IntPtr.Zero)
+            try
             {
-                Thread.Sleep(25);
-                continue;
-            }
-
-            var evPtr = MpvNative.mpv_wait_event(_mpv, 0.1);
-            if (evPtr != IntPtr.Zero)
-            {
-                var ev = Marshal.PtrToStructure<MpvNative.mpv_event>(evPtr);
-                switch ((MpvNative.mpv_event_id)ev.event_id)
+                if (!_initialized || _mpv == IntPtr.Zero)
                 {
-                    case MpvNative.mpv_event_id.MPV_EVENT_FILE_LOADED:
-                        // mpv may briefly report pause=true after loading.
-                        // Force unpause so playback starts immediately.
-                        _state = PlaybackState.Playing;
-                        if (GetFlag("pause"))
-                        {
-                            Play();
-                        }
-                        _isFileLoaded = true;
-                        Opened?.Invoke(this, EventArgs.Empty);
-                        break;
-                    case MpvNative.mpv_event_id.MPV_EVENT_START_FILE:
-                        break;
-                    case MpvNative.mpv_event_id.MPV_EVENT_END_FILE:
-                        _state = PlaybackState.Stopped;
-                        _isFileLoaded = false;
-                        break;
-                    case MpvNative.mpv_event_id.MPV_EVENT_PAUSE:
-                        _state = PlaybackState.Paused;
-                        break;
-                    case MpvNative.mpv_event_id.MPV_EVENT_UNPAUSE:
-                        _state = PlaybackState.Playing;
-                        break;
-                    case MpvNative.mpv_event_id.MPV_EVENT_SHUTDOWN:
-                        _state = PlaybackState.Stopped;
-                        return;
-                    case MpvNative.mpv_event_id.MPV_EVENT_PROPERTY_CHANGE:
-                        HandlePropertyChange(ev);
-                        break;
+                    Thread.Sleep(25);
+                    continue;
                 }
-            }
 
-            // Poll time-pos every loop iteration (~100ms).
-            // mpv_observe_property("time-pos") is unreliable on Windows (known mpv bug #4195
-            // — property change coalescing causes frame-based updates to be skipped).
-            // Direct polling via GetDouble is the reliable cross-platform approach
-            // used by Mpv.NET-lib and other production C# mpv embeddings.
-            if (_isFileLoaded)
-            {
-                var pos = GetDouble("time-pos");
-                if (pos >= 0 && !double.IsNaN(pos))
+                var evPtr = MpvNative.mpv_wait_event(_mpv, 0.1);
+                if (evPtr != IntPtr.Zero)
                 {
-                    PositionChanged?.Invoke(this, new PositionChangedEventArgs(TimeSpan.FromSeconds(pos)));
+                    var ev = Marshal.PtrToStructure<MpvNative.mpv_event>(evPtr);
+                    switch ((MpvNative.mpv_event_id)ev.event_id)
+                    {
+                        case MpvNative.mpv_event_id.MPV_EVENT_FILE_LOADED:
+                            // mpv may briefly report pause=true after loading.
+                            // Force unpause so playback starts immediately.
+                            _state = PlaybackState.Playing;
+                            if (GetFlag("pause"))
+                            {
+                                Play();
+                            }
+                            Opened?.Invoke(this, EventArgs.Empty);
+                            break;
+                        case MpvNative.mpv_event_id.MPV_EVENT_START_FILE:
+                            break;
+                        case MpvNative.mpv_event_id.MPV_EVENT_END_FILE:
+                            _state = PlaybackState.Stopped;
+                            break;
+                        case MpvNative.mpv_event_id.MPV_EVENT_PAUSE:
+                            _state = PlaybackState.Paused;
+                            break;
+                        case MpvNative.mpv_event_id.MPV_EVENT_UNPAUSE:
+                            _state = PlaybackState.Playing;
+                            break;
+                        case MpvNative.mpv_event_id.MPV_EVENT_SHUTDOWN:
+                            _state = PlaybackState.Stopped;
+                            return;
+                        case MpvNative.mpv_event_id.MPV_EVENT_PROPERTY_CHANGE:
+                            HandlePropertyChange(ev);
+                            break;
+                    }
                 }
+
+                // Poll time-pos every loop iteration (~100ms).
+            // The pos >= 0 guard naturally filters out invalid positions (e.g. before
+            // any file is loaded or while the file is still buffering). No additional
+            // _isFileLoaded guard is needed — FILE_LOADED fires before time-pos is valid
+            // (playback hasn't actually started), and that would block our first updates.
+            var pos = GetDouble("time-pos");
+            if (pos >= 0 && !double.IsNaN(pos))
+            {
+                PositionChanged?.Invoke(this, new PositionChangedEventArgs(TimeSpan.FromSeconds(pos)));
+            }
+            }
+            catch (Exception ex)
+            {
+                DebugLog($"Exception in EventLoop: {ex}");
             }
         }
     }
@@ -1036,7 +1035,7 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
         internal struct mpv_event
         {
             public int event_id;
-            public long error;
+            public int error;
             public ulong reply_userdata;
             public IntPtr data;
         }

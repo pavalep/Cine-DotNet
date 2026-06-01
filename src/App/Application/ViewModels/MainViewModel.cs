@@ -55,6 +55,7 @@ public class MainViewModel : INotifyPropertyChanged
     private double _volumeValue = 50;
     private double _speedValue;
     private double _seekValue;
+    private bool _isSeeking;
     private bool _isMuted;
     private string _filePath = string.Empty;
     private string _chapterTitle = string.Empty;
@@ -472,6 +473,40 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    public bool IsSeeking
+    {
+        get => _isSeeking;
+        set
+        {
+            if (_isSeeking != value)
+            {
+                _isSeeking = value;
+                OnPropertyChanged(nameof(IsSeeking));
+            }
+        }
+    }
+
+    public void SeekTo(double normalizedValue)
+    {
+        if (Duration.TotalSeconds <= 0) return;
+        
+        var target = TimeSpan.FromSeconds(normalizedValue * Duration.TotalSeconds);
+        
+        _isUpdatingPositionFromPlayer = true;
+        try
+        {
+            _seekValue = Math.Clamp(normalizedValue, 0.0, 1.0);
+            OnPropertyChanged(nameof(SeekValue));
+            PositionText = FormatTime(target);
+        }
+        finally
+        {
+            _isUpdatingPositionFromPlayer = false;
+        }
+        
+        _player.Seek(target);
+    }
+
     public bool IsMuted
     {
         get => _isMuted;
@@ -572,6 +607,8 @@ public class MainViewModel : INotifyPropertyChanged
     {
         Dispatcher.UIThread.Post(() =>
         {
+            if (IsSeeking) return;
+
             _isUpdatingPositionFromPlayer = true;
             try
             {

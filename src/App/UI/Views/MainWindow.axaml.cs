@@ -48,6 +48,9 @@ public partial class MainWindow : Window
     // Seek bar
     private bool _isSeeking;
     private const double SeekThumbHalf = 8.0; // half of 16px thumb
+    private double _lastSeekNormalized;
+    private TimeSpan _lastPosition;
+    private DispatcherTimer? _seekUpdateTimer;
 
     // Responsive breakpoints
     private const double NarrowBreakpoint = 600.0;
@@ -550,6 +553,14 @@ public partial class MainWindow : Window
         PointerMoved += OnWindowPointerMoved;
         SetUiControlsVisibility(true);
         _autoHideTimer?.Start();
+
+        // Dedicated UI-thread timer for seek bar updates (independent of background event loop timing)
+        _seekUpdateTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(100)
+        };
+        _seekUpdateTimer.Tick += OnSeekUpdateTick;
+        _seekUpdateTimer.Start();
     }
 
     private void OnAutoHideTimerTick(object? sender, EventArgs e)
@@ -742,6 +753,12 @@ public partial class MainWindow : Window
         UpdateChapterMarkers();
     }
 
+    private void OnSeekUpdateTick(object? sender, EventArgs e)
+    {
+        if (!_isSeeking)
+            UpdateSeekBar();
+    }
+
     // ========================
     //  Seek bar — code-behind positioning for reliability
     // ========================
@@ -757,7 +774,7 @@ public partial class MainWindow : Window
 
         var seekValue = _isSeeking
             ? _lastSeekNormalized
-            : Math.Clamp(_viewModel.SeekValue, 0.0, 1.0);
+            : Math.Clamp(_lastPosition.TotalSeconds / _viewModel.Duration.TotalSeconds, 0.0, 1.0);
 
         var fillWidth = seekValue * w;
         SeekFill.Width = fillWidth;
@@ -799,8 +816,6 @@ public partial class MainWindow : Window
     //  Seek hover / wheel / drag parity
     // ========================
 
-    private double _lastSeekNormalized;
-
     private void OnSeekAreaPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (_viewModel == null || SeekArea == null || _viewModel.Duration.TotalSeconds <= 0) return;
@@ -809,9 +824,9 @@ public partial class MainWindow : Window
         var trackWidth = Math.Max(1.0, SeekArea.Bounds.Width);
         _lastSeekNormalized = Math.Clamp(p.X / trackWidth, 0, 1);
 
-        var target = TimeSpan.FromSeconds(_lastSeekNormalized * _viewModel.Duration.TotalSeconds);
-        _viewModel.Position = target;
         _isSeeking = true;
+        _viewModel.IsSeeking = true;
+        _viewModel.SeekTo(_lastSeekNormalized);
         UpdateSeekBar();
         e.Handled = true;
     }
@@ -820,6 +835,10 @@ public partial class MainWindow : Window
     {
         if (!_isSeeking) return;
         _isSeeking = false;
+        if (_viewModel != null)
+        {
+            _viewModel.IsSeeking = false;
+        }
         UpdateSeekBar();
         e.Handled = true;
     }
@@ -836,8 +855,7 @@ public partial class MainWindow : Window
         {
             // Drag-to-seek
             _lastSeekNormalized = normalized;
-            var target = TimeSpan.FromSeconds(normalized * _viewModel.Duration.TotalSeconds);
-            _viewModel.Position = target;
+            _viewModel.SeekTo(normalized);
             UpdateSeekBar();
         }
 
@@ -1334,6 +1352,9 @@ public partial class MainWindow : Window
 
     private void OnPositionChanged(object? sender, PositionChangedEventArgs e)
     {
+        // Save last position for seek bar updates (read by the UI-thread timer)
+        _lastPosition = e.Position;
+
         Dispatcher.UIThread.Post(() =>
         {
             var d = _viewModel?.Duration ?? TimeSpan.Zero;
@@ -1344,8 +1365,6 @@ public partial class MainWindow : Window
                             d.TotalSeconds >= 600 ? 6 : 5;
                 PositionTimeLabel.MinWidth = chars * 8;
             }
-            if (!_isSeeking)
-                UpdateSeekBar();
         });
     }
     private void OnChapterListChanged(object? sender, ChapterListChangedEventArgs e) => _viewModel?.RefreshState();
@@ -1405,6 +1424,13 @@ public partial class MainWindow : Window
         {
             if (_viewModel != null)
                 ShowOsdNotification($"Speed: {_viewModel.SpeedValue:F1}x");
+        }
+        else if (e.PropertyName == nameof(MainViewModel.SeekValue))
+        {
+            if (!_isSeeking)
+            {
+                UpdateSeekBar();
+            }
         }
     }
 
