@@ -15,11 +15,27 @@ public partial class PlaylistDialog : Window
         AddHandler(DragDrop.DropEvent, OnDrop);
         AddHandler(DragDrop.DragEnterEvent, OnDragEnter);
         AddHandler(DragDrop.DragLeaveEvent, OnDragLeave);
+        DataContextChanged += OnDataContextChanged;
     }
 
     private void InitializeComponent()
     {
         AvaloniaXamlLoader.Load(this);
+    }
+
+    private void OnDataContextChanged(object? sender, EventArgs e)
+    {
+        if (DataContext is MainViewModel vm)
+        {
+            vm.PlaylistItems.CollectionChanged += (_, _) => UpdateEmptyState();
+            UpdateEmptyState();
+        }
+    }
+
+    private void UpdateEmptyState()
+    {
+        if (EmptyStatePanel == null || DataContext is not MainViewModel vm) return;
+        EmptyStatePanel.IsVisible = vm.PlaylistItems.Count == 0;
     }
 
     private void OnAddFilesClick(object? sender, RoutedEventArgs e)

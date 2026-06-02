@@ -328,6 +328,34 @@
                                               FontSize="12" />
                             </Grid>
 
+                            <!-- ── SUB SIZE ── -->
+                            <Grid Margin="0,8,0,0" ColumnDefinitions="Auto,*,Auto">
+                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <Button Classes="flat"
+                                            ToolTip.Tip="Reset Subtitle Size"
+                                            Click="OnResetSubSizeClick"
+                                            Padding="4">
+                                        <Path Data="M 3 9 L 6 12 L 9 9 M 6 12 V 4 M 3 5 L 3 3 L 5 3"
+                                              Width="14" Height="14" Stretch="Uniform"
+                                              Fill="{StaticResource OsdForeground}" Stroke="{StaticResource OsdForeground}" StrokeThickness="1" />
+                                    </Button>
+                                    <TextBlock Text="Sub Size"
+                                               FontWeight="SemiBold"
+                                               FontSize="12"
+                                               VerticalAlignment="Center"
+                                               Margin="4,0,0,0"
+                                               Foreground="{StaticResource OsdForeground}" />
+                                </StackPanel>
+                                <NumericUpDown Grid.Column="2"
+                                              Value="{Binding SubtitleFontSize}"
+                                              Minimum="8"
+                                              Maximum="72"
+                                              Increment="2"
+                                              FormatString="0"
+                                              Width="110"
+                                              FontSize="12" />
+                            </Grid>
+
                             <!-- ── AUDIO DELAY ── -->
                             <Grid Margin="0,8,0,0" ColumnDefinitions="Auto,*,Auto">
                                 <StackPanel Grid.Column="0" Orientation="Horizontal">
@@ -356,7 +384,7 @@
                                               FontSize="12" />
                             </Grid>
 
-                            <!-- ── PLAYBACK SPEED ── -->
+                            <!-- ── PLAYBACK SPEED (Pills) ── -->
                             <Grid Margin="0,8,0,8" ColumnDefinitions="Auto,*,Auto">
                                 <StackPanel Grid.Column="0" Orientation="Horizontal">
                                     <Button Classes="flat"
@@ -374,14 +402,14 @@
                                                Margin="4,0,0,0"
                                                Foreground="{StaticResource OsdForeground}" />
                                 </StackPanel>
-                                <NumericUpDown Grid.Column="2"
-                                              Value="{Binding SpeedValue}"
-                                              Minimum="0.25"
-                                              Maximum="10"
-                                              Increment="0.25"
-                                              FormatString="0.00"
-                                              Width="110"
-                                              FontSize="12" />
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="3">
+                                    <Button x:Name="Speed05" Content="0.5×" Width="38" Height="26" FontSize="10" Click="OnSpeedPillClick" Tag="0.5" />
+                                    <Button x:Name="Speed075" Content="0.75×" Width="42" Height="26" FontSize="10" Click="OnSpeedPillClick" Tag="0.75" />
+                                    <Button x:Name="Speed10" Content="1.0×" Width="38" Height="26" FontSize="10" Click="OnSpeedPillClick" Tag="1.0" />
+                                    <Button x:Name="Speed125" Content="1.25×" Width="42" Height="26" FontSize="10" Click="OnSpeedPillClick" Tag="1.25" />
+                                    <Button x:Name="Speed15" Content="1.5×" Width="38" Height="26" FontSize="10" Click="OnSpeedPillClick" Tag="1.5" />
+                                    <Button x:Name="Speed20" Content="2.0×" Width="38" Height="26" FontSize="10" Click="OnSpeedPillClick" Tag="2.0" />
+                                </StackPanel>
                             </Grid>
 
                         </StackPanel>

@@ -35,6 +35,7 @@ public partial class MainWindow : Window
     private MainViewModel? _viewModel;
     private D3D11VideoHost? _videoHost;
     private string? _queuedOpenPath;
+    private TimeSpan _sessionResumePosition;
 
     // UI Auto-hide
     private DispatcherTimer? _autoHideTimer;
@@ -50,7 +51,16 @@ public partial class MainWindow : Window
     private const double SeekThumbHalf = 8.0; // half of 16px thumb
     private double _lastSeekNormalized;
     private TimeSpan _lastPosition;
-    private DispatcherTimer? _seekUpdateTimer;
+    private TimeSpan _lastDuration;
+
+    // Loading guard
+    private bool _isLoading;
+
+    // Keyboard repeat guard
+    private DateTime _lastSeekRepeat = DateTime.MinValue;
+
+    // Double-tap detection
+    private DateTime _lastTapTime = DateTime.MinValue;
 
     // Responsive breakpoints
     private const double NarrowBreakpoint = 600.0;
@@ -60,6 +70,13 @@ public partial class MainWindow : Window
     private bool _isPipMode;
     private PipWindow? _pipWindow;
     private IMediaPlayer? _pipPlayer;
+
+    // Loading spinner rotation
+    private DispatcherTimer? _spinnerTimer;
+    private double _spinnerAngle;
+
+    // Startup error guard
+    private bool _isDisposed;
 
     #region debug-log
     private static readonly string DebugLogFile = CreateLogFilePath();
@@ -157,31 +174,35 @@ public partial class MainWindow : Window
         WindowControlsPanel = this.FindControl<StackPanel>("WindowControlsPanel");
         BtnMinimize = this.FindControl<global::Avalonia.Controls.Button>("BtnMinimize");
         BtnMaximizeRestore = this.FindControl<global::Avalonia.Controls.Button>("BtnMaximizeRestore");
-        MaximizeRestoreIconPath = this.FindControl<global::Avalonia.Controls.Shapes.Path>("MaximizeRestoreIconPath");
+        MaximizeRestoreIconPath = this.FindControl<global::Material.Icons.Avalonia.MaterialIcon>("MaximizeRestoreIconPath");
         BtnClose = this.FindControl<global::Avalonia.Controls.Button>("BtnClose");
         ControlsBox = this.FindControl<Border>("ControlsBox");
+        FullscreenHeader = this.FindControl<Border>("FullscreenHeader");
+        BtnFullscreenExit = this.FindControl<global::Avalonia.Controls.Button>("BtnFullscreenExit");
+        BtnFullscreenMenu = this.FindControl<global::Avalonia.Controls.Button>("BtnFullscreenMenu");
+        ReplayOverlay = this.FindControl<Border>("ReplayOverlay");
         BtnPrevious = this.FindControl<global::Avalonia.Controls.Button>("BtnPrevious");
         BtnPlayPause = this.FindControl<global::Avalonia.Controls.Button>("BtnPlayPause");
         BtnNext = this.FindControl<global::Avalonia.Controls.Button>("BtnNext");
         BtnVolumeMenu = this.FindControl<global::Avalonia.Controls.Button>("BtnVolumeMenu");
         BtnSubtitlesMenu = this.FindControl<global::Avalonia.Controls.Button>("BtnSubtitlesMenu");
-        SubtitleIconPath = this.FindControl<global::Avalonia.Controls.Shapes.Path>("SubtitleIconPath");
+        SubtitleIconPath = this.FindControl<global::Material.Icons.Avalonia.MaterialIcon>("SubtitleIconPath");
         BtnAudioMenu = this.FindControl<global::Avalonia.Controls.Button>("BtnAudioMenu");
-        AudioIconPath = this.FindControl<global::Avalonia.Controls.Shapes.Path>("AudioIconPath");
+        AudioIconPath = this.FindControl<global::Material.Icons.Avalonia.MaterialIcon>("AudioIconPath");
         BtnVideoMenu = this.FindControl<global::Avalonia.Controls.Button>("BtnVideoMenu");
         BtnLoopPlaylist = this.FindControl<global::Avalonia.Controls.Primitives.ToggleButton>("BtnLoopPlaylist");
         BtnLoopFile = this.FindControl<global::Avalonia.Controls.Primitives.ToggleButton>("BtnLoopFile");
         BtnMuteToggle = this.FindControl<global::Avalonia.Controls.Primitives.ToggleButton>("BtnMuteToggle");
         BtnOptionsMenu = this.FindControl<global::Cine.Avalonia.Components.OptionsMenuButton>("BtnOptionsMenu");
         BtnFullscreen = this.FindControl<global::Avalonia.Controls.Primitives.ToggleButton>("BtnFullscreen");
-        FullscreenIconPath = this.FindControl<global::Avalonia.Controls.Shapes.Path>("FullscreenIconPath");
+        FullscreenIconPath = this.FindControl<global::Material.Icons.Avalonia.MaterialIcon>("FullscreenIconPath");
         SeekArea = this.FindControl<Grid>("SeekArea");
         ChapterPreviewPopover = this.FindControl<Border>("ChapterPreviewPopover");
         ChapterPreviewText = this.FindControl<TextBlock>("ChapterPreviewText");
         PositionTimeLabel = this.FindControl<TextBlock>("PositionTimeLabel");
         DurationTimeLabel = this.FindControl<TextBlock>("DurationTimeLabel");
         DropIndicatorOverlay = this.FindControl<Border>("DropIndicatorOverlay");
-        DropIndicatorIcon = this.FindControl<global::Avalonia.Controls.Shapes.Path>("DropIndicatorIcon");
+        DropIndicatorIcon = this.FindControl<global::Material.Icons.Avalonia.MaterialIcon>("DropIndicatorIcon");
         DropIndicatorText = this.FindControl<TextBlock>("DropIndicatorText");
     }
 
@@ -205,14 +226,78 @@ public partial class MainWindow : Window
             throw new InvalidOperationException("VideoHost control was not found in MainWindow.axaml.");
 
         _playerService = new PlayerService();
-        _playerService.Initialize();
+        try
+        {
+            _playerService.Initialize();
+        }
+        catch (Exception ex)
+        {
+            DebugLog($"Player initialization FAILED: {ex}");
+            _isDisposed = true;
+            Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                await ShowErrorDialog("Failed to initialize media player.", ex.Message);
+                Close();
+            });
+            return;
+        }
 
         var player = _playerService.Player;
         if (player == null)
+        {
+            _isDisposed = true;
+            Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                await ShowErrorDialog("Media player returned null.", "The application cannot continue.");
+                Close();
+            });
             return;
+        }
+
+        if (_isDisposed) return;
 
         _viewModel = new MainViewModel(player);
         DataContext = _viewModel;
+
+        // Session resume
+        _viewModel.SessionResumeRequested = (path, pos) =>
+        {
+            _queuedOpenPath = path;
+            _sessionResumePosition = pos;
+            ShowOsdNotification($"Resume {Path.GetFileName(path)} from {pos.Minutes:D2}:{pos.Seconds:D2}?", 5000);
+            // Auto-resume after 4 seconds
+            Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                await Task.Delay(4000);
+                if (!string.IsNullOrEmpty(_queuedOpenPath) && File.Exists(_queuedOpenPath))
+                {
+                    var p = _queuedOpenPath;
+                    var resumePos = _sessionResumePosition;
+                    _queuedOpenPath = null;
+                    _sessionResumePosition = TimeSpan.Zero;
+                    if (_viewModel != null)
+                    {
+                        _viewModel.OpenFile(p);
+                        _viewModel.ClearSession();
+                    }
+                    if (resumePos.TotalSeconds > 0)
+                    {
+                        EventHandler? handler = null;
+                        handler = (s, args) =>
+                        {
+                            _playerService?.Player?.Seek(resumePos);
+                            var player = _playerService?.Player;
+                            if (player != null) player.Opened -= handler;
+                        };
+                        var playerInstance = _playerService?.Player;
+                        if (playerInstance != null) playerInstance.Opened += handler;
+                    }
+                }
+            });
+        };
+        _viewModel.LoadSession();
+
+        _viewModel.Playlist.CollectionChanged += (_, _) => _viewModel?.SaveSession();
 
         // Wire file dialog callbacks
         _viewModel.RequestOpenFilesAsync = OpenFileDialogAsync;
@@ -226,7 +311,13 @@ public partial class MainWindow : Window
         player.ChapterListChanged += OnChapterListChanged;
         player.FullscreenChangedEvent += OnPlayerFullscreenChanged;
 
+        _playerService.Error += (_, error) =>
+        {
+            Dispatcher.UIThread.Post(() => ShowOsdNotification($"Error: {error}", 4000));
+        };
+
         _videoHost.ChildWindowCreated += OnVideoHostChildCreated;
+        _videoHost.PointerPressed += OnVideoPointerPressed;
         KeyDown += OnKeyDown;
 
         // Start page - show on initial launch, hide when media opens
@@ -234,6 +325,7 @@ public partial class MainWindow : Window
             _viewModel.PropertyChanged += OnViewModelPropertyChanged;
 
         InitializeAutoHide();
+        InitializeSessionSave();
         InitializeResponsiveLayout();
         InitializeFlyoutTracking();
 
@@ -247,134 +339,6 @@ public partial class MainWindow : Window
 
         ReportWindowState("MainWindow.InitializeComponent.Finish");
         DebugLog("InitializeComponent finish");
-    }
-
-    // ========================
-    //  WINDOW-LEVEL DRAG-AND-DROP
-    // ========================
-
-    private void OnWindowDragEnter(object? sender, global::Avalonia.Input.DragEventArgs e)
-    {
-        if (e.DataTransfer != null && e.DataTransfer.Contains(global::Avalonia.Input.DataFormat.File))
-        {
-            e.DragEffects = global::Avalonia.Input.DragDropEffects.Copy;
-            
-            var sp = this.FindControl<StartPage>("StartPage");
-            if (sp != null && sp.IsVisible)
-            {
-                var dt = sp.FindControl<Border>("DropTarget");
-                if (dt != null)
-                {
-                    dt.BorderBrush = new global::Avalonia.Media.SolidColorBrush(
-                        global::Avalonia.Media.Color.FromArgb(0xFF, 0x00, 0x78, 0xD7));
-                    dt.Background = new global::Avalonia.Media.SolidColorBrush(
-                        global::Avalonia.Media.Color.FromArgb(0x40, 0x00, 0x78, 0xD7));
-                }
-            }
-
-            UpdateDropIndicator(e, show: true);
-        }
-        else
-        {
-            e.DragEffects = global::Avalonia.Input.DragDropEffects.None;
-            UpdateDropIndicator(e, show: false);
-        }
-    }
-
-    private void OnWindowDragLeave(object? sender, RoutedEventArgs e)
-    {
-        ResetStartPageDragVisuals();
-        UpdateDropIndicator(null, show: false);
-    }
-
-    private void OnWindowDrop(object? sender, global::Avalonia.Input.DragEventArgs e)
-    {
-        ResetStartPageDragVisuals();
-        UpdateDropIndicator(null, show: false);
-
-        if (e.DataTransfer != null && e.DataTransfer.Contains(global::Avalonia.Input.DataFormat.File))
-        {
-            var files = e.DataTransfer.TryGetFiles();
-            if (files != null)
-            {
-                var paths = files.Select(f => f.Path.LocalPath).ToArray();
-                var videoFiles = StartPage.FilterVideoFiles(paths).ToList();
-            var subtitleFiles = paths.Where(f => f.EndsWith(".srt", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".ass", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".vtt", StringComparison.OrdinalIgnoreCase)).ToList();
-            
-            if (videoFiles.Any())
-            {
-                _viewModel?.OpenFiles(videoFiles.ToArray());
-            }
-            
-            if (subtitleFiles.Any() && _viewModel != null && !string.IsNullOrEmpty(_viewModel.FilePath))
-            {
-                foreach (var subFile in subtitleFiles)
-                {
-                    _playerService?.Player?.AddSubtitle(subFile);
-                }
-            }
-            }
-        }
-    }
-
-    private void ResetStartPageDragVisuals()
-    {
-        var sp = this.FindControl<StartPage>("StartPage");
-        if (sp == null) return;
-        var dt = sp.FindControl<Border>("DropTarget");
-        if (dt != null)
-        {
-            dt.BorderBrush = new global::Avalonia.Media.SolidColorBrush(
-                global::Avalonia.Media.Color.FromArgb(0x40, 0xFF, 0xFF, 0xFF));
-            dt.Background = new global::Avalonia.Media.SolidColorBrush(
-                global::Avalonia.Media.Color.FromArgb(0x20, 0xFF, 0xFF, 0xFF));
-        }
-    }
-
-    private bool _isDropIndicatorVisible = false;
-    private async void UpdateDropIndicator(global::Avalonia.Input.DragEventArgs? e, bool show)
-    {
-        if (DropIndicatorOverlay == null || DropIndicatorText == null || DropIndicatorIcon == null)
-            return;
-
-        if (show == _isDropIndicatorVisible) return;
-        _isDropIndicatorVisible = show;
-
-        if (show)
-        {
-            bool subtitleDrop = false;
-            try
-            {
-                var files = e?.DataTransfer?.TryGetFiles();
-                var first = files?.FirstOrDefault()?.Path.LocalPath;
-                if (!string.IsNullOrWhiteSpace(first))
-                {
-                    var ext = Path.GetExtension(first).ToLowerInvariant();
-                    subtitleDrop = ext is ".srt" or ".ass" or ".ssa" or ".vtt" or ".sub" or ".idx";
-                }
-            }
-            catch { }
-
-            if (subtitleDrop && !string.IsNullOrWhiteSpace(_viewModel?.FilePath))
-            {
-                DropIndicatorText.Text = "Add Subtitle Track";
-                TrySetIcon(DropIndicatorIcon, "SubtitlesIcon");
-            }
-            else
-            {
-                DropIndicatorText.Text = "Play";
-                TrySetIcon(DropIndicatorIcon, "PlayIcon");
-            }
-
-            DropIndicatorOverlay.IsVisible = true;
-            await FadeVisual(DropIndicatorOverlay, DropIndicatorOverlay.Opacity, 1, 200, true);
-        }
-        else
-        {
-            await FadeVisual(DropIndicatorOverlay, DropIndicatorOverlay.Opacity, 0, 200, false);
-            if (!_isDropIndicatorVisible)
-                DropIndicatorOverlay.IsVisible = false;
-        }
     }
 
     // ========================
@@ -538,388 +502,8 @@ public partial class MainWindow : Window
     private static void SetFont(TextBlock? l, double s) { if (l != null) l.FontSize = s; }
 
     // ========================
-    //  UI Auto-hide Behavior
-    //  (No PointerEnter/PointerLeave in this Avalonia version -
-    //   use bounds checking in PointerMoved instead)
-    // ========================
-
-    private void InitializeAutoHide()
-    {
-        _autoHideTimer = new DispatcherTimer
-        {
-            Interval = TimeSpan.FromSeconds(AutoHideDelaySeconds)
-        };
-        _autoHideTimer.Tick += OnAutoHideTimerTick;
-        PointerMoved += OnWindowPointerMoved;
-        SetUiControlsVisibility(true);
-        _autoHideTimer?.Start();
-
-        // Dedicated UI-thread timer for seek bar updates (independent of background event loop timing)
-        _seekUpdateTimer = new DispatcherTimer
-        {
-            Interval = TimeSpan.FromMilliseconds(100)
-        };
-        _seekUpdateTimer.Tick += OnSeekUpdateTick;
-        _seekUpdateTimer.Start();
-    }
-
-    private void OnAutoHideTimerTick(object? sender, EventArgs e)
-    {
-        _autoHideTimer?.Stop();
-        
-        // Only hide if we have media loaded AND mouse is not over controls
-        bool hasMedia = !string.IsNullOrEmpty(_viewModel?.FilePath);
-        var isInteractiveOverlayActive = _activeFlyouts > 0 || (DropIndicatorOverlay?.IsVisible ?? false);
-        if (!_isMouseOverControls && hasMedia && !isInteractiveOverlayActive)
-            HideUiControls();
-    }
-
-    private void OnWindowPointerMoved(object? sender, PointerEventArgs e)
-    {
-        var pos = e.GetCurrentPoint(this).Position;
-
-        // Check if mouse is over the controls overlay using bounds
-        _isMouseOverControls =
-            (HeaderBar != null && IsPositionOverElement(pos, HeaderBar)) ||
-            (ControlsBox != null && IsPositionOverElement(pos, ControlsBox));
-
-        if (Math.Abs(pos.X - _lastMousePosition.X) > 1 ||
-            Math.Abs(pos.Y - _lastMousePosition.Y) > 1)
-        {
-            _lastMousePosition = pos;
-            if (!_uiVisible)
-            {
-                if (pos.Y >= Math.Max(0, Bounds.Height - 90))
-                    ShowUiControls();
-                return;
-            }
-            else
-            {
-                _autoHideTimer?.Stop();
-                _autoHideTimer?.Start();
-            }
-        }
-    }
-
-    /// <summary>Checks if a position in visual coordinates is over a given visual element.</summary>
-    private bool IsPositionOverElement(global::Avalonia.Point pos, Visual element)
-    {
-        try
-        {
-            var elementOffset = element.TranslatePoint(new global::Avalonia.Point(0, 0), this);
-            if (elementOffset.HasValue)
-            {
-                var elementRect = new Rect(elementOffset.Value, new global::Avalonia.Size(element.Bounds.Width, element.Bounds.Height));
-                return elementRect.Contains(pos);
-            }
-        }
-        catch { }
-        return false;
-    }
-
-    private async void ShowUiControls()
-    {
-        if (_uiVisible) return;
-        if (HeaderBar == null && ControlsBox == null) return;
-        _uiVisible = true;
-        _autoHideTimer?.Stop();
-        // In fullscreen, only show controls at bottom — header stays hidden for edge-to-edge video
-        bool isFullscreen = WindowState == global::Avalonia.Controls.WindowState.FullScreen;
-        if (HeaderBar != null && !isFullscreen)
-        {
-            HeaderBar.IsVisible = true;
-            await FadeVisual(HeaderBar, 0, 1, 350, true);
-        }
-        if (ControlsBox != null && !string.IsNullOrEmpty(_viewModel?.FilePath))
-        {
-            ControlsBox.IsVisible = true;
-            await FadeVisual(ControlsBox, 0, 1, 350, true);
-        }
-        _autoHideTimer?.Start();
-    }
-
-    private async void HideUiControls()
-    {
-        bool hasMedia = !string.IsNullOrEmpty(_viewModel?.FilePath);
-        if (!_uiVisible || !hasMedia) return;
-        if (_activeFlyouts > 0 || (DropIndicatorOverlay?.IsVisible ?? false)) return;
-        
-        _uiVisible = false;
-        _autoHideTimer?.Stop();
-        if (HeaderBar != null)
-            await FadeVisual(HeaderBar, 1, 0, 300, false);
-        if (ControlsBox != null)
-            await FadeVisual(ControlsBox, 1, 0, 300, false);
-        // Fade complete — now safe to hide
-        if (!_uiVisible)
-        {
-            if (HeaderBar != null) HeaderBar.IsVisible = false;
-            if (ControlsBox != null) ControlsBox.IsVisible = false;
-        }
-    }
-
-    private CancellationTokenSource? _osdCts;
-
-    private async void ShowOsdNotification(string text, double durationMs = 2000)
-    {
-        if (OsdNotificationBorder == null || OsdNotificationText == null) return;
-
-        _osdCts?.Cancel();
-        _osdCts = new CancellationTokenSource();
-        var ct = _osdCts.Token;
-
-        OsdNotificationText.Text = text;
-        OsdNotificationBorder.IsVisible = true;
-        OsdNotificationBorder.Opacity = 0;
-
-        try
-        {
-            // Fade in
-            await FadeVisual(OsdNotificationBorder, 0, 1, 200, true);
-            if (ct.IsCancellationRequested) return;
-
-            // Hold
-            await Task.Delay((int)durationMs, ct);
-            if (ct.IsCancellationRequested) return;
-
-            // Fade out
-            await FadeVisual(OsdNotificationBorder, 1, 0, 300, false);
-            if (!ct.IsCancellationRequested)
-                OsdNotificationBorder.IsVisible = false;
-        }
-        catch (TaskCanceledException) { }
-    }
-
-    private async Task FadeVisual(Visual visual, double from, double to, double durationMs, bool easeOut)
-    {
-        var sw = System.Diagnostics.Stopwatch.StartNew();
-        visual.Opacity = from;
-        while (sw.Elapsed.TotalMilliseconds < durationMs)
-        {
-            var progress = Math.Min(sw.Elapsed.TotalMilliseconds / durationMs, 1.0);
-            double eased = easeOut
-                ? 1 - Math.Cos(progress * Math.PI / 2)
-                : Math.Sin(progress * Math.PI / 2);
-            visual.Opacity = from + (to - from) * eased;
-            await Task.Delay(16);
-        }
-        visual.Opacity = to;
-    }
-
-    private void SetUiControlsVisibility(bool visible)
-    {
-        _uiVisible = visible;
-        if (HeaderBar != null)
-        {
-            HeaderBar.IsVisible = visible;
-            HeaderBar.Opacity = visible ? 1 : 0;
-        }
-        if (ControlsBox != null)
-        {
-            ControlsBox.IsVisible = visible && !string.IsNullOrEmpty(_viewModel?.FilePath);
-            ControlsBox.Opacity = visible ? 1 : 0;
-        }
-    }
-
-    private void ToggleUiControls()
-    {
-        if (_uiVisible) HideUiControls(); else ShowUiControls();
-    }
-
-    private void InitializeFlyoutTracking()
-    {
-        TrackFlyout(BtnOpenMenu);
-        TrackFlyout(BtnPrimaryMenu);
-        TrackFlyout(BtnVolumeMenu);
-        TrackFlyout(BtnSubtitlesMenu);
-        TrackFlyout(BtnAudioMenu);
-        TrackFlyout(BtnVideoMenu);
-        TrackFlyout(BtnOptionsMenu);
-    }
-
-    private void TrackFlyout(global::Avalonia.Controls.Control? control)
-    {
-        if (control is null) return;
-        if (control is global::Avalonia.Controls.Button b && b.Flyout != null)
-        {
-            b.Flyout.Opened += (_, _) => _activeFlyouts++;
-            b.Flyout.Closed += (_, _) => _activeFlyouts = Math.Max(0, _activeFlyouts - 1);
-        }
-    }
-
-    private void OnSeekAreaSizeChanged(object? sender, SizeChangedEventArgs e)
-    {
-        UpdateSeekBar();
-        UpdateChapterMarkers();
-    }
-
-    private void OnSeekUpdateTick(object? sender, EventArgs e)
-    {
-        if (!_isSeeking)
-            UpdateSeekBar();
-    }
-
-    // ========================
-    //  Seek bar — code-behind positioning for reliability
-    // ========================
-
-    private void UpdateSeekBar()
-    {
-        if (SeekArea == null || SeekFill == null || SeekThumb == null ||
-            _viewModel == null || _viewModel.Duration.TotalSeconds <= 0)
-            return;
-
-        var w = SeekArea.Bounds.Width;
-        if (w <= 0) return;
-
-        var seekValue = _isSeeking
-            ? _lastSeekNormalized
-            : Math.Clamp(_lastPosition.TotalSeconds / _viewModel.Duration.TotalSeconds, 0.0, 1.0);
-
-        var fillWidth = seekValue * w;
-        SeekFill.Width = fillWidth;
-
-        var thumbLeft = seekValue * w - SeekThumbHalf;
-        SeekThumb.Margin = new Thickness(thumbLeft, 0, 0, 0);
-    }
-
-    private void UpdateChapterMarkers()
-    {
-        if (ChapterMarkersControl == null || SeekArea == null ||
-            _viewModel == null || _viewModel.Chapters.Count == 0)
-            return;
-
-        var w = SeekArea.Bounds.Width;
-        if (w <= 0) return;
-
-        var container = ChapterMarkersControl.ItemsPanelRoot as Canvas;
-        if (container == null) return;
-
-        for (int i = 0; i < container.Children.Count && i < _viewModel.Chapters.Count; i++)
-        {
-            var ch = _viewModel.Chapters[i];
-            var pos = _viewModel.Duration.TotalSeconds > 0
-                ? ch.Time / _viewModel.Duration.TotalSeconds
-                : 0.0;
-            Canvas.SetLeft(container.Children[i], pos * w);
-        }
-    }
-
-    private static string FormatTimeSpan(TimeSpan ts)
-    {
-        if (ts < TimeSpan.Zero)
-            return "-" + TimeSpan.FromTicks(-ts.Ticks).ToString("hh\\:mm\\:ss");
-        return ts.ToString("hh\\:mm\\:ss");
-    }
-
-    // ========================
-    //  Seek hover / wheel / drag parity
-    // ========================
-
-    private void OnSeekAreaPointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (_viewModel == null || SeekArea == null || _viewModel.Duration.TotalSeconds <= 0) return;
-
-        var p = e.GetPosition(SeekArea);
-        var trackWidth = Math.Max(1.0, SeekArea.Bounds.Width);
-        _lastSeekNormalized = Math.Clamp(p.X / trackWidth, 0, 1);
-
-        _isSeeking = true;
-        _viewModel.IsSeeking = true;
-        _viewModel.SeekTo(_lastSeekNormalized);
-        UpdateSeekBar();
-        e.Handled = true;
-    }
-
-    private void OnSeekAreaPointerReleased(object? sender, PointerReleasedEventArgs e)
-    {
-        if (!_isSeeking) return;
-        _isSeeking = false;
-        if (_viewModel != null)
-        {
-            _viewModel.IsSeeking = false;
-        }
-        UpdateSeekBar();
-        e.Handled = true;
-    }
-
-    private void OnSeekAreaPointerMoved(object? sender, PointerEventArgs e)
-    {
-        if (_viewModel == null || SeekArea == null) return;
-
-        var p = e.GetPosition(SeekArea);
-        var trackWidth = Math.Max(1.0, SeekArea.Bounds.Width);
-        var normalized = Math.Clamp(p.X / trackWidth, 0, 1);
-
-        if (_isSeeking)
-        {
-            // Drag-to-seek
-            _lastSeekNormalized = normalized;
-            _viewModel.SeekTo(normalized);
-            UpdateSeekBar();
-        }
-
-        // Chapter preview popover
-        if (_viewModel.Duration.TotalSeconds > 0 && _viewModel.Chapters.Count > 0 &&
-            ChapterPreviewPopover != null && ChapterPreviewText != null)
-        {
-            var seconds = normalized * _viewModel.Duration.TotalSeconds;
-            var chapter = _viewModel.Chapters
-                .Where(c => c.Time <= seconds)
-                .OrderByDescending(c => c.Time)
-                .FirstOrDefault();
-
-            if (chapter != null && Math.Abs(seconds - chapter.Time) < 3.0)
-            {
-                ChapterPreviewText.Text = $"{chapter.Title}  ({FormatChapterTime(seconds)})";
-                ChapterPreviewPopover.IsVisible = true;
-
-                ChapterPreviewPopover.Measure(new global::Avalonia.Size(double.PositiveInfinity, double.PositiveInfinity));
-                var popoverWidth = ChapterPreviewPopover.DesiredSize.Width;
-                var xPos = (normalized * trackWidth) - (popoverWidth / 2);
-                xPos = Math.Clamp(xPos, 0, Math.Max(0, SeekArea.Bounds.Width - popoverWidth));
-                ChapterPreviewPopover.Margin = new Thickness(xPos, -34, 0, 0);
-            }
-            else
-            {
-                ChapterPreviewPopover.IsVisible = false;
-            }
-        }
-    }
-
-    private void OnSeekAreaPointerExited(object? sender, PointerEventArgs e)
-    {
-        if (ChapterPreviewPopover != null)
-            ChapterPreviewPopover.IsVisible = false;
-    }
-
-    private void OnSeekAreaPointerWheelChanged(object? sender, PointerWheelEventArgs e)
-    {
-        if (_viewModel == null) return;
-
-        var now = DateTime.UtcNow;
-        if ((now - _lastSeekWheel).TotalMilliseconds < 90)
-            return;
-        _lastSeekWheel = now;
-
-        if (e.Delta.Y > 0)
-            _viewModel.SeekForward();
-        else if (e.Delta.Y < 0)
-            _viewModel.SeekBackward();
-        e.Handled = true;
-    }
-
-    private static string FormatChapterTime(double seconds)
-    {
-        var ts = TimeSpan.FromSeconds(seconds);
-        return ts.ToString(ts.TotalHours >= 1 ? "hh\\:mm\\:ss" : "mm\\:ss");
-    }
-
-    // ========================
     //  TRACK MENU BUILDERS
-    //  Programmatically build MenuFlyout items from typed TrackMenuItem collections.
-    //  This provides proper command routing and visual styling parity with Python's
-    //  track selection menus (active tracks shown bold with accent indicator).
+    //  Build regular Flyout with styled Button items (MenuFlyout+MenuItem doesn't render).
     // ========================
 
     private void OnSubtitlesMenuClick(object? sender, RoutedEventArgs e)
@@ -927,8 +511,8 @@ public partial class MainWindow : Window
         if (_viewModel == null || BtnSubtitlesMenu == null) return;
         var flyout = BuildTrackMenuFlyout(_viewModel.SubtitleTracks);
         TrackFlyout(flyout);
-        _activeFlyouts++; // Increment early for programmatic show
-        flyout.Closed += (s, args) => _activeFlyouts = Math.Max(0, _activeFlyouts - 1); // Decrement fallback if Opened doesn't fire
+        _activeFlyouts++;
+        flyout.Closed += (s, args) => _activeFlyouts = Math.Max(0, _activeFlyouts - 1);
         flyout.ShowAt(BtnSubtitlesMenu);
     }
 
@@ -952,58 +536,88 @@ public partial class MainWindow : Window
         flyout.ShowAt(BtnVideoMenu);
     }
 
-    /// <summary>
-    /// Builds a MenuFlyout from a collection of TrackMenuItems with proper
-    /// visual styling (bold for selected, dimmed for pseudo-entries).
-    /// </summary>
-    private global::Avalonia.Controls.MenuFlyout BuildTrackMenuFlyout(System.Collections.ObjectModel.ObservableCollection<TrackMenuItem> tracks)
+    private global::Avalonia.Controls.Flyout BuildTrackMenuFlyout(System.Collections.ObjectModel.ObservableCollection<TrackMenuItem> tracks)
     {
-        var flyout = new global::Avalonia.Controls.MenuFlyout();
+        var stackPanel = new global::Avalonia.Controls.StackPanel();
 
         foreach (var track in tracks)
         {
-            var stack = new global::Avalonia.Controls.StackPanel
+            var dot = new global::Avalonia.Controls.Border
             {
-                Orientation = global::Avalonia.Layout.Orientation.Horizontal
+                Width = 6, Height = 6,
+                CornerRadius = new global::Avalonia.CornerRadius(3),
+                Background = track.IsSelected && !track.IsPseudoEntry
+                    ? new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.FromArgb(0xFF, 0x6C, 0xB4, 0xFF))
+                    : new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.FromArgb(0x30, 0xFF, 0xFF, 0xFF)),
+                VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center,
+                Margin = new global::Avalonia.Thickness(0, 0, 8, 0)
             };
-            stack.Children.Add(new global::Avalonia.Controls.TextBlock
+
+            var text = new global::Avalonia.Controls.TextBlock
             {
                 Text = track.DisplayName,
                 FontWeight = track.IsSelected ? global::Avalonia.Media.FontWeight.SemiBold : global::Avalonia.Media.FontWeight.Normal,
-                FontSize = 12
-            });
+                FontSize = 12,
+                Foreground = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.FromArgb(0xFF, 0xE5, 0xE5, 0xE5))
+            };
 
-            if (track.IsSelected && !track.IsPseudoEntry)
+            var grid = new global::Avalonia.Controls.Grid
             {
-                stack.Children.Add(new global::Avalonia.Controls.Border
+                ColumnDefinitions = new global::Avalonia.Controls.ColumnDefinitions
                 {
-                    Width = 6, Height = 6,
-                    CornerRadius = new global::Avalonia.CornerRadius(3),
-                    Background = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.FromArgb(0xFF, 0x6C, 0xB4, 0xFF)),
-                    HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Right,
-                    VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center,
-                    Margin = new global::Avalonia.Thickness(4, 0, 0, 0)
-                });
-            }
+                    new global::Avalonia.Controls.ColumnDefinition(global::Avalonia.Controls.GridLength.Auto),
+                    new global::Avalonia.Controls.ColumnDefinition(global::Avalonia.Controls.GridLength.Star)
+                }
+            };
+            grid.Children.Add(dot);
+            grid.Children.Add(text);
+            global::Avalonia.Controls.Grid.SetColumn(text, 1);
 
-            var menuItem = new global::Avalonia.Controls.MenuItem
+            var button = new global::Avalonia.Controls.Button
             {
-                Header = stack,
+                Content = grid,
+                Background = global::Avalonia.Media.Brushes.Transparent,
+                BorderThickness = new global::Avalonia.Thickness(0),
+                Padding = new global::Avalonia.Thickness(10, 7),
+                HorizontalContentAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch,
+                Cursor = new global::Avalonia.Input.Cursor(global::Avalonia.Input.StandardCursorType.Arrow),
                 Opacity = track.DisplayOpacity,
                 Command = track.SelectCommand
             };
-            menuItem.Classes.Add("track-item");
-            if (track.IsPseudoEntry)
+
+            button.PointerEntered += (_, _) =>
             {
-                menuItem.Classes.Add("track-pseudo");
-            }
-            flyout.Items.Add(menuItem);
+                button.Background = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF));
+            };
+            button.PointerExited += (_, _) =>
+            {
+                button.Background = global::Avalonia.Media.Brushes.Transparent;
+            };
+
+            stackPanel.Children.Add(button);
         }
+
+        var border = new global::Avalonia.Controls.Border
+        {
+            Background = (global::Avalonia.Media.IBrush?)global::Avalonia.Application.Current?.FindResource("PopoverBackground"),
+            BorderBrush = (global::Avalonia.Media.IBrush?)global::Avalonia.Application.Current?.FindResource("PopoverBorder"),
+            BorderThickness = new global::Avalonia.Thickness(1),
+            CornerRadius = new global::Avalonia.CornerRadius(8),
+            Padding = new global::Avalonia.Thickness(4),
+            MinWidth = 180,
+            Child = stackPanel
+        };
+
+        var flyout = new global::Avalonia.Controls.Flyout
+        {
+            Content = border,
+            Placement = global::Avalonia.Controls.PlacementMode.Top
+        };
 
         return flyout;
     }
 
-    private void TrackFlyout(global::Avalonia.Controls.MenuFlyout flyout)
+    private void TrackFlyout(global::Avalonia.Controls.Flyout flyout)
     {
         flyout.Opened += (_, _) => _activeFlyouts++;
         flyout.Closed += (_, _) => _activeFlyouts = System.Math.Max(0, _activeFlyouts - 1);
@@ -1042,6 +656,36 @@ public partial class MainWindow : Window
     private void OnMinimizeClick(object? sender, RoutedEventArgs e) => WindowState = global::Avalonia.Controls.WindowState.Minimized;
     private void OnMaximizeRestoreClick(object? sender, RoutedEventArgs e) => WindowState = WindowState == global::Avalonia.Controls.WindowState.Maximized ? global::Avalonia.Controls.WindowState.Normal : global::Avalonia.Controls.WindowState.Maximized;
     private void OnCloseClick(object? sender, RoutedEventArgs e) => Close();
+    private void OnOsdNotificationClick(object? sender, PointerPressedEventArgs e)
+    {
+        if (!string.IsNullOrEmpty(_queuedOpenPath) && File.Exists(_queuedOpenPath))
+        {
+            var path = _queuedOpenPath;
+            var pos = _sessionResumePosition;
+            _queuedOpenPath = null;
+            _sessionResumePosition = TimeSpan.Zero;
+            _viewModel?.OpenFile(path);
+            _viewModel?.ClearSession();
+            if (pos.TotalSeconds > 0)
+            {
+                // Seek after media opens
+                EventHandler? handler = null;
+                handler = (s, args) =>
+                {
+                    var player = _playerService?.Player;
+                    if (player != null)
+                    {
+                        player.Seek(pos);
+                        player.Play();
+                    }
+                    if (player != null)
+                        player.Opened -= handler;
+                };
+                var p = _playerService?.Player;
+                if (p != null) p.Opened += handler;
+            }
+        }
+    }
     private void OnNewWindowClick(object? sender, RoutedEventArgs e) => new MainWindow().Show();
     private void OnPreferencesClick(object? sender, RoutedEventArgs e)
     {
@@ -1059,7 +703,7 @@ public partial class MainWindow : Window
         dlg.Show(this);
     }
 
-    private void OnSeekBack(object? sender, RoutedEventArgs e) => _viewModel?.SeekBackward();
+    private void OnSeekBackward(object? sender, RoutedEventArgs e) => _viewModel?.SeekBackward();
     private void OnSeekForward(object? sender, RoutedEventArgs e) => _viewModel?.SeekForward();
     private void OnToggleMute(object? sender, RoutedEventArgs e) => _viewModel?.ToggleMute();
     private void OnVolumeSliderPointerPressed(object? sender, PointerPressedEventArgs e) => e.Handled = true;
@@ -1068,7 +712,7 @@ public partial class MainWindow : Window
     {
         if (_isPipMode)
         {
-            // Close PIP
+            // Close PIP — Closed event handler will resume main player
             _pipWindow?.Close();
             _pipWindow = null;
             _pipPlayer = null;
@@ -1093,12 +737,29 @@ public partial class MainWindow : Window
                     DataContext = _viewModel
                 };
 
+                // Hide main video surface (shows black), PIP plays the video
+                _playerService.Player?.Pause();
+                if (VideoHost != null) VideoHost.IsVideoSurfaceVisible = false;
+
+                // Wire PIP sync on seeks
+                if (_viewModel != null)
+                {
+                    _viewModel.NotifyPipSync = () =>
+                    {
+                        if (_pipWindow is PipWindow pw)
+                            pw.SyncFromMain();
+                    };
+                }
+
                 _pipWindow.Closed += (s, args) =>
                 {
                     _pipWindow = null;
                     _pipPlayer = null;
                     _isPipMode = false;
                     if (BtnPip != null) BtnPip.IsChecked = false;
+                    if (_viewModel != null) _viewModel.NotifyPipSync = null;
+                    if (VideoHost != null) VideoHost.IsVideoSurfaceVisible = true;
+                    _playerService?.Player?.Play();
                 };
 
                 _pipWindow.Show(this);
@@ -1114,6 +775,11 @@ public partial class MainWindow : Window
                 ShowOsdNotification($"PIP failed: {ex.Message}");
             }
         }
+    }
+    private void OnToggleAlwaysOnTop(object? sender, RoutedEventArgs e)
+    {
+        Topmost = !Topmost;
+        ShowOsdNotification(Topmost ? "Always on Top: On" : "Always on Top: Off");
     }
     private void OnFullscreenCloseClick(object? sender, RoutedEventArgs e) => Close();
     private void OnHeaderPointerPressed(object? sender, PointerPressedEventArgs e)
@@ -1208,8 +874,7 @@ public partial class MainWindow : Window
         if (_playerService?.Player == null || FullscreenIconPath == null || BtnFullscreen == null) return;
         if (_playerService.Player.IsFullscreen)
         {
-            global::Avalonia.Application.Current!.TryGetResource("FullscreenExitIcon", global::Avalonia.Styling.ThemeVariant.Default, out var exitIcon);
-            FullscreenIconPath.Data = (global::Avalonia.Media.Geometry)exitIcon!;
+            TrySetIcon(FullscreenIconPath, "FullscreenExitIcon");
             global::Avalonia.Controls.ToolTip.SetTip(BtnFullscreen, "Exit Fullscreen (F)");
             if (HeaderBar != null) { HeaderBar.IsVisible = false; HeaderBar.IsHitTestVisible = false; }
             if (BtnFullscreenClose != null) BtnFullscreenClose.IsVisible = false;
@@ -1218,11 +883,11 @@ public partial class MainWindow : Window
             if (BtnPrimaryMenu != null) BtnPrimaryMenu.IsVisible = false;
             if (BtnPip != null) BtnPip.IsVisible = false;
             if (BtnOpenMenu != null) BtnOpenMenu.IsVisible = false;
+            if (FullscreenHeader != null) { FullscreenHeader.IsVisible = true; FullscreenHeader.Opacity = 1; }
         }
         else
         {
-            global::Avalonia.Application.Current!.TryGetResource("FullscreenEnterIcon", global::Avalonia.Styling.ThemeVariant.Default, out var enterIcon);
-            FullscreenIconPath.Data = (global::Avalonia.Media.Geometry)enterIcon!;
+            TrySetIcon(FullscreenIconPath, "FullscreenEnterIcon");
             global::Avalonia.Controls.ToolTip.SetTip(BtnFullscreen, "Fullscreen (F)");
             if (HeaderBar != null) { HeaderBar.IsVisible = true; HeaderBar.IsHitTestVisible = true; }
             if (BtnFullscreenClose != null) BtnFullscreenClose.IsVisible = false;
@@ -1231,6 +896,7 @@ public partial class MainWindow : Window
             if (BtnPrimaryMenu != null) BtnPrimaryMenu.IsVisible = true;
             if (BtnPip != null) BtnPip.IsVisible = Bounds.Width >= MediumBreakpoint;
             if (BtnOpenMenu != null) BtnOpenMenu.IsVisible = !string.IsNullOrEmpty(_viewModel?.FilePath);
+            if (FullscreenHeader != null) FullscreenHeader.IsVisible = false;
         }
         UpdateMaximizeIcon();
     }
@@ -1253,36 +919,61 @@ public partial class MainWindow : Window
     // ========================
     //  Event handlers
     // ========================
-    private void OnMediaOpened(object? sender, EventArgs e) 
+    private async void OnMediaOpened(object? sender, EventArgs e) 
     {
-        _viewModel?.RefreshState();
-        #region debug-point VT-A
-        App.DebugReport("VT", "MainWindow.OnMediaOpened", "Opened event received.", new
+        await Dispatcher.UIThread.InvokeAsync(() =>
         {
-            windowState = WindowState.ToString(),
-            startPageVisible = StartPage?.IsVisible,
-            videoSurfaceVisible = VideoHost?.IsVideoSurfaceVisible,
-            videoHostBounds = VideoHost?.Bounds.ToString(),
-            renderScaling = RenderScaling
-        }, runId: "pre-fix");
-        #endregion
-        Dispatcher.UIThread.Post(() =>
+            #region debug-point VT-A
+            App.DebugReport("VT", "MainWindow.OnMediaOpened", "Opened event received.", new
+            {
+                windowState = WindowState.ToString(),
+                startPageVisible = StartPage?.IsVisible,
+                videoSurfaceVisible = VideoHost?.IsVideoSurfaceVisible,
+                videoHostBounds = VideoHost?.Bounds.ToString(),
+                renderScaling = RenderScaling
+            }, runId: "pre-fix");
+            #endregion
+            _viewModel?.RefreshState();
+            _isLoading = false;
+            StopLoadingSpinner();
+        });
+
+        // Crossfade: StartPage out, VideoHost in
+        if (StartPage != null)
         {
-            if (LoadingSpinner != null) LoadingSpinner.IsVisible = false;
-            if (StartPage != null) StartPage.IsVisible = false;
+            await FadeVisual(StartPage, 1, 0, 200, true);
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                StartPage.IsVisible = false;
+                StartPage.Opacity = 1;
+            });
+        }
+
+        if (VideoHost != null)
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                VideoHost.IsVideoSurfaceVisible = true;
+                VideoHost.Opacity = 0;
+            });
+            await FadeVisual(VideoHost, 0, 1, 300, false);
+        }
+
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
             if (ControlsBox != null) ControlsBox.IsVisible = true;
-            if (VideoHost != null) VideoHost.IsVideoSurfaceVisible = true;
             if (BtnOpenMenu != null) BtnOpenMenu.IsVisible = true;
-            // Set initial time labels immediately
             if (_viewModel != null)
             {
-                var d = _viewModel.Duration;
+                _lastDuration = _viewModel.Duration;
+                var d = _lastDuration;
                 if (d.TotalSeconds > 0)
                 {
                     if (DurationTimeLabel != null) DurationTimeLabel.Text = FormatTimeSpan(d);
                     if (PositionTimeLabel != null) PositionTimeLabel.Text = FormatTimeSpan(_viewModel.Position);
                 }
             }
+            UpdatePlayPauseIcon();
             _autoHideTimer?.Stop();
             _autoHideTimer?.Start();
         });
@@ -1305,9 +996,7 @@ public partial class MainWindow : Window
         {
             if (PlayPauseIconPath != null)
             {
-                global::Avalonia.Application.Current!.TryGetResource(e.IsPaused ? "PlayIcon" : "PauseIcon", global::Avalonia.Styling.ThemeVariant.Default, out var icon);
-                if (icon is global::Avalonia.Media.Geometry geo)
-                    PlayPauseIconPath.Data = geo;
+                PlayPauseIconPath.Kind = e.IsPaused ? global::Material.Icons.MaterialIconKind.Play : global::Material.Icons.MaterialIconKind.Pause;
             }
 
             if (e.IsPaused)
@@ -1347,25 +1036,36 @@ public partial class MainWindow : Window
             _playerService?.Player?.Seek(TimeSpan.Zero);
             _playerService?.Player?.Pause();
             ShowUiControls();
+            if (ReplayOverlay != null) ReplayOverlay.IsVisible = true;
         });
+    }
+
+    private void OnReplayClick(object? sender, RoutedEventArgs e)
+    {
+        if (ReplayOverlay != null) ReplayOverlay.IsVisible = false;
+        _playerService?.Player?.Seek(TimeSpan.Zero);
+        _playerService?.Player?.Play();
     }
 
     private void OnPositionChanged(object? sender, PositionChangedEventArgs e)
     {
-        // Save last position for seek bar updates (read by the UI-thread timer)
         _lastPosition = e.Position;
+        _lastDuration = e.Duration;
 
         Dispatcher.UIThread.Post(() =>
         {
-            var d = _viewModel?.Duration ?? TimeSpan.Zero;
-            if (d.TotalSeconds > 0)
-            {
-                var chars = d.TotalSeconds >= 36000 ? 8 :
-                            d.TotalSeconds >= 3600 ? 7 :
-                            d.TotalSeconds >= 600 ? 6 : 5;
-                PositionTimeLabel.MinWidth = chars * 8;
-            }
+            if (_isSeeking) return;
+            UpdateSeekBar();
+            UpdateTimeLabels();
         });
+    }
+
+    private void UpdateTimeLabels()
+    {
+        if (PositionTimeLabel != null)
+            PositionTimeLabel.Text = FormatTimeSpan(_lastPosition);
+        if (DurationTimeLabel != null)
+            DurationTimeLabel.Text = FormatTimeSpan(_lastDuration);
     }
     private void OnChapterListChanged(object? sender, ChapterListChangedEventArgs e) => _viewModel?.RefreshState();
 
@@ -1375,14 +1075,17 @@ public partial class MainWindow : Window
         {
             if (!string.IsNullOrEmpty(_viewModel?.FilePath))
             {
+                if (_isLoading) return;
+                _isLoading = true;
                 // Show loading spinner while media opens
-                if (LoadingSpinner != null) LoadingSpinner.IsVisible = true;
+                StartLoadingSpinner();
                 // Media loaded: hide StartPage, show controls and Open button (matching Python)
                 if (StartPage?.IsVisible == true) StartPage.IsVisible = false;
                 if (ControlsBox != null) ControlsBox.IsVisible = true;
                 if (BtnOpenMenu != null) BtnOpenMenu.IsVisible = true;
                 if (TitleText != null) TitleText.Text = _viewModel.Title;
-                
+                Title = $"Cine — {_viewModel.Title}";
+
                 // Restart auto-hide timer now that media is playing
                 _autoHideTimer?.Stop();
                 _autoHideTimer?.Start();
@@ -1400,16 +1103,16 @@ public partial class MainWindow : Window
                 ShowUiControls();
             }
         }
+        else if (e.PropertyName == nameof(MainViewModel.IsPlaying) ||
+                 e.PropertyName == nameof(MainViewModel.IsPaused))
+        {
+            UpdatePlayPauseIcon();
+        }
         else if (e.PropertyName == nameof(MainViewModel.IsSubtitleEnabled))
         {
             RefreshSubtitleIcon();
         }
         else if (e.PropertyName == nameof(MainViewModel.IsAudioEnabled))
-        {
-            RefreshAudioIcon();
-        }
-        else if (e.PropertyName == nameof(MainViewModel.IsMuted) ||
-                 e.PropertyName == nameof(MainViewModel.VolumeValue))
         {
             RefreshVolumeIcon();
             if (_viewModel != null)
@@ -1423,7 +1126,7 @@ public partial class MainWindow : Window
         else if (e.PropertyName == nameof(MainViewModel.SpeedValue))
         {
             if (_viewModel != null)
-                ShowOsdNotification($"Speed: {_viewModel.SpeedValue:F1}x");
+                ShowOsdNotification($"Speed: {_viewModel.SpeedValue:F1}x", 3000);
         }
         else if (e.PropertyName == nameof(MainViewModel.SeekValue))
         {
@@ -1439,7 +1142,7 @@ public partial class MainWindow : Window
     private void RefreshVolumeIcon()
     {
         if (_viewModel == null) return;
-        bool isMuted = _viewModel.IsMuted || _viewModel.VolumeValue == 0;
+        bool isMuted = _viewModel.IsMuted;
         if (VolumeArcsPath != null)
             VolumeArcsPath.IsVisible = !isMuted;
         if (VolumeMuteCrossPath != null)
@@ -1449,127 +1152,43 @@ public partial class MainWindow : Window
     private void RefreshSubtitleIcon()
     {
         if (SubtitleIconPath == null || _viewModel == null) return;
-        TrySetIcon(SubtitleIconPath, _viewModel.IsSubtitleEnabled ? "SubtitlesIcon" : "SubtitlesOffIcon");
+        SubtitleIconPath.Kind = _viewModel.IsSubtitleEnabled ? global::Material.Icons.MaterialIconKind.Subtitles : global::Material.Icons.MaterialIconKind.ClosedCaptionOutline;
     }
 
     private void RefreshAudioIcon()
     {
         if (AudioIconPath == null || _viewModel == null) return;
-        TrySetIcon(AudioIconPath, _viewModel.IsAudioEnabled ? "AudioIcon" : "AudioOffIcon");
+        AudioIconPath.Kind = _viewModel.IsAudioEnabled ? global::Material.Icons.MaterialIconKind.Music : global::Material.Icons.MaterialIconKind.MusicOff;
     }
 
-    private static void TrySetIcon(global::Avalonia.Controls.Shapes.Path path, string resourceKey)
+    private void UpdatePlayPauseIcon()
     {
-        global::Avalonia.Application.Current!.TryGetResource(resourceKey, global::Avalonia.Styling.ThemeVariant.Default, out var icon);
-        if (icon is global::Avalonia.Media.Geometry geo)
-            path.Data = geo;
+        if (PlayPauseIconPath == null || _viewModel == null) return;
+        PlayPauseIconPath.Kind = _viewModel.IsPlaying ? global::Material.Icons.MaterialIconKind.Pause : global::Material.Icons.MaterialIconKind.Play;
     }
 
-    // ========================
-    //  Keyboard shortcuts
-    // ========================
-    private void OnKeyDown(object? sender, AvaloniaKeyEventArgs e)
+    private static void TrySetIcon(global::Material.Icons.Avalonia.MaterialIcon icon, string resourceKey)
     {
-        var key = e.Key;
-        var shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
-        var ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
-
-        void Handle(Action action) { action(); e.Handled = true; }
-
-        // Playback
-        if (key == Key.Space || key == Key.K || key == Key.P || key == Key.MediaPlayPause) 
-            Handle(() => _viewModel?.PlayPause());
-        else if (key == Key.MediaStop) 
-            Handle(() => _viewModel?.Stop());
-
-        // Fullscreen
-        else if (key == Key.Escape) 
-            Handle(() => { if (_playerService?.Player?.IsFullscreen == true) _viewModel?.ToggleFullscreen(); });
-        else if (key == Key.F || key == Key.F11) 
-            Handle(() => _viewModel?.ToggleFullscreen());
-
-        // Volume / Audio
-        else if (key == Key.M || key == Key.VolumeMute) 
-            Handle(() => _viewModel?.ToggleMute());
-        else if (key == Key.Up || key == Key.VolumeUp) 
-            Handle(() => _viewModel?.IncreaseVolume());
-        else if (key == Key.Down || key == Key.VolumeDown) 
-            Handle(() => _viewModel?.DecreaseVolume());
-        else if (ctrl && (key == Key.OemMinus || key == Key.Subtract)) 
-            Handle(() => { _playerService?.Player?.DecreaseAudioDelay(); });
-        else if (ctrl && (key == Key.OemPlus || key == Key.Add)) 
-            Handle(() => { _playerService?.Player?.IncreaseAudioDelay(); });
-
-        // Navigation
-        else if (key == Key.Left) 
-            Handle(() => { if (ctrl) _viewModel?.PreviousChapter(); else if (shift) _viewModel?.SeekLargeBackward(); else _viewModel?.SeekBackward(); });
-        else if (key == Key.Right) 
-            Handle(() => { if (ctrl) _viewModel?.NextChapter(); else if (shift) _viewModel?.SeekLargeForward(); else _viewModel?.SeekForward(); });
-        else if (key == Key.J) 
-            Handle(() => _playerService?.Player?.SeekBackward(10));
-        else if (key == Key.L && !shift && !ctrl) 
-            Handle(() => _playerService?.Player?.SeekForward(10));
-        else if (ctrl && key == Key.OemOpenBrackets) 
-            Handle(() => _playerService?.Player?.PreviousFrame());
-        else if (ctrl && key == Key.OemCloseBrackets) 
-            Handle(() => _playerService?.Player?.NextFrame());
-        else if (key == Key.MediaNextTrack)
-            Handle(() => _viewModel?.NextChapter());
-        else if (key == Key.MediaPreviousTrack)
-            Handle(() => _viewModel?.PreviousChapter());
-
-        // Subtitles
-        else if (key == Key.C) 
-            Handle(() => _playerService?.Player?.CycleSubtitleTrack());
-        else if (key == Key.OemComma) 
-            Handle(() => _playerService?.Player?.DecreaseSubtitleDelay());
-        else if (key == Key.OemPeriod) 
-            Handle(() => _playerService?.Player?.IncreaseSubtitleDelay());
-        else if (key == Key.PageUp) 
-            Handle(() => _playerService?.Player?.SetSubtitlePosition((_playerService?.Player?.SubtitlePosition ?? 50) - 1));
-        else if (key == Key.PageDown) 
-            Handle(() => _playerService?.Player?.SetSubtitlePosition((_playerService?.Player?.SubtitlePosition ?? 50) + 1));
-
-        // Video / Display
-        else if ((key == Key.OemPlus || key == Key.Add) && !ctrl) 
-            Handle(() => { if (_playerService?.Player != null) _playerService.Player.Zoom += 0.05; });
-        else if ((key == Key.OemMinus || key == Key.Subtract) && !ctrl) 
-            Handle(() => { if (_playerService?.Player != null) _playerService.Player.Zoom -= 0.05; });
-        else if (key == Key.D1) 
-            Handle(() => _playerService?.Player?.DecreaseContrast());
-        else if (key == Key.D2) 
-            Handle(() => _playerService?.Player?.IncreaseContrast());
-        else if (key == Key.D3) 
-            Handle(() => _playerService?.Player?.DecreaseBrightness());
-        else if (key == Key.D4) 
-            Handle(() => _playerService?.Player?.IncreaseBrightness());
-        else if (key == Key.D5) 
-            Handle(() => _playerService?.Player?.DecreaseGamma());
-        else if (key == Key.D6) 
-            Handle(() => _playerService?.Player?.IncreaseGamma());
-        else if (key == Key.D7) 
-            Handle(() => _playerService?.Player?.DecreaseSaturation());
-        else if (key == Key.D8) 
-            Handle(() => _playerService?.Player?.IncreaseSaturation());
-        else if (key == Key.OemOpenBrackets && !ctrl) 
-            Handle(() => _playerService?.Player?.DecreaseSpeed());
-        else if (key == Key.OemCloseBrackets && !ctrl) 
-            Handle(() => _playerService?.Player?.IncreaseSpeed());
-        else if (key == Key.Back) 
-            Handle(() => _playerService?.Player?.ResetSpeed());
-
-        // Miscellaneous
-        else if (key == Key.S) 
-            Handle(() => { if (shift) _playerService?.Player?.ScreenshotWithoutSubtitles(); else _playerService?.Player?.ScreenshotWithSubtitles(); });
-        else if (key == Key.I) 
-            Handle(() => { /* Stats not implemented in MF player */ });
-        else if (key == Key.L && shift) 
-            Handle(() => _viewModel?.ToggleLoopFile());
+        icon.Kind = resourceKey switch
+        {
+            "FullscreenEnterIcon" => global::Material.Icons.MaterialIconKind.Fullscreen,
+            "FullscreenExitIcon" => global::Material.Icons.MaterialIconKind.FullscreenExit,
+            "MaxRestoreIcon" => global::Material.Icons.MaterialIconKind.WindowMaximize,
+            "MaximizeIcon" => global::Material.Icons.MaterialIconKind.WindowMaximize,
+            "PlayIcon" => global::Material.Icons.MaterialIconKind.Play,
+            "PauseIcon" => global::Material.Icons.MaterialIconKind.Pause,
+            "SubtitlesIcon" => global::Material.Icons.MaterialIconKind.Subtitles,
+            "SubtitlesOffIcon" => global::Material.Icons.MaterialIconKind.ClosedCaptionOutline,
+            "AudioIcon" => global::Material.Icons.MaterialIconKind.Music,
+            "AudioOffIcon" => global::Material.Icons.MaterialIconKind.MusicOff,
+            _ => icon.Kind
+        };
     }
 
     protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
+        if (_isDisposed) return;
         DebugLog("OnOpened enter");
         ReportWindowState("MainWindow.OnOpened.Enter");
 
@@ -1639,6 +1258,9 @@ public partial class MainWindow : Window
     {
         _autoHideTimer?.Stop();
         _autoHideTimer = null;
+        _sessionSaveTimer?.Stop();
+        _sessionSaveTimer = null;
+        _viewModel?.SaveSession();
         _playerService?.Dispose();
         base.OnClosed(e);
     }

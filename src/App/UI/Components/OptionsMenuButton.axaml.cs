@@ -25,7 +25,7 @@ public partial class OptionsMenuButton : global::Avalonia.Controls.UserControl
         var current = ViewModel.AspectRatioValue;
         for (int i = 0; i < AspectRatioCombo.Items.Count; i++)
         {
-            if (AspectRatioCombo.ContainerFromIndex(i) is ComboBoxItem item &&
+            if (AspectRatioCombo.Items[i] is ComboBoxItem item &&
                 item.Tag is string tag && double.TryParse(tag, out var ratio) &&
                 Math.Abs(ratio - current) < 0.001)
             {
@@ -54,6 +54,10 @@ public partial class OptionsMenuButton : global::Avalonia.Controls.UserControl
     private void OnResetSaturationClick(object? sender, RoutedEventArgs e) => ViewModel?.ResetSaturation();
     private void OnResetHueClick(object? sender, RoutedEventArgs e) => ViewModel?.ResetHue();
     private void OnResetSubtitleDelayClick(object? sender, RoutedEventArgs e) => ViewModel?.ResetSubtitleDelay();
+    private void OnResetSubSizeClick(object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel != null) ViewModel.SubtitleFontSize = 24;
+    }
     private void OnResetAudioDelayClick(object? sender, RoutedEventArgs e) => ViewModel?.ResetAudioDelay();
     private void OnResetSpeedClick(object? sender, RoutedEventArgs e) => ViewModel?.ResetSpeed();
     private void OnScreenshotClick(object? sender, RoutedEventArgs e) => ViewModel?.Screenshot();
@@ -82,4 +86,17 @@ public partial class OptionsMenuButton : global::Avalonia.Controls.UserControl
 
     // --- Zoom ---
     private void OnZoomResetClick(object? sender, RoutedEventArgs e) => ViewModel?.ResetZoom();
+
+    // --- Speed Pills ---
+    private void OnSpeedPillClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is global::Avalonia.Controls.Button btn && btn.Tag is string tag && double.TryParse(tag, out var speed))
+            ViewModel?.SetSpeed(speed);
+    }
+
+    public void CloseFlyout()
+    {
+        if (BtnOptionsMenu?.Flyout is Flyout fly && fly.IsOpen)
+            fly.Hide();
+    }
 }

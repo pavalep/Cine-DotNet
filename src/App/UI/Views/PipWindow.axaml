@@ -1,32 +1,33 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:cc="using:Cine.Avalonia.Controls"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         x:Class="Cine.Avalonia.Views.PipWindow"
         Opened="OnOpened"
         Title="Cine — PIP"
         Width="400" Height="300"
-        MinWidth="200" MinHeight="150"
+        MinWidth="240" MinHeight="160"
+        MaxWidth="1920" MaxHeight="1080"
         Topmost="True"
         ShowInTaskbar="False"
         WindowStartupLocation="Manual"
         Background="#0C0C0E"
-        ExtendClientAreaToDecorationsHint="True"
-        WindowDecorations="BorderOnly">
+        ExtendClientAreaToDecorationsHint="True">
 
-    <Grid RowDefinitions="Auto,*,Auto">
+    <Grid RowDefinitions="Auto,*,Auto,Auto">
         <!-- PIP Header -->
-        <Grid Grid.Row="0" Height="32" Background="#CC000000" ColumnDefinitions="*,Auto">
+        <Grid Grid.Row="0" Height="32" Background="#CC000000" ColumnDefinitions="Auto,*,Auto">
             <TextBlock Grid.Column="0" Text="PIP" FontSize="12" FontWeight="SemiBold"
                        Foreground="{StaticResource OsdForeground}"
                        VerticalAlignment="Center" Margin="8,0,0,0" />
-            <Button Grid.Column="1" Classes="window-control close"
+            <Border Grid.Column="1" Width="6" Height="6" CornerRadius="3"
+                    Background="#4aa3ff" HorizontalAlignment="Right"
+                    VerticalAlignment="Center" Margin="0,0,8,0" />
+            <Button Grid.Column="2" Classes="window-control close"
                     Width="32" Height="32"
                     Click="OnCloseClick">
-                <Path Data="{StaticResource CloseIcon}"
-                      Width="10" Height="10" Stretch="Uniform"
-                      Stroke="{StaticResource OsdForeground}"
-                      StrokeThickness="1.5"
-                      StrokeLineCap="Round" />
+                <materialIcons:MaterialIcon Kind="Close" Width="10" Height="10"
+                    Foreground="{StaticResource OsdForeground}" />
             </Button>
         </Grid>
 
@@ -37,16 +38,61 @@
                            VerticalAlignment="Stretch"
                            IsVideoSurfaceVisible="False" />
 
-        <!-- Controls Overlay (visible on hover) -->
-        <Border Grid.Row="2" Height="36" Background="#CC000000" IsHitTestVisible="True">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
-                <Button Classes="circular-transport" Width="28" Height="28" Click="OnPipPlayPause">
-                    <Path x:Name="PipPlayPauseIcon"
-                          Data="{StaticResource PauseIcon}"
-                          Width="12" Height="12" Stretch="Uniform"
-                          Fill="{StaticResource OsdForeground}" />
-                </Button>
-            </StackPanel>
+        <!-- Controls Bar with transport + seek + time -->
+        <Border Grid.Row="2" Background="#CC000000" IsHitTestVisible="True" Padding="4,2">
+            <Grid RowDefinitions="Auto,Auto">
+                <!-- Row 0: Transport buttons -->
+                <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,Auto" HorizontalAlignment="Center">
+                    <Button Grid.Column="0" Classes="circular-transport" Width="32" Height="32" Click="OnPipPrevious">
+                        <materialIcons:MaterialIcon Kind="SkipPrevious" Width="14" Height="14"
+                            Foreground="{StaticResource OsdForeground}" />
+                    </Button>
+                    <Button Grid.Column="1" x:Name="PipBtnPlayPause" Classes="circular-transport" Width="32" Height="32" Margin="4,0" Click="OnPipPlayPause">
+                        <materialIcons:MaterialIcon x:Name="PipPlayPauseIcon" Kind="Pause" Width="14" Height="14"
+                            Foreground="{StaticResource OsdForeground}" />
+                    </Button>
+                    <Button Grid.Column="2" Classes="circular-transport" Width="32" Height="32" Click="OnPipNext">
+                        <materialIcons:MaterialIcon Kind="SkipNext" Width="14" Height="14"
+                            Foreground="{StaticResource OsdForeground}" />
+                    </Button>
+                </Grid>
+
+                <!-- Row 1: Seek bar + time -->
+                <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Height="22">
+                    <Grid Grid.Column="0" Margin="8,0,6,0" VerticalAlignment="Center">
+                        <Border x:Name="PipSeekTrack" Background="{StaticResource ProgressTroughBackground}"
+                                CornerRadius="2" Height="3" VerticalAlignment="Center" />
+                        <Border x:Name="PipSeekFill" Background="{StaticResource ProgressSliderBackground}"
+                                CornerRadius="2" Height="3" VerticalAlignment="Center" HorizontalAlignment="Left" Width="0" />
+                        <Border x:Name="PipSeekThumb"
+                                Width="10" Height="10" CornerRadius="5"
+                                Background="{StaticResource ProgressSliderBackground}"
+                                HorizontalAlignment="Left" VerticalAlignment="Center"
+                                IsHitTestVisible="False" />
+                    </Grid>
+                    <TextBlock Grid.Column="1"
+                               x:Name="PipTimeLabel"
+                               Text="00:00 / 00:00"
+                               FontSize="10" FontFamily="{StaticResource MonoFontFamily}"
+                               Foreground="{StaticResource OsdForeground}"
+                               VerticalAlignment="Center" Margin="0,0,8,0" />
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- Resize grip -->
+        <Border Grid.Row="3" Height="12" Background="#CC000000" HorizontalAlignment="Stretch">
+            <Grid ColumnDefinitions="*,Auto">
+                <Border Grid.Column="1" Width="18" Height="10" Margin="0,0,4,0">
+                    <Border.Styles>
+                        <Style Selector="Border">
+                            <Setter Property="Background" Value="Transparent" />
+                        </Style>
+                    </Border.Styles>
+                    <TextBlock Text="⣿" FontSize="8" Foreground="rgba(255,255,255,0.25)"
+                               VerticalAlignment="Center" HorizontalAlignment="Right" />
+                </Border>
+            </Grid>
         </Border>
     </Grid>
 </Window>

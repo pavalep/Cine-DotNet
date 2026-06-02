@@ -1,8 +1,8 @@
 using System;
+using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using Avalonia.Controls;
-using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Cine.Avalonia.ViewModels;
 
@@ -13,6 +13,7 @@ public partial class StartPage : global::Avalonia.Controls.UserControl
     public StartPage()
     {
         InitializeComponent();
+        DataContextChanged += OnDataContextChanged;
     }
 
     private void InitializeComponent()
@@ -20,19 +21,76 @@ public partial class StartPage : global::Avalonia.Controls.UserControl
         AvaloniaXamlLoader.Load(this);
     }
 
-    /// <summary>Shows the start page overlay.</summary>
-    public void Show()
+    private MainViewModel? _previousVm;
+
+    private void OnDataContextChanged(object? sender, EventArgs e)
     {
-        IsVisible = true;
+        if (_previousVm != null)
+            _previousVm.RecentFiles.CollectionChanged -= OnRecentFilesChanged;
+        if (DataContext is MainViewModel vm)
+        {
+            vm.RecentFiles.CollectionChanged += OnRecentFilesChanged;
+            RebuildRecentFiles(vm);
+        }
+        _previousVm = DataContext as MainViewModel;
     }
 
-    /// <summary>Hides the start page overlay.</summary>
-    public void Hide()
+    private void OnRecentFilesChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        IsVisible = false;
+        if (DataContext is MainViewModel vm)
+            RebuildRecentFiles(vm);
     }
 
-    /// <summary>Filters file paths to only video extensions matching Python reference.</summary>
+    private void RebuildRecentFiles(MainViewModel vm)
+    {
+        if (RecentFilesList == null) return;
+        RecentFilesList.Children.Clear();
+        foreach (var path in vm.RecentFiles)
+        {
+            var name = Path.GetFileName(path);
+            var btn = new global::Avalonia.Controls.Button
+            {
+                Content = name,
+                Tag = path,
+                Background = global::Avalonia.Media.Brushes.Transparent,
+                Foreground = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.FromArgb(0xCC, 0xFF, 0xFF, 0xFF)),
+                FontSize = 12,
+                HorizontalContentAlignment = global::Avalonia.Layout.HorizontalAlignment.Left,
+                Padding = new global::Avalonia.Thickness(40, 4),
+                BorderThickness = new global::Avalonia.Thickness(0),
+                Cursor = new global::Avalonia.Input.Cursor(global::Avalonia.Input.StandardCursorType.Arrow)
+            };
+            btn.PointerEntered += (_, _) =>
+                btn.Background = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF));
+            btn.PointerExited += (_, _) =>
+                btn.Background = global::Avalonia.Media.Brushes.Transparent;
+            btn.Click += (s, _) =>
+            {
+                vm.OpenRecentFile(path);
+                IsVisible = false;
+            };
+            RecentFilesList.Children.Add(btn);
+        }
+    }
+
+    private void BtnOpenFile_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (Parent is null) return;
+        var window = TopLevel.GetTopLevel(this);
+        if (window is null) return;
+        var vm = DataContext as MainViewModel;
+        vm?.OpenFilesCommand.Execute(null);
+    }
+
+    private void BtnOpenFolder_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (Parent is null) return;
+        var window = TopLevel.GetTopLevel(this);
+        if (window is null) return;
+        var vm = DataContext as MainViewModel;
+        vm?.OpenFolderCommand.Execute(null);
+    }
+
     public static string[] FilterVideoFiles(string[] files)
     {
         var videoExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -42,38 +100,5 @@ public partial class StartPage : global::Avalonia.Controls.UserControl
             ".vob", ".ogv", ".asf", ".divx", ".f4v", ".rm", ".rmvb"
         };
         return files.Where(f => videoExtensions.Contains(Path.GetExtension(f))).ToArray();
-    }
-
-    /// <summary>Handles open file button click.</summary>
-    private async void BtnOpenFile_Click(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is MainViewModel vm)
-        {
-            if (vm.RequestOpenFilesAsync != null)
-            {
-                var paths = await vm.RequestOpenFilesAsync();
-                if (paths != null && paths.Length > 0)
-                {
-                    vm.OpenFiles(paths);
-                    Hide();
-                }
-            }
-        }
-    }
-
-    private async void BtnOpenFolder_Click(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is MainViewModel vm)
-        {
-            if (vm.RequestOpenFolderAsync != null)
-            {
-                var path = await vm.RequestOpenFolderAsync();
-                if (!string.IsNullOrWhiteSpace(path))
-                {
-                    vm.OpenFile(path);
-                    Hide();
-                }
-            }
-        }
     }
 }

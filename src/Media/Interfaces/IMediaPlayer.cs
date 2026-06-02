@@ -66,6 +66,7 @@ public interface IMediaPlayer
     void DecreaseSubtitleDelay();
     int SubtitlePosition { get; set; }
     void SetSubtitlePosition(int position);
+    void SetSubtitleFontSize(double size);
 
     // === Video filters ===
     double Zoom { get; set; }

@@ -39,11 +39,26 @@
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="CornerRadius" Value="17" />
+        <Setter Property="RenderTransform">
+            <Setter.Value>
+                <ScaleTransform ScaleX="1" ScaleY="1" />
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Transitions">
+            <Transitions>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" />
+            </Transitions>
+        </Setter>
         <Setter Property="Template">
             <ControlTemplate TargetType="Button">
                 <Border x:Name="RootBorder"
                         Background="{TemplateBinding Background}"
                         CornerRadius="{TemplateBinding CornerRadius}">
+                    <Border.Transitions>
+                        <Transitions>
+                            <BrushTransition Property="Background" Duration="0:0:0.12" />
+                        </Transitions>
+                    </Border.Transitions>
                     <ContentPresenter x:Name="ContentPresenter"
                                       Content="{TemplateBinding Content}"
                                       ContentTemplate="{TemplateBinding ContentTemplate}"
@@ -61,6 +76,20 @@
         </Style>
         <Style Selector="^:disabled /template/ ContentPresenter#ContentPresenter">
             <Setter Property="Opacity" Value="0.4" />
+        </Style>
+        <Style Selector="^:pointerover">
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <ScaleTransform ScaleX="1.08" ScaleY="1.08" />
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style Selector="^:pressed">
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <ScaleTransform ScaleX="0.95" ScaleY="0.95" />
+                </Setter.Value>
+            </Setter>
         </Style>
     </Style>
     
@@ -74,11 +103,26 @@
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="CornerRadius" Value="17" />
+        <Setter Property="RenderTransform">
+            <Setter.Value>
+                <ScaleTransform ScaleX="1" ScaleY="1" />
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Transitions">
+            <Transitions>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" />
+            </Transitions>
+        </Setter>
         <Setter Property="Template">
             <ControlTemplate TargetType="Button">
                 <Border x:Name="RootBorder"
                         Background="{TemplateBinding Background}"
                         CornerRadius="{TemplateBinding CornerRadius}">
+                    <Border.Transitions>
+                        <Transitions>
+                            <BrushTransition Property="Background" Duration="0:0:0.12" />
+                        </Transitions>
+                    </Border.Transitions>
                     <ContentPresenter x:Name="ContentPresenter"
                                       Content="{TemplateBinding Content}"
                                       ContentTemplate="{TemplateBinding ContentTemplate}"
@@ -97,6 +141,20 @@
         <Style Selector="^:disabled /template/ ContentPresenter#ContentPresenter">
             <Setter Property="Opacity" Value="0.4" />
         </Style>
+        <Style Selector="^:pointerover">
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <ScaleTransform ScaleX="1.08" ScaleY="1.08" />
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style Selector="^:pressed">
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <ScaleTransform ScaleX="0.95" ScaleY="0.95" />
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Style>
     
     <!-- Circular Toggle Button (matches reference) -->
@@ -109,6 +167,16 @@
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="CornerRadius" Value="17" />
+        <Setter Property="RenderTransform">
+            <Setter.Value>
+                <ScaleTransform ScaleX="1" ScaleY="1" />
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Transitions">
+            <Transitions>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" />
+            </Transitions>
+        </Setter>
         <Setter Property="Template">
             <ControlTemplate TargetType="ToggleButton">
                 <Border x:Name="RootBorder"
@@ -116,6 +184,11 @@
                         CornerRadius="{TemplateBinding CornerRadius}"
                         BorderBrush="{TemplateBinding BorderBrush}"
                         BorderThickness="{TemplateBinding BorderThickness}">
+                    <Border.Transitions>
+                        <Transitions>
+                            <BrushTransition Property="Background" Duration="0:0:0.12" />
+                        </Transitions>
+                    </Border.Transitions>
                     <ContentPresenter x:Name="ContentPresenter"
                                       Content="{TemplateBinding Content}"
                                       ContentTemplate="{TemplateBinding ContentTemplate}"
@@ -146,24 +219,24 @@
         <Setter Property="Background" Value="{StaticResource PopoverBackground}" />
         <Setter Property="BorderBrush" Value="{StaticResource PopoverBorder}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="CornerRadius" Value="8" />
         <Setter Property="Padding" Value="0" />
     </Style>
 
     <Style Selector="FlyoutPresenter /template/ Border#PART_LayoutRoot">
-        <Setter Property="BoxShadow" Value="0 1 4 0 #54000000" />
+        <Setter Property="BoxShadow" Value="0 4 16 0 #80000000" />
     </Style>
 
     <Style Selector="MenuFlyoutPresenter">
         <Setter Property="Background" Value="{StaticResource PopoverBackground}" />
         <Setter Property="BorderBrush" Value="{StaticResource PopoverBorder}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="CornerRadius" Value="8" />
         <Setter Property="Padding" Value="4" />
     </Style>
 
     <Style Selector="MenuFlyoutPresenter /template/ Border#PART_LayoutRoot">
-        <Setter Property="BoxShadow" Value="0 1 4 0 #54000000" />
+        <Setter Property="BoxShadow" Value="0 4 16 0 #80000000" />
     </Style>
     
     <!-- ======================== -->

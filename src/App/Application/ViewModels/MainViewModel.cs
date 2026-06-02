@@ -12,6 +12,7 @@ using Avalonia.Threading;
 using Cine.Media.Interfaces;
 using Cine.Media.Models;
 using Cine.Media.Events;
+using System.Text.Json;
 
 namespace Cine.Avalonia.ViewModels;
 
@@ -77,6 +78,7 @@ public class MainViewModel : INotifyPropertyChanged
     public ObservableCollection<string> Playlist { get; } = new();
     public ObservableCollection<PlaylistItemViewModel> PlaylistItems { get; } = new();
     public ObservableCollection<double> ChapterMarkers { get; } = new();
+    public ObservableCollection<string> RecentFiles { get; } = new();
 
     // --- Commands ---
     public ICommand OpenFilesCommand { get; }
@@ -84,6 +86,7 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand AddFilesCommand { get; }
     public ICommand AddSubtitleCommand { get; }
     public ICommand AddAudioCommand { get; }
+    public ICommand OpenRecentCommand { get; }
 
     // File dialog callbacks (set by MainWindow code-behind)
     public Func<Task<string[]?>>? RequestOpenFilesAsync { get; set; }
@@ -124,9 +127,16 @@ public class MainViewModel : INotifyPropertyChanged
         AddFilesCommand = new RelayCommand(async _ => await OnAddFiles());
         AddSubtitleCommand = new RelayCommand(async _ => await OnAddSubtitle());
         AddAudioCommand = new RelayCommand(async _ => await OnAddAudio());
+        OpenRecentCommand = new RelayCommand(path =>
+        {
+            if (path is string p) OpenRecentFile(p);
+        });
 
         // Build initial empty track menus with placeholder entries
         BuildEmptyTrackMenus();
+
+        // Load recent files
+        LoadRecentFiles();
     }
 
     /// <summary>Initializes track menus with "Add..." and "None" pseudo-entries.</summary>
@@ -244,10 +254,15 @@ public class MainViewModel : INotifyPropertyChanged
     public void PlayPause()
     {
         if (_player.IsPlaying)
+        {
             _player.Pause();
+            State = PlaybackState.Paused;
+        }
         else
+        {
             _player.Play();
-        State = _player.State;
+            State = PlaybackState.Playing;
+        }
     }
 
     public void Stop() => _player.Stop();
@@ -275,10 +290,29 @@ public class MainViewModel : INotifyPropertyChanged
             PlaylistItems[i].NotifyPlayingChanged();
         HasMultiplePlaylistItems = PlaylistItems.Count > 1;
     }
-    public void SeekForward() => _player.Seek(Position + TimeSpan.FromSeconds(5));
-    public void SeekBackward() => _player.Seek(Position - TimeSpan.FromSeconds(5));
-    public void SeekLargeForward() => _player.Seek(Position + TimeSpan.FromSeconds(60));
-    public void SeekLargeBackward() => _player.Seek(Position - TimeSpan.FromSeconds(60));
+    public void SeekForward()
+    {
+        _player.Seek(Position + TimeSpan.FromSeconds(5));
+        NotifyPipSync?.Invoke();
+    }
+
+    public void SeekBackward()
+    {
+        _player.Seek(Position - TimeSpan.FromSeconds(5));
+        NotifyPipSync?.Invoke();
+    }
+
+    public void SeekLargeForward()
+    {
+        _player.Seek(Position + TimeSpan.FromSeconds(60));
+        NotifyPipSync?.Invoke();
+    }
+
+    public void SeekLargeBackward()
+    {
+        _player.Seek(Position - TimeSpan.FromSeconds(60));
+        NotifyPipSync?.Invoke();
+    }
     public void IncreaseVolume() => VolumeValue = Math.Min(150, VolumeValue + 10);
     public void DecreaseVolume() => VolumeValue = Math.Max(0, VolumeValue - 10);
     public void ToggleMute() => IsMuted = !_player.IsMuted;
@@ -304,7 +338,68 @@ public class MainViewModel : INotifyPropertyChanged
         RefreshPlaylistState();
     }
     public void ResetSpeed() => SpeedValue = 1.0;
+    public void SetSpeed(double speed) => SpeedValue = speed;
     public void Screenshot() => _player.TakeScreenshot(GetScreenshotPath());
+
+    // === Session resume ===
+    public Action<string, TimeSpan>? SessionResumeRequested { get; set; }
+
+    private static string SessionPath => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "Cine", "session.json");
+
+    public void SaveSession()
+    {
+        try
+        {
+            var dir = Path.GetDirectoryName(SessionPath);
+            if (dir != null) Directory.CreateDirectory(dir);
+            var session = new
+            {
+                FilePath = _filePath,
+                Position = _player.Position.Ticks,
+                Playlist = Playlist.ToList()
+            };
+            File.WriteAllText(SessionPath, JsonSerializer.Serialize(session));
+        }
+        catch { }
+    }
+
+    public void LoadSession()
+    {
+        try
+        {
+            if (!File.Exists(SessionPath)) return;
+            var json = File.ReadAllText(SessionPath);
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            if (root.TryGetProperty("FilePath", out var pathEl) && pathEl.GetString() is string path
+                && File.Exists(path)
+                && root.TryGetProperty("Position", out var posEl))
+            {
+                var pos = TimeSpan.FromTicks(posEl.GetInt64());
+                SessionResumeRequested?.Invoke(path, pos);
+            }
+            if (root.TryGetProperty("Playlist", out var plEl))
+            {
+                foreach (var item in plEl.EnumerateArray())
+                {
+                    var p = item.GetString();
+                    if (!string.IsNullOrEmpty(p) && File.Exists(p))
+                        Playlist.Add(p);
+                }
+                if (Playlist.Count > 0)
+                    OnPropertyChanged(nameof(HasMultiplePlaylistItems));
+            }
+        }
+        catch { }
+    }
+
+    public void ClearSession()
+    {
+        try { if (File.Exists(SessionPath)) File.Delete(SessionPath); }
+        catch { }
+    }
 
     // --- Properties for binding ---
     public PlaybackState State
@@ -400,6 +495,18 @@ public class MainViewModel : INotifyPropertyChanged
     {
         get => _player.SubtitleDelay;
         set { _player.SubtitleDelay = value; OnPropertyChanged(); }
+    }
+
+    private double _subtitleFontSize = 24;
+    public double SubtitleFontSize
+    {
+        get => _subtitleFontSize;
+        set
+        {
+            _subtitleFontSize = value;
+            _player.SetSubtitleFontSize(value);
+            OnPropertyChanged();
+        }
     }
 
     public float AudioDelayValue
@@ -505,7 +612,11 @@ public class MainViewModel : INotifyPropertyChanged
         }
         
         _player.Seek(target);
+        NotifyPipSync?.Invoke();
     }
+
+    // Optional callback for PIP sync
+    public Action? NotifyPipSync { get; set; }
 
     public bool IsMuted
     {
@@ -566,19 +677,74 @@ public class MainViewModel : INotifyPropertyChanged
         set { _hasMultiplePlaylistItems = value; OnPropertyChanged(); }
     }
 
+    public bool HasPlaylistItems => PlaylistItems.Count > 0;
+
     public bool HasMultipleVideoTracks
     {
         get => _hasMultipleVideoTracks;
         set { _hasMultipleVideoTracks = value; OnPropertyChanged(); }
     }
 
+    // --- Recent files ---
+    private static string RecentFilesPath => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "Cine", "recent.json");
+
+    public bool HasRecentFiles => RecentFiles.Count > 0;
+
+    public void AddRecentFile(string path)
+    {
+        RecentFiles.Remove(path);
+        RecentFiles.Insert(0, path);
+        while (RecentFiles.Count > 10)
+            RecentFiles.RemoveAt(RecentFiles.Count - 1);
+        SaveRecentFiles();
+        OnPropertyChanged(nameof(HasRecentFiles));
+    }
+
+    private void SaveRecentFiles()
+    {
+        try
+        {
+            var dir = Path.GetDirectoryName(RecentFilesPath);
+            if (dir != null) Directory.CreateDirectory(dir);
+            File.WriteAllText(RecentFilesPath, JsonSerializer.Serialize(RecentFiles.ToList()));
+        }
+        catch { }
+    }
+
+    public void LoadRecentFiles()
+    {
+        try
+        {
+            if (!File.Exists(RecentFilesPath)) return;
+            var json = File.ReadAllText(RecentFilesPath);
+            var list = JsonSerializer.Deserialize<List<string>>(json);
+            if (list != null)
+            {
+                RecentFiles.Clear();
+                foreach (var f in list.Where(File.Exists))
+                    RecentFiles.Add(f);
+                OnPropertyChanged(nameof(HasRecentFiles));
+            }
+        }
+        catch { }
+    }
+
+    public void OpenRecentFile(string path)
+    {
+        if (!string.IsNullOrWhiteSpace(path) && File.Exists(path))
+            OpenFile(path);
+    }
+
     // --- Drag & drop support ---
     public async void OpenFile(string path)
     {
         if (string.IsNullOrWhiteSpace(path)) return;
+        AddRecentFile(path);
         FilePath = path;
+        // Ensure UI binding propagation before loading media
         await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Render);
-        await System.Threading.Tasks.Task.Delay(50);
         try
         {
             _player.Open(path);
@@ -614,10 +780,8 @@ public class MainViewModel : INotifyPropertyChanged
             {
                 State = _player.State;
                 PositionText = FormatTime(e.Position);
-                DurationText = FormatTime(_player.Duration);
-                SeekValue = Duration.TotalSeconds > 0
-                    ? e.Position.TotalSeconds / Duration.TotalSeconds
-                    : 0;
+                DurationText = FormatTime(e.Duration);
+                SeekValue = e.NormalizedPosition;
             }
             finally
             {
@@ -696,8 +860,7 @@ public class MainViewModel : INotifyPropertyChanged
 
             // --- Video tracks ---
             VideoTracks.Clear();
-            VideoTracks.Add(new TrackMenuItem("No video tracks", TrackType.Video, -1, OnSelectVideo));
-            if (e.VideoTracks != null)
+            if (e.VideoTracks != null && e.VideoTracks.Any())
             {
                 int idx = 0;
                 foreach (var track in e.VideoTracks)
@@ -713,6 +876,10 @@ public class MainViewModel : INotifyPropertyChanged
                     VideoTracks.Add(item);
                     idx++;
                 }
+            }
+            else
+            {
+                VideoTracks.Add(new TrackMenuItem("No video tracks", TrackType.Video, -1, OnSelectVideo));
             }
             HasMultipleVideoTracks = e.VideoTracks?.Count() > 1;
         });

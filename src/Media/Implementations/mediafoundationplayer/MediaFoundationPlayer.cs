@@ -194,7 +194,7 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
         private set
         {
             _position = value;
-            PositionChanged?.Invoke(this, new PositionChangedEventArgs(value));
+            PositionChanged?.Invoke(this, new PositionChangedEventArgs(value, Duration));
         }
     }
     public TimeSpan Duration
@@ -768,7 +768,7 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
 
         _position = position;
         _lastNativeTimestamp = position.Ticks;
-        PositionChanged?.Invoke(this, new PositionChangedEventArgs(position));
+        PositionChanged?.Invoke(this, new PositionChangedEventArgs(position, Duration));
 
         if (_nativeRendering)
         {
@@ -884,6 +884,7 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
 
     public void SetSubtitleDelay(float seconds) => SubtitleDelay = seconds;
     public void SetSubtitlePosition(int position) => SubtitlePosition = position;
+    public void SetSubtitleFontSize(double size) { }
     public void SetSubtitleScale(float scale) => SubtitleScale = scale;
     public void SetSubtitleColor(System.Drawing.Color color) => SubtitleColor = color;
     public void SetSubtitleFont(string fontName) => SubtitleFont = fontName;

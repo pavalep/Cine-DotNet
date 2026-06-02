@@ -32,6 +32,8 @@ namespace Cine.Avalonia.ViewModels
 
         public IMediaPlayer? Player => _player;
 
+    public event EventHandler<string>? Error;
+
     public IMediaPlayer CreateSecondaryPlayer()
     {
         var secondary = new MpvPlayer();
@@ -87,6 +89,7 @@ namespace Cine.Avalonia.ViewModels
             DebugLog($"[Error] {error}");
             System.Diagnostics.Debug.WriteLine($"[PlayerService Error] {error}");
             System.Diagnostics.Trace.WriteLine($"[PlayerService Error] {error}");
+            Error?.Invoke(this, error);
         }
     }
 }

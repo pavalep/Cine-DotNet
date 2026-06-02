@@ -360,6 +360,12 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
     public int SubtitlePosition { get; set; }
     public void SetSubtitlePosition(int position) => SubtitlePosition = position;
 
+    public void SetSubtitleFontSize(double size)
+    {
+        if (_initialized)
+            SetDouble("sub-font-size", size);
+    }
+
     public double Zoom
     {
         get => GetDouble("video-zoom");
@@ -680,7 +686,9 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
             var pos = GetDouble("time-pos");
             if (pos >= 0 && !double.IsNaN(pos))
             {
-                PositionChanged?.Invoke(this, new PositionChangedEventArgs(TimeSpan.FromSeconds(pos)));
+                var dur = GetDouble("duration");
+                PositionChanged?.Invoke(this, new PositionChangedEventArgs(
+                    TimeSpan.FromSeconds(pos), TimeSpan.FromSeconds(dur)));
             }
             }
             catch (Exception ex)

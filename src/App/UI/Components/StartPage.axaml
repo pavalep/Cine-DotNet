@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Cine.Avalonia.ViewModels"
+             xmlns:local="using:Cine.Avalonia.Controls"
              x:Class="Cine.Avalonia.Controls.StartPage"
              x:DataType="vm:MainViewModel">
 
@@ -9,6 +10,11 @@
             HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
             Background="{DynamicResource StartPageBackground}"
             CornerRadius="0">
+        <Border.Transitions>
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.3" />
+            </Transitions>
+        </Border.Transitions>
 
         <Grid>
             <!-- Drop Target Overlay Visuals -->
@@ -59,7 +65,23 @@
                         Padding="32,0"
                         HorizontalAlignment="Center"
                         Click="BtnOpenFolder_Click" />
+
+                <!-- Recent files section -->
+                <StackPanel Spacing="4" Margin="0,16,0,0"
+                            IsVisible="{Binding HasRecentFiles}">
+                    <TextBlock Text="Recent" FontSize="12" FontWeight="SemiBold"
+                               Foreground="#80FFFFFF" Margin="40,0,40,4" />
+                    <ScrollViewer MaxHeight="160" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel x:Name="RecentFilesList" Spacing="0" />
+                    </ScrollViewer>
+                </StackPanel>
             </StackPanel>
+
+            <!-- Keyboard shortcut hint -->
+            <TextBlock Text="Space to play  ·  F for fullscreen  ·  Esc to exit"
+                       FontSize="11" Foreground="#60FFFFFF"
+                       HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                       Margin="0,0,0,24" />
         </Grid>
     </Border>
 </UserControl>

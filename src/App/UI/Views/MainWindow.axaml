@@ -5,6 +5,7 @@
         xmlns:conv="using:Cine.Avalonia.Converters"
         xmlns:ctrl="using:Cine.Avalonia.Controls"
         xmlns:local="using:Cine.Avalonia.Controls"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         x:Class="Cine.Avalonia.MainWindow"
         x:DataType="vm:MainViewModel"
         Title="Cine"
@@ -57,7 +58,22 @@
             <ctrl:D3D11VideoHost x:Name="VideoHost"
                                  IsVideoSurfaceVisible="False"
                                  HorizontalAlignment="Stretch"
-                                 VerticalAlignment="Stretch" />
+                                 VerticalAlignment="Stretch"
+                                 Opacity="0">
+                <ctrl:D3D11VideoHost.Transitions>
+                    <Transitions>
+                        <DoubleTransition Property="Opacity" Duration="0:0:0.3" />
+                    </Transitions>
+                </ctrl:D3D11VideoHost.Transitions>
+            </ctrl:D3D11VideoHost>
+
+            <!-- Video click overlay (captures pointer events on video surface) -->
+            <Border x:Name="VideoClickOverlay"
+                    Background="Transparent"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    PointerPressed="OnVideoPointerPressed"
+                    ZIndex="5" />
 
             <!-- Vignette overlay -->
             <Border Background="{StaticResource VignetteOverlay}"
@@ -68,6 +84,7 @@
 
             <!-- Loading Spinner -->
             <Border x:Name="LoadingSpinner"
+                    ZIndex="20"
                     Classes="loading-spinner"
                     Width="48" Height="48"
                     HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -76,7 +93,12 @@
                     BorderThickness="3"
                     BorderBrush="{StaticResource OsdForeground}"
                     Background="Transparent"
-                    Opacity="0.7" />
+                    Opacity="0.7"
+                    RenderTransformOrigin="0.5,0.5">
+                <Border.RenderTransform>
+                    <RotateTransform Angle="0" />
+                </Border.RenderTransform>
+            </Border>
 
             <!-- Pause Indicator -->
             <Border x:Name="PauseIndicator"
@@ -84,9 +106,9 @@
                     Opacity="0" IsVisible="False"
                     CornerRadius="8" Padding="16"
                     Background="#80000000">
-                <Path Data="{StaticResource PauseIcon}"
-                      Width="48" Height="48" Stretch="Uniform"
-                      Fill="White" />
+                <materialIcons:MaterialIcon Kind="Pause"
+                      Width="48" Height="48"
+                      Foreground="White" />
             </Border>
 
             <!-- Chapter Badge Overlay (top-right) -->
@@ -98,11 +120,32 @@
             <!-- OSD Notifications -->
             <Border x:Name="OsdNotification"
                     Classes="OsdNotificationStyle">
+                <Border.Transitions>
+                    <Transitions>
+                        <DoubleTransition Property="Opacity" Duration="0:0:0.2" />
+                    </Transitions>
+                </Border.Transitions>
                 <TextBlock x:Name="OsdText"
                            Foreground="{StaticResource OsdForeground}"
                            FontSize="13"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center" />
+            </Border>
+
+            <!-- Replay Overlay (shown on media end) -->
+            <Border x:Name="ReplayOverlay"
+                    ZIndex="30" IsVisible="False"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Background="#80000000" CornerRadius="12" Padding="24">
+                <StackPanel Spacing="8" HorizontalAlignment="Center">
+                    <Button Classes="circular-transport" Width="56" Height="56"
+                            Click="OnReplayClick">
+                        <materialIcons:MaterialIcon Kind="Play" Width="24" Height="24"
+                            Foreground="{StaticResource OsdForeground}" />
+                    </Button>
+                    <TextBlock Text="Replay" Foreground="White"
+                               FontSize="14" HorizontalAlignment="Center" />
+                </StackPanel>
             </Border>
 
             <!-- Drop indicator overlay -->
@@ -118,11 +161,9 @@
                 <StackPanel HorizontalAlignment="Center"
                             VerticalAlignment="Center"
                             Spacing="10">
-                    <Path x:Name="DropIndicatorIcon"
-                          Data="{StaticResource PlayIcon}"
+                    <materialIcons:MaterialIcon x:Name="DropIndicatorIcon" Kind="Play"
                           Width="56" Height="56"
-                          Stretch="Uniform"
-                          Fill="#FF4AA3FF" />
+                          Foreground="#FF4AA3FF" />
                     <TextBlock x:Name="DropIndicatorText"
                                Text="Play"
                                FontSize="28"
@@ -152,6 +193,7 @@
                     HorizontalAlignment="Stretch"
                     Height="56"
                     IsHitTestVisible="True"
+                    ZIndex="20"
                     PointerPressed="OnHeaderPointerPressed">
                 <Grid x:Name="HeaderGrid" Margin="0,0,0,0">
                     <Grid.ColumnDefinitions>
@@ -191,28 +233,80 @@
                                        Foreground="{StaticResource OsdForeground}"
                                        FontSize="13" FontWeight="Medium"
                                        VerticalAlignment="Center" />
-                            <Path Data="{StaticResource OpenChevronIcon}"
-                                  Width="8" Height="6" Stretch="Uniform"
-                                  Stroke="{StaticResource OsdForeground}"
-                                  StrokeThickness="1.5"
-                                  StrokeLineCap="Round"
-                                  Opacity="0.7"
-                                  VerticalAlignment="Center" />
+                            <materialIcons:MaterialIcon Kind="MenuDown" Width="8" Height="8"
+                                Foreground="{StaticResource OsdForeground}"
+                                Opacity="0.7"
+                                VerticalAlignment="Center" />
                         </StackPanel>
                         <Button.Flyout>
-                            <MenuFlyout Placement="BottomEdgeAlignedLeft">
-                                <MenuItem Header="Open Files"
-                                          Command="{Binding OpenFilesCommand}" />
-                                <MenuItem Header="Open Folder"
-                                          Command="{Binding OpenFolderCommand}" />
-                                <Separator />
-                                <MenuItem Header="Add Files"
-                                          Command="{Binding AddFilesCommand}" />
-                                <MenuItem Header="Add Subtitle Track"
-                                          Command="{Binding AddSubtitleCommand}" />
-                                <MenuItem Header="Add Audio Track"
-                                          Command="{Binding AddAudioCommand}" />
-                            </MenuFlyout>
+                            <Flyout Placement="BottomEdgeAlignedLeft">
+                                <Border Background="{StaticResource PopoverBackground}"
+                                        BorderBrush="{StaticResource PopoverBorder}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="4">
+                                    <StackPanel Width="200">
+                                        <StackPanel.Styles>
+                                            <Style Selector="Button.flyout-item">
+                                                <Setter Property="Background" Value="Transparent" />
+                                                <Setter Property="BorderThickness" Value="0" />
+                                                <Setter Property="Padding" Value="10,7" />
+                                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                                <Setter Property="Cursor" Value="Arrow" />
+                                            </Style>
+                                            <Style Selector="Button.flyout-item:pointerover">
+                                                <Setter Property="Background" Value="rgba(255,255,255,0.08)" />
+                                            </Style>
+                                            <Style Selector="Button.flyout-item TextBlock">
+                                                <Setter Property="FontSize" Value="13" />
+                                                <Setter Property="FontWeight" Value="500" />
+                                                <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
+                                            </Style>
+                                        </StackPanel.Styles>
+                                        <Button Classes="flyout-item"
+                                                Command="{Binding OpenFilesCommand}">
+                                            <Grid ColumnDefinitions="Auto,*">
+                                                <materialIcons:MaterialIcon Kind="Play" Width="14" Height="14"
+                                                    Foreground="{StaticResource OsdForeground}" />
+                                                <TextBlock Grid.Column="1" Text="Open Files" Margin="10,0,0,0" />
+                                            </Grid>
+                                        </Button>
+                                        <Button Classes="flyout-item"
+                                                Command="{Binding OpenFolderCommand}">
+                                            <Grid ColumnDefinitions="Auto,*">
+                                                <materialIcons:MaterialIcon Kind="Folder" Width="14" Height="14"
+                                                    Foreground="{StaticResource OsdForeground}" />
+                                                <TextBlock Grid.Column="1" Text="Open Folder" Margin="10,0,0,0" />
+                                            </Grid>
+                                        </Button>
+                                        <Separator Background="{StaticResource PopoverBorder}" />
+                                        <Button Classes="flyout-item"
+                                                Command="{Binding AddFilesCommand}">
+                                            <Grid ColumnDefinitions="Auto,*">
+                                                <materialIcons:MaterialIcon Kind="Plus" Width="14" Height="14"
+                                                    Foreground="{StaticResource OsdForeground}" />
+                                                <TextBlock Grid.Column="1" Text="Add Files" Margin="10,0,0,0" />
+                                            </Grid>
+                                        </Button>
+                                        <Button Classes="flyout-item"
+                                                Command="{Binding AddSubtitleCommand}">
+                                            <Grid ColumnDefinitions="Auto,*">
+                                                <materialIcons:MaterialIcon Kind="Subtitles" Width="14" Height="14"
+                                                    Foreground="{StaticResource OsdForeground}" />
+                                                <TextBlock Grid.Column="1" Text="Add Subtitle Track" Margin="10,0,0,0" />
+                                            </Grid>
+                                        </Button>
+                                        <Button Classes="flyout-item"
+                                                Command="{Binding AddAudioCommand}">
+                                            <Grid ColumnDefinitions="Auto,*">
+                                                <materialIcons:MaterialIcon Kind="Music" Width="14" Height="14"
+                                                    Foreground="{StaticResource OsdForeground}" />
+                                                <TextBlock Grid.Column="1" Text="Add Audio Track" Margin="10,0,0,0" />
+                                            </Grid>
+                                        </Button>
+                                    </StackPanel>
+                                </Border>
+                            </Flyout>
                         </Button.Flyout>
                     </Button>
 
@@ -236,9 +330,8 @@
                                       Margin="0,0,4,0"
                                       Click="OnTogglePip"
                                       ToolTip.Tip="Picture-in-Picture">
-                            <Path Data="{StaticResource PipIcon}"
-                                  Width="16" Height="16" Stretch="Uniform"
-                                  Fill="{StaticResource OsdForeground}" />
+                            <materialIcons:MaterialIcon Kind="PictureInPictureBottomRight" Width="16" Height="16"
+                                Foreground="{StaticResource OsdForeground}" />
                         </ToggleButton>
 
                         <!-- Primary Menu Button -->
@@ -247,17 +340,169 @@
                                 ToolTip.Tip="Main Menu"
                                 Width="34" Height="34"
                                 Margin="0,0,4,0">
-                            <Path Data="{StaticResource MenuIcon}"
-                                  Width="16" Height="16" Stretch="Uniform"
-                                  Fill="{StaticResource OsdForeground}" />
+                            <materialIcons:MaterialIcon Kind="DotsHorizontal" Width="16" Height="16"
+                                Foreground="{StaticResource OsdForeground}" />
                             <Button.Flyout>
-                                <MenuFlyout Placement="Bottom">
-                                    <MenuItem Header="New Window" Click="OnNewWindowClick" />
-                                    <MenuItem Header="Preferences" Click="OnPreferencesClick" />
-                                    <Separator />
-                                    <MenuItem Header="Keyboard Shortcuts" Click="OnShortcutsClick" />
-                                    <MenuItem Header="About Cine" Click="OnAboutClick" />
-                                </MenuFlyout>
+                                <Flyout Placement="Bottom">
+                                    <Border Classes="primary-menu-content"
+                                            Background="{StaticResource PopoverBackground}"
+                                            BorderBrush="{StaticResource PopoverBorder}"
+                                            BorderThickness="1"
+                                            CornerRadius="8"
+                                            Padding="6">
+                                        <StackPanel Width="240">
+                                            <StackPanel.Styles>
+                                                <Style Selector="Button.flyout-item">
+                                                    <Setter Property="Background" Value="Transparent" />
+                                                    <Setter Property="BorderThickness" Value="0" />
+                                                    <Setter Property="Padding" Value="10,7" />
+                                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                                    <Setter Property="Cursor" Value="Arrow" />
+                                                </Style>
+                                                <Style Selector="Button.flyout-item:pointerover">
+                                                    <Setter Property="Background" Value="rgba(255,255,255,0.08)" />
+                                                </Style>
+                                                <Style Selector="Button.flyout-item TextBlock">
+                                                    <Setter Property="FontSize" Value="13" />
+                                                    <Setter Property="FontWeight" Value="500" />
+                                                    <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
+                                                </Style>
+                                                <Style Selector="Button.flyout-item TextBlock.shortcut">
+                                                    <Setter Property="FontSize" Value="11" />
+                                                    <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
+                                                    <Setter Property="Opacity" Value="0.3" />
+                                                </Style>
+                                            </StackPanel.Styles>
+
+                                            <!-- Playback Section -->
+                                            <TextBlock Text="PLAYBACK" FontSize="9" FontWeight="Bold"
+                                                       Foreground="{StaticResource OsdForeground}"
+                                                       Opacity="0.4" LetterSpacing="0.8"
+                                                       Margin="8,6,8,4" />
+                                            <Button x:Name="MnuPlayPause" Classes="flyout-item" Click="OnPlayPause">
+                                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                                    <materialIcons:MaterialIcon x:Name="MnuPlayPauseIcon" Kind="Play" Width="14" Height="14"
+                                                        Foreground="{StaticResource OsdForeground}" />
+                                                    <TextBlock x:Name="MnuPlayPauseLabel" Grid.Column="1" Text="Play/Pause" Margin="10,0,0,0" />
+                                                    <TextBlock Grid.Column="2" Text="Space" Classes="shortcut" />
+                                                </Grid>
+                                            </Button>
+                                            <Button Classes="flyout-item" Click="OnStop">
+                                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                                    <materialIcons:MaterialIcon Kind="Stop" Width="14" Height="14"
+                                                        Foreground="{StaticResource OsdForeground}" />
+                                                    <TextBlock Grid.Column="1" Text="Stop" Margin="10,0,0,0" />
+                                                    <TextBlock Grid.Column="2" Text="Ctrl+S" Classes="shortcut" />
+                                                </Grid>
+                                            </Button>
+                                            <Button Classes="flyout-item" Click="OnSeekBackward">
+                                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                                    <materialIcons:MaterialIcon Kind="Rewind" Width="14" Height="14"
+                                                        Foreground="{StaticResource OsdForeground}" />
+                                                    <TextBlock Grid.Column="1" Text="Seek -10s" Margin="10,0,0,0" />
+                                                    <TextBlock Grid.Column="2" Text="←" Classes="shortcut" />
+                                                </Grid>
+                                            </Button>
+                                            <Button Classes="flyout-item" Click="OnSeekForward">
+                                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                                    <materialIcons:MaterialIcon Kind="FastForward" Width="14" Height="14"
+                                                        Foreground="{StaticResource OsdForeground}" />
+                                                    <TextBlock Grid.Column="1" Text="Seek +10s" Margin="10,0,0,0" />
+                                                    <TextBlock Grid.Column="2" Text="→" Classes="shortcut" />
+                                                </Grid>
+                                            </Button>
+                                            <Separator Background="{StaticResource PopoverBorder}" />
+
+                                            <!-- View Section -->
+                                            <TextBlock Text="VIEW" FontSize="9" FontWeight="Bold"
+                                                       Foreground="{StaticResource OsdForeground}"
+                                                       Opacity="0.4" LetterSpacing="0.8"
+                                                       Margin="8,6,8,4" />
+                                            <Button Classes="flyout-item" Click="OnToggleFullscreen">
+                                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                                    <materialIcons:MaterialIcon Kind="Fullscreen" Width="14" Height="14"
+                                                        Foreground="{StaticResource OsdForeground}" />
+                                                    <TextBlock Grid.Column="1" Text="Fullscreen" Margin="10,0,0,0" />
+                                                    <TextBlock Grid.Column="2" Text="F" Classes="shortcut" />
+                                                </Grid>
+                                            </Button>
+                                            <Button Classes="flyout-item" Click="OnTogglePip">
+                                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                                    <materialIcons:MaterialIcon Kind="PictureInPictureBottomRight" Width="14" Height="14"
+                                                        Foreground="{StaticResource OsdForeground}" />
+                                                    <TextBlock Grid.Column="1" Text="Picture-in-Picture" Margin="10,0,0,0" />
+                                                    <TextBlock Grid.Column="2" Text="I" Classes="shortcut" />
+                                                </Grid>
+                                            </Button>
+                                            <Button Classes="flyout-item" Click="OnToggleAlwaysOnTop">
+                                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                                    <materialIcons:MaterialIcon Kind="Pin" Width="14" Height="14"
+                                                        Foreground="{StaticResource OsdForeground}" />
+                                                    <TextBlock Grid.Column="1" Text="Always on Top" Margin="10,0,0,0" />
+                                                </Grid>
+                                            </Button>
+                                            <Separator Background="{StaticResource PopoverBorder}" />
+
+                                            <!-- Loop Section -->
+                                            <TextBlock Text="LOOP" FontSize="9" FontWeight="Bold"
+                                                       Foreground="{StaticResource OsdForeground}"
+                                                       Opacity="0.4" LetterSpacing="0.8"
+                                                       Margin="8,6,8,4" />
+                                            <Button Classes="flyout-item" Click="OnToggleLoopFile">
+                                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                                    <materialIcons:MaterialIcon Kind="RepeatOnce" Width="14" Height="14"
+                                                        Foreground="{StaticResource OsdForeground}" />
+                                                    <TextBlock Grid.Column="1" Text="Loop File" Margin="10,0,0,0" />
+                                                    <TextBlock Grid.Column="2" Text="L" Classes="shortcut" />
+                                                </Grid>
+                                            </Button>
+                                            <Button Classes="flyout-item" Click="OnToggleLoopPlaylist">
+                                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                                    <materialIcons:MaterialIcon Kind="Repeat" Width="14" Height="14"
+                                                        Foreground="{StaticResource OsdForeground}" />
+                                                    <TextBlock Grid.Column="1" Text="Loop Playlist" Margin="10,0,0,0" />
+                                                    <TextBlock Grid.Column="2" Text="Ctrl+R" Classes="shortcut" />
+                                                </Grid>
+                                            </Button>
+                                            <Button Classes="flyout-item" Click="OnToggleShuffle">
+                                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                                    <materialIcons:MaterialIcon Kind="ShuffleVariant" Width="14" Height="14"
+                                                        Foreground="{StaticResource OsdForeground}" />
+                                                    <TextBlock Grid.Column="1" Text="Shuffle" Margin="10,0,0,0" />
+                                                    <TextBlock Grid.Column="2" Text="Ctrl+S" Classes="shortcut" />
+                                                </Grid>
+                                            </Button>
+                                            <Separator Background="{StaticResource PopoverBorder}" />
+
+                                            <!-- Tools Section -->
+                                            <TextBlock Text="TOOLS" FontSize="9" FontWeight="Bold"
+                                                       Foreground="{StaticResource OsdForeground}"
+                                                       Opacity="0.4" LetterSpacing="0.8"
+                                                       Margin="8,6,8,4" />
+                                            <Button Classes="flyout-item" Click="OnShortcutsClick">
+                                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                                    <materialIcons:MaterialIcon Kind="Keyboard" Width="14" Height="14"
+                                                        Foreground="{StaticResource OsdForeground}" />
+                                                    <TextBlock Grid.Column="1" Text="Keyboard Shortcuts" Margin="10,0,0,0" />
+                                                </Grid>
+                                            </Button>
+                                            <Button Classes="flyout-item" Click="OnPreferencesClick">
+                                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                                    <materialIcons:MaterialIcon Kind="Cog" Width="14" Height="14"
+                                                        Foreground="{StaticResource OsdForeground}" />
+                                                    <TextBlock Grid.Column="1" Text="Preferences" Margin="10,0,0,0" />
+                                                </Grid>
+                                            </Button>
+                                            <Button Classes="flyout-item" Click="OnAboutClick">
+                                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                                    <materialIcons:MaterialIcon Kind="Information" Width="14" Height="14"
+                                                        Foreground="{StaticResource OsdForeground}" />
+                                                    <TextBlock Grid.Column="1" Text="About Cine" Margin="10,0,0,0" />
+                                                </Grid>
+                                            </Button>
+                                        </StackPanel>
+                                    </Border>
+                                </Flyout>
                             </Button.Flyout>
                         </Button>
 
@@ -269,42 +514,170 @@
                                 IsVisible="False"
                                 Width="34" Height="34"
                                 Margin="0,0,4,0">
-                            <Path Data="{StaticResource CloseIcon}"
-                                  Width="12" Height="12" Stretch="Uniform"
-                                  Stroke="{StaticResource OsdForeground}"
-                                  StrokeThickness="1.5"
-                                  StrokeLineCap="Round" />
+                            <materialIcons:MaterialIcon Kind="Close" Width="12" Height="12"
+                                Foreground="{StaticResource OsdForeground}" />
                         </Button>
 
                         <!-- Native Window Controls (Minimize, Maximize, Close) -->
                         <StackPanel Orientation="Horizontal" Spacing="0"
-                                    IsVisible="True" x:Name="WindowControlsPanel">
+                                    IsVisible="True" x:Name="WindowControlsPanel"
+                                    Margin="0,0,4,0">
                             <Button x:Name="BtnMinimize" Click="OnMinimizeClick"
                                     Classes="window-control"
                                     ToolTip.Tip="Minimize">
-                                <Path Data="{StaticResource MinimizeIcon}"
-                                      Width="12" Height="12" Stretch="Uniform"
-                                      Fill="{StaticResource OsdForeground}" />
+                                <materialIcons:MaterialIcon Kind="WindowMinimize" Width="12" Height="12"
+                                    Foreground="{StaticResource OsdForeground}" />
                             </Button>
                             <Button x:Name="BtnMaximizeRestore" Click="OnMaximizeRestoreClick"
                                     Classes="window-control"
                                     ToolTip.Tip="Maximize">
-                                <Path x:Name="MaximizeRestoreIconPath"
-                                      Data="{StaticResource MaximizeIcon}"
-                                      Width="12" Height="12" Stretch="Uniform"
-                                      Stroke="{StaticResource OsdForeground}"
-                                      StrokeThickness="1.5" />
+                                <materialIcons:MaterialIcon x:Name="MaximizeRestoreIconPath" Kind="WindowMaximize" Width="12" Height="12"
+                                    Foreground="{StaticResource OsdForeground}" />
                             </Button>
                             <Button x:Name="BtnClose" Click="OnCloseClick"
                                     Classes="window-control close"
                                     ToolTip.Tip="Close">
-                                <Path Data="{StaticResource CloseIcon}"
-                                      Width="12" Height="12" Stretch="Uniform"
-                                      Stroke="{StaticResource OsdForeground}"
-                                      StrokeThickness="1.5"
-                                      StrokeLineCap="Round" />
+                                <materialIcons:MaterialIcon Kind="Close" Width="12" Height="12"
+                                    Foreground="{StaticResource OsdForeground}" />
                             </Button>
                         </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- ======================== -->
+            <!--  FULLSCREEN HEADER (top overlay, auto-hides) -->
+            <!-- ======================== -->
+            <Border x:Name="FullscreenHeader"
+                    VerticalAlignment="Top" Height="44"
+                    IsVisible="False"
+                    Background="{StaticResource HeaderGradient}"
+                    ZIndex="25">
+                <Grid ColumnDefinitions="Auto,*,Auto" Margin="8,0">
+                    <TextBlock Grid.Column="0"
+                               Text="{Binding Title}"
+                               Foreground="{StaticResource OsdForeground}"
+                               FontSize="13" FontWeight="SemiBold"
+                               VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
+                        <Button x:Name="BtnFullscreenExit"
+                                Classes="circular-menu" Width="30" Height="30"
+                                Click="OnToggleFullscreen"
+                                ToolTip.Tip="Exit Fullscreen (F)">
+                            <materialIcons:MaterialIcon Kind="FullscreenExit" Width="12" Height="12"
+                                Foreground="{StaticResource OsdForeground}" />
+                        </Button>
+                        <Button x:Name="BtnFullscreenMenu"
+                                Classes="circular-menu" Width="30" Height="30"
+                                ToolTip.Tip="Menu">
+                            <materialIcons:MaterialIcon Kind="DotsHorizontal" Width="12" Height="12"
+                                Foreground="{StaticResource OsdForeground}" />
+                            <Button.Flyout>
+                                <Flyout Placement="Bottom">
+                                    <Border Classes="primary-menu-content"
+                                            Background="{StaticResource PopoverBackground}"
+                                            BorderBrush="{StaticResource PopoverBorder}"
+                                            BorderThickness="1"
+                                            CornerRadius="8"
+                                            Padding="6">
+                                        <StackPanel Width="240">
+                                            <StackPanel.Styles>
+                                                <Style Selector="Button.flyout-item">
+                                                    <Setter Property="Background" Value="Transparent" />
+                                                    <Setter Property="BorderThickness" Value="0" />
+                                                    <Setter Property="Padding" Value="10,7" />
+                                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                                    <Setter Property="Cursor" Value="Arrow" />
+                                                </Style>
+                                                <Style Selector="Button.flyout-item:pointerover">
+                                                    <Setter Property="Background" Value="rgba(255,255,255,0.08)" />
+                                                </Style>
+                                                <Style Selector="Button.flyout-item TextBlock">
+                                                    <Setter Property="FontSize" Value="13" />
+                                                    <Setter Property="FontWeight" Value="500" />
+                                                    <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
+                                                </Style>
+                                                <Style Selector="Button.flyout-item TextBlock.shortcut">
+                                                    <Setter Property="FontSize" Value="11" />
+                                                    <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
+                                                    <Setter Property="Opacity" Value="0.3" />
+                                                </Style>
+                                            </StackPanel.Styles>
+                                            <TextBlock Text="PLAYBACK" FontSize="9" FontWeight="Bold"
+                                                       Foreground="{StaticResource OsdForeground}"
+                                                       Opacity="0.4" LetterSpacing="0.8"
+                                                       Margin="8,6,8,4" />
+                                            <Button Classes="flyout-item" Click="OnPlayPause">
+                                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                                    <materialIcons:MaterialIcon Kind="Play" Width="14" Height="14"
+                                                        Foreground="{StaticResource OsdForeground}" />
+                                                    <TextBlock Grid.Column="1" Text="Play/Pause" Margin="10,0,0,0" />
+                                                    <TextBlock Grid.Column="2" Text="Space" Classes="shortcut" />
+                                                </Grid>
+                                            </Button>
+                                            <Button Classes="flyout-item" Click="OnStop">
+                                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                                    <materialIcons:MaterialIcon Kind="Stop" Width="14" Height="14"
+                                                        Foreground="{StaticResource OsdForeground}" />
+                                                    <TextBlock Grid.Column="1" Text="Stop" Margin="10,0,0,0" />
+                                                    <TextBlock Grid.Column="2" Text="Ctrl+S" Classes="shortcut" />
+                                                </Grid>
+                                            </Button>
+                                            <Button Classes="flyout-item" Click="OnSeekBackward">
+                                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                                    <materialIcons:MaterialIcon Kind="Rewind" Width="14" Height="14"
+                                                        Foreground="{StaticResource OsdForeground}" />
+                                                    <TextBlock Grid.Column="1" Text="Seek -10s" Margin="10,0,0,0" />
+                                                    <TextBlock Grid.Column="2" Text="←" Classes="shortcut" />
+                                                </Grid>
+                                            </Button>
+                                            <Button Classes="flyout-item" Click="OnSeekForward">
+                                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                                    <materialIcons:MaterialIcon Kind="FastForward" Width="14" Height="14"
+                                                        Foreground="{StaticResource OsdForeground}" />
+                                                    <TextBlock Grid.Column="1" Text="Seek +10s" Margin="10,0,0,0" />
+                                                    <TextBlock Grid.Column="2" Text="→" Classes="shortcut" />
+                                                </Grid>
+                                            </Button>
+                                            <Separator Background="{StaticResource PopoverBorder}" />
+                                            <TextBlock Text="TOOLS" FontSize="9" FontWeight="Bold"
+                                                       Foreground="{StaticResource OsdForeground}"
+                                                       Opacity="0.4" LetterSpacing="0.8"
+                                                       Margin="8,6,8,4" />
+                                            <Button Classes="flyout-item" Click="OnShortcutsClick">
+                                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                                    <materialIcons:MaterialIcon Kind="Keyboard" Width="14" Height="14"
+                                                        Foreground="{StaticResource OsdForeground}" />
+                                                    <TextBlock Grid.Column="1" Text="Keyboard Shortcuts" Margin="10,0,0,0" />
+                                                </Grid>
+                                            </Button>
+                                            <Button Classes="flyout-item" Click="OnPreferencesClick">
+                                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                                    <materialIcons:MaterialIcon Kind="Cog" Width="14" Height="14"
+                                                        Foreground="{StaticResource OsdForeground}" />
+                                                    <TextBlock Grid.Column="1" Text="Preferences" Margin="10,0,0,0" />
+                                                </Grid>
+                                            </Button>
+                                            <Button Classes="flyout-item" Click="OnAboutClick">
+                                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                                    <materialIcons:MaterialIcon Kind="Information" Width="14" Height="14"
+                                                        Foreground="{StaticResource OsdForeground}" />
+                                                    <TextBlock Grid.Column="1" Text="About Cine" Margin="10,0,0,0" />
+                                                </Grid>
+                                            </Button>
+                                            <Separator Background="{StaticResource PopoverBorder}" />
+                                            <Button Classes="flyout-item" Click="OnToggleAlwaysOnTop">
+                                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                                    <materialIcons:MaterialIcon Kind="Pin" Width="14" Height="14"
+                                                        Foreground="{StaticResource OsdForeground}" />
+                                                    <TextBlock Grid.Column="1" Text="Always on Top" Margin="10,0,0,0" />
+                                                </Grid>
+                                            </Button>
+                                        </StackPanel>
+                                    </Border>
+                                </Flyout>
+                            </Button.Flyout>
+                        </Button>
                     </StackPanel>
                 </Grid>
             </Border>
@@ -320,8 +693,14 @@
                     VerticalAlignment="Bottom"
                     HorizontalAlignment="Stretch"
                     IsVisible="False"
-                    IsHitTestVisible="True">
-                <Grid x:Name="ControlsGrid">
+                    IsHitTestVisible="True"
+                    ZIndex="15">
+                <Border.Transitions>
+                    <Transitions>
+                        <DoubleTransition Property="Opacity" Duration="0:0:0.3" />
+                    </Transitions>
+                </Border.Transitions>
+                <Grid x:Name="ControlsGrid" Margin="0,0,0,8">
                     <Grid.RowDefinitions>
                         <!-- Row 0: Transport buttons (ALIGNED: above seek bar, matches Python WrapBox) -->
                         <RowDefinition Height="Auto" />
@@ -331,228 +710,196 @@
 
                     <!-- ======================== -->
                     <!--  ROW 0: TRANSPORT BUTTONS -->
-                    <!--  ALIGNED button order:    -->
-                    <!--  prev|play|next|vol|subs|audio|[video]|[spacer*]|[shuffle]|[loopList]|loopFile|playlist|options|fullscreen -->
-                    <!--  REMOVED: BtnRewind, BtnForward (not in Python reference)   -->
-                    <!--  ADDED: BtnLoopPlaylist between Shuffle and LoopFile        -->
-                    <!--  ADDED: * spacer column between audio/video and shuffle groups -->
+                    <!--  Grouped layout with visual separators between sections:  -->
+                    <!--  TRANSPORT | AUDIO/SUBTITLE | MODE | TOOLS -->
                     <!-- ======================== -->
-                    <Grid Grid.Row="0"
-                          Margin="13,10,13,4"
-                          VerticalAlignment="Center">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />  <!-- 0: Previous -->
-                            <ColumnDefinition Width="Auto" />  <!-- 1: Play/Pause -->
-                            <ColumnDefinition Width="Auto" />  <!-- 2: Next -->
-                            <ColumnDefinition Width="Auto" />  <!-- 3: Volume -->
-                            <ColumnDefinition Width="Auto" />  <!-- 4: Subtitles -->
-                            <ColumnDefinition Width="Auto" />  <!-- 5: Audio -->
-                            <ColumnDefinition Width="Auto" />  <!-- 6: Video (conditional) -->
-                            <ColumnDefinition Width="*" />     <!-- 7: Spacer (hexpand, matches Python Separator hexpand) -->
-                            <ColumnDefinition Width="Auto" />  <!-- 8: Shuffle (conditional) -->
-                            <ColumnDefinition Width="Auto" />  <!-- 9: LoopPlaylist (conditional) — NEWLY ADDED -->
-                            <ColumnDefinition Width="Auto" />  <!-- 10: LoopFile -->
-                            <ColumnDefinition Width="Auto" />  <!-- 11: Playlist -->
-                            <ColumnDefinition Width="Auto" />  <!-- 12: Options -->
-                            <ColumnDefinition Width="Auto" />  <!-- 13: Fullscreen -->
-                        </Grid.ColumnDefinitions>
-
-                        <Grid.Styles>
+                    <StackPanel Grid.Row="0"
+                                Orientation="Horizontal"
+                                Margin="13,10,13,4"
+                                HorizontalAlignment="Center">
+                        <StackPanel.Styles>
                             <Style Selector="Button, ToggleButton">
                                 <Setter Property="Width" Value="34" />
                                 <Setter Property="Height" Value="34" />
                                 <Setter Property="Margin" Value="2" />
                                 <Setter Property="Background" Value="Transparent" />
                             </Style>
-                        </Grid.Styles>
+                        </StackPanel.Styles>
 
-                        <!-- Previous -->
-                        <Button Grid.Column="0" x:Name="BtnPrevious"
-                                Classes="circular-transport"
-                                Click="OnPrevious"
-                                ToolTip.Tip="Previous (Shift+P)">
-                            <Path Data="{StaticResource SkipBackwardIcon}"
-                                  Width="18" Height="18" Stretch="Uniform"
-                                  Fill="{StaticResource OsdForeground}" />
-                        </Button>
+                        <!-- Group 1: Transport -->
+                        <StackPanel Orientation="Horizontal" Spacing="2">
+                            <Button x:Name="BtnPrevious"
+                                    Classes="circular-transport"
+                                    Click="OnPrevious"
+                                    ToolTip.Tip="Previous (Shift+P)">
+                                <materialIcons:MaterialIcon Kind="SkipPrevious" Width="18" Height="18"
+                                    Foreground="{StaticResource OsdForeground}" />
+                            </Button>
+                            <Button x:Name="BtnPlayPause"
+                                    Classes="circular-transport"
+                                    Click="OnPlayPause"
+                                    ToolTip.Tip="Play/Pause (Space)">
+                                <materialIcons:MaterialIcon x:Name="PlayPauseIconPath" Kind="Play" Width="18" Height="18"
+                                    Foreground="{StaticResource OsdForeground}" />
+                            </Button>
+                            <Button x:Name="BtnNext"
+                                    Classes="circular-transport"
+                                    Click="OnNext"
+                                    ToolTip.Tip="Next (P)">
+                                <materialIcons:MaterialIcon Kind="SkipNext" Width="18" Height="18"
+                                    Foreground="{StaticResource OsdForeground}" />
+                            </Button>
+                        </StackPanel>
 
-                        <!-- Play/Pause -->
-                        <Button Grid.Column="1" x:Name="BtnPlayPause"
-                                Classes="circular-transport"
-                                Click="OnPlayPause"
-                                ToolTip.Tip="Play/Pause (Space)">
-                            <Path x:Name="PlayPauseIconPath"
-                                  Data="{StaticResource PlayIcon}"
-                                  Width="18" Height="18" Stretch="Uniform"
-                                  Fill="{StaticResource OsdForeground}" />
-                        </Button>
+                        <!-- Separator -->
+                        <Rectangle Width="1" Height="20" Fill="#26FFFFFF"
+                                   VerticalAlignment="Center" Margin="8,0" IsHitTestVisible="False" />
 
-                        <!-- Next -->
-                        <Button Grid.Column="2" x:Name="BtnNext"
-                                Classes="circular-transport"
-                                Click="OnNext"
-                                ToolTip.Tip="Next (P)">
-                            <Path Data="{StaticResource SkipForwardIcon}"
-                                  Width="18" Height="18" Stretch="Uniform"
-                                  Fill="{StaticResource OsdForeground}" />
-                        </Button>
+                        <!-- Group 2: Audio/Subtitle -->
+                        <StackPanel Orientation="Horizontal" Spacing="2">
+                            <Button x:Name="BtnVolumeMenu"
+                                    Classes="circular-menu"
+                                    ToolTip.Tip="Volume (M)"
+                                    PointerWheelChanged="OnVolumeButtonScroll">
+                                <Panel Width="18" Height="18">
+                                    <materialIcons:MaterialIcon x:Name="VolumeIconPath" Kind="VolumeHigh" Width="18" Height="18"
+                                        Foreground="{StaticResource OsdForeground}" />
+                                    <materialIcons:MaterialIcon x:Name="VolumeArcsPath" Kind="VolumeMedium" Width="18" Height="18"
+                                        Foreground="{StaticResource OsdForeground}"
+                                        Opacity="0" />
+                                    <materialIcons:MaterialIcon x:Name="VolumeMuteCrossPath" Kind="VolumeOff" Width="18" Height="18"
+                                        Foreground="{StaticResource OsdForeground}"
+                                        IsVisible="False" />
+                                </Panel>
+                                <Button.Flyout>
+                                    <Flyout Placement="Top">
+                                        <Border Classes="volume-popover-content"
+                                                Background="{StaticResource PopoverBackground}"
+                                                BorderBrush="{StaticResource PopoverBorder}"
+                                                BorderThickness="1"
+                                                CornerRadius="8"
+                                                Padding="8"
+                                                RenderTransformOrigin="0.5,1">
+                                            <Border.RenderTransform>
+                                                <ScaleTransform ScaleX="0.8" ScaleY="0.8" />
+                                            </Border.RenderTransform>
+                                            <Border.Transitions>
+                                                <Transitions>
+                                                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" />
+                                                    <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
+                                                </Transitions>
+                                            </Border.Transitions>
+                                            <StackPanel Orientation="Vertical" Spacing="10" Width="64"
+                                                        HorizontalAlignment="Center">
+                                                <ToggleButton x:Name="BtnMuteToggle"
+                                                              Classes="circular-toggle"
+                                                              IsChecked="{Binding IsMuted}"
+                                                              Click="OnToggleMute"
+                                                              ToolTip.Tip="Mute"
+                                                              Width="40" Height="40"
+                                                              HorizontalAlignment="Center">
+                                                    <materialIcons:MaterialIcon Kind="VolumeHigh" Width="20" Height="20"
+                                                        Foreground="{StaticResource OsdForeground}" />
+                                                </ToggleButton>
+                                                <Slider x:Name="VolumeSlider"
+                                                        Classes="volume-slider"
+                                                        Minimum="0" Maximum="130"
+                                                        Value="{Binding VolumeValue}"
+                                                        Orientation="Vertical"
+                                                        Height="120"
+                                                        HorizontalAlignment="Center"
+                                                        PointerPressed="OnVolumeSliderPointerPressed" />
+                                                <TextBlock x:Name="VolumePercentLabel"
+                                                           Text="{Binding VolumeValue, StringFormat='{}{0:F0} / 130%'}"
+                                                           FontSize="13" FontWeight="SemiBold"
+                                                           Foreground="{StaticResource OsdForeground}"
+                                                           HorizontalAlignment="Center" />
+                                            </StackPanel>
+                                        </Border>
+                                    </Flyout>
+                                </Button.Flyout>
+                            </Button>
+                            <Button x:Name="BtnSubtitlesMenu"
+                                    Classes="circular-menu"
+                                    ToolTip.Tip="Subtitles"
+                                    Click="OnSubtitlesMenuClick">
+                                <materialIcons:MaterialIcon x:Name="SubtitleIconPath" Kind="Subtitles" Width="18" Height="18"
+                                    Foreground="{StaticResource OsdForeground}" />
+                            </Button>
+                            <Button x:Name="BtnAudioMenu"
+                                    Classes="circular-menu"
+                                    ToolTip.Tip="Audio Tracks"
+                                    Click="OnAudioMenuClick">
+                                <materialIcons:MaterialIcon x:Name="AudioIconPath" Kind="Music" Width="18" Height="18"
+                                    Foreground="{StaticResource OsdForeground}" />
+                            </Button>
+                            <Button x:Name="BtnVideoMenu"
+                                    Classes="circular-menu"
+                                    ToolTip.Tip="Video Tracks"
+                                    IsVisible="{Binding HasMultipleVideoTracks}"
+                                    Click="OnVideoMenuClick">
+                                <materialIcons:MaterialIcon Kind="Video" Width="18" Height="18"
+                                    Foreground="{StaticResource OsdForeground}" />
+                            </Button>
+                        </StackPanel>
 
-                        <!-- Volume -->
-                        <Button Grid.Column="3" x:Name="BtnVolumeMenu"
-                                Classes="circular-menu"
-                                ToolTip.Tip="Volume (M)">
-                            <Panel Width="18" Height="18">
-                                <!-- Speaker body — always visible -->
-                                <Path x:Name="VolumeIconPath"
-                                      Data="{StaticResource VolumeSpeakerIcon}"
-                                      Width="18" Height="18" Stretch="Uniform"
-                                      Fill="{StaticResource OsdForeground}" />
-                                <!-- Volume arcs — visible when unmuted -->
-                                <Path x:Name="VolumeArcsPath"
-                                      Data="{StaticResource VolumeArcsIcon}"
-                                      Width="18" Height="18" Stretch="Uniform"
-                                      Stroke="{StaticResource OsdForeground}"
-                                      StrokeThickness="1.5"
-                                      StrokeLineCap="Round" />
-                                <!-- Mute cross — visible when muted -->
-                                <Path x:Name="VolumeMuteCrossPath"
-                                      Data="{StaticResource VolumeMuteCrossIcon}"
-                                      Width="18" Height="18" Stretch="Uniform"
-                                      Stroke="{StaticResource OsdForeground}"
-                                      StrokeThickness="1.5"
-                                      StrokeLineCap="Round"
-                                      IsVisible="False" />
-                            </Panel>
-                            <Button.Flyout>
-                                <!-- ALIGNED: horizontal Box matching Python reference volume popover -->
-                                <Flyout Placement="Top">
-                                    <Border Classes="volume-popover-content"
-                                            Background="{StaticResource PopoverBackground}"
-                                            BorderBrush="{StaticResource PopoverBorder}"
-                                            BorderThickness="1"
-                                            CornerRadius="6"
-                                            Padding="12,10">
-                                        <!-- ALIGNED: horizontal layout (mute toggle + slider side by side) -->
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <!-- Mute Toggle — ALIGNED: VolumeMuteIcon + IsChecked binding -->
-                                            <ToggleButton x:Name="BtnMuteToggle"
-                                                          Classes="circular-toggle"
-                                                          IsChecked="{Binding IsMuted}"
-                                                          Click="OnToggleMute"
-                                                          ToolTip.Tip="Mute"
-                                                          Width="34" Height="34">
-                                                <Path Data="{StaticResource VolumeSpeakerIcon}"
-                                                      Width="18" Height="18" Stretch="Uniform"
-                                                      Fill="{StaticResource OsdForeground}" />
-                                            </ToggleButton>
-                                            <!-- Volume Slider -->
-                                            <Slider x:Name="VolumeSlider"
-                                                    Classes="volume-slider"
-                                                    Minimum="0" Maximum="130"
-                                                    Value="{Binding VolumeValue}"
-                                                    PointerPressed="OnVolumeSliderPointerPressed" />
-                                        </StackPanel>
-                                    </Border>
-                                </Flyout>
-                            </Button.Flyout>
-                        </Button>
+                        <!-- Separator -->
+                        <Rectangle Width="1" Height="20" Fill="#26FFFFFF"
+                                   VerticalAlignment="Center" Margin="8,0" IsHitTestVisible="False" />
 
-                        <!-- Subtitles -->
-                        <Button Grid.Column="4" x:Name="BtnSubtitlesMenu"
-                                Classes="circular-menu"
-                                ToolTip.Tip="Subtitles"
-                                Click="OnSubtitlesMenuClick">
-                            <Path x:Name="SubtitleIconPath" Data="{StaticResource SubtitlesIcon}"
-                                  Width="18" Height="18" Stretch="Uniform"
-                                  Fill="{StaticResource OsdForeground}" />
-                        </Button>
+                        <!-- Group 3: Mode -->
+                        <StackPanel Orientation="Horizontal" Spacing="2">
+                            <ToggleButton x:Name="BtnShufflePlaylist"
+                                          Classes="circular-toggle"
+                                          IsChecked="{Binding IsShuffleEnabled}"
+                                          IsVisible="{Binding HasMultiplePlaylistItems}"
+                                          Click="OnToggleShuffle"
+                                          ToolTip.Tip="Shuffle Playlist">
+                                <materialIcons:MaterialIcon Kind="ShuffleVariant" Width="16" Height="16"
+                                    Foreground="{StaticResource OsdForeground}" />
+                            </ToggleButton>
+                            <ToggleButton x:Name="BtnLoopPlaylist"
+                                          Classes="circular-toggle"
+                                          IsChecked="{Binding IsLoopPlaylistEnabled}"
+                                          IsVisible="{Binding HasMultiplePlaylistItems}"
+                                          Click="OnToggleLoopPlaylist"
+                                          ToolTip.Tip="Loop Playlist">
+                                <materialIcons:MaterialIcon Kind="Repeat" Width="16" Height="16"
+                                    Foreground="{StaticResource OsdForeground}" />
+                            </ToggleButton>
+                            <ToggleButton x:Name="BtnLoopFile"
+                                          Classes="circular-toggle"
+                                          IsChecked="{Binding IsLoopFileEnabled}"
+                                          Click="OnToggleLoopFile"
+                                          ToolTip.Tip="Loop File (L)">
+                                <materialIcons:MaterialIcon Kind="RepeatOnce" Width="14" Height="14"
+                                    Foreground="{StaticResource OsdForeground}" />
+                            </ToggleButton>
+                            <Button x:Name="BtnPlaylistDialog"
+                                    Classes="circular-menu"
+                                    Click="OnOpenPlaylistDialog"
+                                    ToolTip.Tip="Playlist">
+                                <materialIcons:MaterialIcon Kind="PlaylistMusic" Width="16" Height="16"
+                                    Foreground="{StaticResource OsdForeground}" />
+                            </Button>
+                        </StackPanel>
 
-                        <!-- Audio Tracks -->
-                        <Button Grid.Column="5" x:Name="BtnAudioMenu"
-                                Classes="circular-menu"
-                                ToolTip.Tip="Audio Tracks"
-                                Click="OnAudioMenuClick">
-                            <Path x:Name="AudioIconPath" Data="{StaticResource AudioIcon}"
-                                  Width="18" Height="18" Stretch="Uniform"
-                                  Fill="{StaticResource OsdForeground}" />
-                        </Button>
+                        <!-- Separator -->
+                        <Rectangle Width="1" Height="20" Fill="#26FFFFFF"
+                                   VerticalAlignment="Center" Margin="8,0" IsHitTestVisible="False" />
 
-                        <!-- Video Tracks (conditional) -->
-                        <Button Grid.Column="6" x:Name="BtnVideoMenu"
-                                Classes="circular-menu"
-                                ToolTip.Tip="Video Tracks"
-                                IsVisible="{Binding HasMultipleVideoTracks}"
-                                Click="OnVideoMenuClick">
-                            <Path Data="{StaticResource VideoIcon}"
-                                  Width="18" Height="18" Stretch="Uniform"
-                                  Fill="{StaticResource OsdForeground}" />
-                        </Button>
-
-                        <!-- Col 7: invisible spacer (*) — matches Python "Separator hexpand opacity:0" -->
-
-                        <!-- Shuffle (conditional: HasMultiplePlaylistItems) -->
-                        <ToggleButton Grid.Column="8" x:Name="BtnShufflePlaylist"
-                                      Classes="circular-toggle"
-                                      IsChecked="{Binding IsShuffleEnabled}"
-                                      IsVisible="{Binding HasMultiplePlaylistItems}"
-                                      Click="OnToggleShuffle"
-                                      ToolTip.Tip="Shuffle Playlist">
-                            <Path Data="{StaticResource PlaylistShuffleIcon}"
-                                  Width="16" Height="16" Stretch="Uniform"
-                                  Stroke="{StaticResource OsdForeground}"
-                                  StrokeThickness="1.4"
-                                  StrokeLineCap="Round" />
-                        </ToggleButton>
-
-                        <!-- LoopPlaylist — NEWLY ADDED (was missing in previous version) -->
-                        <ToggleButton Grid.Column="9" x:Name="BtnLoopPlaylist"
-                                      Classes="circular-toggle"
-                                      IsChecked="{Binding IsLoopPlaylistEnabled}"
-                                      IsVisible="{Binding HasMultiplePlaylistItems}"
-                                      Click="OnToggleLoopPlaylist"
-                                      ToolTip.Tip="Loop Playlist">
-                            <Path Data="{StaticResource LoopPlaylistIcon}"
-                                  Width="16" Height="16" Stretch="Uniform"
-                                  Fill="{StaticResource OsdForeground}" />
-                        </ToggleButton>
-
-                        <!-- Loop File -->
-                        <ToggleButton Grid.Column="10" x:Name="BtnLoopFile"
-                                      Classes="circular-toggle"
-                                      IsChecked="{Binding IsLoopFileEnabled}"
-                                      Click="OnToggleLoopFile"
-                                      ToolTip.Tip="Loop File (L)">
-                            <Path Data="{StaticResource LoopFileIcon}"
-                                  Width="14" Height="14" Stretch="Uniform"
-                                  Fill="{StaticResource OsdForeground}" />
-                        </ToggleButton>
-
-                        <!-- Playlist -->
-                        <Button Grid.Column="11" x:Name="BtnPlaylistDialog"
-                                Classes="circular-menu"
-                                Click="OnOpenPlaylistDialog"
-                                ToolTip.Tip="Playlist">
-                            <Path Data="{StaticResource PlaylistIcon}"
-                                  Width="16" Height="16" Stretch="Uniform"
-                                  Fill="{StaticResource OsdForeground}" />
-                        </Button>
-
-                        <!-- Options -->
-                        <components:OptionsMenuButton Grid.Column="12" x:Name="BtnOptionsMenu" />
-
-                        <!-- Fullscreen -->
-                        <ToggleButton Grid.Column="13" x:Name="BtnFullscreen"
-                                      Classes="circular-toggle"
-                                      Click="OnToggleFullscreen"
-                                      ToolTip.Tip="Fullscreen (F)">
-                            <Path x:Name="FullscreenIconPath"
-                                  Data="{StaticResource FullscreenEnterIcon}"
-                                  Width="14" Height="14" Stretch="Uniform"
-                                  Stroke="{StaticResource OsdForeground}"
-                                  StrokeThickness="1.5"
-                                  StrokeLineCap="Round" />
-                        </ToggleButton>
-                    </Grid>
+                        <!-- Group 4: Tools -->
+                        <StackPanel Orientation="Horizontal" Spacing="2">
+                            <components:OptionsMenuButton x:Name="BtnOptionsMenu" />
+                            <ToggleButton x:Name="BtnFullscreen"
+                                          Classes="circular-toggle"
+                                          Click="OnToggleFullscreen"
+                                          ToolTip.Tip="Fullscreen (F)">
+                                <materialIcons:MaterialIcon x:Name="FullscreenIconPath" Kind="Fullscreen" Width="14" Height="14"
+                                    Foreground="{StaticResource OsdForeground}" />
+                            </ToggleButton>
+                        </StackPanel>
+                    </StackPanel>
 
                     <!-- ======================== -->
                     <!--  ROW 1: SEEK BAR + TIME  -->
@@ -605,8 +952,7 @@
                                     CornerRadius="8"
                                     Background="{StaticResource ProgressSliderBackground}"
                                     HorizontalAlignment="Left"
-                                    VerticalAlignment="Center"
-                                    IsHitTestVisible="False">
+                                    VerticalAlignment="Center">
                                 <Border.Effect>
                                     <DropShadowEffect BlurRadius="4" OffsetY="1" Color="#80000000" />
                                 </Border.Effect>
@@ -684,15 +1030,45 @@
                 IsVisible="False"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Bottom"
-                Margin="0,0,0,80"
+                Margin="0,0,0,100"
                 Padding="16,8"
                 CornerRadius="8"
-                Background="{StaticResource OsdBackground}">
+                Background="{StaticResource OsdBackground}"
+                PointerPressed="OnOsdNotificationClick">
+            <Border.Transitions>
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.2" />
+                </Transitions>
+            </Border.Transitions>
             <TextBlock x:Name="OsdNotificationText"
                        Text=""
                        FontSize="14"
                        FontWeight="SemiBold"
                        Foreground="{StaticResource OsdForeground}" />
+        </Border>
+
+        <!-- Drag-drop overlay (hidden by default) -->
+        <Border x:Name="DragDropOverlay"
+                IsVisible="False"
+                IsHitTestVisible="False"
+                Background="#B0000000"
+                CornerRadius="8"
+                Margin="12"
+                BorderThickness="2"
+                BorderBrush="#804aa3ff"
+                VerticalAlignment="Stretch"
+                HorizontalAlignment="Stretch">
+            <Border.Transitions>
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
+                </Transitions>
+            </Border.Transitions>
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="8">
+                <materialIcons:MaterialIcon Kind="Play" Width="48" Height="48"
+                    Foreground="#4aa3ff" />
+                <TextBlock Text="Drop to Play" FontSize="24" FontWeight="SemiBold"
+                           Foreground="#4aa3ff" HorizontalAlignment="Center" />
+            </StackPanel>
         </Border>
     </Grid>
 </Window>
