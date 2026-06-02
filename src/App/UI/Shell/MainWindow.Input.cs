@@ -3,12 +3,23 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Media;
+using AvaloniaLayout = Avalonia.Layout;
+using Button = Avalonia.Controls.Button;
+using Color = Avalonia.Media.Color;
+using Brushes = Avalonia.Media.Brushes;
+using Cursor = Avalonia.Input.Cursor;
+using KeyEventArgs = Avalonia.Input.KeyEventArgs;
+using PointerWheelEventArgs = Avalonia.Input.PointerWheelEventArgs;
+using PointerPressedEventArgs = Avalonia.Input.PointerPressedEventArgs;
+using RoutedEventArgs = Avalonia.Interactivity.RoutedEventArgs;
+using Cine.Avalonia.Views.Dialogs;
 
 namespace Cine.Avalonia;
 
 public partial class MainWindow
 {
-    private void OnKeyDown(object? sender, global::Avalonia.Input.KeyEventArgs e)
+    private void OnKeyDown(object? sender, KeyEventArgs e)
     {
         var key = e.Key;
         var shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
@@ -20,11 +31,11 @@ public partial class MainWindow
             Handle(() => _viewModel?.PlayPause());
         else if (key == Key.MediaStop) 
             Handle(() => _viewModel?.Stop());
-        else if (key == Key.Escape) 
-            Handle(() => { 
-                if (_activeFlyouts > 0)
-                    CloseOpenFlyouts();
-                else if (_playerService?.Player?.IsFullscreen == true) 
+        else if (key == Key.Escape)
+            Handle(() => {
+                if (_headerBar.HasActiveFlyouts)
+                    _headerBar.CloseOpenFlyouts();
+                else if (_playerService?.Player?.IsFullscreen == true)
                     _viewModel?.ToggleFullscreen();
             });
         else if (key == Key.F || key == Key.F11) 
@@ -111,28 +122,37 @@ public partial class MainWindow
 
     private void CloseOpenFlyouts()
     {
-        if (BtnVolumeMenu?.Flyout is global::Avalonia.Controls.Flyout volFly && volFly.IsOpen) volFly.Hide();
-        if (BtnOpenMenu?.Flyout is global::Avalonia.Controls.Flyout openFly && openFly.IsOpen) openFly.Hide();
-        if (BtnPrimaryMenu?.Flyout is global::Avalonia.Controls.Flyout primFly && primFly.IsOpen) primFly.Hide();
-        BtnOptionsMenu?.CloseFlyout();
-        if (BtnSubtitlesMenu?.Flyout is global::Avalonia.Controls.Flyout subFly && subFly.IsOpen) subFly.Hide();
-        if (BtnAudioMenu?.Flyout is global::Avalonia.Controls.Flyout audFly && audFly.IsOpen) audFly.Hide();
-        if (BtnVideoMenu?.Flyout is global::Avalonia.Controls.Flyout vidFly && vidFly.IsOpen) vidFly.Hide();
+        var flyoutsToClose = new[] { _controlsBox.BtnVolumeMenu, _headerBar.BtnOpenMenu, _headerBar.BtnPrimaryMenu };
+        foreach (var btn in flyoutsToClose)
+            if (btn?.Flyout is Flyout f)
+                f.Hide();
+        // BtnOptionsMenu handles its own flyout internally
+        var trackMenus = new[] { _controlsBox.BtnSubtitlesMenu, _controlsBox.BtnAudioMenu, _controlsBox.BtnVideoMenu };
+        foreach (var btn in trackMenus)
+            if (btn?.Flyout is Flyout f)
+                f.Hide();
     }
 
-    // ========================
-    //  Video surface interaction
-    // ========================
+    // Guard against duplicate PointerPressed from both VideoClickOverlay and _videoHost
+    private DateTime _lastClickTime = DateTime.MinValue;
 
-    private void OnVideoPointerPressed(object? sender, global::Avalonia.Input.PointerPressedEventArgs e)
+    private void OnVideoPointerPressed(object? sender, PointerPressedEventArgs e)
     {
+        var clickNow = DateTime.UtcNow;
+        if ((clickNow - _lastClickTime).TotalMilliseconds < 100)
+        {
+            e.Handled = true;
+            return;
+        }
+        _lastClickTime = clickNow;
+
         var props = e.GetCurrentPoint(this).Properties;
 
         if (props.IsRightButtonPressed)
         {
-            var flyout = new global::Avalonia.Controls.Flyout
+            var flyout = new Flyout
             {
-                Placement = global::Avalonia.Controls.PlacementMode.Pointer
+                Placement = PlacementMode.Pointer
             };
             BuildVideoContextMenu(flyout);
             flyout.ShowAt(this);
@@ -152,22 +172,20 @@ public partial class MainWindow
             var now = DateTime.UtcNow;
             if ((now - _lastTapTime).TotalMilliseconds < 300)
             {
-                // Double-click → fullscreen
                 _lastTapTime = DateTime.MinValue;
                 _viewModel?.ToggleFullscreen();
                 e.Handled = true;
                 return;
             }
 
-            // Single click → play/pause immediately
             _lastTapTime = now;
             _viewModel?.PlayPause();
-            UpdatePlayPauseIcon();
+            _controlsBox?.UpdatePlayPauseIcon();
             e.Handled = true;
         }
     }
 
-    private void OnVolumeButtonScroll(object? sender, global::Avalonia.Input.PointerWheelEventArgs e)
+    private void OnVolumeButtonScroll(object? sender, PointerWheelEventArgs e)
     {
         if (_viewModel == null) return;
         if (e.Delta.Y > 0)
@@ -177,75 +195,75 @@ public partial class MainWindow
         e.Handled = true;
     }
 
-    private void BuildVideoContextMenu(global::Avalonia.Controls.Flyout flyout)
+    private void BuildVideoContextMenu(Flyout flyout)
     {
         var stack = new global::Avalonia.Controls.StackPanel();
 
         void AddItem(string iconKey, string text, string? shortcut, Action action)
         {
-            var grid = new global::Avalonia.Controls.Grid
+            var grid = new Grid
             {
-                ColumnDefinitions = new global::Avalonia.Controls.ColumnDefinitions
+                ColumnDefinitions = new ColumnDefinitions
                 {
-                    new global::Avalonia.Controls.ColumnDefinition(global::Avalonia.Controls.GridLength.Auto),
-                    new global::Avalonia.Controls.ColumnDefinition(global::Avalonia.Controls.GridLength.Star),
-                    new global::Avalonia.Controls.ColumnDefinition(global::Avalonia.Controls.GridLength.Auto)
+                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(GridLength.Star),
+                    new ColumnDefinition(GridLength.Auto)
                 }
             };
 
-            var iconData = global::Avalonia.Application.Current?.FindResource(iconKey) as global::Avalonia.Media.Geometry;
+            var iconData = AvaloniaApp.Current?.FindResource(iconKey) as Geometry;
             if (iconData != null)
             {
                 var iconPath = new global::Avalonia.Controls.Shapes.Path
                 {
                     Data = iconData,
-                    Fill = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.FromArgb(0xFF, 0xE5, 0xE5, 0xE5)),
+                    Fill = new SolidColorBrush(Color.FromArgb(0xFF, 0xE5, 0xE5, 0xE5)),
                     Width = 14, Height = 14,
-                    Stretch = global::Avalonia.Media.Stretch.Uniform,
+                    Stretch = Stretch.Uniform,
                     VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center
                 };
-                global::Avalonia.Controls.Grid.SetColumn(iconPath, 0);
+                Grid.SetColumn(iconPath, 0);
                 grid.Children.Add(iconPath);
             }
 
-            var textBlock = new global::Avalonia.Controls.TextBlock
+            var textBlock = new TextBlock
             {
                 Text = text,
                 FontSize = 13,
-                Foreground = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.FromArgb(0xFF, 0xE5, 0xE5, 0xE5)),
-                Margin = new global::Avalonia.Thickness(10, 0, 0, 0),
+                Foreground = new SolidColorBrush(Color.FromArgb(0xFF, 0xE5, 0xE5, 0xE5)),
+                Margin = new Thickness(10, 0, 0, 0),
                 VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center
             };
-            global::Avalonia.Controls.Grid.SetColumn(textBlock, 1);
+            Grid.SetColumn(textBlock, 1);
             grid.Children.Add(textBlock);
 
             if (shortcut != null)
             {
-                var shortcutBlock = new global::Avalonia.Controls.TextBlock
+                var shortcutBlock = new TextBlock
                 {
                     Text = shortcut,
                     FontSize = 11,
-                    Foreground = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.FromArgb(0x50, 0xFF, 0xFF, 0xFF)),
+                    Foreground = new SolidColorBrush(Color.FromArgb(0x50, 0xFF, 0xFF, 0xFF)),
                     VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center
                 };
-                global::Avalonia.Controls.Grid.SetColumn(shortcutBlock, 2);
+                Grid.SetColumn(shortcutBlock, 2);
                 grid.Children.Add(shortcutBlock);
             }
 
-            var btn = new global::Avalonia.Controls.Button
+            var btn = new Button
             {
                 Content = grid,
-                Background = global::Avalonia.Media.Brushes.Transparent,
-                BorderThickness = new global::Avalonia.Thickness(0),
-                Padding = new global::Avalonia.Thickness(10, 7),
+                Background = Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                Padding = new Thickness(10, 7),
                 HorizontalContentAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch,
-                Cursor = new global::Avalonia.Input.Cursor(global::Avalonia.Input.StandardCursorType.Arrow)
+                Cursor = new Cursor(StandardCursorType.Arrow)
             };
 
             btn.PointerEntered += (_, _) =>
-                btn.Background = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF));
+                btn.Background = new SolidColorBrush(Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF));
             btn.PointerExited += (_, _) =>
-                btn.Background = global::Avalonia.Media.Brushes.Transparent;
+                btn.Background = Brushes.Transparent;
             btn.Click += (_, _) => { action(); flyout.Hide(); };
 
             stack.Children.Add(btn);
@@ -254,33 +272,33 @@ public partial class MainWindow
         AddItem("PlayIcon", "Play / Pause", "Space", () => _viewModel?.PlayPause());
         AddItem("StopIcon", "Stop", "Ctrl+S", () => _viewModel?.Stop());
 
-        stack.Children.Add(new global::Avalonia.Controls.Separator
+        stack.Children.Add(new Separator
         {
-            Background = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.FromArgb(0x33, 0xFF, 0xFF, 0xFF)),
-            Margin = new global::Avalonia.Thickness(4, 2)
+            Background = new SolidColorBrush(Color.FromArgb(0x33, 0xFF, 0xFF, 0xFF)),
+            Margin = new Thickness(4, 2)
         });
 
         AddItem("SkipBackwardIcon", "Seek Backward", "←", () => _viewModel?.SeekBackward());
         AddItem("SkipForwardIcon", "Seek Forward", "→", () => _viewModel?.SeekForward());
         AddItem("FullscreenEnterIcon", "Fullscreen", "F", () => _viewModel?.ToggleFullscreen());
 
-        stack.Children.Add(new global::Avalonia.Controls.Separator
+        stack.Children.Add(new Separator
         {
-            Background = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.FromArgb(0x33, 0xFF, 0xFF, 0xFF)),
-            Margin = new global::Avalonia.Thickness(4, 2)
+            Background = new SolidColorBrush(Color.FromArgb(0x33, 0xFF, 0xFF, 0xFF)),
+            Margin = new Thickness(4, 2)
         });
 
         AddItem("SubtitlesIcon", "Cycle Subtitles", "C", () => _playerService?.Player?.CycleSubtitleTrack());
-        AddItem("OptionsIcon", "Preferences", "", () => OnPreferencesClick(null!, null!));
-        AddItem("InfoIcon", "About Cine", "", () => OnAboutClick(null!, null!));
+        AddItem("OptionsIcon", "Preferences", "", () => new PreferencesDialog { DataContext = _viewModel }.Show(this));
+        AddItem("InfoIcon", "About Cine", "", () => new AboutDialog { DataContext = _viewModel }.Show(this));
 
-        flyout.Content = new global::Avalonia.Controls.Border
+        flyout.Content = new Border
         {
-            Background = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.FromArgb(0xF0, 0x1E, 0x1E, 0x2E)),
-            BorderBrush = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.FromArgb(0x33, 0xFF, 0xFF, 0xFF)),
-            BorderThickness = new global::Avalonia.Thickness(1),
-            CornerRadius = new global::Avalonia.CornerRadius(8),
-            Padding = new global::Avalonia.Thickness(4),
+            Background = new SolidColorBrush(Color.FromArgb(0xF0, 0x1E, 0x1E, 0x2E)),
+            BorderBrush = new SolidColorBrush(Color.FromArgb(0x33, 0xFF, 0xFF, 0xFF)),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(4),
             MinWidth = 200,
             Child = stack
         };

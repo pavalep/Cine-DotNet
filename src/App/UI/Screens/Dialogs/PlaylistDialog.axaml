@@ -1,0 +1,86 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:Cine.Avalonia.ViewModels"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="450"
+        x:Class="Cine.Avalonia.Views.Dialogs.PlaylistDialog"
+        x:DataType="vm:MainViewModel"
+        Title="Cine — Playlist"
+        Width="520" Height="420"
+        MinWidth="360" MinHeight="300"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource AppBackground}"
+        ExtendClientAreaToDecorationsHint="True"
+        WindowDecorations="BorderOnly">
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="0">
+        <!-- Header -->
+        <Grid Grid.Row="0" Height="40" ColumnDefinitions="Auto,Auto,*,Auto"
+              Background="{StaticResource PopoverBackground}">
+            <Button Grid.Column="0" 
+                    Classes="flat" 
+                    Margin="8,0"
+                    Click="OnAddFilesClick"
+                    ToolTip.Tip="Add Files">
+                <materialIcons:MaterialIcon Kind="PlaylistPlus" Width="16" Height="16"
+                    Foreground="{StaticResource OsdForeground}" />
+            </Button>
+            <TextBlock Grid.Column="1" Text="Playlist" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" HorizontalAlignment="Center" />
+            <Button Grid.Column="3" 
+                    Classes="flat" 
+                    Margin="0,0,8,0"
+                    Click="OnCloseClick"
+                    ToolTip.Tip="Close">
+                <materialIcons:MaterialIcon Kind="Close" Width="14" Height="14"
+                    Foreground="{StaticResource OsdForeground}" />
+            </Button>
+        </Grid>
+
+        <!-- List -->
+        <ListBox Grid.Row="1" x:Name="PlaylistListBox"
+                 ItemsSource="{Binding PlaylistItems}"
+                 Background="Transparent"
+                 BorderThickness="0">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" Margin="8,4">
+                        <TextBlock Grid.Column="0" Text="▶" FontSize="10"
+                                   Foreground="{StaticResource OsdForeground}"
+                                   VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <TextBlock Grid.Column="1" Text="{Binding Title}"
+                                   FontSize="13" Foreground="{StaticResource OsdForeground}"
+                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        <Button Grid.Column="2" 
+                                Classes="circular-transport" 
+                                Click="OnItemPlayClick"
+                                Width="32" Height="32"
+                                Margin="8,0,0,0">
+                            <materialIcons:MaterialIcon Kind="Play" Width="12" Height="12"
+                                Foreground="{StaticResource OsdForeground}" />
+                        </Button>
+                        <Button Grid.Column="3" 
+                                Classes="circular-transport" 
+                                Click="OnItemRemoveClick"
+                                Width="32" Height="32"
+                                ToolTip.Tip="Remove">
+                            <materialIcons:MaterialIcon Kind="Close" Width="10" Height="10"
+                                Foreground="{StaticResource OsdForeground}" />
+                        </Button>
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <!-- Empty State -->
+        <Border Grid.Row="1" x:Name="EmptyStateOverlay"
+                Background="Transparent" IsVisible="False">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16">
+                <materialIcons:MaterialIcon Kind="PlaylistPlus" Width="64" Height="64"
+                    Foreground="{StaticResource OsdForeground}" />
+                <TextBlock Text="Add to Playlist" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

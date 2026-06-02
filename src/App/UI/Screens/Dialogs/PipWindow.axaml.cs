@@ -3,12 +3,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using Cine.Avalonia.Controls;
 using Cine.Media.Interfaces;
 
-namespace Cine.Avalonia.Views;
+namespace Cine.Avalonia.Views.Dialogs;
 
 public partial class PipWindow : Window
 {
@@ -33,11 +32,6 @@ public partial class PipWindow : Window
         _pipPlayer = pipPlayer;
         _mainPlayer = mainPlayer;
         _filePath = filePath;
-    }
-
-    private void InitializeComponent()
-    {
-        AvaloniaXamlLoader.Load(this);
     }
 
     private void OnOpened(object? sender, EventArgs e)
@@ -86,7 +80,6 @@ public partial class PipWindow : Window
             }
             catch (OperationCanceledException)
             {
-                // PIP was closed during init — clean up silently
             }
             catch
             {
@@ -203,3 +196,4 @@ public partial class PipWindow : Window
         base.OnClosed(e);
     }
 }
+

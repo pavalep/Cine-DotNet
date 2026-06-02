@@ -1,0 +1,303 @@
+using System;
+using System.Collections.ObjectModel;
+using System.Linq;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
+using Avalonia.Media;
+using Cine.Avalonia.ViewModels;
+using Cine.Avalonia.Views.Dialogs;
+using AvaloniaLayout = Avalonia.Layout;
+using Button = global::Avalonia.Controls.Button;
+using Color = Avalonia.Media.Color;
+using Brushes = Avalonia.Media.Brushes;
+using Cursor = Avalonia.Input.Cursor;
+using PointerPressedEventArgs = Avalonia.Input.PointerPressedEventArgs;
+using PointerWheelEventArgs = Avalonia.Input.PointerWheelEventArgs;
+using Control = Avalonia.Controls.Control;
+using ToolTip = Avalonia.Controls.ToolTip;
+
+namespace Cine.Avalonia.Controls;
+
+public partial class ControlsBoxControl : AvaloniaUserControl
+{
+    public event EventHandler? PlaylistDialogRequested;
+
+    private MainViewModel? _viewModel;
+    private int _activeFlyouts;
+    private PlaylistDialog? _playlistDialog;
+
+    public SeekBarControl SeekBarControl => SeekBar;
+
+    public ControlsBoxControl()
+    {
+        InitializeComponent();
+        DataContextChanged += OnDataContextChanged;
+        SeekBar?.InitializeSeekBar();
+    }
+
+    private void OnDataContextChanged(object? sender, EventArgs e)
+    {
+        _viewModel = DataContext as MainViewModel;
+    }
+
+    // --- Public API for MainWindow ---
+
+    public bool HasActiveFlyouts => _activeFlyouts > 0;
+
+    public void UpdatePlayPauseIcon()
+    {
+        if (_viewModel == null) return;
+        PlayPauseIconPath.Kind = _viewModel.IsPlaying
+            ? Material.Icons.MaterialIconKind.Pause
+            : Material.Icons.MaterialIconKind.Play;
+    }
+
+    public void RefreshVolumeIcon()
+    {
+        if (_viewModel == null) return;
+        bool isMuted = _viewModel.IsMuted;
+        VolumeArcsPath.IsVisible = !isMuted;
+        VolumeMuteCrossPath.IsVisible = isMuted;
+    }
+
+    public void RefreshSubtitleIcon()
+    {
+        if (_viewModel == null) return;
+        SubtitleIconPath.Kind = _viewModel.IsSubtitleEnabled
+            ? Material.Icons.MaterialIconKind.Subtitles
+            : Material.Icons.MaterialIconKind.ClosedCaptionOutline;
+    }
+
+    public void RefreshAudioIcon()
+    {
+        if (_viewModel == null) return;
+        AudioIconPath.Kind = _viewModel.IsAudioEnabled
+            ? Material.Icons.MaterialIconKind.Music
+            : Material.Icons.MaterialIconKind.MusicOff;
+    }
+
+    public void SetControlsVisibility(bool visible)
+    {
+        ControlsBox.IsVisible = visible;
+    }
+
+    public void UpdateFullscreenIcon(bool isFullscreen)
+    {
+        if (isFullscreen)
+        {
+            FullscreenIconPath.Kind = Material.Icons.MaterialIconKind.FullscreenExit;
+            ToolTip.SetTip(BtnFullscreen, "Exit Fullscreen (F)");
+        }
+        else
+        {
+            FullscreenIconPath.Kind = Material.Icons.MaterialIconKind.Fullscreen;
+            ToolTip.SetTip(BtnFullscreen, "Fullscreen (F)");
+        }
+    }
+
+    // --- Responsive layout ---
+
+    public void SetButtonSize(Control? control, double size)
+    {
+        if (control == null) return;
+        control.Width = size;
+        control.Height = size;
+        if (control is Button btn)
+            btn.CornerRadius = new CornerRadius(size / 2);
+        else if (control is global::Avalonia.Controls.Primitives.ToggleButton tbtn)
+            tbtn.CornerRadius = new CornerRadius(size / 2);
+    }
+
+    public void SetVis(Control? c, bool v) { if (c != null) c.IsVisible = v; }
+    public void SetFont(TextBlock? l, double s) { if (l != null) l.FontSize = s; }
+
+    public void UpdateResponsiveLayout(double width, bool hasMultipleVideoTracks)
+    {
+        bool isNarrow = width < 495;
+        if (isNarrow)
+        {
+            SetVis(BtnSubtitlesMenu, false);
+            SetVis(BtnAudioMenu, false);
+            SetVis(BtnVideoMenu, false);
+            SetFont(SeekBar.PositionTimeLabel, 11);
+            SetFont(SeekBar.DurationTimeLabel, 11);
+        }
+        else
+        {
+            SetVis(BtnSubtitlesMenu, true);
+            SetVis(BtnAudioMenu, true);
+            SetVis(BtnVideoMenu, hasMultipleVideoTracks);
+            SetFont(SeekBar.PositionTimeLabel, 13);
+            SetFont(SeekBar.DurationTimeLabel, 13);
+        }
+    }
+
+    // --- Transport handlers ---
+
+    private void OnPlayPause(object? sender, RoutedEventArgs e) => _viewModel?.PlayPause();
+    private void OnPrevious(object? sender, RoutedEventArgs e)
+    {
+        if (_viewModel != null)
+        {
+            if (_viewModel.HasMultiplePlaylistItems)
+                _viewModel.PreviousItem();
+            else
+                _viewModel.PreviousChapter();
+        }
+    }
+    private void OnNext(object? sender, RoutedEventArgs e)
+    {
+        if (_viewModel != null)
+        {
+            if (_viewModel.HasMultiplePlaylistItems)
+                _viewModel.NextItem();
+            else
+                _viewModel.NextChapter();
+        }
+    }
+    private void OnToggleShuffle(object? sender, RoutedEventArgs e) => _viewModel?.ToggleShuffle();
+    private void OnToggleLoopFile(object? sender, RoutedEventArgs e) => _viewModel?.ToggleLoopFile();
+    private void OnToggleLoopPlaylist(object? sender, RoutedEventArgs e) => _viewModel?.ToggleLoopPlaylist();
+    private void OnToggleFullscreen(object? sender, RoutedEventArgs e) => _viewModel?.ToggleFullscreen();
+
+    // --- Volume handlers ---
+
+    private void OnToggleMute(object? sender, RoutedEventArgs e) => _viewModel?.ToggleMute();
+    private void OnVolumeSliderPointerPressed(object? sender, PointerPressedEventArgs e) => e.Handled = true;
+
+    private void OnVolumeButtonScroll(object? sender, PointerWheelEventArgs e)
+    {
+        if (_viewModel == null) return;
+        if (e.Delta.Y > 0)
+            _viewModel.IncreaseVolume();
+        else if (e.Delta.Y < 0)
+            _viewModel.DecreaseVolume();
+        e.Handled = true;
+    }
+
+    // --- Track menu handlers ---
+
+    private void OnSubtitlesMenuClick(object? sender, RoutedEventArgs e)
+    {
+        if (_viewModel == null) return;
+        var flyout = BuildTrackMenuFlyout(_viewModel.SubtitleTracks);
+        TrackFlyout(flyout);
+        flyout.ShowAt(BtnSubtitlesMenu);
+    }
+
+    private void OnAudioMenuClick(object? sender, RoutedEventArgs e)
+    {
+        if (_viewModel == null) return;
+        var flyout = BuildTrackMenuFlyout(_viewModel.AudioTracks);
+        TrackFlyout(flyout);
+        flyout.ShowAt(BtnAudioMenu);
+    }
+
+    private void OnVideoMenuClick(object? sender, RoutedEventArgs e)
+    {
+        if (_viewModel == null) return;
+        var flyout = BuildTrackMenuFlyout(_viewModel.VideoTracks);
+        TrackFlyout(flyout);
+        flyout.ShowAt(BtnVideoMenu);
+    }
+
+    private Flyout BuildTrackMenuFlyout(ObservableCollection<TrackMenuItem> tracks)
+    {
+        var stackPanel = new global::Avalonia.Controls.StackPanel();
+
+        foreach (var track in tracks)
+        {
+            var dot = new Border
+            {
+                Width = 6, Height = 6,
+                CornerRadius = new CornerRadius(3),
+                Background = track.IsSelected && !track.IsPseudoEntry
+                    ? new SolidColorBrush(Color.FromArgb(0xFF, 0x6C, 0xB4, 0xFF))
+                    : new SolidColorBrush(Color.FromArgb(0x30, 0xFF, 0xFF, 0xFF)),
+                VerticalAlignment = AvaloniaLayout.VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 8, 0)
+            };
+
+            var text = new TextBlock
+            {
+                Text = track.DisplayName,
+                FontWeight = track.IsSelected ? FontWeight.SemiBold : FontWeight.Normal,
+                FontSize = 12,
+                Foreground = new SolidColorBrush(Color.FromArgb(0xFF, 0xE5, 0xE5, 0xE5))
+            };
+
+            var grid = new Grid
+            {
+                ColumnDefinitions = new ColumnDefinitions
+                {
+                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(GridLength.Star)
+                }
+            };
+            grid.Children.Add(dot);
+            grid.Children.Add(text);
+            Grid.SetColumn(text, 1);
+
+            var button = new Button
+            {
+                Content = grid,
+                Background = Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                Padding = new Thickness(10, 7),
+                HorizontalContentAlignment = AvaloniaLayout.HorizontalAlignment.Stretch,
+                Cursor = new Cursor(StandardCursorType.Arrow),
+                Opacity = track.DisplayOpacity,
+                Command = track.SelectCommand
+            };
+
+            button.PointerEntered += (_, _) =>
+                button.Background = new SolidColorBrush(Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF));
+            button.PointerExited += (_, _) =>
+                button.Background = Brushes.Transparent;
+
+            stackPanel.Children.Add(button);
+        }
+
+        var border = new Border
+        {
+            Background = (IBrush?)global::Avalonia.Application.Current?.FindResource("PopoverBackground"),
+            BorderBrush = (IBrush?)global::Avalonia.Application.Current?.FindResource("PopoverBorder"),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(4),
+            MinWidth = 180,
+            Child = stackPanel
+        };
+
+        return new Flyout { Content = border, Placement = PlacementMode.Top };
+    }
+
+    private void TrackFlyout(Flyout flyout)
+    {
+        _activeFlyouts++;
+        flyout.Opened += (_, _) => _activeFlyouts++;
+        flyout.Closed += (_, _) => _activeFlyouts = Math.Max(0, _activeFlyouts - 1);
+    }
+
+    // --- Playlist dialog ---
+
+    private void OnOpenPlaylistDialog(object? sender, RoutedEventArgs e)
+    {
+        var w = TopLevel.GetTopLevel(this) as Window;
+        if (w == null) return;
+
+        if (_playlistDialog == null)
+        {
+            _playlistDialog = new PlaylistDialog { DataContext = _viewModel };
+            _playlistDialog.Closed += (s, args) => _playlistDialog = null;
+            _playlistDialog.Show(w);
+        }
+        else
+        {
+            _playlistDialog.Activate();
+        }
+    }
+}
+

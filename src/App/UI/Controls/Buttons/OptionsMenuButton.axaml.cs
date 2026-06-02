@@ -1,6 +1,5 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Markup.Xaml;
 using Cine.Avalonia.ViewModels;
 
 namespace Cine.Avalonia.Components;
@@ -34,11 +33,6 @@ public partial class OptionsMenuButton : global::Avalonia.Controls.UserControl
             }
         }
         AspectRatioCombo.SelectedIndex = 0;
-    }
-
-    private void InitializeComponent()
-    {
-        AvaloniaXamlLoader.Load(this);
     }
 
     private MainViewModel? ViewModel => DataContext as MainViewModel;

@@ -1,0 +1,140 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        x:Class="Cine.Avalonia.Views.Dialogs.ShortcutsDialog"
+        Title="Keyboard Shortcuts"
+        Width="480" Height="420"
+        MinWidth="360" MinHeight="300"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource AppBackground}"
+        ExtendClientAreaToDecorationsHint="True"
+        WindowDecorations="BorderOnly">
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="0">
+        <Grid Grid.Row="0" Height="40" Background="{StaticResource PopoverBackground}"
+              ColumnDefinitions="*,Auto">
+            <TextBlock Grid.Column="0" Text="Keyboard Shortcuts" FontWeight="Bold" FontSize="16"
+                       Foreground="{StaticResource OsdForeground}"
+                       VerticalAlignment="Center" Margin="12,0,0,0" />
+            <Button Grid.Column="1" Click="OnCloseClick" Background="Transparent"
+                    BorderThickness="0" Width="32" Height="32"
+                    ToolTip.Tip="Close">
+                <materialIcons:MaterialIcon Kind="Close" Width="12" Height="12"
+                    Foreground="White" />
+            </Button>
+        </Grid>
+
+        <ScrollViewer Grid.Row="1" Margin="16,8">
+            <StackPanel Spacing="12">
+                <TextBlock Text="Playback" FontSize="16" FontWeight="SemiBold"
+                           Foreground="{StaticResource OsdForeground}" />
+                <Border Background="{StaticResource PopoverBackground}" CornerRadius="6" Padding="12">
+                    <StackPanel Spacing="6">
+                        <TextBlock Foreground="{StaticResource OsdForeground}" FontSize="13"
+                                   TextWrapping="Wrap">
+                        <Run Text="Space / K / P" FontWeight="SemiBold" /> – Play / Pause
+                        </TextBlock>
+                        <TextBlock Foreground="{StaticResource OsdForeground}" FontSize="13"
+                                   TextWrapping="Wrap">
+                        <Run Text="Ctrl+S" FontWeight="SemiBold" /> – Stop
+                        </TextBlock>
+                        <TextBlock Foreground="{StaticResource OsdForeground}" FontSize="13"
+                                   TextWrapping="Wrap">
+                        <Run Text="[ / ]" FontWeight="SemiBold" /> – Decrease/Increase Speed
+                        </TextBlock>
+                        <TextBlock Foreground="{StaticResource OsdForeground}" FontSize="13"
+                                   TextWrapping="Wrap">
+                        <Run Text="Backspace" FontWeight="SemiBold" /> – Reset Speed
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <TextBlock Text="Seeking" FontSize="16" FontWeight="SemiBold"
+                           Foreground="{StaticResource OsdForeground}" />
+                <Border Background="{StaticResource PopoverBackground}" CornerRadius="6" Padding="12">
+                    <StackPanel Spacing="6">
+                        <TextBlock Foreground="{StaticResource OsdForeground}" FontSize="13"
+                                   TextWrapping="Wrap">
+                        <Run Text="← / →" FontWeight="SemiBold" /> – Seek ±5s
+                        </TextBlock>
+                        <TextBlock Foreground="{StaticResource OsdForeground}" FontSize="13"
+                                   TextWrapping="Wrap">
+                        <Run Text="Shift+← / Shift+→" FontWeight="SemiBold" /> – Seek ±30s
+                        </TextBlock>
+                        <TextBlock Foreground="{StaticResource OsdForeground}" FontSize="13"
+                                   TextWrapping="Wrap">
+                        <Run Text="Ctrl+← / Ctrl+→" FontWeight="SemiBold" /> – Prev/Next Chapter
+                        </TextBlock>
+                        <TextBlock Foreground="{StaticResource OsdForeground}" FontSize="13"
+                                   TextWrapping="Wrap">
+                        <Run Text="J / L" FontWeight="SemiBold" /> – Seek -10s / +10s
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <TextBlock Text="Video &amp; Audio" FontSize="16" FontWeight="SemiBold"
+                           Foreground="{StaticResource OsdForeground}" />
+                <Border Background="{StaticResource PopoverBackground}" CornerRadius="6" Padding="12">
+                    <StackPanel Spacing="6">
+                        <TextBlock Foreground="{StaticResource OsdForeground}" FontSize="13"
+                                   TextWrapping="Wrap">
+                        <Run Text="F / F11" FontWeight="SemiBold" /> – Toggle Fullscreen
+                        </TextBlock>
+                        <TextBlock Foreground="{StaticResource OsdForeground}" FontSize="13"
+                                   TextWrapping="Wrap">
+                        <Run Text="↑ / ↓" FontWeight="SemiBold" /> – Volume ±5%
+                        </TextBlock>
+                        <TextBlock Foreground="{StaticResource OsdForeground}" FontSize="13"
+                                   TextWrapping="Wrap">
+                        <Run Text="M" FontWeight="SemiBold" /> – Mute Toggle
+                        </TextBlock>
+                        <TextBlock Foreground="{StaticResource OsdForeground}" FontSize="13"
+                                   TextWrapping="Wrap">
+                        <Run Text="C" FontWeight="SemiBold" /> – Cycle Subtitles
+                        </TextBlock>
+                        <TextBlock Foreground="{StaticResource OsdForeground}" FontSize="13"
+                                   TextWrapping="Wrap">
+                        <Run Text=", / ." FontWeight="SemiBold" /> – Subtitle Delay ±200ms
+                        </TextBlock>
+                        <TextBlock Foreground="{StaticResource OsdForeground}" FontSize="13"
+                                   TextWrapping="Wrap">
+                        <Run Text="PageUp / PageDown" FontWeight="SemiBold" /> – Subtitle Position
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <TextBlock Text="Image Controls" FontSize="16" FontWeight="SemiBold"
+                           Foreground="{StaticResource OsdForeground}" />
+                <Border Background="{StaticResource PopoverBackground}" CornerRadius="6" Padding="12">
+                    <StackPanel Spacing="6">
+                        <TextBlock Foreground="{StaticResource OsdForeground}" FontSize="13"
+                                   TextWrapping="Wrap">
+                        <Run Text="1 / 2" FontWeight="SemiBold" /> – Contrast
+                        </TextBlock>
+                        <TextBlock Foreground="{StaticResource OsdForeground}" FontSize="13"
+                                   TextWrapping="Wrap">
+                        <Run Text="3 / 4" FontWeight="SemiBold" /> – Brightness
+                        </TextBlock>
+                        <TextBlock Foreground="{StaticResource OsdForeground}" FontSize="13"
+                                   TextWrapping="Wrap">
+                        <Run Text="5 / 6" FontWeight="SemiBold" /> – Gamma
+                        </TextBlock>
+                        <TextBlock Foreground="{StaticResource OsdForeground}" FontSize="13"
+                                   TextWrapping="Wrap">
+                        <Run Text="7 / 8" FontWeight="SemiBold" /> – Saturation
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Button Grid.Row="2" Content="Close" HorizontalAlignment="Center"
+                Margin="0,0,0,12" Padding="48,8"
+                Click="OnCloseClick"
+                Background="{StaticResource OsdForeground}"
+                Foreground="Black"
+                CornerRadius="20"
+                FontWeight="SemiBold"
+                BorderThickness="0" />
+    </Grid>
+</Window>

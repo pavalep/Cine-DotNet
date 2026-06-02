@@ -3,7 +3,6 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using Avalonia.Controls;
-using Avalonia.Markup.Xaml;
 using Cine.Avalonia.ViewModels;
 
 namespace Cine.Avalonia.Controls;
@@ -14,11 +13,6 @@ public partial class StartPage : global::Avalonia.Controls.UserControl
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
-    }
-
-    private void InitializeComponent()
-    {
-        AvaloniaXamlLoader.Load(this);
     }
 
     private MainViewModel? _previousVm;
@@ -102,3 +96,4 @@ public partial class StartPage : global::Avalonia.Controls.UserControl
         return files.Where(f => videoExtensions.Contains(Path.GetExtension(f))).ToArray();
     }
 }
+

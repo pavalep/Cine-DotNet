@@ -1,0 +1,19 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Cine.Avalonia.Controls.SpinnerOverlayControl">
+    <Border x:Name="LoadingSpinner"
+            Classes="loading-spinner"
+            Width="48" Height="48"
+            HorizontalAlignment="Center" VerticalAlignment="Center"
+            IsVisible="False" IsHitTestVisible="False"
+            CornerRadius="24"
+            BorderThickness="3"
+            BorderBrush="{StaticResource OsdForeground}"
+            Background="Transparent"
+            Opacity="0"
+            RenderTransformOrigin="0.5,0.5">
+        <Border.RenderTransform>
+            <RotateTransform Angle="0" />
+        </Border.RenderTransform>
+    </Border>
+</UserControl>

@@ -1,6 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        x:Class="Cine.Avalonia.Views.AboutDialog"
+        x:Class="Cine.Avalonia.Views.Dialogs.AboutDialog"
         Title="About Cine"
         Width="380" Height="240"
         WindowStartupLocation="CenterOwner"

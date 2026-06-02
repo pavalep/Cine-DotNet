@@ -1,0 +1,87 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        x:Class="Cine.Avalonia.Views.Dialogs.PreferencesDialog"
+        Title="Preferences"
+        Width="480" Height="360"
+        MinWidth="360" MinHeight="300"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource AppBackground}"
+        ExtendClientAreaToDecorationsHint="True"
+        WindowDecorations="BorderOnly">
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="0">
+        <Grid Grid.Row="0" Height="40" Background="{StaticResource PopoverBackground}"
+              ColumnDefinitions="*,Auto">
+            <TextBlock Grid.Column="0" Text="Preferences" FontWeight="Bold" FontSize="16"
+                       Foreground="{StaticResource OsdForeground}"
+                       VerticalAlignment="Center" Margin="12,0,0,0" />
+            <Button Grid.Column="1" Click="OnCloseClick" Background="Transparent"
+                    BorderThickness="0" Width="32" Height="32"
+                    ToolTip.Tip="Close">
+                <materialIcons:MaterialIcon Kind="Close" Width="12" Height="12"
+                    Foreground="White" />
+            </Button>
+        </Grid>
+
+        <ScrollViewer Grid.Row="1" Margin="16,8">
+            <StackPanel Spacing="12">
+                <TextBlock Text="Keyboard Shortcuts" FontSize="16" FontWeight="SemiBold"
+                           Foreground="{StaticResource OsdForeground}" />
+                <Border Background="{StaticResource PopoverBackground}" CornerRadius="6" Padding="12">
+                    <StackPanel Spacing="6">
+                        <TextBlock Foreground="{StaticResource OsdForeground}" FontSize="13"
+                                   TextWrapping="Wrap">
+                        <Run Text="Space" FontWeight="SemiBold" /> – Play / Pause
+                        </TextBlock>
+                        <TextBlock Foreground="{StaticResource OsdForeground}" FontSize="13"
+                                   TextWrapping="Wrap">
+                        <Run Text="F / F11" FontWeight="SemiBold" /> – Toggle Fullscreen
+                        </TextBlock>
+                        <TextBlock Foreground="{StaticResource OsdForeground}" FontSize="13"
+                                   TextWrapping="Wrap">
+                        <Run Text="← / →" FontWeight="SemiBold" /> – Seek ±5s
+                        </TextBlock>
+                        <TextBlock Foreground="{StaticResource OsdForeground}" FontSize="13"
+                                   TextWrapping="Wrap">
+                        <Run Text="Ctrl+← / Ctrl+→" FontWeight="SemiBold" /> – Previous/Next Chapter
+                        </TextBlock>
+                        <TextBlock Foreground="{StaticResource OsdForeground}" FontSize="13"
+                                   TextWrapping="Wrap">
+                        <Run Text="Shift+← / Shift+→" FontWeight="SemiBold" /> – Seek ±30s
+                        </TextBlock>
+                        <TextBlock Foreground="{StaticResource OsdForeground}" FontSize="13"
+                                   TextWrapping="Wrap">
+                        <Run Text="↑ / ↓" FontWeight="SemiBold" /> – Volume ±5%
+                        </TextBlock>
+                        <TextBlock Foreground="{StaticResource OsdForeground}" FontSize="13"
+                                   TextWrapping="Wrap">
+                        <Run Text="M" FontWeight="SemiBold" /> – Mute Toggle
+                        </TextBlock>
+                        <TextBlock Foreground="{StaticResource OsdForeground}" FontSize="13"
+                                   TextWrapping="Wrap">
+                        <Run Text="C" FontWeight="SemiBold" /> – Cycle Subtitles
+                        </TextBlock>
+                        <TextBlock Foreground="{StaticResource OsdForeground}" FontSize="13"
+                                   TextWrapping="Wrap">
+                        <Run Text="S" FontWeight="SemiBold" /> – Screenshot
+                        </TextBlock>
+                        <TextBlock Foreground="{StaticResource OsdForeground}" FontSize="13"
+                                   TextWrapping="Wrap">
+                        <Run Text="Esc" FontWeight="SemiBold" /> – Exit Fullscreen / Close Menu
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Button Grid.Row="2" Content="Close" HorizontalAlignment="Center"
+                Margin="0,0,0,12" Padding="48,8"
+                Click="OnCloseClick"
+                Background="{StaticResource OsdForeground}"
+                Foreground="Black"
+                CornerRadius="20"
+                FontWeight="SemiBold"
+                BorderThickness="0" />
+    </Grid>
+</Window>

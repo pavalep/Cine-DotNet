@@ -1,0 +1,495 @@
+using System;
+using System.IO;
+using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
+using Avalonia.Threading;
+using Avalonia.Media;
+using Cine.Avalonia.Controls;
+using Cine.Avalonia.ViewModels;
+using Cine.Avalonia.Views.Dialogs;
+using Cine.Media.Interfaces;
+using App = global::Avalonia.Application;
+using Button = Avalonia.Controls.Button;
+using Control = Avalonia.Controls.Control;
+using DragEventArgs = Avalonia.Input.DragEventArgs;
+using KeyEventArgs = Avalonia.Input.KeyEventArgs;
+using PointerEventArgs = Avalonia.Input.PointerEventArgs;
+using PointerWheelEventArgs = Avalonia.Input.PointerWheelEventArgs;
+using RoutedEventArgs = Avalonia.Interactivity.RoutedEventArgs;
+using SizeChangedEventArgs = Avalonia.Controls.SizeChangedEventArgs;
+using TextBlock = Avalonia.Controls.TextBlock;
+
+namespace Cine.Avalonia;
+
+public partial class MainWindow
+{
+    private PlayerService? _playerService;
+    private MainViewModel? _viewModel;
+    private D3D11VideoHost? _videoHost;
+    private string? _queuedOpenPath;
+    private TimeSpan _sessionResumePosition;
+
+    // UI Auto-hide
+    private DispatcherTimer? _autoHideTimer;
+    private bool _uiVisible = true;
+    private const double AutoHideDelaySeconds = 3.0;
+    private global::Avalonia.Point _lastMousePosition;
+    private bool _isMouseOverControls;
+    private DateTime _lastSeekWheel = DateTime.MinValue;
+
+    // Seek bar
+    private bool _isSeeking;
+    private double _lastSeekNormalized;
+    private TimeSpan _lastPosition;
+    private TimeSpan _lastDuration;
+
+    // Loading guard
+    private bool _isLoading;
+
+    // Keyboard repeat guard
+    private DateTime _lastSeekRepeat = DateTime.MinValue;
+
+    // Double-tap detection
+    private DateTime _lastTapTime = DateTime.MinValue;
+
+    // Responsive breakpoints
+    private const double NarrowBreakpoint = 600.0;
+    private const double MediumBreakpoint = 1024.0;
+
+    // PIP / compact mini-player mode
+    private bool _isPipMode;
+    private PipWindow? _pipWindow;
+    private IMediaPlayer? _pipPlayer;
+
+    // Session save
+    private DispatcherTimer? _sessionSaveTimer;
+
+    // Startup error guard
+    private bool _isDisposed;
+
+    // Component references (set in InitializeComponent)
+    private HeaderBarControl _headerBar = null!;
+    private ControlsBoxControl _controlsBox = null!;
+    private FullscreenHeaderControl _fullscreenHeader = null!;
+    private SpinnerOverlayControl _spinnerOverlay = null!;
+    private PauseOverlayControl _pauseOverlay = null!;
+    private ReplayOverlayControl _replayOverlay = null!;
+    private DragDropOverlayControl _dropIndicator = null!;
+    private OsdNotificationControl _osdNotification = null!;
+
+    #region debug-log
+    private static readonly string DebugLogFile = CreateLogFilePath();
+
+    private static string CreateLogFilePath()
+    {
+        try
+        {
+            var dir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Cine");
+            Directory.CreateDirectory(dir);
+            return Path.Combine(dir, "cine_startup.log");
+        }
+        catch
+        {
+            return Path.Combine(Path.GetTempPath(), "cine_startup.log");
+        }
+    }
+
+    private static void DebugLog(string message)
+    {
+        try
+        {
+            File.AppendAllText(DebugLogFile, $"[{DateTime.Now:HH:mm:ss.fff}] [MainWindow] {message}{Environment.NewLine}");
+        }
+        catch { }
+    }
+    #endregion
+
+    #region debug-point B:startup-visual-state
+    private void ReportWindowState(string location, string hypothesisId = "B")
+    {
+        try
+        {
+            var startPage = this.FindControl<Control>("StartPage");
+            var mainOverlay = this.FindControl<Control>("MainOverlay");
+            var videoHost = this.FindControl<Control>("VideoHost");
+            App.DebugReport(hypothesisId, location, "Window startup state snapshot.", new
+            {
+                title = Title,
+                background = Background?.ToString(),
+                extendClientArea = ExtendClientAreaToDecorationsHint,
+                windowState = WindowState.ToString(),
+                isVisible = IsVisible,
+                width = Bounds.Width,
+                height = Bounds.Height,
+                contentType = Content?.GetType().FullName,
+                startPageFound = startPage is not null,
+                startPageVisible = startPage?.IsVisible,
+                videoHostFound = videoHost is not null,
+                videoHostVisible = videoHost?.IsVisible
+            });
+        }
+        catch { }
+    }
+    #endregion
+
+    public static void TrySetIcon(Material.Icons.Avalonia.MaterialIcon icon, string resourceKey)
+    {
+        icon.Kind = resourceKey switch
+        {
+            "FullscreenEnterIcon" => Material.Icons.MaterialIconKind.Fullscreen,
+            "FullscreenExitIcon" => Material.Icons.MaterialIconKind.FullscreenExit,
+            "MaxRestoreIcon" => Material.Icons.MaterialIconKind.WindowMaximize,
+            "MaximizeIcon" => Material.Icons.MaterialIconKind.WindowMaximize,
+            "PlayIcon" => Material.Icons.MaterialIconKind.Play,
+            "PauseIcon" => Material.Icons.MaterialIconKind.Pause,
+            "SubtitlesIcon" => Material.Icons.MaterialIconKind.Subtitles,
+            "SubtitlesOffIcon" => Material.Icons.MaterialIconKind.ClosedCaptionOutline,
+            "AudioIcon" => Material.Icons.MaterialIconKind.Music,
+            "AudioOffIcon" => Material.Icons.MaterialIconKind.MusicOff,
+            _ => icon.Kind
+        };
+    }
+
+    public void QueueStartupOpen(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return;
+        _queuedOpenPath = path;
+    }
+
+    private void OnWindowInitialized()
+    {
+        DebugLog("OnWindowInitialized start");
+
+        // Resolve component references
+        _videoHost = VideoHost;
+        _headerBar = HeaderBarControl;
+        _controlsBox = ControlsBoxControl;
+        _fullscreenHeader = FullscreenHeaderControl;
+        _spinnerOverlay = LoadingSpinnerOverlay;
+        _pauseOverlay = PauseOverlay;
+        _replayOverlay = ReplayOverlay;
+        _dropIndicator = DropIndicatorOverlay;
+        _osdNotification = OsdNotificationControl;
+
+        DebugLog($"VideoHost resolved null={_videoHost is null}");
+        if (_videoHost == null)
+            throw new InvalidOperationException("VideoHost control was not found in MainWindow.axaml.");
+
+        ReportWindowState("MainWindow.OnWindowInitialized.AfterResolve");
+
+        _playerService = new PlayerService();
+        try
+        {
+            _playerService.Initialize();
+        }
+        catch (Exception ex)
+        {
+            DebugLog($"Player initialization FAILED: {ex}");
+            _isDisposed = true;
+            Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                await ShowErrorDialog("Failed to initialize media player.", ex.Message);
+                Close();
+            });
+            return;
+        }
+
+        var player = _playerService.Player;
+        if (player == null)
+        {
+            _isDisposed = true;
+            Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                await ShowErrorDialog("Media player returned null.", "The application cannot continue.");
+                Close();
+            });
+            return;
+        }
+
+        if (_isDisposed) return;
+
+        _viewModel = new MainViewModel(player);
+        DataContext = _viewModel;
+
+        _viewModel.SessionResumeRequested = (path, pos) =>
+        {
+            _queuedOpenPath = path;
+            _sessionResumePosition = pos;
+            ShowOsdNotification($"Resume {Path.GetFileName(path)} from {pos.Minutes:D2}:{pos.Seconds:D2}?", 5000);
+            Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                await Task.Delay(4000);
+                if (!string.IsNullOrEmpty(_queuedOpenPath) && File.Exists(_queuedOpenPath))
+                {
+                    var p = _queuedOpenPath;
+                    var resumePos = _sessionResumePosition;
+                    _queuedOpenPath = null;
+                    _sessionResumePosition = TimeSpan.Zero;
+                    if (_viewModel != null)
+                    {
+                        _viewModel.OpenFile(p);
+                        _viewModel.ClearSession();
+                    }
+                    if (resumePos.TotalSeconds > 0)
+                    {
+                        EventHandler? handler = null;
+                        handler = (s, args) =>
+                        {
+                            _playerService?.Player?.Seek(resumePos);
+                            var playerInstance = _playerService?.Player;
+                            if (playerInstance != null) playerInstance.Opened -= handler;
+                        };
+                        var playerInstance = _playerService?.Player;
+                        if (playerInstance != null) playerInstance.Opened += handler;
+                    }
+                }
+            });
+        };
+        _viewModel.LoadSession();
+
+        _viewModel.Playlist.CollectionChanged += (_, _) => _viewModel?.SaveSession();
+
+        _viewModel.RequestOpenFilesAsync = OpenFileDialogAsync;
+        _viewModel.RequestOpenFolderAsync = OpenFolderDialogAsync;
+        _viewModel.RequestAddFilesAsync = OpenAddFilesDialogAsync;
+        _viewModel.RequestSubtitleFileAsync = OpenSubtitleDialogAsync;
+        _viewModel.RequestAudioFileAsync = OpenAudioDialogAsync;
+
+        player.Opened += OnMediaOpened;
+        player.PositionChanged += OnPositionChanged;
+        player.ChapterListChanged += OnChapterListChanged;
+        player.FullscreenChangedEvent += OnPlayerFullscreenChanged;
+
+        _playerService.Error += (_, error) =>
+        {
+            Dispatcher.UIThread.Post(() => ShowOsdNotification($"Error: {error}", 4000));
+        };
+
+        _videoHost.ChildWindowCreated += OnVideoHostChildCreated;
+        _videoHost.PointerPressed += OnVideoPointerPressed;
+        _videoHost.PointerMoved += OnWindowPointerMoved;
+        KeyDown += OnKeyDown;
+
+        if (_viewModel != null)
+            _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+
+        // Wire up component events
+        _replayOverlay.ReplayRequested += (_, _) =>
+        {
+            _playerService?.Player?.Seek(TimeSpan.Zero);
+            _playerService?.Player?.Play();
+        };
+
+        _osdNotification.NotificationClicked += OnOsdNotificationClicked;
+
+        _controlsBox.SeekBarControl.InitializeSeekBar();
+        _controlsBox.SeekBarControl.SeekWheelChanged += (_, delta) =>
+        {
+            if (delta > 0) _viewModel?.SeekForward();
+            else _viewModel?.SeekBackward();
+        };
+
+        InitializeAutoHide();
+        InitializeSessionSave();
+        InitializeResponsiveLayout();
+        InitPipHandlers();
+
+        AddHandler(global::Avalonia.Input.DragDrop.DragEnterEvent, OnWindowDragEnter);
+        AddHandler(global::Avalonia.Input.DragDrop.DragLeaveEvent, OnWindowDragLeave);
+        AddHandler(global::Avalonia.Input.DragDrop.DropEvent, OnWindowDrop);
+
+        ReportWindowState("MainWindow.OnWindowInitialized.Finish");
+        DebugLog("OnWindowInitialized finish");
+    }
+
+    protected override void OnOpened(EventArgs e)
+    {
+        base.OnOpened(e);
+        if (_isDisposed) return;
+        DebugLog("OnOpened enter");
+        ReportWindowState("MainWindow.OnOpened.Enter");
+
+        try
+        {
+            if (WindowState == WindowState.Minimized)
+                WindowState = WindowState.Normal;
+
+            var primary = Screens?.Primary;
+            if (primary != null)
+            {
+                var work = primary.WorkingArea;
+                double scale = RenderScaling;
+                int w = (int)Math.Max(332 * scale, Bounds.Width * scale);
+                int h = (int)Math.Max(187 * scale, Bounds.Height * scale);
+                int x = work.X + Math.Max(0, (work.Width - w) / 2);
+                int y = work.Y + Math.Max(0, (work.Height - h) / 2);
+                Position = new PixelPoint(x, y);
+            }
+
+            Activate();
+        }
+        catch { }
+
+        var handle = PlatformImplHandle();
+        DebugLog($"Platform handle has value={handle.HasValue} value={handle.GetValueOrDefault()}");
+        if (handle.HasValue && handle.Value != IntPtr.Zero && _videoHost != null)
+        {
+            _videoHost.ParentHwnd = handle.Value;
+            DebugLog("VideoHost.ParentHwnd assigned");
+        }
+
+        if (StartPage != null) StartPage.IsVisible = true;
+        _controlsBox.SetControlsVisibility(false);
+        _headerBar.HideOpenMenu();
+        if (VideoHost != null) VideoHost.IsVideoSurfaceVisible = false;
+
+        RefreshFullscreenUi();
+        _controlsBox.RefreshSubtitleIcon();
+        _controlsBox.RefreshAudioIcon();
+        _controlsBox.RefreshVolumeIcon();
+        ReportWindowState("MainWindow.OnOpened.AfterInitialState");
+        Dispatcher.UIThread.Post(() => ReportWindowState("MainWindow.OnOpened.PostLayout"), DispatcherPriority.Background);
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        _autoHideTimer?.Stop();
+        _autoHideTimer = null;
+        _sessionSaveTimer?.Stop();
+        _sessionSaveTimer = null;
+        _viewModel?.SaveSession();
+        _playerService?.Dispose();
+        base.OnClosed(e);
+    }
+
+    private IntPtr? PlatformImplHandle()
+    {
+        try
+        {
+            var platformHandle = TryGetPlatformHandle();
+            if (platformHandle is { Handle: not 0 })
+            {
+                DebugLog($"TryGetPlatformHandle descriptor={platformHandle.HandleDescriptor}");
+                return platformHandle.Handle;
+            }
+        }
+        catch (Exception ex)
+        {
+            DebugLog($"TryGetPlatformHandle failed: {ex.Message}");
+        }
+        return IntPtr.Zero;
+    }
+
+    private void OnVideoHostChildCreated(object? sender, EventArgs e)
+    {
+        var videoHwnd = _videoHost?.VideoHwnd ?? IntPtr.Zero;
+        DebugLog($"OnVideoHostChildCreated hwnd={videoHwnd}");
+        if (videoHwnd == IntPtr.Zero) return;
+        var player = _playerService?.Player;
+        if (player != null)
+        {
+            DebugLog("Calling InitializeRenderer");
+            player.InitializeRenderer(videoHwnd);
+            DebugLog("InitializeRenderer returned");
+        }
+
+        if (!string.IsNullOrWhiteSpace(_queuedOpenPath) && File.Exists(_queuedOpenPath))
+        {
+            var path = _queuedOpenPath;
+            _queuedOpenPath = null;
+            Dispatcher.UIThread.Post(() => _viewModel?.OpenFile(path));
+        }
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainViewModel.FilePath))
+        {
+            if (!string.IsNullOrEmpty(_viewModel?.FilePath))
+            {
+                if (_isLoading) return;
+                _isLoading = true;
+                _spinnerOverlay.Start();
+                if (StartPage?.IsVisible == true) StartPage.IsVisible = false;
+                _controlsBox.SetControlsVisibility(true);
+                _headerBar.ShowOpenMenu();
+                _headerBar.SetTitle(_viewModel.Title);
+                Title = $"Cine — {_viewModel.Title}";
+
+                _autoHideTimer?.Stop();
+                _autoHideTimer?.Start();
+            }
+            else
+            {
+                if (StartPage?.IsVisible == false) StartPage.IsVisible = true;
+                _controlsBox.SetControlsVisibility(false);
+                _headerBar.HideOpenMenu();
+                if (VideoHost != null) VideoHost.IsVideoSurfaceVisible = false;
+                _headerBar.SetTitle("Cine");
+
+                ShowUiControls();
+            }
+        }
+        else if (e.PropertyName == nameof(MainViewModel.IsPlaying) ||
+                 e.PropertyName == nameof(MainViewModel.IsPaused))
+        {
+            _controlsBox.UpdatePlayPauseIcon();
+        }
+        else if (e.PropertyName == nameof(MainViewModel.IsSubtitleEnabled))
+        {
+            _controlsBox.RefreshSubtitleIcon();
+        }
+        else if (e.PropertyName == nameof(MainViewModel.IsAudioEnabled))
+        {
+            _controlsBox.RefreshVolumeIcon();
+            if (_viewModel != null)
+            {
+                if (_viewModel.IsMuted || _viewModel.VolumeValue == 0)
+                    ShowOsdNotification("Muted");
+                else
+                    ShowOsdNotification($"Volume: {_viewModel.VolumeValue}%");
+            }
+        }
+        else if (e.PropertyName == nameof(MainViewModel.SpeedValue))
+        {
+            if (_viewModel != null)
+                ShowOsdNotification($"Speed: {_viewModel.SpeedValue:F1}x", 3000);
+        }
+        else if (e.PropertyName == nameof(MainViewModel.SeekValue))
+        {
+            if (!_isSeeking)
+            {
+                var seekBar = _controlsBox?.SeekBarControl;
+                if (seekBar != null)
+                {
+                    _lastPosition = _viewModel?.Position ?? TimeSpan.Zero;
+                    _lastDuration = _viewModel?.Duration ?? TimeSpan.Zero;
+                    seekBar.UpdatePosition(_lastPosition);
+                    seekBar.UpdateDuration(_lastDuration);
+                }
+            }
+        }
+    }
+
+    private void InitializeSessionSave()
+    {
+        _sessionSaveTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(15)
+        };
+        _sessionSaveTimer.Tick += (_, _) => _viewModel?.SaveSession();
+        _sessionSaveTimer.Start();
+    }
+
+    // --- MediaEvents helper for OnPlaybackStateChanged ---
+    private void UpdatePlayPauseFromState(bool isPaused)
+    {
+        _controlsBox?.UpdatePlayPauseIcon();
+    }
+}
