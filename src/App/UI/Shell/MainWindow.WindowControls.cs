@@ -54,6 +54,7 @@ public partial class MainWindow
 
         if (isFullscreen)
         {
+            ExtendClientAreaToDecorationsHint = false;
             ToolTip.SetTip(_controlsBox.BtnFullscreen, "Exit Fullscreen (F)");
             _headerBar.IsVisible = false;
             _headerBar.IsHitTestVisible = false;
@@ -66,6 +67,7 @@ public partial class MainWindow
         }
         else
         {
+            ExtendClientAreaToDecorationsHint = true;
             ToolTip.SetTip(_controlsBox.BtnFullscreen, "Fullscreen (F)");
             _headerBar.IsVisible = true;
             _headerBar.IsHitTestVisible = true;

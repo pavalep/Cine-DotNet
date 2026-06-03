@@ -275,6 +275,8 @@ public partial class MainWindow
         _videoHost.ChildWindowCreated += OnVideoHostChildCreated;
         _videoHost.PointerPressed += OnVideoPointerPressed;
         _videoHost.PointerMoved += OnWindowPointerMoved;
+        _videoHost.PointerEntered += OnVideoPointerEntered;
+        _videoHost.PointerExited += OnVideoPointerExited;
         KeyDown += OnKeyDown;
 
         if (_viewModel != null)

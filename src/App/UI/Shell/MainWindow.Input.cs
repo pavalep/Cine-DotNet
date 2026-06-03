@@ -281,6 +281,7 @@ public partial class MainWindow
         AddItem("SkipBackwardIcon", "Seek Backward", "←", () => _viewModel?.SeekBackward());
         AddItem("SkipForwardIcon", "Seek Forward", "→", () => _viewModel?.SeekForward());
         AddItem("FullscreenEnterIcon", "Fullscreen", "F", () => _viewModel?.ToggleFullscreen());
+        AddItem("AlwaysOnTopIcon", "Always on Top", "", () => Topmost = !Topmost);
 
         stack.Children.Add(new Separator
         {
@@ -289,6 +290,45 @@ public partial class MainWindow
         });
 
         AddItem("SubtitlesIcon", "Cycle Subtitles", "C", () => _playerService?.Player?.CycleSubtitleTrack());
+
+        // Aspect Ratio sub-menu
+        var aspectLabel = new TextBlock
+        {
+            Text = "Aspect Ratio",
+            FontSize = 13,
+            Foreground = new SolidColorBrush(Color.FromArgb(0xFF, 0xE5, 0xE5, 0xE5)),
+            Margin = new Thickness(10, 7, 0, 7),
+            VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center
+        };
+        stack.Children.Add(aspectLabel);
+        var aspectRatios = new[] { ("Original", -1.0), ("16:9", 1.7778), ("4:3", 1.3333), ("2.35:1", 2.35) };
+        foreach (var (label, ratio) in aspectRatios)
+        {
+            AddItem("", label, "", () => _viewModel?.SetAspectRatio(ratio));
+        }
+
+        // Speed sub-menu
+        var speedLabel = new TextBlock
+        {
+            Text = "Speed",
+            FontSize = 13,
+            Foreground = new SolidColorBrush(Color.FromArgb(0xFF, 0xE5, 0xE5, 0xE5)),
+            Margin = new Thickness(10, 7, 0, 7),
+            VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center
+        };
+        stack.Children.Add(speedLabel);
+        var speeds = new[] { ("0.5×", 0.5), ("1.0×", 1.0), ("1.5×", 1.5), ("2.0×", 2.0) };
+        foreach (var (label, speed) in speeds)
+        {
+            AddItem("", label, "", () => _viewModel?.SetSpeed(speed));
+        }
+
+        stack.Children.Add(new Separator
+        {
+            Background = new SolidColorBrush(Color.FromArgb(0x33, 0xFF, 0xFF, 0xFF)),
+            Margin = new Thickness(4, 2)
+        });
+
         AddItem("OptionsIcon", "Preferences", "", () => new PreferencesDialog { DataContext = _viewModel }.Show(this));
         AddItem("InfoIcon", "About Cine", "", () => new AboutDialog { DataContext = _viewModel }.Show(this));
 

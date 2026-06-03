@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
@@ -170,7 +171,7 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
         }
     }
 
-    public double VolumeMax => 150;
+    public double VolumeMax => 200;
 
     public bool IsMuted
     {
@@ -339,6 +340,7 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
         }
     }
     public void AddSubtitle(string path) => CommandInternal("sub-add", path, "select");
+    public void AddAudio(string path) => CommandInternal("audio-add", path, "select");
     public void SelectSubtitleTrack(int trackIndex) => SetInt64("sid", trackIndex);
     public void SelectAudioTrack(int trackIndex) => SetInt64("aid", trackIndex);
     public void CycleSubtitleTrack() => CommandInternal("cycle", "sid");
@@ -745,10 +747,16 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
         switch (propName)
         {
             case "track-list":
-                TrackListChanged?.Invoke(this, new TrackListChangedEventArgs(
-                    Array.Empty<SubtitleSource>(),
-                    Array.Empty<SubtitleSource>(),
-                    SubtitleSources));
+                {
+                    var allTracks = SubtitleSources;
+                    var videoTracks = allTracks.Where(t => t.Type == "video").ToArray();
+                    var audioTracks = allTracks.Where(t => t.Type == "audio").ToArray();
+                    var subtitleTracks = allTracks.Where(t => t.Type == "sub").ToArray();
+                    TrackListChanged?.Invoke(this, new TrackListChangedEventArgs(
+                        audioTracks,
+                        videoTracks,
+                        subtitleTracks));
+                }
                 break;
             case "chapter-list":
                 var ch = ChapterList;
@@ -759,8 +767,7 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
                 SetPlaybackState(isPaused ? PlaybackState.Paused : PlaybackState.Playing);
                 break;
             case "core-idle":
-                if (GetFlag("core-idle") && _state == PlaybackState.Playing)
-                    SetPlaybackState(PlaybackState.Paused);
+                // Bypass core-idle pause changes to prevent play/pause state mismatch
                 break;
             case "eof-reached":
                 if (GetFlag("eof-reached"))

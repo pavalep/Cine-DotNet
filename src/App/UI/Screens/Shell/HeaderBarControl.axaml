@@ -53,7 +53,8 @@
                         VerticalAlignment="Center" />
                 </StackPanel>
                 <Button.Flyout>
-                    <Flyout Placement="BottomEdgeAlignedLeft">
+                    <Flyout Placement="BottomEdgeAlignedLeft"
+                            Opened="TrackFlyoutOpened" Closed="TrackFlyoutClosed">
                         <Border Background="{StaticResource PopoverBackground}"
                                 BorderBrush="{StaticResource PopoverBorder}"
                                 BorderThickness="1"
@@ -155,7 +156,8 @@
                     <materialIcons:MaterialIcon Kind="DotsHorizontal" Width="16" Height="16"
                         Foreground="{StaticResource OsdForeground}" />
                     <Button.Flyout>
-                        <Flyout Placement="Bottom">
+                        <Flyout Placement="Bottom"
+                                Opened="TrackFlyoutOpened" Closed="TrackFlyoutClosed">
                             <Border Classes="primary-menu-content"
                                     Background="{StaticResource PopoverBackground}"
                                     BorderBrush="{StaticResource PopoverBorder}"

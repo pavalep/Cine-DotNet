@@ -248,7 +248,8 @@ public class MainViewModel : INotifyPropertyChanged
     {
         if (RequestAudioFileAsync == null) return;
         var path = await RequestAudioFileAsync();
-        // TODO: wire audio track loading to player when supported
+        if (!string.IsNullOrWhiteSpace(path))
+            _player.AddAudio(path);
     }
 
     // --- Playback commands ---
@@ -470,6 +471,23 @@ public class MainViewModel : INotifyPropertyChanged
     {
         get => _speedValue;
         set { _speedValue = value; _player.Speed = value; OnPropertyChanged(); }
+    }
+
+    private bool _isDialogueBoostEnabled;
+
+    public bool IsDialogueBoostEnabled
+    {
+        get => _isDialogueBoostEnabled;
+        set
+        {
+            if (_isDialogueBoostEnabled == value) return;
+            _isDialogueBoostEnabled = value;
+            if (value)
+                _player.Command("af", "set", "lavfi=[acompressor=threshold=-20dB:ratio=4:makeup=8dB]");
+            else
+                _player.Command("af", "del", "lavfi=[acompressor=threshold=-20dB:ratio=4:makeup=8dB]");
+            OnPropertyChanged();
+        }
     }
 
     public double ContrastValue
@@ -852,10 +870,11 @@ public class MainViewModel : INotifyPropertyChanged
                 int idx = 0;
                 foreach (var track in e.SubtitleTracks)
                 {
+                    var trackId = int.TryParse(track.PathOrId, out var parsedId) ? parsedId : idx;
                     var item = new TrackMenuItem(
                         FormatTrack("Sub", track),
                         TrackType.Subtitle,
-                        idx,
+                        trackId,
                         OnSelectSubtitle,
                         track
                     );
@@ -875,10 +894,11 @@ public class MainViewModel : INotifyPropertyChanged
                 int idx = 0;
                 foreach (var track in e.AudioTracks)
                 {
+                    var trackId = int.TryParse(track.PathOrId, out var parsedId) ? parsedId : idx;
                     var item = new TrackMenuItem(
                         FormatTrack("Audio", track),
                         TrackType.Audio,
-                        idx,
+                        trackId,
                         OnSelectAudio,
                         track
                     );
@@ -896,10 +916,11 @@ public class MainViewModel : INotifyPropertyChanged
                 int idx = 0;
                 foreach (var track in e.VideoTracks)
                 {
+                    var trackId = int.TryParse(track.PathOrId, out var parsedId) ? parsedId : idx;
                     var item = new TrackMenuItem(
                         FormatTrack("Video", track),
                         TrackType.Video,
-                        idx,
+                        trackId,
                         OnSelectVideo,
                         track
                     );

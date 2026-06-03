@@ -104,14 +104,14 @@
                                         </ToggleButton>
                                         <Slider x:Name="VolumeSlider"
                                                 Classes="volume-slider"
-                                                Minimum="0" Maximum="130"
+                                                Minimum="0" Maximum="200"
                                                 Value="{Binding VolumeValue}"
                                                 Orientation="Vertical"
                                                 Height="120"
                                                 HorizontalAlignment="Center"
                                                 PointerPressed="OnVolumeSliderPointerPressed" />
                                         <TextBlock x:Name="VolumePercentLabel"
-                                                   Text="{Binding VolumeValue, StringFormat='{}{0:F0} / 130%'}"
+                                                   Text="{Binding VolumeValue, StringFormat='{}{0:F0} / 200%'}"
                                                    FontSize="13" FontWeight="SemiBold"
                                                    Foreground="{StaticResource OsdForeground}"
                                                    HorizontalAlignment="Center" />

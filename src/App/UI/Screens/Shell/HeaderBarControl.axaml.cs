@@ -103,12 +103,12 @@ public partial class HeaderBarControl : AvaloniaUserControl
         BtnPip.IsVisible = visible;
     }
 
-    public void TrackFlyoutOpened()
+    public void TrackFlyoutOpened(object? sender, EventArgs e)
     {
         _activeFlyouts++;
     }
 
-    public void TrackFlyoutClosed()
+    public void TrackFlyoutClosed(object? sender, EventArgs e)
     {
         _activeFlyouts = Math.Max(0, _activeFlyouts - 1);
     }

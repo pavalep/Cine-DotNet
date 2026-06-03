@@ -3,7 +3,8 @@
              xmlns:vm="using:Cine.Avalonia.ViewModels"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Cine.Avalonia.Controls.FullscreenHeaderControl"
-             x:DataType="vm:MainViewModel">
+             x:DataType="vm:MainViewModel"
+             IsVisible="False">
     <Border x:Name="FullscreenHeader"
             VerticalAlignment="Top" Height="44"
             IsVisible="False"
@@ -29,7 +30,8 @@
                     <materialIcons:MaterialIcon Kind="DotsHorizontal" Width="12" Height="12"
                         Foreground="{StaticResource OsdForeground}" />
                     <Button.Flyout>
-                        <Flyout Placement="Bottom">
+                        <Flyout Placement="Bottom"
+                                Opened="TrackFlyoutOpened" Closed="TrackFlyoutClosed">
                             <Border Classes="primary-menu-content"
                                     Background="{StaticResource PopoverBackground}"
                                     BorderBrush="{StaticResource PopoverBorder}"

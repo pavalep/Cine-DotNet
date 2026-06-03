@@ -71,6 +71,8 @@
                     HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                     PointerPressed="OnVideoPointerPressed"
                     PointerMoved="OnWindowPointerMoved"
+                    PointerEntered="OnVideoPointerEntered"
+                    PointerExited="OnVideoPointerExited"
                     ZIndex="5" />
 
             <!-- Vignette overlay -->

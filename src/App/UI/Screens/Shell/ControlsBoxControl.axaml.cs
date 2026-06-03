@@ -283,7 +283,6 @@ public partial class ControlsBoxControl : AvaloniaUserControl
 
     private void TrackFlyout(Flyout flyout)
     {
-        _activeFlyouts++;
         flyout.Opened += (_, _) => _activeFlyouts++;
         flyout.Closed += (_, _) => _activeFlyouts = Math.Max(0, _activeFlyouts - 1);
     }

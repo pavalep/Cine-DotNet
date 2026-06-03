@@ -1066,6 +1066,11 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
         SelectSubtitleTrack(_currentSubtitleTrack);
     }
 
+    public void AddAudio(string path)
+    {
+        // Media Foundation does not support external audio tracks
+    }
+
     #endregion
 
     #region Position Tracking

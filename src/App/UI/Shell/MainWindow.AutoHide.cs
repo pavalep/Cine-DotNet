@@ -41,6 +41,18 @@ public partial class MainWindow
             HideUiControls();
     }
 
+    private void OnVideoPointerEntered(object? sender, PointerEventArgs e)
+    {
+        if (!_uiVisible)
+            ShowUiControls();
+    }
+
+    private void OnVideoPointerExited(object? sender, PointerEventArgs e)
+    {
+        _autoHideTimer?.Stop();
+        _autoHideTimer?.Start();
+    }
+
     private void OnWindowPointerMoved(object? sender, PointerEventArgs e)
     {
         var pos = e.GetCurrentPoint(this).Position;

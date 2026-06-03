@@ -29,14 +29,26 @@ public partial class FullscreenHeaderControl : UserControl
 
     public bool HasActiveFlyouts => _activeFlyouts > 0;
 
+    public void TrackFlyoutOpened(object? sender, EventArgs e)
+    {
+        _activeFlyouts++;
+    }
+
+    public void TrackFlyoutClosed(object? sender, EventArgs e)
+    {
+        _activeFlyouts = Math.Max(0, _activeFlyouts - 1);
+    }
+
     public void Show()
     {
+        IsVisible = true;
         FullscreenHeader.IsVisible = true;
         FullscreenHeader.Opacity = 1;
     }
 
     public void Hide()
     {
+        IsVisible = false;
         FullscreenHeader.IsVisible = false;
     }
 

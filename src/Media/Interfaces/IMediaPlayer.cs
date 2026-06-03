@@ -58,6 +58,7 @@ public interface IMediaPlayer
     int CurrentSubtitleTrack { get; set; }
     SubtitleSource[] SubtitleSources { get; }
     void AddSubtitle(string path);
+    void AddAudio(string path);
     void SelectSubtitleTrack(int trackIndex);
     void SelectAudioTrack(int trackIndex);
     void CycleSubtitleTrack();
