@@ -262,6 +262,7 @@ public partial class MainWindow
         _viewModel.RequestAudioFileAsync = OpenAudioDialogAsync;
 
         player.Opened += OnMediaOpened;
+        player.PlaybackStateChangedEvent += OnPlaybackStateChanged;
         player.PositionChanged += OnPositionChanged;
         player.ChapterListChanged += OnChapterListChanged;
         player.FullscreenChangedEvent += OnPlayerFullscreenChanged;
@@ -442,6 +443,11 @@ public partial class MainWindow
             _controlsBox.RefreshSubtitleIcon();
         }
         else if (e.PropertyName == nameof(MainViewModel.IsAudioEnabled))
+        {
+            _controlsBox.RefreshAudioIcon();
+        }
+        else if (e.PropertyName == nameof(MainViewModel.IsMuted) ||
+                 e.PropertyName == nameof(MainViewModel.VolumeValue))
         {
             _controlsBox.RefreshVolumeIcon();
             if (_viewModel != null)

@@ -91,14 +91,14 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
     {
         EnsureInitializedOrError("Play");
         SetFlag("pause", false);
-        _state = PlaybackState.Playing;
+        SetPlaybackState(PlaybackState.Playing);
     }
 
     public void Pause()
     {
         EnsureInitializedOrError("Pause");
         SetFlag("pause", true);
-        _state = PlaybackState.Paused;
+        SetPlaybackState(PlaybackState.Paused);
     }
 
     public void Stop()
@@ -110,7 +110,7 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
         }
 
         CommandInternal("stop");
-        _state = PlaybackState.Stopped;
+        SetPlaybackState(PlaybackState.Stopped);
     }
 
     public PlaybackState State => _state;
@@ -591,6 +591,7 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
     }
 
     public event EventHandler? Opened;
+    public event EventHandler<PlaybackStateChangedEventArgs>? PlaybackStateChangedEvent;
     public event EventHandler<PositionChangedEventArgs>? PositionChanged;
     public event EventHandler<ChapterListChangedEventArgs>? ChapterListChanged;
     public event EventHandler<VolumeChangedEventArgs>? VolumeChanged;
@@ -630,6 +631,15 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
         _eventLoop = Task.Run(() => EventLoop(token), token);
     }
 
+    private void SetPlaybackState(PlaybackState state)
+    {
+        if (_state == state)
+            return;
+
+        _state = state;
+        PlaybackStateChangedEvent?.Invoke(this, new PlaybackStateChangedEventArgs(state));
+    }
+
     private void EventLoop(CancellationToken token)
     {
         while (!token.IsCancellationRequested && !_disposed)
@@ -651,7 +661,7 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
                         case MpvNative.mpv_event_id.MPV_EVENT_FILE_LOADED:
                             // mpv may briefly report pause=true after loading.
                             // Force unpause so playback starts immediately.
-                            _state = PlaybackState.Playing;
+                            SetPlaybackState(PlaybackState.Playing);
                             if (GetFlag("pause"))
                             {
                                 Play();
@@ -661,16 +671,16 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
                         case MpvNative.mpv_event_id.MPV_EVENT_START_FILE:
                             break;
                         case MpvNative.mpv_event_id.MPV_EVENT_END_FILE:
-                            _state = PlaybackState.Stopped;
+                            SetPlaybackState(PlaybackState.Stopped);
                             break;
                         case MpvNative.mpv_event_id.MPV_EVENT_PAUSE:
-                            _state = PlaybackState.Paused;
+                            SetPlaybackState(PlaybackState.Paused);
                             break;
                         case MpvNative.mpv_event_id.MPV_EVENT_UNPAUSE:
-                            _state = PlaybackState.Playing;
+                            SetPlaybackState(PlaybackState.Playing);
                             break;
                         case MpvNative.mpv_event_id.MPV_EVENT_SHUTDOWN:
-                            _state = PlaybackState.Stopped;
+                            SetPlaybackState(PlaybackState.Stopped);
                             return;
                         case MpvNative.mpv_event_id.MPV_EVENT_PROPERTY_CHANGE:
                             HandlePropertyChange(ev);
@@ -720,7 +730,7 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
         }
 
         CommandInternal("loadfile", path, replace ? "replace" : "append-play");
-        _state = PlaybackState.Playing;
+        SetPlaybackState(PlaybackState.Playing);
         DebugLog($"LoadFile: state set to Playing");
     }
 
@@ -746,16 +756,16 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
                 break;
             case "pause":
                 var isPaused = GetFlag("pause");
-                _state = isPaused ? PlaybackState.Paused : PlaybackState.Playing;
+                SetPlaybackState(isPaused ? PlaybackState.Paused : PlaybackState.Playing);
                 break;
             case "core-idle":
                 if (GetFlag("core-idle") && _state == PlaybackState.Playing)
-                    _state = PlaybackState.Paused;
+                    SetPlaybackState(PlaybackState.Paused);
                 break;
             case "eof-reached":
                 if (GetFlag("eof-reached"))
                 {
-                    _state = PlaybackState.Stopped;
+                    SetPlaybackState(PlaybackState.Stopped);
                     // Replay at EOF for continuous playback with keep-open
                     if (GetFlag("keep-open"))
                     {

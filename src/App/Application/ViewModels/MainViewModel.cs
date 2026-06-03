@@ -119,6 +119,8 @@ public class MainViewModel : INotifyPropertyChanged
         _player.PlaylistChanged += OnPlaylistChanged;
         _player.LoopChangedEvent += OnLoopChanged;
         _player.PositionChanged += OnPositionChanged;
+        _player.PlaybackStateChangedEvent += OnPlaybackStateChanged;
+        _player.VolumeChanged += OnVolumeChanged;
 
         // Initialize commands
         OpenFilesCommand = new RelayCommand(async _ => await OnOpenFiles());
@@ -252,7 +254,9 @@ public class MainViewModel : INotifyPropertyChanged
     // --- Playback commands ---
     public void PlayPause()
     {
-        if (_player.IsPlaying)
+        State = _player.State;
+
+        if (IsPlaying)
         {
             _player.Pause();
             State = PlaybackState.Paused;
@@ -312,9 +316,9 @@ public class MainViewModel : INotifyPropertyChanged
         _player.Seek(Position - TimeSpan.FromSeconds(60));
         NotifyPipSync?.Invoke();
     }
-    public void IncreaseVolume() => VolumeValue = Math.Min(150, VolumeValue + 10);
-    public void DecreaseVolume() => VolumeValue = Math.Max(0, VolumeValue - 10);
-    public void ToggleMute() => IsMuted = !_player.IsMuted;
+    public void IncreaseVolume() => VolumeValue = Math.Min(VolumeMax, VolumeValue + 5);
+    public void DecreaseVolume() => VolumeValue = Math.Max(0, VolumeValue - 5);
+    public void ToggleMute() => IsMuted = !IsMuted;
     public void ToggleFullscreen() => _player.SetFullscreen(!_player.IsFullscreen);
     public void NextChapter() => _player.NextChapter();
     public void PreviousChapter() => _player.PreviousChapter();
@@ -422,6 +426,9 @@ public class MainViewModel : INotifyPropertyChanged
         set => VolumeValue = value;
     }
 
+    public double VolumeMax => _player.VolumeMax;
+    public string VolumeText => $"{VolumeValue:F0}%";
+
     public TimeSpan Position
     {
         get => _player.Position;
@@ -447,10 +454,15 @@ public class MainViewModel : INotifyPropertyChanged
         get => _volumeValue;
         set
         {
-            _volumeValue = value;
-            _player.Volume = value;
+            var clamped = Math.Clamp(value, 0, VolumeMax);
+            if (Math.Abs(_volumeValue - clamped) < 0.001)
+                return;
+
+            _volumeValue = clamped;
+            _player.Volume = clamped;
             OnPropertyChanged();
             OnPropertyChanged(nameof(Volume));
+            OnPropertyChanged(nameof(VolumeText));
         }
     }
 
@@ -622,6 +634,9 @@ public class MainViewModel : INotifyPropertyChanged
         get => _isMuted;
         set
         {
+            if (_isMuted == value)
+                return;
+
             _isMuted = value;
             _player.Mute(value);
             OnPropertyChanged();
@@ -793,7 +808,29 @@ public class MainViewModel : INotifyPropertyChanged
     {
         Dispatcher.UIThread.Post(() =>
         {
-            State = e.IsPaused ? PlaybackState.Paused : PlaybackState.Playing;
+            State = e.State;
+        });
+    }
+
+    private void OnVolumeChanged(object? sender, VolumeChangedEventArgs e)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            var playerVolume = Math.Clamp(_player.Volume, 0, VolumeMax);
+            if (Math.Abs(_volumeValue - playerVolume) >= 0.001)
+            {
+                _volumeValue = playerVolume;
+                OnPropertyChanged(nameof(VolumeValue));
+                OnPropertyChanged(nameof(Volume));
+                OnPropertyChanged(nameof(VolumeText));
+            }
+
+            var playerMuted = _player.IsMuted;
+            if (_isMuted != playerMuted)
+            {
+                _isMuted = playerMuted;
+                OnPropertyChanged(nameof(IsMuted));
+            }
         });
     }
 
@@ -906,11 +943,18 @@ public class MainViewModel : INotifyPropertyChanged
     internal void RefreshState()
     {
         _state = _player.State;
+        _volumeValue = Math.Clamp(_player.Volume, 0, VolumeMax);
+        _isMuted = _player.IsMuted;
+        OnPropertyChanged(nameof(State));
         OnPropertyChanged(nameof(IsPlaying));
         OnPropertyChanged(nameof(IsPaused));
         OnPropertyChanged(nameof(Position));
         OnPropertyChanged(nameof(Duration));
+        OnPropertyChanged(nameof(VolumeMax));
         OnPropertyChanged(nameof(VolumeValue));
+        OnPropertyChanged(nameof(Volume));
+        OnPropertyChanged(nameof(VolumeText));
+        OnPropertyChanged(nameof(IsMuted));
 
         // Ensure time labels show immediately on media open
         PositionText = FormatTime(_player.Position);

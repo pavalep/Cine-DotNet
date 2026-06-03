@@ -115,6 +115,7 @@ public interface IMediaPlayer
 
     // === Events ===
     event EventHandler? Opened;
+    event EventHandler<PlaybackStateChangedEventArgs>? PlaybackStateChangedEvent;
     event EventHandler<PositionChangedEventArgs>? PositionChanged;
     event EventHandler<ChapterListChangedEventArgs>? ChapterListChanged;
     event EventHandler<VolumeChangedEventArgs>? VolumeChanged;
