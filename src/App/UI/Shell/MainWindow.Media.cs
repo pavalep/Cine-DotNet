@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Avalonia.Threading;
 using Cine.Avalonia.Controls;
 using Cine.Media.Events;
+using Cine.Media.Models;
 using App = global::Avalonia.Application;
 
 namespace Cine.Avalonia;
@@ -66,6 +67,9 @@ public partial class MainWindow
                     seekBar.SetPositionText(SeekBarControl.FormatTimeSpan(_viewModel.Position));
                 }
             }
+            // Force icon from player state directly to avoid PropertyChanged races
+            var playerState = _playerService?.Player?.State ?? PlaybackState.Stopped;
+            _controlsBox.SetPlayPauseIconFromPlayerState(playerState);
             _controlsBox.UpdatePlayPauseIcon();
             _autoHideTimer?.Stop();
             _autoHideTimer?.Start();
@@ -86,10 +90,7 @@ public partial class MainWindow
         Dispatcher.UIThread.Post(() =>
         {
             if (e.IsPaused)
-            {
                 _pauseOverlay.Show();
-                ShowUiControls();
-            }
         });
     }
 

@@ -115,7 +115,6 @@ public class MainViewModel : INotifyPropertyChanged
         _player.Volume = _volumeValue;
 
         // Wire player events
-        _player.Opened += OnMediaOpened;
         _player.TrackListChanged += OnTrackListChanged;
         _player.PlaylistChanged += OnPlaylistChanged;
         _player.LoopChangedEvent += OnLoopChanged;
@@ -798,11 +797,6 @@ public class MainViewModel : INotifyPropertyChanged
         });
     }
 
-    private void OnMediaOpened(object? sender, EventArgs e)
-    {
-        RefreshState();
-    }
-
     /// <summary>
     /// Rebuilds typed track menu items from player track list events.
     /// Matches Python's _update_track_menus() behavior: preserves "Add..." and "None"
@@ -911,6 +905,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     internal void RefreshState()
     {
+        _state = _player.State;
         OnPropertyChanged(nameof(IsPlaying));
         OnPropertyChanged(nameof(IsPaused));
         OnPropertyChanged(nameof(Position));

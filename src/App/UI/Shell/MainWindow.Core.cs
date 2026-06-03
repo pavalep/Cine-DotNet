@@ -417,13 +417,9 @@ public partial class MainWindow
                 _isLoading = true;
                 _spinnerOverlay.Start();
                 if (StartPage?.IsVisible == true) StartPage.IsVisible = false;
-                _controlsBox.SetControlsVisibility(true);
                 _headerBar.ShowOpenMenu();
                 _headerBar.SetTitle(_viewModel.Title);
                 Title = $"Cine — {_viewModel.Title}";
-
-                _autoHideTimer?.Stop();
-                _autoHideTimer?.Start();
             }
             else
             {

@@ -8,6 +8,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Cine.Avalonia.ViewModels;
 using Cine.Avalonia.Views.Dialogs;
+using Cine.Media.Models;
 using AvaloniaLayout = Avalonia.Layout;
 using Button = global::Avalonia.Controls.Button;
 using Color = Avalonia.Media.Color;
@@ -34,7 +35,6 @@ public partial class ControlsBoxControl : AvaloniaUserControl
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
-        SeekBar?.InitializeSeekBar();
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
@@ -50,6 +50,13 @@ public partial class ControlsBoxControl : AvaloniaUserControl
     {
         if (_viewModel == null) return;
         PlayPauseIconPath.Kind = _viewModel.IsPlaying
+            ? Material.Icons.MaterialIconKind.Pause
+            : Material.Icons.MaterialIconKind.Play;
+    }
+
+    public void SetPlayPauseIconFromPlayerState(PlaybackState state)
+    {
+        PlayPauseIconPath.Kind = state == PlaybackState.Playing
             ? Material.Icons.MaterialIconKind.Pause
             : Material.Icons.MaterialIconKind.Play;
     }
