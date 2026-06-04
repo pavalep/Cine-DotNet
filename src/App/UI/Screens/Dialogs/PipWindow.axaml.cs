@@ -113,6 +113,14 @@ public partial class PipWindow : Window
 
         _videoHost.ChildWindowCreated += OnPipVideoHostReady;
 
+        // Set the PipWindow's own native HWND as the video host's parent,
+        // which triggers child HWND creation + ChildWindowCreated event.
+        var pipHwnd = GetPlatformHwnd();
+        if (pipHwnd != IntPtr.Zero)
+        {
+            _videoHost.ParentHwnd = pipHwnd;
+        }
+
         // Restore saved state (position, size, pin)
         RestoreState();
 
@@ -125,6 +133,18 @@ public partial class PipWindow : Window
 
         // Start auto-hide + mouse activity tracking
         StartMouseActivityTimer();
+    }
+
+    private IntPtr GetPlatformHwnd()
+    {
+        try
+        {
+            var handle = TryGetPlatformHandle();
+            if (handle is { Handle: not 0 })
+                return handle.Handle;
+        }
+        catch { }
+        return IntPtr.Zero;
     }
 
     // =========================================================================
