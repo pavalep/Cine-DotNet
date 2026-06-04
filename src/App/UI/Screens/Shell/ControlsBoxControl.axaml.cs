@@ -31,6 +31,7 @@ public partial class ControlsBoxControl : AvaloniaUserControl
     private PlaylistDialog? _playlistDialog;
 
     public SeekBarControl SeekBarControl => SeekBar;
+    public global::Avalonia.Controls.Border ControlsBoxElement => ControlsBox;
 
     public ControlsBoxControl()
     {

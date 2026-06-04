@@ -85,4 +85,9 @@ public partial class MainWindow
     }
 
     private void OnToggleFullscreen(object? sender, RoutedEventArgs e) => _viewModel?.ToggleFullscreen();
+
+    private async Task ShowErrorDialog(string message, string details)
+    {
+        await Task.CompletedTask; // P12: placeholder — will show proper error dialog
+    }
 }

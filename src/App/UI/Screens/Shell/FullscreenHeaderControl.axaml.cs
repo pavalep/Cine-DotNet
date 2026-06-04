@@ -29,6 +29,9 @@ public partial class FullscreenHeaderControl : UserControl
 
     public bool HasActiveFlyouts => _activeFlyouts > 0;
 
+    // P12: Expose inner FullscreenHeader Border for overlay hover tracking
+    public global::Avalonia.Controls.Border FullscreenHeaderElement => FullscreenHeader;
+
     public void TrackFlyoutOpened(object? sender, EventArgs e)
     {
         _activeFlyouts++;

@@ -41,7 +41,6 @@ public partial class MainWindow
     private bool _uiVisible = true;
     private const double AutoHideDelaySeconds = 3.0;
     private global::Avalonia.Point _lastMousePosition;
-    private bool _isMouseOverControls;
     private DateTime _lastSeekWheel = DateTime.MinValue;
 
     // Seek bar
@@ -273,11 +272,19 @@ public partial class MainWindow
         };
 
         _videoHost.ChildWindowCreated += OnVideoHostChildCreated;
-        _videoHost.PointerPressed += OnVideoPointerPressed;
-        _videoHost.PointerMoved += OnWindowPointerMoved;
-        _videoHost.PointerEntered += OnVideoPointerEntered;
-        _videoHost.PointerExited += OnVideoPointerExited;
         KeyDown += OnKeyDown;
+
+        // Pointer events on transparent overlay (topmost, catches all mouse activity)
+        VideoClickOverlay.PointerMoved += OnWindowPointerMoved;
+
+        // P12: Hover tracking — direct PointerEntered/Exited on each overlay element
+        // Mirrors Python's EventController + contains_pointer checks
+        _headerBar.HeaderBar.PointerEntered += OnHeaderPointerEntered;
+        _headerBar.HeaderBar.PointerExited += OnHeaderPointerExited;
+        _controlsBox.ControlsBox.PointerEntered += OnControlsPointerEntered;
+        _controlsBox.ControlsBox.PointerExited += OnControlsPointerExited;
+        _fullscreenHeader.FullscreenHeader.PointerEntered += OnFullscreenHeaderPointerEntered;
+        _fullscreenHeader.FullscreenHeader.PointerExited += OnFullscreenHeaderPointerExited;
 
         // P6.6: Window backdrop opacity
         Activated += OnWindowActivated;
@@ -361,9 +368,11 @@ public partial class MainWindow
         }
 
         if (StartPage != null) StartPage.IsVisible = true;
-        _controlsBox.SetControlsVisibility(false);
         _headerBar.HideOpenMenu();
         if (VideoHost != null) VideoHost.IsVideoSurfaceVisible = false;
+
+        // Show controls immediately (auto-hide will handle dismissal after media opens)
+        ShowUiControls();
 
         // P5.1: Resume session only if no command-line file was queued
         if (string.IsNullOrEmpty(_queuedOpenPath))
@@ -583,22 +592,14 @@ public partial class MainWindow
         FadeHeaderAndControls(UnfocusedOpacity);
     }
 
-    private async void FadeHeaderAndControls(double targetOpacity)
-    {
-        var controls = HeaderAndControlsOverlay;
-        if (controls == null) return;
+    // =========================================================================
+    // OSD Notification helpers
+    // =========================================================================
 
-        ErrorBoundary.Run(async () =>
-        {
-            var steps = 6;
-            for (int i = 1; i <= steps; i++)
-            {
-                controls.Opacity = controls.Opacity + (targetOpacity - controls.Opacity) * 0.5;
-                await Task.Delay(16);
-            }
-            controls.Opacity = targetOpacity;
-        });
-    }
+    private void ShowOsdNotification(string text, double durationMs = 2000)
+        => OsdNotificationControl.Show(text, durationMs);
+    private void ShowOsdNotification(MaterialIconKind icon, string text, double durationMs = 2000)
+        => OsdNotificationControl.ShowWithIcon(icon, text, durationMs);
 
     // =========================================================================
     // P8.3: Typed property watchers — replaces string-based PropertyChanged switch

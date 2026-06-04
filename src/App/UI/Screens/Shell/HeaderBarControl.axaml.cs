@@ -32,6 +32,9 @@ public partial class HeaderBarControl : AvaloniaUserControl
         _viewModel = DataContext as MainViewModel;
     }
 
+    // P12: Expose inner HeaderBar Border for overlay hover tracking
+    public global::Avalonia.Controls.Border HeaderBarElement => HeaderBar;
+
     public void SetTitle(string title)
     {
         TitleText.Text = title;

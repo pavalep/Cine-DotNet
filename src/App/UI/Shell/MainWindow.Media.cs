@@ -54,7 +54,7 @@ public partial class MainWindow
 
         await Dispatcher.UIThread.OnUiThreadAsync(() =>
         {
-            _controlsBox.SetControlsVisibility(true);
+            ShowUiControls();
             _headerBar.ShowOpenMenu();
 
             if (_viewModel != null)

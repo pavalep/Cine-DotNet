@@ -23,7 +23,8 @@ Phase 7 — Pipeline & Comp ★★★★★    5/5 COMPLETED ✅
 Phase 8 — State & Events  ★★★★★    7/7 COMPLETED ✅
 Phase 9 — Audio/Video Enh ★★★★☆    4/6 COMPLETED ✅
 Phase 10 — Perf & Stab ★★★★★    6/6 COMPLETED ✅
-Phase 11 — Platform & Dist ★★★★☆    5/5 COMPLETED ✅
+Phase 11 — Platform & Dist ★★★★☆    4/5 COMPLETED ✅
+Phase 12 — Layout & Hover   ★★★★★    5/5 COMPLETED ✅
 PIP (Picture-in-Pic)      ★★★★★    Done — gold standard
 Seek Bar Click/Drag       ★★★★★    FIXED (P0.1+P0.2) + time toggle (P1.3)
 Transport Controls        ★★★★★    Great — scale fx, shadows, dividers added
@@ -242,6 +243,20 @@ Audio Filtering/Equalizer ★★★★☆    10-band EQ (P9.1) + normalization (
 
 > **Phase 11 target: shipped product** — 4/5 complete. Auto-updater deferred. The bootstrapper checks for .NET 10 Desktop Runtime at install time via registry search; if missing, shows a clear message with download link.
 
+---
+
+## Phase 12 — Layout & Auto-Hide Alignment with Python Reference (P12 — Visual Fidelity)
+
+| # | Item | Status | Detail | Files | Effort |
+|---|---|---|---|---|---|
+| **12.1** | **Panel overlay layout** | ✅ Done | Replaced `Grid` with `Panel` in `MainWindow.axaml`. All layers (video, start page, header, controls, OSD) now overlap in a single stack — video fills the entire window, controls float on top. Mirrors Python's `Gtk.Overlay` + `[overlay]` Blueprint markers. Zero layout competition between video and controls. | `MainWindow.axaml` | **1 hr** |
+| **12.2** | **Direct PointerEntered/Exited hover tracking** | ✅ Done | Replaced `IsPositionOverElement(TranslatePoint(...))` heuristic with direct `PointerEntered`/`PointerExited` on `HeaderBar`, `ControlsBox`, and `FullscreenHeader` Border elements. Mirrors Python's `EventController` + `contains_pointer` pattern: each overlay tracks its own hover state independently via native events. No manual bounds calculation. | `MainWindow.AutoHide.cs`, `MainWindow.Core.cs` | **2 hrs** |
+| **12.3** | **Hover-gated auto-hide** | ✅ Done | `OnAutoHideTimerTick` now checks `_hoverHeader || _hoverControls || _hoverFullscreenHeader` **before** hiding. Mirrors Python's `_hide_ui()` which checks `motion_header.contains_pointer` and `motion_controls.contains_pointer`. If mouse is still over any control, timer resets instead of hiding. | `MainWindow.AutoHide.cs` | **1 hr** |
+| **12.4** | **Remove dead positioning code** | ✅ Done | Removed `_isMouseOverControls` field (replaced by per-element `_hover*` bools). Removed duplicate `FadeHeaderAndControls` from Core.cs (AutoHide.cs owns it). Removed unused `OnVideoPointerEntered`/`Exited` handlers on `_videoHost` (now on `VideoClickOverlay`). | `MainWindow.Core.cs`, `MainWindow.AutoHide.cs` | **1 hr** |
+| **12.5** | **Surface-layer pointer routing** | ✅ Done | `PointerMoved` wired to `VideoClickOverlay` (transparent full-window Border, layer 0 of overlay stack) instead of `_videoHost` (native HWND that doesn't reliably fire pointer events). Mirrors Python's `motion_controller` on `revealer_ui` — the topmost catch-all layer. | `MainWindow.Core.cs`, `MainWindow.axaml` | **1 hr** |
+
+> **Phase 12 target: layout parity with Python reference** — ✅ 5/5 complete. Controls no longer push video off-screen. Hover-triggered auto-hide now works reliably via per-element PointerEntered/Exited matching Python's EventController pattern. Aspect ratio changes now apply to entire window, not just the video region.
+
 ```
 Phase 0: Foundation Fixes (ship blockers)        ⏱ 2-3 days
     ↓
@@ -266,9 +281,11 @@ Phase 9: Audio/Video Enhancements (pro features) ⏱ 4-6 days
 Phase 10: Performance & Stability (ship ready)   ⏱ 3-5 days
     ↓
 Phase 11: Platform & Distribution (ship it)      ⏱ 3-5 days
+    ↓
+Phase 12: Layout & Auto-Hide (python alignment)  ⏱ 1-2 days
 ```
 
-**Total estimated effort: 29-43 days of focused development**
+**Total estimated effort: 30-45 days of focused development**
 
 ---
 

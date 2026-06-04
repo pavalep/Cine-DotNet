@@ -36,108 +36,80 @@
         <conv:ChapterMarginConverter x:Key="ChapterMarginConverter" />
     </Window.Resources>
 
-    <!-- Main Overlay Container -->
-    <Grid x:Name="MainOverlay" Background="Black"
-          HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
+    <!-- =====================================================================
+         SINGLE OVERLAY PANEL
+         All children overlap — video fills entire window, controls float on top.
+         No row definitions — nothing pushes video off-screen.
+         ===================================================================== -->
+    <Panel x:Name="MainOverlay" Background="Black">
 
-        <!-- ======================== -->
-        <!--  VIDEO AREA (full grid)  -->
-        <!-- ======================== -->
-        <Grid Grid.Row="0" Background="Black"
-              HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <!-- ================================================= -->
+        <!--  LAYER 0: VIDEO + BACKDROP (fills entire window)  -->
+        <!-- ================================================= -->
 
-            <!-- Playback background -->
-            <Border Background="{StaticResource PlaybackRadialBackground}"
-                    IsHitTestVisible="False" />
+        <!-- Playback background -->
+        <Border Background="{StaticResource PlaybackRadialBackground}"
+                IsHitTestVisible="False" />
 
-            <!-- Video Host (Native HWND) -->
-            <ctrl:D3D11VideoHost x:Name="VideoHost"
-                                 IsVideoSurfaceVisible="False"
-                                 HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                                 Opacity="0">
-                <ctrl:D3D11VideoHost.Transitions>
-                    <Transitions>
-                        <DoubleTransition Property="Opacity" Duration="0:0:0.3" />
-                    </Transitions>
-                </ctrl:D3D11VideoHost.Transitions>
-            </ctrl:D3D11VideoHost>
+        <!-- Video Host (Native HWND) -->
+        <ctrl:D3D11VideoHost x:Name="VideoHost"
+                             IsVideoSurfaceVisible="False"
+                             HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                             Opacity="0" />
 
-            <!-- Video click overlay -->
-            <Border x:Name="VideoClickOverlay"
-                    Background="Transparent"
-                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                    PointerPressed="OnVideoPointerPressed"
-                    PointerMoved="OnWindowPointerMoved"
-                    PointerEntered="OnVideoPointerEntered"
-                    PointerExited="OnVideoPointerExited"
-                    ZIndex="5" />
+        <!-- Video click overlay — fills window, captures hover for auto-hide -->
+        <Border x:Name="VideoClickOverlay"
+                Background="Transparent"
+                HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                PointerPressed="OnVideoPointerPressed" />
 
-            <!-- Vignette overlay -->
-            <Border Background="{StaticResource VignetteOverlay}"
-                    IsHitTestVisible="False" />
+        <!-- Vignette overlay -->
+        <Border Background="{StaticResource VignetteOverlay}"
+                IsHitTestVisible="False" />
 
-            <!-- Start Page -->
-            <local:StartPage x:Name="StartPage" ZIndex="10" />
+        <!-- ================================================= -->
+        <!--  LAYER 5: UI OVERLAYS (no layout impact on video)  -->
+        <!-- ================================================= -->
 
-            <!-- Loading Spinner -->
-            <controls:SpinnerOverlayControl x:Name="LoadingSpinnerOverlay" ZIndex="20" />
+        <!-- Start Page -->
+        <local:StartPage x:Name="StartPage" />
 
-            <!-- Pause Indicator -->
-            <controls:PauseOverlayControl x:Name="PauseOverlay" ZIndex="25" />
+        <!-- Loading Spinner -->
+        <controls:SpinnerOverlayControl x:Name="LoadingSpinnerOverlay" />
 
-            <!-- Chapter Badge Overlay -->
-            <Border Classes="chapter-badge-overlay">
-                <TextBlock Classes="chapter-badge"
-                           Text="{Binding ChapterTitle, Mode=OneWay}" />
-            </Border>
+        <!-- Pause Indicator -->
+        <controls:PauseOverlayControl x:Name="PauseOverlay" />
 
-            <!-- Replay Overlay -->
-            <controls:ReplayOverlayControl x:Name="ReplayOverlay" ZIndex="30" />
+        <!-- Chapter Badge Overlay -->
+        <Border Classes="chapter-badge-overlay" IsHitTestVisible="False">
+            <TextBlock Classes="chapter-badge"
+                       Text="{Binding ChapterTitle, Mode=OneWay}" />
+        </Border>
 
-            <!-- Drag-drop indicator overlay -->
-            <controls:DragDropOverlayControl x:Name="DropIndicatorOverlay" ZIndex="35" />
+        <!-- Replay Overlay -->
+        <controls:ReplayOverlayControl x:Name="ReplayOverlay" />
 
-            <!-- ======================== -->
-            <!--  HEADER + CONTROLS OVERLAY  -->
-            <!-- ======================== -->
-            <Border x:Name="HeaderAndControlsOverlay"
-                    Classes="header-and-controls"
-                    Background="{StaticResource HeaderAndControlsGradient}"
-                    IsHitTestVisible="False"
-                    VerticalAlignment="Stretch" HorizontalAlignment="Stretch" />
+        <!-- Drag-drop indicator overlay -->
+        <controls:DragDropOverlayControl x:Name="DropIndicatorOverlay" />
 
-            <!-- ======================== -->
-            <!--  HEADER BAR  -->
-            <!-- ======================== -->
-            <controls:HeaderBarControl x:Name="HeaderBarControl"
-                                       ZIndex="20"
-                                       VerticalAlignment="Top"
-                                       HorizontalAlignment="Stretch" />
+        <!-- HEADER BAR — top, floats over video -->
+        <controls:HeaderBarControl x:Name="HeaderBarControl"
+                                   VerticalAlignment="Top"
+                                   HorizontalAlignment="Stretch" />
 
-            <!-- ======================== -->
-            <!--  FULLSCREEN HEADER  -->
-            <!-- ======================== -->
-            <controls:FullscreenHeaderControl x:Name="FullscreenHeaderControl"
-                                              VerticalAlignment="Top" Height="44"
-                                              ZIndex="25" />
+        <!-- FULLSCREEN HEADER — top, floats over video -->
+        <controls:FullscreenHeaderControl x:Name="FullscreenHeaderControl"
+                                          VerticalAlignment="Top" Height="44" />
 
-            <!-- ======================== -->
-            <!--  CONTROLS BOX  -->
-            <!-- ======================== -->
-            <controls:ControlsBoxControl x:Name="ControlsBoxControl"
-                                         ZIndex="15"
-                                         VerticalAlignment="Bottom"
-                                         HorizontalAlignment="Stretch" />
+        <!-- CONTROLS BOX — bottom, floats over video -->
+        <controls:ControlsBoxControl x:Name="ControlsBoxControl"
+                                     VerticalAlignment="Bottom"
+                                     HorizontalAlignment="Stretch" />
 
-        </Grid>
-
-        <!-- OSD Notification -->
+        <!-- OSD Notification — bottom center, floats over everything -->
         <controls:OsdNotificationControl x:Name="OsdNotificationControl"
                                           VerticalAlignment="Bottom"
-                                          HorizontalAlignment="Center"
-                                          ZIndex="40" />
-    </Grid>
+                                          HorizontalAlignment="Center" />
+
+    </Panel>
 </Window>

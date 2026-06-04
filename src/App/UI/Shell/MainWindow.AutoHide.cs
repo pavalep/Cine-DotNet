@@ -1,77 +1,90 @@
 using System;
-using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
-using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Media;
 using Avalonia.Threading;
-using AvaloniaLayout = Avalonia.Layout;
-using Control = Avalonia.Controls.Control;
-using PointerEventArgs = Avalonia.Input.PointerEventArgs;
-using Button = Avalonia.Controls.Button;
 using Cine.Avalonia.Helpers;
-using Material.Icons;
-
 namespace Cine.Avalonia;
 
 public partial class MainWindow
 {
+    // =========================================================================
+    // Auto-hide overlay — aligned with Python Reference (PyGObject + Blueprint)
+    //
+    // Fields: _autoHideTimer, _uiVisible, _lastMousePosition, _isMouseOverControls
+    //         declared in MainWindow.Core.cs
+    //
+    // Python approach (code_for_reference/src/window.blp + window.py):
+    //   - All layers stacked in an Overlay widget (no Grid, no rows)
+    //   - Header + Controls wrapped in a single `revealer_ui` containing a
+    //     vertical Box with expandable Separator to push header←top, controls←bottom
+    //   - Motion controllers on revealer_ui, headerbar, controls_box — each
+    //     tracks hover independently via direct controller attachment
+    //   - _hide_ui() checks header/controls hover BEFORE hiding
+    //   - _show_ui() is idempotent: reveals, resets timer
+    //
+    // Avalonia implementation:
+    //   - Panel (overlap container) ✓  (replaced Grid in .axaml)
+    //   - HeaderBarControl + ControlsBoxControl float on top via alignment
+    //   - Hover tracked via PointerEntered/PointerExited on each element
+    //     (Avalonia's equivalent of GTK event controllers)
+    //   - HideCondition: timer fires → checks _hover* flags → hides or resets
+    // =========================================================================
+
+    // Hover state — set by PointerEntered/Exited on each overlay element.
+    // Mirrors Python's `motion_header.contains_pointer` / `motion_controls.contains_pointer`.
+    private bool _hoverHeader;
+    private bool _hoverControls;
+    private bool _hoverFullscreenHeader;
+
     private void InitializeAutoHide()
     {
         _autoHideTimer = new DispatcherTimer
         {
-            Interval = TimeSpan.FromSeconds(AutoHideDelaySeconds)
+            Interval = TimeSpan.FromMilliseconds(3000)
         };
         _autoHideTimer.Tick += OnAutoHideTimerTick;
-        PointerMoved += OnWindowPointerMoved;
-        SetUiControlsVisibility(true);
         _autoHideTimer?.Start();
     }
+
+    // ── Auto-hide timer logic (aligned with Python _on_hide_ui) ──
 
     private void OnAutoHideTimerTick(object? sender, EventArgs e)
     {
         _autoHideTimer?.Stop();
 
+        // Python: _hide_ui() checks `motion_header.contains_pointer`
+        //        and `motion_controls.contains_pointer` before hiding.
+        if (_hoverHeader || _hoverControls || _hoverFullscreenHeader)
+        {
+            _autoHideTimer?.Start();
+            return;
+        }
+
         bool hasMedia = !string.IsNullOrEmpty(_viewModel?.FilePath);
-        bool isInteractiveOverlayActive = _controlsBox.HasActiveFlyouts ||
-            _fullscreenHeader.HasActiveFlyouts ||
-            _headerBar.HasActiveFlyouts ||
-            _dropIndicator.IsShowing;
+        if (!hasMedia) return;
 
-        if (!_isMouseOverControls && hasMedia && !isInteractiveOverlayActive)
-            HideUiControls();
+        bool isFlyoutOpen = _controlsBox.HasActiveFlyouts ||
+                            _fullscreenHeader.HasActiveFlyouts ||
+                            _headerBar.HasActiveFlyouts ||
+                            _dropIndicator.IsShowing;
+        if (isFlyoutOpen) return;
+
+        HideUiControls();
     }
 
-    private void OnVideoPointerEntered(object? sender, PointerEventArgs e)
-    {
-        if (!_uiVisible)
-            ShowUiControls();
-    }
-
-    private void OnVideoPointerExited(object? sender, PointerEventArgs e)
-    {
-        _autoHideTimer?.Stop();
-        _autoHideTimer?.Start();
-    }
+    // ── Window-level pointer (catches all mouse movement) ──
+    // Mirrors Python's motion_controller on revealer_ui
 
     private void OnWindowPointerMoved(object? sender, PointerEventArgs e)
     {
         var pos = e.GetCurrentPoint(this).Position;
 
         if (!_uiVisible)
-        {
             ShowUiControls();
-            // Fall through to update hover state and restart timer
-        }
 
-        _isMouseOverControls =
-            (_headerBar != null && IsPositionOverElement(pos, _headerBar)) ||
-            (_fullscreenHeader != null && IsPositionOverElement(pos, _fullscreenHeader)) ||
-            (_controlsBox != null && IsPositionOverElement(pos, _controlsBox));
-
-        if (Math.Abs(pos.X - _lastMousePosition.X) > 1 ||
-            Math.Abs(pos.Y - _lastMousePosition.Y) > 1)
+        if (Math.Abs(pos.X - _lastMousePosition.X) > 3 ||
+            Math.Abs(pos.Y - _lastMousePosition.Y) > 3)
         {
             _lastMousePosition = pos;
             _autoHideTimer?.Stop();
@@ -79,181 +92,105 @@ public partial class MainWindow
         }
     }
 
-    private bool IsPositionOverElement(global::Avalonia.Point pos, Visual element)
-    {
-        try
-        {
-            var elementOffset = element.TranslatePoint(new AvaloniaPoint(0, 0), this);
-            if (elementOffset.HasValue)
-            {
-                var elementRect = new AvaloniaRect(elementOffset.Value, new AvaloniaSize(element.Bounds.Width, element.Bounds.Height));
-                return elementRect.Contains(pos);
-            }
-        }
-        catch { }
-        return false;
-    }
+    // ── Hover tracking — direct PointerEntered/Exited on each overlay element ──
+    // Mirrors Python's EventController + contains_pointer checks
 
-    private async void ShowUiControls()
+    private void OnHeaderPointerEntered(object? sender, PointerEventArgs e) => _hoverHeader = true;
+    private void OnHeaderPointerExited(object? sender, PointerEventArgs e) => _hoverHeader = false;
+    private void OnControlsPointerEntered(object? sender, PointerEventArgs e) => _hoverControls = true;
+    private void OnControlsPointerExited(object? sender, PointerEventArgs e) => _hoverControls = false;
+    private void OnFullscreenHeaderPointerEntered(object? sender, PointerEventArgs e) => _hoverFullscreenHeader = true;
+    private void OnFullscreenHeaderPointerExited(object? sender, PointerEventArgs e) => _hoverFullscreenHeader = false;
+
+    // ── Show / Hide — aligned with Python idempotent _show_ui / _hide_ui ──
+
+    private void ShowUiControls()
     {
-        if (_uiVisible) return;
         _uiVisible = true;
         _autoHideTimer?.Stop();
 
-        bool isFullscreen = WindowState == WindowState.FullScreen;
-        bool hasMedia = !string.IsNullOrEmpty(_viewModel?.FilePath);
+        // Header bar: always visible (handles start-page, menu, window controls).
+        // Just restore opacity.
+        if (_headerBar.HeaderBar != null)
+        {
+            _headerBar.HeaderBar.IsVisible = true;
+            _headerBar.HeaderBar.Opacity = 1;
+        }
+        // Fullscreen header: only visible when in fullscreen mode
+        if (_fullscreenHeader.FullscreenHeader != null && _playerService?.Player?.IsFullscreen == true)
+        {
+            _fullscreenHeader.FullscreenHeader.IsVisible = true;
+            _fullscreenHeader.FullscreenHeader.Opacity = 1;
+        }
+        // Controls box: always show (contains seekbar, transport, etc.)
+        if (_controlsBox.ControlsBox != null)
+        {
+            _controlsBox.ControlsBox.IsVisible = true;
+            _controlsBox.ControlsBox.Opacity = 1;
+        }
 
-        if (!isFullscreen)
-        {
-            _headerBar.SetBarVisibility(true);
-            await FadeVisual(_headerBar.HeaderBar, 0, 1, 350, true);
-        }
-        if (isFullscreen)
-        {
-            _fullscreenHeader.Show();
-            await FadeVisual(_fullscreenHeader.FullscreenHeader, 0, 1, 350, true);
-        }
-        if (hasMedia)
-        {
-            _controlsBox.SetControlsVisibility(true);
-            await FadeVisual(_controlsBox.ControlsBox, 0, 1, 350, true);
-        }
         _autoHideTimer?.Start();
     }
 
-    private async void HideUiControls()
+    private void HideUiControls()
     {
-        bool hasMedia = !string.IsNullOrEmpty(_viewModel?.FilePath);
-        if (!_uiVisible || !hasMedia) return;
-
-        bool isInteractiveOverlayActive = _controlsBox.HasActiveFlyouts ||
-            _fullscreenHeader.HasActiveFlyouts ||
-            _headerBar.HasActiveFlyouts ||
-            _dropIndicator.IsShowing;
-
-        if (isInteractiveOverlayActive) return;
-
         _uiVisible = false;
         _autoHideTimer?.Stop();
 
-        // Fade out content then hide
-        if (_headerBar.HeaderBar?.IsVisible == true)
+        // HeaderBar: fade to transparent but keep IsVisible = true
+        // (it's always in the layer stack, just invisible when media is playing).
+        _headerBar.HeaderBar.Opacity = 0;
+        _fullscreenHeader.FullscreenHeader.IsVisible = false;
+        _fullscreenHeader.FullscreenHeader.Opacity = 0;
+        _controlsBox.ControlsBox.IsVisible = false;
+        _controlsBox.ControlsBox.Opacity = 0;
+    }
+
+    // ── Fade animation (Python: revealer transition) ──
+
+    private async void FadeHeaderAndControls(double targetOpacity)
+    {
+        ErrorBoundary.Run(async () =>
         {
-            await FadeVisual(_headerBar.HeaderBar, 1, 0, 300, false);
-            _headerBar.SetBarVisibility(false);
-        }
-        if (_fullscreenHeader.FullscreenHeader?.IsVisible == true)
-        {
-            await FadeVisual(_fullscreenHeader.FullscreenHeader, 1, 0, 300, false);
-            _fullscreenHeader.Hide();
-        }
-        if (_controlsBox.ControlsBox?.IsVisible == true)
-        {
-            await FadeVisual(_controlsBox.ControlsBox, 1, 0, 300, false);
-            _controlsBox.SetControlsVisibility(false);
-        }
+            var headerBar = _headerBar.HeaderBar;
+            var controlsBox = _controlsBox.ControlsBox;
+            if (headerBar == null && controlsBox == null) return;
+
+            double startHeader = headerBar?.Opacity ?? 0;
+            double startControls = controlsBox?.Opacity ?? 0;
+            int steps = 6;
+
+            for (int i = 1; i <= steps; i++)
+            {
+                double t = i / (double)steps;
+                if (headerBar != null)
+                    headerBar.Opacity = startHeader + (targetOpacity - startHeader) * t;
+                if (controlsBox != null)
+                    controlsBox.Opacity = startControls + (targetOpacity - startControls) * t;
+                await Task.Delay(16);
+            }
+
+            if (headerBar != null) headerBar.Opacity = targetOpacity;
+            if (controlsBox != null) controlsBox.Opacity = targetOpacity;
+        });
     }
 
     /// <summary>
-    /// Sets the initial visibility of all UI controls without animation.
-    /// UserControls themselves remain visible to preserve layout space.
-    /// Only the inner content elements are toggled.
+    /// Fade a Control's Opacity from→to with optional await.
+    /// Used by OnMediaOpened to fade out StartPage / fade in video.
     /// </summary>
-    private void SetUiControlsVisibility(bool visible)
+    private static async Task FadeVisual(global::Avalonia.Controls.Control target, double from, double to, int durationMs, bool waitUntilComplete)
     {
-        _uiVisible = visible;
-        bool isFullscreen = WindowState == WindowState.FullScreen;
-        bool hasMedia = !string.IsNullOrEmpty(_viewModel?.FilePath);
+        target.Opacity = from;
+        const int steps = 20;
+        var delay = TimeSpan.FromMilliseconds(durationMs / (double)steps);
 
-        _headerBar.SetBarVisibility(visible && !isFullscreen);
-        if (isFullscreen)
+        for (int i = 1; i <= steps; i++)
         {
-            if (visible) _fullscreenHeader.Show(); else _fullscreenHeader.Hide();
+            target.Opacity = from + (to - from) * (i / (double)steps);
+            if (waitUntilComplete || i < steps)
+                await Task.Delay(delay);
         }
-        _controlsBox.SetControlsVisibility(visible && hasMedia);
-    }
-
-    private void ToggleUiControls()
-    {
-        if (_uiVisible) HideUiControls(); else ShowUiControls();
-    }
-
-    private CancellationTokenSource? _fadeCts;
-
-    private async Task FadeVisual(Visual visual, double from, double to, double durationMs, bool easeOut)
-    {
-        if (visual == null) return;
-        var sw = System.Diagnostics.Stopwatch.StartNew();
-        await Dispatcher.UIThread.OnUiThreadAsync(() => visual.Opacity = from);
-        while (sw.Elapsed.TotalMilliseconds < durationMs)
-        {
-            var progress = Math.Min(sw.Elapsed.TotalMilliseconds / durationMs, 1.0);
-            double eased = easeOut
-                ? 1 - Math.Cos(progress * Math.PI / 2)
-                : Math.Sin(progress * Math.PI / 2);
-            var opacity = from + (to - from) * eased;
-            await Dispatcher.UIThread.OnUiThreadAsync(() => visual.Opacity = opacity);
-            await Task.Delay(16);
-        }
-        await Dispatcher.UIThread.OnUiThreadAsync(() => visual.Opacity = to);
-    }
-
-    private async void ShowOsdNotification(string text, double durationMs = 2000)
-    {
-        _osdNotification.IsControlsBoxVisible = _controlsBox?.ControlsBox?.IsVisible == true;
-        _osdNotification.Show(text, durationMs);
-    }
-
-    // P6.1: Icon indicator overload
-    private async void ShowOsdNotification(MaterialIconKind icon, string text, double durationMs = 2000)
-    {
-        _osdNotification.IsControlsBoxVisible = _controlsBox?.ControlsBox?.IsVisible == true;
-        _osdNotification.ShowWithIcon(icon, text, durationMs);
-    }
-
-    private async Task ShowErrorDialog(string title, string message)
-    {
-        var dialog = new Window
-        {
-            Title = "Cine — Error",
-            SizeToContent = SizeToContent.WidthAndHeight,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            CanResize = false,
-            Background = new SolidColorBrush(AvaloniaColor.FromArgb(0xFF, 0x1E, 0x1E, 0x2E)),
-            Padding = new Thickness(24),
-            MinWidth = 320,
-            MaxWidth = 480
-        };
-
-        var stack = new global::Avalonia.Controls.StackPanel { Spacing = 16 };
-        stack.Children.Add(new TextBlock
-        {
-            Text = title,
-            FontSize = 16,
-            FontWeight = global::Avalonia.Media.FontWeight.SemiBold,
-            Foreground = AvaloniaBrushes.White,
-            TextWrapping = AvaloniaTextWrapping.Wrap
-        });
-        stack.Children.Add(new TextBlock
-        {
-            Text = message,
-            FontSize = 13,
-            Foreground = new SolidColorBrush(AvaloniaColor.FromArgb(0xCC, 0xFF, 0xFF, 0xFF)),
-            TextWrapping = AvaloniaTextWrapping.Wrap
-        });
-        var okBtn = new Button
-        {
-            Content = "OK",
-            HorizontalAlignment = AvaloniaLayout.HorizontalAlignment.Center,
-            MinWidth = 100,
-            Padding = new Thickness(16, 8),
-            FontSize = 14,
-            Cursor = new AvaloniaCursor(StandardCursorType.Arrow)
-        };
-        okBtn.Click += (_, _) => dialog.Close();
-        stack.Children.Add(okBtn);
-
-        dialog.Content = stack;
-        await dialog.ShowDialog(this);
+        target.Opacity = to;
     }
 }
