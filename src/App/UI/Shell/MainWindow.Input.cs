@@ -25,6 +25,33 @@ public partial class MainWindow
         var shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
         var ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
 
+        // P2.5: When PIP is active, forward PIP-relevant keys so they control the PIP window
+        if (_pipService is { IsActive: true } && _pipService.Window is { IsVisible: true })
+        {
+            var forwarded = false;
+            switch (key)
+            {
+                case Key.Space:
+                case Key.Escape:
+                    _pipService.Window.SimulateKeyPress(key);
+                    forwarded = true;
+                    break;
+                case Key.Left when !ctrl:
+                case Key.Right when !ctrl:
+                case Key.Up:
+                case Key.Down:
+                case Key.M:
+                    _pipService.Window.SimulateKeyPress(key);
+                    forwarded = true;
+                    break;
+            }
+            if (forwarded)
+            {
+                e.Handled = true;
+                return;
+            }
+        }
+
         void Handle(Action action) { action(); e.Handled = true; }
 
         if (key == Key.Space || key == Key.K || key == Key.P || key == Key.MediaPlayPause) 
@@ -114,10 +141,41 @@ public partial class MainWindow
             Handle(() => _playerService?.Player?.ResetSpeed());
         else if (key == Key.S) 
             Handle(() => { if (shift) _playerService?.Player?.ScreenshotWithoutSubtitles(); else _playerService?.Player?.ScreenshotWithSubtitles(); });
+        else if (ctrl && shift && key == Key.E)
+            Handle(() => { var dlg = new EqualizerDialog(_viewModel!); dlg.Show(this); });
         else if (key == Key.I) 
             Handle(() => { });
         else if (key == Key.L && shift) 
             Handle(() => _viewModel?.ToggleLoopFile());
+        // ── Phase 4: Global Keyboard Shortcuts ──
+        else if (ctrl && key == Key.O && !shift)
+            Handle(async () => { var files = await OpenFileDialogAsync(); if (files != null) _viewModel?.OpenFiles(files); });
+        else if (ctrl && key == Key.O && shift)
+            Handle(async () => { var folder = await OpenFolderDialogAsync(); if (folder != null) _viewModel?.OpenFiles(new[] { folder }); });
+        else if (ctrl && key == Key.U)
+            Handle(() => { /* Ctrl+U: Open URL — placeholder for future URL streaming */ });
+        else if (ctrl && key == Key.L)
+            Handle(() => _viewModel?.ToggleLoopFile());
+        else if (ctrl && key == Key.I)
+            Handle(() => _viewModel?.ToggleLoopPlaylist());
+        else if (ctrl && key == Key.S && !shift)
+            Handle(() => _viewModel?.ToggleShuffle());
+        else if (ctrl && key == Key.P)
+            Handle(() => _controlsBox.OpenPlaylistDialog());
+        else if (ctrl && key == Key.OemComma)
+            Handle(() => { var prefs = new PreferencesDialog { DataContext = _viewModel }; prefs.Show(this); });
+        else if (ctrl && key == Key.A && shift)
+            Handle(async () => { var files = await OpenAddFilesDialogAsync(); if (files != null) _viewModel?.OpenFiles(files); });
+        else if (key == Key.T && !ctrl && !shift)
+            Handle(() => _controlsBox?.SeekBarControl?.ToggleTimeDisplay());
+        else if (key == Key.N && !ctrl && !shift)
+            Handle(() => _viewModel?.NextItem());
+        else if (key == Key.B && !ctrl && !shift)
+            Handle(() => _viewModel?.PreviousItem());
+        else if (key == Key.H && !ctrl && !shift)
+            Handle(() => _viewModel?.ToggleShuffle());
+        else if (ctrl && key == Key.OemQuestion)
+            Handle(() => { var dlg = new KeyboardShortcutsDialog(); dlg.Show(this); });
     }
 
     private void CloseOpenFlyouts()

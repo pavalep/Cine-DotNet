@@ -4,6 +4,7 @@
         xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         x:Class="Cine.Avalonia.Views.Dialogs.PipWindow"
         Opened="OnOpened"
+        KeyDown="OnKeyDown"
         Title="Cine — PIP"
         Width="400" Height="300"
         MinWidth="240" MinHeight="160"
@@ -12,63 +13,184 @@
         ShowInTaskbar="False"
         WindowStartupLocation="Manual"
         Background="#0C0C0E"
-        ExtendClientAreaToDecorationsHint="True">
+        ExtendClientAreaToDecorationsHint="True"
+        SystemDecorations="None"
+        TransparencyLevelHint="None"
+        PointerWheelChanged="OnPipPointerWheelChanged"
+        PointerMoved="OnPipPointerMoved">
 
-    <Grid RowDefinitions="Auto,*,Auto,Auto">
-        <!-- PIP Header -->
-        <Grid Grid.Row="0" Height="32" Background="#CC000000" ColumnDefinitions="Auto,*,Auto">
-            <TextBlock Grid.Column="0" Text="PIP" FontSize="12" FontWeight="SemiBold"
+    <Grid RowDefinitions="Auto,*,Auto">
+        <!-- PIP Header (drag handle, auto-hide) -->
+        <Grid x:Name="PipHeader"
+              Grid.Row="0" Height="32" Background="#CC000000"
+              ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto,Auto"
+              PointerPressed="OnHeaderPointerPressed"
+              PointerMoved="OnHeaderPointerMoved"
+              PointerReleased="OnHeaderPointerReleased"
+              IsVisible="False">
+            <TextBlock Grid.Column="0" x:Name="PipTitleLabel"
+                       Text="PIP" FontSize="12" FontWeight="SemiBold"
                        Foreground="{StaticResource OsdForeground}"
                        VerticalAlignment="Center" Margin="8,0,0,0" />
-            <Border Grid.Column="1" Width="6" Height="6" CornerRadius="3"
+            <TextBlock Grid.Column="1" x:Name="PipFileNameLabel"
+                       Text="" FontSize="11"
+                       Foreground="#AAFFFFFF"
+                       VerticalAlignment="Center" Margin="4,0,0,0"
+                       MaxWidth="180" TextTrimming="CharacterEllipsis" />
+            <Border Grid.Column="2" Width="6" Height="6" CornerRadius="3"
                     Background="#4aa3ff" HorizontalAlignment="Right"
                     VerticalAlignment="Center" Margin="0,0,8,0" />
-            <Button Grid.Column="2" Classes="window-control close"
+            <!-- Aspect ratio lock toggle -->
+            <Button Grid.Column="3" x:Name="PipAspectLockButton"
+                    Width="28" Height="28"
+                    Background="Transparent" BorderThickness="0"
+                    Click="OnAspectLockToggle"
+                    ToolTip.Tip="Toggle aspect ratio lock">
+                <materialIcons:MaterialIcon x:Name="PipAspectLockIcon"
+                    Kind="AspectRatio" Width="12" Height="12"
+                    Foreground="{StaticResource OsdForeground}" />
+            </Button>
+            <!-- Pin/Always-on-top toggle -->
+            <Button Grid.Column="4" x:Name="PipPinButton"
+                    Width="28" Height="28"
+                    Background="Transparent" BorderThickness="0"
+                    Click="OnPinToggleClick"
+                    ToolTip.Tip="Toggle always-on-top">
+                <materialIcons:MaterialIcon x:Name="PipPinIcon"
+                    Kind="PinOff" Width="12" Height="12"
+                    Foreground="{StaticResource OsdForeground}" />
+            </Button>
+            <!-- Back to Main Window -->
+            <Button Grid.Column="5" x:Name="PipBackButton"
+                    Width="28" Height="28"
+                    Background="Transparent" BorderThickness="0"
+                    Click="OnBackToMainClick"
+                    ToolTip.Tip="Return to main window">
+                <materialIcons:MaterialIcon Kind="Fullscreen" Width="12" Height="12"
+                    Foreground="{StaticResource OsdForeground}" />
+            </Button>
+            <Button Grid.Column="6" x:Name="PipCloseButton"
                     Width="32" Height="32"
+                    Background="Transparent" BorderThickness="0"
                     Click="OnCloseClick">
                 <materialIcons:MaterialIcon Kind="Close" Width="10" Height="10"
                     Foreground="{StaticResource OsdForeground}" />
             </Button>
         </Grid>
 
-        <!-- Video Surface -->
+        <!-- Video Surface (also serves as double-tap exit + drag target) -->
         <cc:D3D11VideoHost x:Name="PipVideoHost"
                            Grid.Row="1"
                            HorizontalAlignment="Stretch"
                            VerticalAlignment="Stretch"
                            IsVideoSurfaceVisible="False" />
 
-        <!-- Controls Bar with transport + seek + time -->
-        <Border Grid.Row="2" Background="#CC000000" IsHitTestVisible="True" Padding="4,2">
-            <Grid RowDefinitions="Auto,Auto">
+        <!-- Shadow layer -->
+        <Border Grid.Row="1" IsHitTestVisible="False" Opacity="0.3"
+                Margin="-4,0" CornerRadius="4"
+                BoxShadow="0 2px 8px rgba(0,0,0,0.6)" />
+
+        <!-- Big center Play/Pause button (appears on hover, fades in) -->
+        <Button x:Name="PipBigPlayPause"
+                Grid.Row="1"
+                Width="48" Height="48"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Background="#80000000"
+                BorderThickness="0"
+                CornerRadius="24"
+                Click="OnPipPlayPause"
+                Opacity="0"
+                IsHitTestVisible="False"
+                PointerEntered="OnBigPlayButtonPointerEntered"
+                PointerExited="OnBigPlayButtonPointerExited">
+            <materialIcons:MaterialIcon x:Name="PipBigPlayPauseIcon"
+                Kind="Pause" Width="20" Height="20"
+                Foreground="{StaticResource OsdForeground}" />
+        </Button>
+
+        <!-- Controls Bar (bottom, auto-hide) -->
+        <Border x:Name="PipControlsBar"
+                Grid.Row="2" Background="#CC000000"
+                IsHitTestVisible="True" Padding="4,2"
+                IsVisible="False"
+                PointerEntered="OnControlsPointerEntered"
+                PointerExited="OnControlsPointerExited">
+
+            <Grid RowDefinitions="Auto,Auto,Auto">
                 <!-- Row 0: Transport buttons -->
-                <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,Auto" HorizontalAlignment="Center">
-                    <Button Grid.Column="0" Classes="circular-transport" Width="32" Height="32" Click="OnPipPrevious">
-                        <materialIcons:MaterialIcon Kind="SkipPrevious" Width="14" Height="14"
+                <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,Auto,Auto"
+                      HorizontalAlignment="Center" Margin="4,0">
+                    <Button Grid.Column="0" Classes="circular-transport"
+                            Width="28" Height="28" Click="OnPipPrevious">
+                        <materialIcons:MaterialIcon Kind="SkipPrevious" Width="12" Height="12"
                             Foreground="{StaticResource OsdForeground}" />
                     </Button>
-                    <Button Grid.Column="1" x:Name="PipBtnPlayPause" Classes="circular-transport" Width="32" Height="32" Margin="4,0" Click="OnPipPlayPause">
-                        <materialIcons:MaterialIcon x:Name="PipPlayPauseIcon" Kind="Pause" Width="14" Height="14"
+                    <Button Grid.Column="1" x:Name="PipBtnPlayPause"
+                            Classes="circular-transport"
+                            Width="28" Height="28" Margin="4,0"
+                            Click="OnPipPlayPause">
+                        <materialIcons:MaterialIcon x:Name="PipPlayPauseIcon"
+                            Kind="Pause" Width="12" Height="12"
                             Foreground="{StaticResource OsdForeground}" />
                     </Button>
-                    <Button Grid.Column="2" Classes="circular-transport" Width="32" Height="32" Click="OnPipNext">
-                        <materialIcons:MaterialIcon Kind="SkipNext" Width="14" Height="14"
+                    <Button Grid.Column="2" Classes="circular-transport"
+                            Width="28" Height="28" Click="OnPipNext">
+                        <materialIcons:MaterialIcon Kind="SkipNext" Width="12" Height="12"
+                            Foreground="{StaticResource OsdForeground}" />
+                    </Button>
+                    <Button Grid.Column="3" x:Name="PipMuteButton"
+                            Width="28" Height="28" Margin="4,0,0,0"
+                            Background="Transparent" BorderThickness="0"
+                            Click="OnPipMuteClick">
+                        <materialIcons:MaterialIcon x:Name="PipVolumeIcon"
+                            Kind="VolumeHigh" Width="12" Height="12"
                             Foreground="{StaticResource OsdForeground}" />
                     </Button>
                 </Grid>
 
-                <!-- Row 1: Seek bar + time -->
-                <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Height="22">
+                <!-- Row 1: Volume slider -->
+                <Grid Grid.Row="1" ColumnDefinitions="Auto,*" Height="18"
+                      Margin="8,0,8,0">
+                    <TextBlock Grid.Column="0" Text="Vol"
+                               FontSize="9"
+                               Foreground="#88FFFFFF"
+                               VerticalAlignment="Center"
+                               Margin="0,0,4,0" />
+                    <Border x:Name="PipVolumeTrack"
+                            Grid.Column="1"
+                            Background="{StaticResource ProgressTroughBackground}"
+                            CornerRadius="3" Height="5" VerticalAlignment="Center"
+                            PointerPressed="OnVolumePointerPressed"
+                            PointerMoved="OnVolumePointerMoved"
+                            PointerReleased="OnVolumePointerReleased" />
+                    <Border x:Name="PipVolumeFill"
+                            Grid.Column="1"
+                            Background="{StaticResource ProgressSliderBackground}"
+                            CornerRadius="3" Height="5" VerticalAlignment="Center"
+                            HorizontalAlignment="Left" Width="75"
+                            IsHitTestVisible="False" />
+                </Grid>
+
+                <!-- Row 2: Seek bar + time -->
+                <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Height="24">
                     <Grid Grid.Column="0" Margin="8,0,6,0" VerticalAlignment="Center">
-                        <Border x:Name="PipSeekTrack" Background="{StaticResource ProgressTroughBackground}"
-                                CornerRadius="2" Height="3" VerticalAlignment="Center" />
-                        <Border x:Name="PipSeekFill" Background="{StaticResource ProgressSliderBackground}"
-                                CornerRadius="2" Height="3" VerticalAlignment="Center" HorizontalAlignment="Left" Width="0" />
+                        <Border x:Name="PipSeekTrack"
+                                Background="{StaticResource ProgressTroughBackground}"
+                                CornerRadius="3" Height="6" VerticalAlignment="Center"
+                                PointerPressed="OnSeekPointerPressed"
+                                PointerMoved="OnSeekPointerMoved"
+                                PointerReleased="OnSeekPointerReleased" />
+                        <Border x:Name="PipSeekFill"
+                                Background="{StaticResource ProgressSliderBackground}"
+                                CornerRadius="3" Height="6" VerticalAlignment="Center"
+                                HorizontalAlignment="Left" Width="0"
+                                IsHitTestVisible="False" />
                         <Border x:Name="PipSeekThumb"
-                                Width="10" Height="10" CornerRadius="5"
+                                Width="12" Height="12" CornerRadius="6"
                                 Background="{StaticResource ProgressSliderBackground}"
                                 HorizontalAlignment="Left" VerticalAlignment="Center"
-                                IsHitTestVisible="False" />
+                                IsHitTestVisible="False" Opacity="0.9" />
                     </Grid>
                     <TextBlock Grid.Column="1"
                                x:Name="PipTimeLabel"
@@ -77,16 +199,6 @@
                                Foreground="{StaticResource OsdForeground}"
                                VerticalAlignment="Center" Margin="0,0,8,0" />
                 </Grid>
-            </Grid>
-        </Border>
-
-        <!-- Resize grip -->
-        <Border Grid.Row="3" Height="12" Background="#CC000000" HorizontalAlignment="Stretch">
-            <Grid ColumnDefinitions="*,Auto">
-                <Border Grid.Column="1" Width="18" Height="10" Margin="0,0,4,0">
-                    <TextBlock Text="⣿" FontSize="8" Foreground="rgba(255,255,255,0.25)"
-                               VerticalAlignment="Center" HorizontalAlignment="Right" />
-                </Border>
             </Grid>
         </Border>
     </Grid>

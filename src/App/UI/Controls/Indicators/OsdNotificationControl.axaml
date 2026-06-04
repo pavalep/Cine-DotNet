@@ -1,12 +1,13 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Cine.Avalonia.Controls.OsdNotificationControl">
     <Border x:Name="OsdNotificationBorder"
             IsVisible="False"
             HorizontalAlignment="Center"
             VerticalAlignment="Bottom"
             Margin="0,0,0,100"
-            Padding="16,8"
+            Padding="12,8,16,8"
             CornerRadius="8"
             Background="{StaticResource OsdBackground}"
             PointerPressed="OnOsdNotificationClick">
@@ -15,10 +16,19 @@
                 <DoubleTransition Property="Opacity" Duration="0:0:0.2" />
             </Transitions>
         </Border.Transitions>
-        <TextBlock x:Name="OsdNotificationText"
-                   Text=""
-                   FontSize="14"
-                   FontWeight="SemiBold"
-                   Foreground="{StaticResource OsdForeground}" />
+        <StackPanel Orientation="Horizontal" Spacing="6">
+            <materialIcons:MaterialIcon x:Name="OsdIcon"
+                                        Kind="Information"
+                                        Width="16" Height="16"
+                                        Foreground="{StaticResource OsdForeground}"
+                                        VerticalAlignment="Center"
+                                        IsVisible="False" />
+            <TextBlock x:Name="OsdNotificationText"
+                       Text=""
+                       FontSize="14"
+                       FontWeight="SemiBold"
+                       Foreground="{StaticResource OsdForeground}"
+                       VerticalAlignment="Center" />
+        </StackPanel>
     </Border>
 </UserControl>

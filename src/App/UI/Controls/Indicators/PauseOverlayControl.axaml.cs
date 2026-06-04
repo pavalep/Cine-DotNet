@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Threading;
+using Cine.Avalonia.Helpers;
 
 namespace Cine.Avalonia.Controls;
 
@@ -51,12 +52,12 @@ public partial class PauseOverlayControl : AvaloniaUserControl
             if (ct.IsCancellationRequested) return;
             var progress = Math.Min(sw.Elapsed.TotalMilliseconds / durationMs, 1.0);
             var eased = Math.Sin(progress * Math.PI / 2);
-            await Dispatcher.UIThread.InvokeAsync(() =>
+            await Dispatcher.UIThread.OnUiThreadAsync(() =>
                 PauseIndicator.Opacity = startOpacity + (targetOpacity - startOpacity) * eased);
             await Task.Delay(16);
         }
         if (!ct.IsCancellationRequested)
-            await Dispatcher.UIThread.InvokeAsync(() => PauseIndicator.Opacity = targetOpacity);
+            await Dispatcher.UIThread.OnUiThreadAsync(() => PauseIndicator.Opacity = targetOpacity);
     }
 }
 

@@ -10,6 +10,8 @@ using AvaloniaLayout = Avalonia.Layout;
 using Control = Avalonia.Controls.Control;
 using PointerEventArgs = Avalonia.Input.PointerEventArgs;
 using Button = Avalonia.Controls.Button;
+using Cine.Avalonia.Helpers;
+using Material.Icons;
 
 namespace Cine.Avalonia;
 
@@ -182,7 +184,7 @@ public partial class MainWindow
     {
         if (visual == null) return;
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        await Dispatcher.UIThread.InvokeAsync(() => visual.Opacity = from);
+        await Dispatcher.UIThread.OnUiThreadAsync(() => visual.Opacity = from);
         while (sw.Elapsed.TotalMilliseconds < durationMs)
         {
             var progress = Math.Min(sw.Elapsed.TotalMilliseconds / durationMs, 1.0);
@@ -190,16 +192,23 @@ public partial class MainWindow
                 ? 1 - Math.Cos(progress * Math.PI / 2)
                 : Math.Sin(progress * Math.PI / 2);
             var opacity = from + (to - from) * eased;
-            await Dispatcher.UIThread.InvokeAsync(() => visual.Opacity = opacity);
+            await Dispatcher.UIThread.OnUiThreadAsync(() => visual.Opacity = opacity);
             await Task.Delay(16);
         }
-        await Dispatcher.UIThread.InvokeAsync(() => visual.Opacity = to);
+        await Dispatcher.UIThread.OnUiThreadAsync(() => visual.Opacity = to);
     }
 
     private async void ShowOsdNotification(string text, double durationMs = 2000)
     {
         _osdNotification.IsControlsBoxVisible = _controlsBox?.ControlsBox?.IsVisible == true;
         _osdNotification.Show(text, durationMs);
+    }
+
+    // P6.1: Icon indicator overload
+    private async void ShowOsdNotification(MaterialIconKind icon, string text, double durationMs = 2000)
+    {
+        _osdNotification.IsControlsBoxVisible = _controlsBox?.ControlsBox?.IsVisible == true;
+        _osdNotification.ShowWithIcon(icon, text, durationMs);
     }
 
     private async Task ShowErrorDialog(string title, string message)

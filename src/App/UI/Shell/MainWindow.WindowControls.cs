@@ -5,6 +5,7 @@ using Avalonia.Threading;
 using Cine.Avalonia.Views.Dialogs;
 using Cine.Media.Events;
 using App = global::Avalonia.Application;
+using Cine.Avalonia.Helpers;
 using RoutedEventArgs = Avalonia.Interactivity.RoutedEventArgs;
 using ToolTip = Avalonia.Controls.ToolTip;
 
@@ -21,7 +22,7 @@ public partial class MainWindow
             videoHostBounds = _videoHost?.Bounds.ToString(),
             renderScaling = RenderScaling
         }, runId: "pre-fix");
-        Dispatcher.UIThread.Post(() =>
+        Dispatcher.UIThread.OnUiThread(() =>
         {
             WindowState = e.IsFullscreen ? WindowState.FullScreen : WindowState.Normal;
             RefreshFullscreenUi();

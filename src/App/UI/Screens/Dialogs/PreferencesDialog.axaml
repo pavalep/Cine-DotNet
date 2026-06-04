@@ -72,6 +72,16 @@
                         </TextBlock>
                     </StackPanel>
                 </Border>
+                <Button Content="View All Shortcuts (Ctrl+/)"
+                        Background="{StaticResource OsdForeground}"
+                        Foreground="Black"
+                        CornerRadius="20"
+                        Padding="16,6"
+                        FontSize="13"
+                        FontWeight="SemiBold"
+                        BorderThickness="0"
+                        HorizontalAlignment="Center"
+                        Click="OnViewAllShortcutsClick" />
             </StackPanel>
         </ScrollViewer>
 

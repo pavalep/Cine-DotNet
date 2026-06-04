@@ -1,10 +1,14 @@
 using System;
+using System.IO;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Cine.Avalonia.ViewModels;
 using Cine.Avalonia.Views.Dialogs;
+using Layout = Avalonia.Layout;
 using PointerPressedEventArgs = Avalonia.Input.PointerPressedEventArgs;
 using ToolTip = Avalonia.Controls.ToolTip;
 
@@ -106,6 +110,109 @@ public partial class HeaderBarControl : AvaloniaUserControl
     public void TrackFlyoutOpened(object? sender, EventArgs e)
     {
         _activeFlyouts++;
+
+        // P5.4: When Open menu flyout opens, add recent files dynamically
+        if (sender is Flyout flyout)
+        {
+            UpdateOpenMenuRecentFiles(flyout);
+        }
+    }
+
+    private void UpdateOpenMenuRecentFiles(Flyout flyout)
+    {
+        try
+        {
+            if (flyout.Content is not Border border) return;
+            if (border.Child is not StackPanel stack) return;
+            if (_viewModel == null || !_viewModel.HasRecentFiles) return;
+
+            var app = global::Avalonia.Application.Current;
+
+            // Remove old recent files section
+            var sepIndex = -1;
+            for (int i = stack.Children.Count - 1; i >= 0; i--)
+            {
+                if (stack.Children[i] is TextBlock tb && tb.Text == "Recent Files")
+                {
+                    sepIndex = i;
+                    break;
+                }
+            }
+            if (sepIndex >= 0)
+            {
+                while (stack.Children.Count > sepIndex)
+                    stack.Children.RemoveAt(stack.Children.Count - 1);
+            }
+
+            if (_viewModel.RecentFiles.Count == 0) return;
+
+            // Add separator and recent files section
+            stack.Children.Add(new Separator
+            {
+                Background = (IBrush?)app?.FindResource("PopoverBorder"),
+                Margin = new Thickness(4, 2)
+            });
+
+            var header = new TextBlock
+            {
+                Text = "Recent Files",
+                FontSize = 11,
+                FontWeight = FontWeight.SemiBold,
+                Foreground = (IBrush?)app?.FindResource("OsdForeground"),
+                Opacity = 0.5,
+                Margin = new Thickness(12, 5, 0, 2)
+            };
+            stack.Children.Add(header);
+
+            foreach (var file in _viewModel.RecentFiles.Take(10))
+            {
+                if (!System.IO.File.Exists(file)) continue;
+
+                var fileName = System.IO.Path.GetFileName(file);
+                var recentBtn = new global::Avalonia.Controls.Button
+                {
+                    Classes = { "flyout-item" },
+                    Content = new Grid
+                    {
+                        ColumnDefinitions = new ColumnDefinitions
+                        {
+                            new ColumnDefinition(GridLength.Auto),
+                            new ColumnDefinition(GridLength.Star)
+                        },
+                        Children =
+                        {
+                            new TextBlock
+                            {
+                                Text = "📄",
+                                FontSize = 12,
+                                VerticalAlignment = Layout.VerticalAlignment.Center
+                            },
+                            new TextBlock
+                            {
+                                Text = fileName,
+                                TextTrimming = TextTrimming.CharacterEllipsis,
+                                FontSize = 12,
+                                Foreground = (IBrush?)app?.FindResource("OsdForeground"),
+                                Margin = new Thickness(10, 0, 0, 0),
+                                VerticalAlignment = Layout.VerticalAlignment.Center
+                            }
+                        }
+                    },
+                    HorizontalContentAlignment = Layout.HorizontalAlignment.Stretch,
+                    Tag = file
+                };
+                Grid.SetColumn((TextBlock)((Grid)recentBtn.Content).Children[1], 1);
+
+                recentBtn.Click += (_, _) =>
+                {
+                    if (recentBtn.Tag is string path && _viewModel != null)
+                        _viewModel.OpenFile(path);
+                    flyout.Hide();
+                };
+                stack.Children.Add(recentBtn);
+            }
+        }
+        catch { }
     }
 
     public void TrackFlyoutClosed(object? sender, EventArgs e)

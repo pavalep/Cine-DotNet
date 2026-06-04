@@ -11,5 +11,11 @@ public partial class PreferencesDialog : Window
     }
 
     private void OnCloseClick(object? sender, RoutedEventArgs e) => Close();
+
+    private void OnViewAllShortcutsClick(object? sender, RoutedEventArgs e)
+    {
+        var dialog = new KeyboardShortcutsDialog();
+        dialog.Show(this);
+    }
 }
 

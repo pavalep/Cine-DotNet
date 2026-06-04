@@ -90,7 +90,7 @@
                                         BorderThickness="1"
                                         CornerRadius="8"
                                         Padding="8">
-                                    <StackPanel Orientation="Vertical" Spacing="10" Width="64"
+                                    <StackPanel Orientation="Vertical" Spacing="10" Width="80"
                                                 HorizontalAlignment="Center">
                                         <ToggleButton x:Name="BtnMuteToggle"
                                                       Classes="circular-toggle"
@@ -132,6 +132,13 @@
                             ToolTip.Tip="Audio Tracks"
                             Click="OnAudioMenuClick">
                         <materialIcons:MaterialIcon x:Name="AudioIconPath" Kind="Music" Width="18" Height="18"
+                            Foreground="{StaticResource OsdForeground}" />
+                    </Button>
+                    <Button x:Name="BtnEqualizer"
+                            Classes="circular-menu"
+                            ToolTip.Tip="Equalizer"
+                            Click="OnEqualizerClick">
+                        <materialIcons:MaterialIcon Kind="Tune" Width="18" Height="18"
                             Foreground="{StaticResource OsdForeground}" />
                     </Button>
                     <Button x:Name="BtnVideoMenu"
@@ -191,6 +198,14 @@
 
                 <!-- Group 4: Tools -->
                 <StackPanel Orientation="Horizontal" Spacing="2">
+                    <Button x:Name="BtnChaptersMenu"
+                            Classes="circular-menu"
+                            IsVisible="{Binding HasChapters}"
+                            ToolTip.Tip="Chapters"
+                            Click="OnChaptersMenuClick">
+                        <materialIcons:MaterialIcon Kind="BookmarkOutline" Width="16" Height="16"
+                            Foreground="{StaticResource OsdForeground}" />
+                    </Button>
                     <components:OptionsMenuButton x:Name="BtnOptionsMenu" />
                     <ToggleButton x:Name="BtnFullscreen"
                                   Classes="circular-toggle"

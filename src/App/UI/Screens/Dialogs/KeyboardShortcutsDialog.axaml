@@ -1,0 +1,34 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        mc:Ignorable="d" xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        d:DesignWidth="560" d:DesignHeight="480"
+        x:Class="Cine.Avalonia.Views.Dialogs.KeyboardShortcutsDialog"
+        Title="Keyboard Shortcuts"
+        Width="560" Height="480"
+        MinWidth="400" MinHeight="360"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource AppBackground}"
+        ExtendClientAreaToDecorationsHint="True"
+        WindowDecorations="BorderOnly">
+
+    <Grid RowDefinitions="Auto,*" Margin="0">
+        <!-- Header -->
+        <Grid Grid.Row="0" Height="40" ColumnDefinitions="*,Auto"
+              Background="{StaticResource PopoverBackground}">
+            <TextBlock Grid.Column="0" Text="Keyboard Shortcuts" FontWeight="Bold" FontSize="16"
+                       Margin="16,0" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Classes="flat" Margin="0,0,8,0"
+                    Click="OnCloseClick" ToolTip.Tip="Close">
+                <materialIcons:MaterialIcon Kind="Close" Width="14" Height="14"
+                    Foreground="{StaticResource OsdForeground}" />
+            </Button>
+        </Grid>
+
+        <!-- Shortcuts list (populated in code-behind) -->
+        <ScrollViewer Grid.Row="1" Margin="0" Background="Transparent">
+            <StackPanel x:Name="ShortcutsStack" Margin="16,8,16,16" Spacing="0" />
+        </ScrollViewer>
+    </Grid>
+</Window>

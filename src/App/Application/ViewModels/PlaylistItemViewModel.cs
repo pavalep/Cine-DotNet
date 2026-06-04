@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using System.IO;
+using System.Runtime.CompilerServices;
 
 namespace Cine.Avalonia.ViewModels;
 
@@ -9,6 +10,7 @@ public class PlaylistItemViewModel : INotifyPropertyChanged
     private readonly MainViewModel _parent;
     private readonly int _index;
     private readonly string _path;
+    private bool _isVisible = true;
 
     public PlaylistItemViewModel(MainViewModel parent, int index, string path)
     {
@@ -19,10 +21,23 @@ public class PlaylistItemViewModel : INotifyPropertyChanged
 
     public string Title => Path.GetFileNameWithoutExtension(_path);
     public string Directory => Path.GetFileName(Path.GetDirectoryName(_path) ?? string.Empty);
-    public string PathStr => _path;
+    public string FilePath => _path;
     public int Index => _index;
 
     public bool IsPlaying => _parent.PlaylistPosition == _index;
+
+    public bool IsVisible
+    {
+        get => _isVisible;
+        set
+        {
+            if (_isVisible != value)
+            {
+                _isVisible = value;
+                OnPropertyChanged();
+            }
+        }
+    }
 
     public void NotifyPlayingChanged()
     {
@@ -40,4 +55,9 @@ public class PlaylistItemViewModel : INotifyPropertyChanged
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
+
+    protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
 }

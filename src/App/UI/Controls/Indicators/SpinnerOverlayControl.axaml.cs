@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Threading;
+using Cine.Avalonia.Helpers;
 
 namespace Cine.Avalonia.Controls;
 
@@ -54,11 +55,11 @@ public partial class SpinnerOverlayControl : AvaloniaUserControl
         {
             var progress = Math.Min(sw.Elapsed.TotalMilliseconds / durationMs, 1.0);
             var eased = 1 - Math.Cos(progress * Math.PI / 2);
-            await Dispatcher.UIThread.InvokeAsync(() =>
+            await Dispatcher.UIThread.OnUiThreadAsync(() =>
                 LoadingSpinner.Opacity = startOpacity + (targetOpacity - startOpacity) * eased);
             await Task.Delay(16);
         }
-        await Dispatcher.UIThread.InvokeAsync(() => LoadingSpinner.Opacity = targetOpacity);
+        await Dispatcher.UIThread.OnUiThreadAsync(() => LoadingSpinner.Opacity = targetOpacity);
     }
 }
 

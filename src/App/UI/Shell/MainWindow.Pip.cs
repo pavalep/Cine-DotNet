@@ -1,9 +1,7 @@
 using System;
-using System.IO;
-using Cine.Avalonia.Controls;
-using Cine.Avalonia.Views.Dialogs;
-using Cine.Media.Interfaces;
-using RoutedEventArgs = Avalonia.Interactivity.RoutedEventArgs;
+using Avalonia.Threading;
+using Cine.Avalonia.Helpers;
+using Cine.Avalonia.ViewModels;
 
 namespace Cine.Avalonia;
 
@@ -11,24 +9,56 @@ public partial class MainWindow
 {
     private void InitPipHandlers()
     {
+        if (_pipService == null) return;
         _headerBar.PipToggled += OnPipToggled;
+
+        _pipService.PipOpened += (_, _) =>
+        {
+            Dispatcher.UIThread.OnUiThread(() =>
+            {
+                _playerService?.Player?.Pause();
+                if (_videoHost != null) _videoHost.IsVideoSurfaceVisible = false;
+                _headerBar.SetPipChecked(true);
+                ShowOsdNotification("PIP mode active");
+            });
+        };
+
+        _pipService.PipClosed += (_, _) =>
+        {
+            Dispatcher.UIThread.OnUiThread(() =>
+            {
+                _headerBar.SetPipChecked(false);
+                if (_videoHost != null) _videoHost.IsVideoSurfaceVisible = true;
+                _playerService?.Player?.Play();
+                ShowOsdNotification("PIP closed");
+            });
+        };
+
+        _pipService.PipError += (_, error) =>
+        {
+            Dispatcher.UIThread.OnUiThread(() =>
+            {
+                ShowOsdNotification(error, 4000);
+            });
+        };
+
+        // Sync file path when media changes
+        _viewModel!.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(MainViewModel.FilePath) && _viewModel != null)
+            {
+                _pipService.SetCurrentFilePath(_viewModel.FilePath);
+            }
+        };
     }
 
     private void OnPipToggled(object? sender, EventArgs e)
     {
-        OnTogglePip(sender, e);
-    }
+        if (_pipService == null) return;
 
-    private void OnTogglePip(object? sender, EventArgs e)
-    {
-        if (_isPipMode)
+        if (_pipService.IsActive)
         {
-            _pipWindow?.Close();
-            _pipWindow = null;
-            _pipPlayer = null;
-            _isPipMode = false;
-            _headerBar.SetPipChecked(false);
-            ShowOsdNotification("PIP closed");
+            _pipService.ExitPip();
         }
         else
         {
@@ -38,48 +68,13 @@ public partial class MainWindow
                 return;
             }
 
-            try
+            _pipService.Initialize(_playerService!.Player!);
+            _pipService.SetCurrentFilePath(_viewModel.FilePath);
+            var pipWindow = _pipService.EnterPip();
+
+            if (pipWindow == null)
             {
-                _pipPlayer = _playerService!.CreateSecondaryPlayer();
-                _pipWindow = new PipWindow(_pipPlayer, _playerService.Player!, _viewModel!.FilePath!)
-                {
-                    DataContext = _viewModel
-                };
-
-                _playerService.Player?.Pause();
-                if (_videoHost != null) _videoHost.IsVideoSurfaceVisible = false;
-
-                if (_viewModel != null)
-                {
-                    _viewModel.NotifyPipSync = () =>
-                    {
-                        if (_pipWindow is PipWindow pw)
-                            pw.SyncFromMain();
-                    };
-                }
-
-                _pipWindow.Closed += (s, args) =>
-                {
-                    _pipWindow = null;
-                    _pipPlayer = null;
-                    _isPipMode = false;
-                    _headerBar.SetPipChecked(false);
-                    if (_viewModel != null) _viewModel.NotifyPipSync = null;
-                    if (_videoHost != null) _videoHost.IsVideoSurfaceVisible = true;
-                    _playerService?.Player?.Play();
-                };
-
-                _pipWindow.Show(this);
-                _isPipMode = true;
-                _headerBar.SetPipChecked(true);
-                ShowOsdNotification("PIP mode active");
-            }
-            catch (Exception ex)
-            {
-                _pipWindow = null;
-                _pipPlayer = null;
-                _isPipMode = false;
-                ShowOsdNotification($"PIP failed: {ex.Message}");
+                ShowOsdNotification("PIP failed to start");
             }
         }
     }

@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using Cine.Avalonia.Controls;
+using Cine.Avalonia.Helpers;
 using Cine.Media.Events;
 using Cine.Media.Models;
 using App = global::Avalonia.Application;
@@ -14,7 +15,7 @@ public partial class MainWindow
 
     private async void OnMediaOpened(object? sender, EventArgs e)
     {
-        await Dispatcher.UIThread.InvokeAsync(() =>
+        await Dispatcher.UIThread.OnUiThreadAsync(() =>
         {
             #region debug-point VT-A
             App.DebugReport("VT", "MainWindow.OnMediaOpened", "Opened event received.", new
@@ -34,7 +35,7 @@ public partial class MainWindow
         if (StartPage != null)
         {
             await FadeVisual(StartPage, 1, 0, 200, true);
-            await Dispatcher.UIThread.InvokeAsync(() =>
+            await Dispatcher.UIThread.OnUiThreadAsync(() =>
             {
                 StartPage.IsVisible = false;
                 StartPage.Opacity = 1;
@@ -43,7 +44,7 @@ public partial class MainWindow
 
         if (_videoHost != null)
         {
-            await Dispatcher.UIThread.InvokeAsync(() =>
+            await Dispatcher.UIThread.OnUiThreadAsync(() =>
             {
                 _videoHost.IsVideoSurfaceVisible = true;
                 _videoHost.Opacity = 0;
@@ -51,7 +52,7 @@ public partial class MainWindow
             await FadeVisual(_videoHost, 0, 1, 300, false);
         }
 
-        await Dispatcher.UIThread.InvokeAsync(() =>
+        await Dispatcher.UIThread.OnUiThreadAsync(() =>
         {
             _controlsBox.SetControlsVisibility(true);
             _headerBar.ShowOpenMenu();
@@ -87,7 +88,7 @@ public partial class MainWindow
             videoHostBounds = _videoHost?.Bounds.ToString()
         }, runId: "pre-fix");
         #endregion
-        Dispatcher.UIThread.Post(() =>
+        Dispatcher.UIThread.OnUiThread(() =>
         {
             if (e.IsPaused)
                 _pauseOverlay.Show();
@@ -96,7 +97,7 @@ public partial class MainWindow
 
     private void OnMediaEnded(object? sender, EventArgs e)
     {
-        Dispatcher.UIThread.Post(() =>
+        Dispatcher.UIThread.OnUiThread(() =>
         {
             _replayOverlay.Show();
         });
@@ -104,7 +105,7 @@ public partial class MainWindow
 
     private void OnPositionChanged(object? sender, PositionChangedEventArgs e)
     {
-        Dispatcher.UIThread.Post(() =>
+        Dispatcher.UIThread.OnUiThread(() =>
         {
             _lastPosition = e.Position;
             _lastDuration = e.Duration;

@@ -5,7 +5,10 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
+using Material.Icons;
+using Material.Icons.Avalonia;
 using AvaloniaLayout = Avalonia.Layout;
+using Cine.Avalonia.Helpers;
 
 namespace Cine.Avalonia.Controls;
 
@@ -24,10 +27,25 @@ public partial class OsdNotificationControl : AvaloniaUserControl
 
     public async void Show(string text, double durationMs = 2000)
     {
+        // Hide icon for text-only notifications
+        OsdIcon.IsVisible = false;
         _osdCts?.Cancel();
         _osdCts = new CancellationTokenSource();
-        var ct = _osdCts.Token;
+        await ShowInternal(text, durationMs, _osdCts.Token);
+    }
 
+    // P6.1: Icon indicator overload
+    public async void ShowWithIcon(MaterialIconKind iconKind, string text, double durationMs = 2000)
+    {
+        OsdIcon.IsVisible = true;
+        OsdIcon.Kind = iconKind;
+        _osdCts?.Cancel();
+        _osdCts = new CancellationTokenSource();
+        await ShowInternal(text, durationMs, _osdCts.Token);
+    }
+
+    private async Task ShowInternal(string text, double durationMs, CancellationToken ct)
+    {
         if (IsControlsBoxVisible)
         {
             OsdNotificationBorder.VerticalAlignment = AvaloniaLayout.VerticalAlignment.Bottom;
@@ -75,12 +93,12 @@ public partial class OsdNotificationControl : AvaloniaUserControl
             var eased = progress < 0.5
                 ? 1 - Math.Cos(progress * Math.PI / 2)
                 : Math.Sin(progress * Math.PI / 2);
-            await Dispatcher.UIThread.InvokeAsync(() =>
+            await Dispatcher.UIThread.OnUiThreadAsync(() =>
                 OsdNotificationBorder.Opacity = startOpacity + (targetOpacity - startOpacity) * eased);
             await Task.Delay(16);
         }
         if (!ct.IsCancellationRequested)
-            await Dispatcher.UIThread.InvokeAsync(() => OsdNotificationBorder.Opacity = targetOpacity);
+            await Dispatcher.UIThread.OnUiThreadAsync(() => OsdNotificationBorder.Opacity = targetOpacity);
     }
 
     private void OnOsdNotificationClick(object? sender, PointerPressedEventArgs e)

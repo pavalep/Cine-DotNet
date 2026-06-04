@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Avalonia.Threading;
+using Cine.Avalonia.Helpers;
 using Cine.Media.Interfaces;
 using Cine.Media.Models;
 using Cine.Media.Events;
@@ -345,6 +346,92 @@ public class MainViewModel : INotifyPropertyChanged
     public void SetSpeed(double speed) => SpeedValue = speed;
     public void Screenshot() => _player.TakeScreenshot(GetScreenshotPath());
 
+    // === Audio Equalizer (P9.1) ===
+
+    public static readonly double[] EqualizerFrequencies = { 31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000 };
+
+    private double[] _equalizerBands = new double[10];
+    public double[] EqualizerBands
+    {
+        get => _equalizerBands;
+        set { _equalizerBands = value; OnPropertyChanged(); }
+    }
+
+    private string _equalizerPresetName = "Flat";
+    public string EqualizerPresetName
+    {
+        get => _equalizerPresetName;
+        set { _equalizerPresetName = value; OnPropertyChanged(); }
+    }
+
+    public void SetEqualizerBand(int bandIndex, double gain)
+    {
+        if (bandIndex < 0 || bandIndex >= 10) return;
+        _equalizerBands[bandIndex] = Math.Clamp(gain, -20, 20);
+        ApplyEqualizer();
+    }
+
+    public void ApplyEqualizerPreset(string presetName)
+    {
+        var preset = GetPreset(presetName);
+        for (int i = 0; i < 10 && i < preset.Length; i++)
+            _equalizerBands[i] = preset[i];
+        EqualizerPresetName = presetName;
+        OnPropertyChanged(nameof(EqualizerBands));
+        ApplyEqualizer();
+    }
+
+    private void ApplyEqualizer()
+    {
+        try
+        {
+            var bands = new List<string>();
+            for (int i = 0; i < 10; i++)
+            {
+                if (Math.Abs(_equalizerBands[i]) > 0.5)
+                    bands.Add($"equalizer=f={EqualizerFrequencies[i]}:t=q:width=1:g={_equalizerBands[i]:F1}");
+            }
+
+            if (bands.Count > 0)
+                _player.Command("set_property", "af", string.Join(",", bands));
+            else
+                _player.Command("set_property", "af", "");
+        }
+        catch { /* player not ready */ }
+    }
+
+    // === Audio Normalization (P9.2) ===
+
+    private bool _isAudioNormalizationEnabled;
+    public bool IsAudioNormalizationEnabled
+    {
+        get => _isAudioNormalizationEnabled;
+        set { _isAudioNormalizationEnabled = value; OnPropertyChanged(); }
+    }
+
+    public void ToggleAudioNormalization()
+    {
+        IsAudioNormalizationEnabled = !IsAudioNormalizationEnabled;
+        try
+        {
+            if (_isAudioNormalizationEnabled)
+                _player.Command("set_property", "af", "drc");
+            else
+                _player.Command("set_property", "af", "");
+        }
+        catch { /* player not ready */ }
+    }
+
+    private static double[] GetPreset(string name) => name switch
+    {
+        "Classical" => new[] { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -4.0, -4.0, -4.0, -6.0 },
+        "Rock" => new[] { 4.0, 3.0, 2.0, 1.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0 },
+        "Pop" => new[] { -1.0, 0.0, 2.0, 3.0, 4.0, 3.0, 2.0, 0.0, -1.0, -1.0 },
+        "Jazz" => new[] { 3.0, 2.0, 1.0, 2.0, 3.0, 3.0, 2.0, 1.0, 1.0, 2.0 },
+        "Bass Boost" => new[] { 6.0, 5.0, 4.0, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 },
+        _ => new double[10] // Flat
+    };
+
     // === Session resume ===
     public Action<string, TimeSpan>? SessionResumeRequested { get; set; }
 
@@ -362,7 +449,8 @@ public class MainViewModel : INotifyPropertyChanged
             {
                 FilePath = _filePath,
                 Position = _player.Position.Ticks,
-                Playlist = Playlist.ToList()
+                Playlist = Playlist.ToList(),
+                // P5.2: Window bounds saved by MainWindow before close
             };
             File.WriteAllText(SessionPath, JsonSerializer.Serialize(session));
         }
@@ -711,6 +799,8 @@ public class MainViewModel : INotifyPropertyChanged
 
     public bool HasPlaylistItems => PlaylistItems.Count > 0;
 
+    public bool HasChapters => Chapters.Count > 0;
+
     public bool HasMultipleVideoTracks
     {
         get => _hasMultipleVideoTracks;
@@ -776,7 +866,7 @@ public class MainViewModel : INotifyPropertyChanged
         AddRecentFile(path);
         FilePath = path;
         // Ensure UI binding propagation before loading media
-        await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Render);
+        await Dispatcher.UIThread.OnUiThreadAsync(() => { }, DispatcherPriority.Render);
         try
         {
             _player.Open(path);
@@ -803,7 +893,7 @@ public class MainViewModel : INotifyPropertyChanged
     // --- Internal helpers ---
     private void OnPositionChanged(object? sender, PositionChangedEventArgs e)
     {
-        Dispatcher.UIThread.Post(() =>
+        Dispatcher.UIThread.OnUiThread(() =>
         {
             if (IsSeeking) return;
 
@@ -824,7 +914,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     private void OnPlaybackStateChanged(object? sender, PlaybackStateChangedEventArgs e)
     {
-        Dispatcher.UIThread.Post(() =>
+        Dispatcher.UIThread.OnUiThread(() =>
         {
             State = e.State;
         });
@@ -832,7 +922,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     private void OnVolumeChanged(object? sender, VolumeChangedEventArgs e)
     {
-        Dispatcher.UIThread.Post(() =>
+        Dispatcher.UIThread.OnUiThread(() =>
         {
             var playerVolume = Math.Clamp(_player.Volume, 0, VolumeMax);
             if (Math.Abs(_volumeValue - playerVolume) >= 0.001)
@@ -859,7 +949,7 @@ public class MainViewModel : INotifyPropertyChanged
     /// </summary>
     private void OnTrackListChanged(object? sender, TrackListChangedEventArgs e)
     {
-        Dispatcher.UIThread.Post(() =>
+        Dispatcher.UIThread.OnUiThread(() =>
         {
             // --- Subtitle tracks ---
             SubtitleTracks.Clear();
@@ -939,7 +1029,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     private void OnPlaylistChanged(object? sender, PlaylistChangedEventArgs e)
     {
-        Dispatcher.UIThread.Post(() =>
+        Dispatcher.UIThread.OnUiThread(() =>
         {
             Playlist.Clear();
             PlaylistItems.Clear();
@@ -958,7 +1048,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     private void OnLoopChanged(object? sender, LoopChangedEventArgs e)
     {
-        Dispatcher.UIThread.Post(SyncLoopFlags);
+        Dispatcher.UIThread.OnUiThread(SyncLoopFlags);
     }
 
     internal void RefreshState()
@@ -989,6 +1079,7 @@ public class MainViewModel : INotifyPropertyChanged
             if (Duration.TotalSeconds > 0)
                 ChapterMarkers.Add(ch.Time / Duration.TotalSeconds);
         }
+        OnPropertyChanged(nameof(HasChapters));
 
         RefreshPlaylistState();
         SyncLoopFlags();

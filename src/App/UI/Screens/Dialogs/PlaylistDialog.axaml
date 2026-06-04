@@ -15,9 +15,9 @@
         ExtendClientAreaToDecorationsHint="True"
         WindowDecorations="BorderOnly">
 
-    <Grid RowDefinitions="Auto,*,Auto" Margin="0">
+    <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="0">
         <!-- Header -->
-        <Grid Grid.Row="0" Height="40" ColumnDefinitions="Auto,Auto,*,Auto"
+        <Grid Grid.Row="0" Height="40" ColumnDefinitions="Auto,Auto,*,Auto,Auto"
               Background="{StaticResource PopoverBackground}">
             <Button Grid.Column="0" 
                     Classes="flat" 
@@ -28,7 +28,15 @@
                     Foreground="{StaticResource OsdForeground}" />
             </Button>
             <TextBlock Grid.Column="1" Text="Playlist" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" HorizontalAlignment="Center" />
-            <Button Grid.Column="3" 
+            <Button Grid.Column="3"
+                    Classes="flat"
+                    Margin="0,0,4,0"
+                    Click="OnSavePlaylistClick"
+                    ToolTip.Tip="Save Playlist (.m3u8)">
+                <materialIcons:MaterialIcon Kind="ContentSave" Width="14" Height="14"
+                    Foreground="{StaticResource OsdForeground}" />
+            </Button>
+            <Button Grid.Column="4" 
                     Classes="flat" 
                     Margin="0,0,8,0"
                     Click="OnCloseClick"
@@ -38,14 +46,51 @@
             </Button>
         </Grid>
 
+        <!-- Search Bar (P3.3) -->
+        <Border Grid.Row="1" Height="36" Margin="8,4,8,0"
+                Background="{StaticResource PopoverBackground}"
+                CornerRadius="6"
+                BorderBrush="{StaticResource PopoverBorder}"
+                BorderThickness="1">
+            <Grid ColumnDefinitions="Auto,*,Auto" Margin="8,0">
+                <materialIcons:MaterialIcon Grid.Column="0" Kind="Magnify" Width="14" Height="14"
+                    Foreground="{StaticResource OsdForeground}"
+                    VerticalAlignment="Center" />
+                <TextBox Grid.Column="1"
+                         x:Name="SearchTextBox"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Foreground="{StaticResource OsdForeground}"
+                         PlaceholderText="Search playlist..."
+                         FontSize="13"
+                         Margin="6,0,0,0"
+                         VerticalAlignment="Center"
+                         TextChanged="OnSearchTextChanged" />
+                <Button Grid.Column="2"
+                        x:Name="SearchClearButton"
+                        Classes="flat"
+                        Width="20" Height="20"
+                        IsVisible="False"
+                        Click="OnSearchClearClick"
+                        ToolTip.Tip="Clear">
+                    <materialIcons:MaterialIcon Kind="CloseCircle" Width="12" Height="12"
+                        Foreground="{StaticResource OsdForeground}" />
+                </Button>
+            </Grid>
+        </Border>
+
         <!-- List -->
-        <ListBox Grid.Row="1" x:Name="PlaylistListBox"
+        <ListBox Grid.Row="2" x:Name="PlaylistListBox"
                  ItemsSource="{Binding PlaylistItems}"
                  Background="Transparent"
-                 BorderThickness="0">
+                 BorderThickness="0"
+                 PointerPressed="OnPlaylistListBoxPointerPressed"
+                 PointerMoved="OnPlaylistListBoxPointerMoved"
+                 PointerReleased="OnPlaylistListBoxPointerReleased">
             <ListBox.ItemTemplate>
                 <DataTemplate>
-                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" Margin="8,4">
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" Margin="8,4"
+                          IsVisible="{Binding IsVisible}">
                         <TextBlock Grid.Column="0" Text="▶" FontSize="10"
                                    Foreground="{StaticResource OsdForeground}"
                                    VerticalAlignment="Center" Margin="0,0,8,0" />
@@ -73,13 +118,28 @@
             </ListBox.ItemTemplate>
         </ListBox>
 
-        <!-- Empty State -->
-        <Border Grid.Row="1" x:Name="EmptyStateOverlay"
-                Background="Transparent" IsVisible="False">
+        <!-- Empty State (no items at all) -->
+        <Border Grid.Row="2" x:Name="EmptyStateOverlay"
+                Background="Transparent" IsVisible="False" ZIndex="1">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16">
                 <materialIcons:MaterialIcon Kind="PlaylistPlus" Width="64" Height="64"
                     Foreground="{StaticResource OsdForeground}" />
                 <TextBlock Text="Add to Playlist" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center" />
+            </StackPanel>
+        </Border>
+
+        <!-- No Results (P3.6) -->
+        <Border Grid.Row="2" x:Name="NoResultsOverlay"
+                Background="Transparent" IsVisible="False" ZIndex="2">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+                <materialIcons:MaterialIcon Kind="MagnifyClose" Width="48" Height="48"
+                    Foreground="{StaticResource OsdForeground}" Opacity="0.6" />
+                <TextBlock Text="No matching items" FontSize="18" FontWeight="Medium"
+                           HorizontalAlignment="Center"
+                           Foreground="{StaticResource OsdForeground}" Opacity="0.6" />
+                <TextBlock Text="Try a different search term" FontSize="13"
+                           HorizontalAlignment="Center"
+                           Foreground="{StaticResource OsdForeground}" Opacity="0.4" />
             </StackPanel>
         </Border>
     </Grid>

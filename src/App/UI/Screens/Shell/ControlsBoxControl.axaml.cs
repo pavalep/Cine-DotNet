@@ -8,6 +8,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Cine.Avalonia.ViewModels;
 using Cine.Avalonia.Views.Dialogs;
+using Cine.Avalonia.Helpers;
 using Cine.Media.Models;
 using AvaloniaLayout = Avalonia.Layout;
 using Button = global::Avalonia.Controls.Button;
@@ -194,6 +195,14 @@ public partial class ControlsBoxControl : AvaloniaUserControl
         flyout.ShowAt(BtnSubtitlesMenu);
     }
 
+    private void OnEqualizerClick(object? sender, RoutedEventArgs e)
+    {
+        if (_viewModel == null) return;
+        var dialog = new EqualizerDialog(_viewModel);
+        var parent = this.VisualRoot as Window;
+        if (parent != null) dialog.Show(parent);
+    }
+
     private void OnAudioMenuClick(object? sender, RoutedEventArgs e)
     {
         if (_viewModel == null) return;
@@ -210,9 +219,56 @@ public partial class ControlsBoxControl : AvaloniaUserControl
         flyout.ShowAt(BtnVideoMenu);
     }
 
+    // --- Chapter menu handler ---
+
+    private void OnChaptersMenuClick(object? sender, RoutedEventArgs e)
+    {
+        if (_viewModel == null || _viewModel.Chapters.Count == 0) return;
+        var flyout = BuildChaptersFlyout(_viewModel.Chapters);
+        TrackFlyout(flyout);
+        flyout.ShowAt(BtnChaptersMenu);
+    }
+
+    private Flyout BuildChaptersFlyout(ObservableCollection<ChapterInfo> chapters)
+    {
+        var builder = new FlyoutBuilder()
+            .WithMinWidth(220)
+            .WithMaxHeight(300)
+            .WithPlacement(PlacementMode.Top);
+
+        foreach (var chapter in chapters)
+        {
+            var timeStr = TimeSpan.FromSeconds(chapter.Time).TotalHours >= 1
+                ? TimeSpan.FromSeconds(chapter.Time).ToString(@"h\:mm\:ss")
+                : TimeSpan.FromSeconds(chapter.Time).ToString(@"mm\:ss");
+
+            var seekTime = chapter.Time;
+            builder.AddLabeledItem(chapter.Title, timeStr, () =>
+            {
+                _viewModel?.SeekTo(seekTime / _viewModel.Duration.TotalSeconds);
+            });
+        }
+
+        return builder.Build();
+    }
+
     private Flyout BuildTrackMenuFlyout(ObservableCollection<TrackMenuItem> tracks)
     {
         var stackPanel = new global::Avalonia.Controls.StackPanel();
+
+        // Safety: if no real tracks, show fallback message
+        var hasRealTracks = tracks.Any(t => !t.IsPseudoEntry);
+        if (!hasRealTracks && tracks.Count == 0)
+        {
+            var text = new TextBlock
+            {
+                Text = "No tracks available",
+                FontSize = 12,
+                Foreground = new SolidColorBrush(Color.FromArgb(0x88, 0xE5, 0xE5, 0xE5)),
+                Padding = new Thickness(10, 7)
+            };
+            stackPanel.Children.Add(text);
+        }
 
         foreach (var track in tracks)
         {
@@ -288,6 +344,14 @@ public partial class ControlsBoxControl : AvaloniaUserControl
     }
 
     // --- Playlist dialog ---
+
+    /// <summary>
+    /// Public entry point for keyboard shortcut (Ctrl+P) to open/activate playlist.
+    /// </summary>
+    public void OpenPlaylistDialog()
+    {
+        OnOpenPlaylistDialog(this, new RoutedEventArgs());
+    }
 
     private void OnOpenPlaylistDialog(object? sender, RoutedEventArgs e)
     {

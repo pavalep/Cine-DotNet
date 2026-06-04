@@ -18,7 +18,19 @@ public partial class SeekBarControl : AvaloniaUserControl
     public void InitializeSeekBar()
     {
         if (SeekArea != null)
+        {
             SeekArea.SizeChanged += OnSeekAreaSizeChanged;
+            SeekArea.LayoutUpdated += OnSeekAreaLayoutUpdated;
+        }
+    }
+
+    /// <summary>
+    /// Called from MainWindow keyboard shortcut (T key) to toggle elapsed/remaining.
+    /// </summary>
+    public void ToggleTimeDisplay()
+    {
+        _showRemaining = !_showRemaining;
+        UpdatePositionLabel();
     }
 
     public event EventHandler<double>? SeekRequested;
@@ -32,9 +44,12 @@ public partial class SeekBarControl : AvaloniaUserControl
     private TimeSpan _lastPosition;
     private TimeSpan _lastDuration;
     private DateTime _lastSeekWheel = DateTime.MinValue;
-    private DateTime _lastTapTime = DateTime.MinValue;
 
     private const double SeekThumbHalf = 8.0;
+
+    private bool _showRemaining;
+    private string _lastPositionText = "00:00:00";
+    private string _lastDurationText = "00:00:00";
 
     public SeekBarControl()
     {
@@ -57,14 +72,33 @@ public partial class SeekBarControl : AvaloniaUserControl
     public void UpdateDuration(TimeSpan duration)
     {
         _lastDuration = duration;
-        UpdateSeekBar();
-        UpdateChapterMarkers();
+        if (duration.TotalSeconds > 0)
+        {
+            UpdateSeekBar();
+            UpdateChapterMarkers();
+        }
     }
 
     public void UpdateTimeLabels(string positionText, string durationText)
     {
-        PositionTimeLabel.Text = positionText;
+        _lastPositionText = positionText;
+        _lastDurationText = durationText;
         DurationTimeLabel.Text = durationText;
+        UpdatePositionLabel();
+    }
+
+    private void UpdatePositionLabel()
+    {
+        if (_showRemaining && _lastDuration.TotalSeconds > 0)
+        {
+            var remaining = _lastDuration - _lastPosition;
+            if (remaining.TotalSeconds < 0) remaining = TimeSpan.Zero;
+            PositionTimeLabel.Text = "-" + FormatTimeSpan(remaining);
+        }
+        else
+        {
+            PositionTimeLabel.Text = _lastPositionText;
+        }
     }
 
     public void SetPositionText(string text) => PositionTimeLabel.Text = text;
@@ -90,6 +124,32 @@ public partial class SeekBarControl : AvaloniaUserControl
         UpdateChapterMarkers();
     }
 
+    /// <summary>
+    /// Fallback re-render when layout changes (catches cases where
+    /// SizeChanged might not fire or width is temporarily 0).
+    /// </summary>
+    private void OnSeekAreaLayoutUpdated(object? sender, EventArgs e)
+    {
+        if (SeekArea.Bounds.Width <= 0) return;
+        // Only re-render if fill width doesn't match current state
+        var currentFillWidth = SeekFill.Width;
+        if (currentFillWidth <= 0 && (_lastDuration.TotalSeconds > 0))
+        {
+            UpdateSeekBar();
+            UpdateChapterMarkers();
+        }
+    }
+
+    /// <summary>
+    /// Get the current normalized seek position (0..1).
+    /// </summary>
+    public double GetNormalizedPosition()
+    {
+        if (_isSeeking) return _lastSeekNormalized;
+        if (_lastDuration.TotalSeconds <= 0) return 0;
+        return Math.Clamp(_lastPosition.TotalSeconds / _lastDuration.TotalSeconds, 0.0, 1.0);
+    }
+
     private void UpdateSeekBar()
     {
         if (_lastDuration.TotalSeconds <= 0) return;
@@ -111,7 +171,10 @@ public partial class SeekBarControl : AvaloniaUserControl
     public void UpdateChapterMarkers()
     {
         if (_viewModel == null || _viewModel.Chapters.Count == 0)
+        {
+            ChapterMarkersControl.IsVisible = false;
             return;
+        }
 
         var w = SeekArea.Bounds.Width;
         if (w <= 0) return;
@@ -119,12 +182,16 @@ public partial class SeekBarControl : AvaloniaUserControl
         var container = ChapterMarkersControl.ItemsPanelRoot as Canvas;
         if (container == null) return;
 
-        for (int i = 0; i < container.Children.Count && i < _viewModel.Chapters.Count; i++)
+        ChapterMarkersControl.IsVisible = true;
+
+        var max = Math.Min(container.Children.Count, _viewModel.Chapters.Count);
+        var duration = _viewModel.Duration.TotalSeconds;
+        if (duration <= 0) return;
+
+        for (int i = 0; i < max; i++)
         {
             var ch = _viewModel.Chapters[i];
-            var pos = _viewModel.Duration.TotalSeconds > 0
-                ? ch.Time / _viewModel.Duration.TotalSeconds
-                : 0.0;
+            var pos = Math.Clamp(ch.Time / duration, 0.0, 1.0);
             Canvas.SetLeft(container.Children[i], pos * w);
         }
     }
@@ -142,9 +209,8 @@ public partial class SeekBarControl : AvaloniaUserControl
         _isSeeking = true;
         _viewModel.IsSeeking = true;
         SeekStarted?.Invoke(this, EventArgs.Empty);
-        _viewModel.SeekTo(_lastSeekNormalized);
+        // Update visual immediately
         UpdateSeekBar();
-        _lastTapTime = DateTime.MinValue;
         e.Handled = true;
     }
 
@@ -152,8 +218,14 @@ public partial class SeekBarControl : AvaloniaUserControl
     {
         if (!_isSeeking) return;
         _isSeeking = false;
+
+        // Perform the actual seek only on release (not every mouse move)
         if (_viewModel != null)
+        {
             _viewModel.IsSeeking = false;
+            _viewModel.SeekTo(_lastSeekNormalized);
+        }
+
         SeekEnded?.Invoke(this, EventArgs.Empty);
         UpdateSeekBar();
         e.Handled = true;
@@ -170,10 +242,11 @@ public partial class SeekBarControl : AvaloniaUserControl
         if (_isSeeking)
         {
             _lastSeekNormalized = normalized;
-            _viewModel.SeekTo(normalized);
+            // Visual-only update during drag. Actual seek happens on PointerReleased.
             UpdateSeekBar();
         }
 
+        // Chapter preview popover on hover
         if (_viewModel.Duration.TotalSeconds > 0)
         {
             var seconds = normalized * _viewModel.Duration.TotalSeconds;
@@ -212,6 +285,15 @@ public partial class SeekBarControl : AvaloniaUserControl
 
         var delta = e.Delta.Y > 0 ? 1.0 : -1.0;
         SeekWheelChanged?.Invoke(this, delta);
+        e.Handled = true;
+    }
+
+    // --- Time label toggle ---
+
+    private void OnPositionTimeLabelPressed(object? sender, PointerPressedEventArgs e)
+    {
+        _showRemaining = !_showRemaining;
+        UpdatePositionLabel();
         e.Handled = true;
     }
 
