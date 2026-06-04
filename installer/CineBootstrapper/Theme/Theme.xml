@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Theme xmlns="http://wixtoolset.org/schemas/v4/thmutil"
+       Name="CineDark"
+       ThemeVersion="1.0"
+       WindowWidth="520"
+       WindowHeight="440"
+       FontId="0">
+
+    <!-- === Font Definitions === -->
+    <Font Id="0" Dpi="96" Height="-11" Weight="400" Foreground="FFFFFF" Background="1A1A2E">Segoe UI</Font>
+    <Font Id="1" Dpi="96" Height="-16" Weight="600" Foreground="FFFFFF">Segoe UI Semibold</Font>
+    <Font Id="2" Dpi="96" Height="-24" Weight="700" Foreground="FFFFFF">Segoe UI Bold</Font>
+    <Font Id="3" Dpi="96" Height="-10" Weight="400" Foreground="A0A0B0">Segoe UI</Font>
+    <Font Id="4" Dpi="96" Height="-12" Weight="500" Foreground="6CB4FF">Segoe UI</Font>
+
+    <!-- === Page: Welcome / Install === -->
+    <Page Name="Install">
+        <!-- Background image (full window) -->
+        <Image Control="BackgroundImage"
+               X="0" Y="0"
+               Width="520" Height="440"
+               ImageFile="Background.bmp"
+               ScaleMode="uniformToFill"
+               Visible="yes" />
+
+        <!-- Left panel: decorative gradient overlay + app name -->
+        <Rectangle X="0" Y="0" Width="220" Height="440" Fill="1A1A2E" Visible="yes" />
+
+        <Text X="0" Y="60" Width="220" Height="40"
+              FontId="2" DisablePrefix="yes"
+              HideWhenDisabled="yes"
+              Center="yes">Cine</Text>
+
+        <Image Control="LogoControl"
+               X="70" Y="120"
+               Width="80" Height="80"
+               ImageFile="Logo.png"
+               ScaleMode="uniform"
+               Visible="yes" />
+
+        <Text X="0" Y="220" Width="220" Height="20"
+              FontId="3" DisablePrefix="yes"
+              Center="yes">Media Player</Text>
+        <Text X="0" Y="240" Width="220" Height="20"
+              FontId="3" DisablePrefix="yes"
+              Center="yes">v!(bind.packageVersion.CineMsi)</Text>
+
+        <!-- Right panel: main content -->
+        <Text X="250" Y="40" Width="240" Height="30"
+              FontId="1" DisablePrefix="yes">Welcome to Cine Setup</Text>
+
+        <Text X="250" Y="80" Width="240" Height="80"
+              FontId="0" DisablePrefix="yes"
+              HideWhenDisabled="yes">This will install Cine Media Player on your computer.
+
+Choose the installation options and click Install to begin.</Text>
+
+        <!-- Install folder -->
+        <Text X="250" Y="175" Width="240" Height="16"
+              FontId="0" DisablePrefix="yes">Install location:</Text>
+
+        <EditBox Control="InstallFolderEdit"
+                 X="250" Y="195" Width="200" Height="22"
+                 FontId="0" TabStop="yes"
+                 Hex="yes" />
+        <Button Control="BrowseButton"
+                X="455" Y="195" Width="35" Height="22"
+                FontId="0" TabStop="yes">...</Button>
+
+        <!-- Options -->
+        <Checkbox Control="DesktopShortcutCheckbox"
+                  X="250" Y="235" Width="240" Height="18"
+                  FontId="0" TabStop="yes"
+                  Hex="yes">Create desktop shortcut</Checkbox>
+
+        <Checkbox Control="AssociateFilesCheckbox"
+                  X="250" Y="258" Width="240" Height="18"
+                  FontId="0" TabStop="yes"
+                  Hex="yes">Associate video files (.mp4, .mkv, .avi)</Checkbox>
+
+        <!-- .NET Runtime status -->
+        <Text Control="DotNetStatus"
+              X="250" Y="295" Width="240" Height="16"
+              FontId="3" DisablePrefix="yes">Checking .NET Runtime...</Text>
+
+        <!-- Bottom bar -->
+        <Rectangle X="0" Y="390" Width="520" Height="50" Fill="141428" Visible="yes" />
+
+        <Button Control="InstallButton"
+                X="320" Y="400" Width="85" Height="30"
+                FontId="1" TabStop="yes"
+                Hex="yes"
+                Default="yes">Install</Button>
+
+        <Button Control="CancelButton"
+                X="415" Y="400" Width="85" Height="30"
+                FontId="1" TabStop="yes"
+                Hex="yes">Cancel</Button>
+    </Page>
+
+    <!-- === Page: Progress === -->
+    <Page Name="Progress">
+        <Image Control="BackgroundImage"
+               X="0" Y="0"
+               Width="520" Height="440"
+               ImageFile="Background.bmp"
+               ScaleMode="uniformToFill" />
+
+        <Rectangle X="0" Y="0" Width="520" Height="440" Fill="1A1A2E" Opacity="180" />
+
+        <!-- Spinning / progress indicator -->
+        <Text X="40" Y="150" Width="440" Height="30"
+              FontId="2" DisablePrefix="yes" Center="yes">Installing Cine...</Text>
+
+        <Text Control="OverallProgressText"
+              X="40" Y="195" Width="440" Height="16"
+              FontId="3" DisablePrefix="yes" Center="yes">Preparing...</Text>
+
+        <Progressbar Control="OverallProgressBar"
+                     X="60" Y="225" Width="400" Height="8"
+                     TabStop="yes" />
+
+        <Text Control="CurrentActionText"
+              X="40" Y="250" Width="440" Height="14"
+              FontId="3" DisablePrefix="yes" Center="yes" />
+
+        <Button Control="CancelButton"
+                X="220" Y="300" Width="80" Height="26"
+                FontId="0" TabStop="yes">Cancel</Button>
+    </Page>
+
+    <!-- === Page: Success === -->
+    <Page Name="Success">
+        <Image Control="BackgroundImage"
+               X="0" Y="0"
+               Width="520" Height="440"
+               ImageFile="Background.bmp"
+               ScaleMode="uniformToFill" />
+
+        <Rectangle X="0" Y="0" Width="520" Height="440" Fill="1A1A2E" Opacity="180" />
+
+        <Text X="40" Y="140" Width="440" Height="36"
+              FontId="2" DisablePrefix="yes" Center="yes">✓ Installation Complete</Text>
+
+        <Text X="40" Y="190" Width="440" Height="40"
+              FontId="0" DisablePrefix="yes" Center="yes"
+              HideWhenDisabled="yes">Cine Media Player has been installed successfully.
+Thank you for choosing Cine!</Text>
+
+        <Checkbox Control="LaunchCheckbox"
+                  X="180" Y="260" Width="200" Height="18"
+                  FontId="0" TabStop="yes"
+                  Hex="yes">Launch Cine</Checkbox>
+
+        <Rectangle X="0" Y="390" Width="520" Height="50" Fill="141428" />
+
+        <Button Control="FinishButton"
+                X="320" Y="400" Width="85" Height="30"
+                FontId="1" TabStop="yes"
+                Hex="yes"
+                Default="yes">Finish</Button>
+
+        <Button Control="CancelButton"
+                X="415" Y="400" Width="85" Height="30"
+                FontId="1" TabStop="yes"
+                Hex="yes">Close</Button>
+    </Page>
+
+    <!-- === Page: Failure === -->
+    <Page Name="Failure">
+        <Image Control="BackgroundImage"
+               X="0" Y="0"
+               Width="520" Height="440"
+               ImageFile="Background.bmp"
+               ScaleMode="uniformToFill" />
+
+        <Rectangle X="0" Y="0" Width="520" Height="440" Fill="1A1A2E" Opacity="180" />
+
+        <Text X="40" Y="130" Width="440" Height="36"
+              FontId="2" DisablePrefix="yes" Center="yes">✗ Installation Failed</Text>
+
+        <Text Control="FailureText"
+              X="40" Y="180" Width="440" Height="60"
+              FontId="0" DisablePrefix="yes"
+              HideWhenDisabled="yes" Center="yes" />
+
+        <Hypertext Control="HyperlinkControl"
+                   X="40" Y="260" Width="440" Height="30"
+                   FontId="4" DisablePrefix="yes"
+                   Center="yes"
+                   TabStop="yes">https://github.com/diegopvlk/Cine/issues</Hypertext>
+
+        <Rectangle X="0" Y="390" Width="520" Height="50" Fill="141428" />
+
+        <Button Control="CancelButton"
+                X="320" Y="400" Width="85" Height="30"
+                FontId="1" TabStop="yes"
+                Hex="yes">Close</Button>
+    </Page>
+</Theme>

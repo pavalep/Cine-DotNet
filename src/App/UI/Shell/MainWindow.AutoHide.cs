@@ -62,7 +62,7 @@ public partial class MainWindow
         if (!_uiVisible)
         {
             ShowUiControls();
-            return;
+            // Fall through to update hover state and restart timer
         }
 
         _isMouseOverControls =

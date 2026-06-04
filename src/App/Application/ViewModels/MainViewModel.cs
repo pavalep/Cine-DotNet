@@ -346,6 +346,23 @@ public class MainViewModel : INotifyPropertyChanged
     public void SetSpeed(double speed) => SpeedValue = speed;
     public void Screenshot() => _player.TakeScreenshot(GetScreenshotPath());
 
+    // === PIP Decode Resolution (P10.2) ===
+
+    private string _pipResolution = "Auto";
+    public string PipResolution
+    {
+        get => _pipResolution;
+        set { _pipResolution = value; OnPropertyChanged(); }
+    }
+
+    public static readonly string[] PipResolutionOptions = { "Auto", "480p", "720p", "1080p", "Source" };
+
+    public void SetPipResolution(string resolution)
+    {
+        PipResolution = resolution;
+        OnPropertyChanged(nameof(PipResolution));
+    }
+
     // === Audio Equalizer (P9.1) ===
 
     public static readonly double[] EqualizerFrequencies = { 31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000 };

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="WixToolset.Sdk/4.0.0">
+    <PropertyGroup>
+        <Name>CineBootstrapper</Name>
+        <OutputType>Bundle</OutputType>
+        <OutputPath>bin\$(Configuration)</OutputPath>
+        <IntermediateOutputPath>obj\$(Configuration)</IntermediateOutputPath>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Include="Bundle.wxs" />
+        <BindPath Include="..\Assets\" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- Custom theme -->
+        <Content Include="Theme\Theme.xml" />
+        <Content Include="Theme\Theme.wxl" />
+        <!-- Background images -->
+        <Content Include="..\Assets\Background.bmp" />
+        <Content Include="..\Assets\BackgroundSmall.bmp" />
+        <Content Include="..\Assets\Logo.png" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- Reference the MSI we built -->
+        <MsiPackage SourceFile="..\CineMsi\bin\Release\Cine.msi" />
+    </ItemGroup>
+</Project>

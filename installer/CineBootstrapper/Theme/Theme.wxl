@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WixLocalization xmlns="http://wixtoolset.org/schemas/v4/wxl"
+                 Culture="en-US"
+                 Codepage="1252">
+    <String Id="WelcomeMessage">Welcome to Cine Media Player Setup</String>
+    <String Id="InstallMessage">This will install Cine Media Player on your computer.</String>
+    <String Id="InstallFolderLabel">Install location:</String>
+    <String Id="DesktopShortcutLabel">Create desktop shortcut</String>
+    <String Id="AssociateFilesLabel">Associate video files (.mp4, .mkv, .avi)</String>
+    <String Id="CheckingDotNetLabel">Checking .NET Runtime...</String>
+    <String Id="InstallButtonLabel">Install</String>
+    <String Id="CancelButtonLabel">Cancel</String>
+    <String Id="FinishButtonLabel">Finish</String>
+    <String Id="CloseButtonLabel">Close</String>
+    <String Id="LaunchLabel">Launch Cine</String>
+    <String Id="SuccessTitle">Installation Complete</String>
+    <String Id="SuccessMessage">Cine Media Player has been installed successfully.</String>
+    <String Id="FailureTitle">Installation Failed</String>
+    <String Id="ProgressTitle">Installing Cine...</String>
+</WixLocalization>

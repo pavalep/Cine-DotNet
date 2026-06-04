@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -250,7 +251,7 @@ public partial class MainWindow
                 }
             });
         };
-        _viewModel.LoadSession();
+        // P5.1: Session resume moved to OnOpened to let start page show first
 
         _viewModel.Playlist.CollectionChanged += (_, _) => _viewModel?.SaveSession();
 
@@ -321,14 +322,14 @@ public partial class MainWindow
         DebugLog("OnWindowInitialized finish");
     }
 
-    private double OsdForegroundOpacity = 1.0;
-
     protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
         if (_isDisposed) return;
         DebugLog("OnOpened enter");
         ReportWindowState("MainWindow.OnOpened.Enter");
+
+        var startupWatch = Stopwatch.StartNew();
 
         try
         {
@@ -364,6 +365,10 @@ public partial class MainWindow
         _headerBar.HideOpenMenu();
         if (VideoHost != null) VideoHost.IsVideoSurfaceVisible = false;
 
+        // P5.1: Resume session only if no command-line file was queued
+        if (string.IsNullOrEmpty(_queuedOpenPath))
+            _viewModel?.LoadSession();
+
         RefreshFullscreenUi();
         _controlsBox.RefreshSubtitleIcon();
         _controlsBox.RefreshAudioIcon();
@@ -393,6 +398,18 @@ public partial class MainWindow
                     if (x >= 0 && y >= 0) Position = new PixelPoint(x, y);
                 }
             });
+        }, DispatcherPriority.Background);
+
+        // P10.4: Log startup timing
+        startupWatch.Stop();
+        DebugLog($"Startup complete in {startupWatch.Elapsed.TotalMilliseconds:F0}ms");
+
+        // P10.4: Deferred non-critical init — runs after window is fully painted
+        Dispatcher.UIThread.OnUiThread(async () =>
+        {
+            await Task.Delay(100); // Let the first frame render
+            _controlsBox.SeekBarControl.InitializeSeekBar();
+            DebugLog("Deferred init complete");
         }, DispatcherPriority.Background);
     }
 

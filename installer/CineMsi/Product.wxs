@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+    <Package Name="Cine"
+             Manufacturer="Cine"
+             Version="!(bind.FileVersion.AppExe)"
+             UpgradeCode="B5A1C2D3-E4F5-6789-ABCD-EF0123456789"
+             Scope="perMachine">
+
+        <MajorUpgrade DowngradeErrorMessage="A newer version of Cine is already installed." />
+
+        <!-- Install to ProgramFiles -->
+        <StandardDirectory Id="ProgramFiles64Folder">
+            <Directory Id="INSTALLDIR" Name="Cine">
+                <Component Id="AppFiles" Guid="*" Bitness="always64">
+                    <Files Include="*.exe" />
+                    <Files Include="*.dll" />
+                    <Files Include="*.json" />
+                    <Files Include="*.ico" />
+                    <Files Include="*.xml" />
+                    <File Id="AppExe" Source="!(bind.Property.PublishDir)\Cine.exe" KeyPath="yes" />
+                </Component>
+            </Directory>
+        </StandardDirectory>
+
+        <!-- Start Menu shortcut -->
+        <StandardDirectory Id="ProgramMenuFolder">
+            <Component Id="StartMenuShortcut" Guid="*">
+                <Shortcut Id="CineShortcut"
+                          Name="Cine"
+                          Description="Cine Media Player"
+                          Target="[INSTALLDIR]Cine.exe"
+                          WorkingDirectory="INSTALLDIR"
+                          Icon="AppIcon.ico" />
+                <RemoveFolder Id="RemoveShortcut" On="uninstall" />
+                <RegistryValue Root="HKCU"
+                               Key="Software\Cine\Installer"
+                               Name="Shortcut"
+                               Type="integer"
+                               Value="1"
+                               KeyPath="yes" />
+            </Component>
+        </StandardDirectory>
+
+        <!-- Desktop shortcut (optional) -->
+        <StandardDirectory Id="DesktopFolder">
+            <Component Id="DesktopShortcut" Guid="*">
+                <Shortcut Id="CineDesktopShortcut"
+                          Name="Cine"
+                          Description="Cine Media Player"
+                          Target="[INSTALLDIR]Cine.exe"
+                          WorkingDirectory="INSTALLDIR"
+                          Icon="AppIcon.ico" />
+                <RemoveFolder Id="RemoveDesktopShortcut" On="uninstall" />
+                <RegistryValue Root="HKCU"
+                               Key="Software\Cine\Installer"
+                               Name="DesktopShortcut"
+                               Type="integer"
+                               Value="1"
+                               KeyPath="yes" />
+            </Component>
+        </StandardDirectory>
+
+        <!-- File associations -->
+        <Component Id="FileAssociations" Guid="*" Bitness="always64">
+            <RegistryValue Root="HKCR"
+                           Key=".mp4\OpenWithProgIds"
+                           Name="Cine.MP4"
+                           Type="string"
+                           Value=""
+                           KeyPath="yes" />
+            <RegistryValue Root="HKCR"
+                           Key=".mkv\OpenWithProgIds"
+                           Name="Cine.MKV"
+                           Type="string"
+                           Value="" />
+            <RegistryValue Root="HKCR"
+                           Key=".avi\OpenWithProgIds"
+                           Name="Cine.AVI"
+                           Type="string"
+                           Value="" />
+            <RegistryValue Root="HKCR"
+                           Key=".mov\OpenWithProgIds"
+                           Name="Cine.MOV"
+                           Type="string"
+                           Value="" />
+            <RegistryValue Root="HKCR"
+                           Key=".webm\OpenWithProgIds"
+                           Name="Cine.WEBM"
+                           Type="string"
+                           Value="" />
+            <RegistryValue Root="HKCR"
+                           Key=".flv\OpenWithProgIds"
+                           Name="Cine.FLV"
+                           Type="string"
+                           Value="" />
+            <ProgId Id="Cine.MP4" Description="MP4 Video" Icon="AppIcon.ico">
+                <Extension Id="mp4">
+                    <Verb Id="open" Command="&amp;Open" Argument="&quot;%1&quot;" />
+                </Extension>
+            </ProgId>
+            <ProgId Id="Cine.MKV" Description="MKV Video" Icon="AppIcon.ico">
+                <Extension Id="mkv">
+                    <Verb Id="open" Command="&amp;Open" Argument="&quot;%1&quot;" />
+                </Extension>
+            </ProgId>
+            <ProgId Id="Cine.AVI" Description="AVI Video" Icon="AppIcon.ico">
+                <Extension Id="avi">
+                    <Verb Id="open" Command="&amp;Open" Argument="&quot;%1&quot;" />
+                </Extension>
+            </ProgId>
+            <ProgId Id="Cine.MOV" Description="MOV Video" Icon="AppIcon.ico">
+                <Extension Id="mov">
+                    <Verb Id="open" Command="&amp;Open" Argument="&quot;%1&quot;" />
+                </Extension>
+            </ProgId>
+            <ProgId Id="Cine.WEBM" Description="WebM Video" Icon="AppIcon.ico">
+                <Extension Id="webm">
+                    <Verb Id="open" Command="&amp;Open" Argument="&quot;%1&quot;" />
+                </Extension>
+            </ProgId>
+            <ProgId Id="Cine.FLV" Description="FLV Video" Icon="AppIcon.ico">
+                <Extension Id="flv">
+                    <Verb Id="open" Command="&amp;Open" Argument="&quot;%1&quot;" />
+                </Extension>
+            </ProgId>
+        </Component>
+
+        <!-- Features -->
+        <Feature Id="CineApp" Title="Cine Media Player" Level="1">
+            <ComponentRef Id="AppFiles" />
+            <ComponentRef Id="StartMenuShortcut" />
+            <ComponentRef Id="FileAssociations" />
+            <ComponentRef Id="DesktopShortcut" />
+        </Feature>
+
+        <!-- UI -->
+        <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
+        <WixVariable Id="WixUIDialogBmp" Value="Assets\Background.bmp" />
+        <WixVariable Id="WixUIBannerBmp" Value="Assets\Banner.bmp" />
+
+        <Property Id="ARPPRODUCTICON" Value="AppIcon.ico" />
+        <Property Id="ARPHELPLINK" Value="https://github.com/diegopvlk/Cine" />
+        <Property Id="ARPNOREPAIR" Value="yes" />
+        <Property Id="ARPNOMODIFY" Value="yes" />
+
+        <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+        <Icon Id="AppIcon.ico" SourceFile="..\Assets\AppIcon.ico" />
+
+        <!-- Publish directory path -->
+        <SetProperty Id="PublishDir"
+                     Value="..\..\src\App\bin\Release\net10.0-windows\win-x64\publish\"
+                     Before="AppSearch" Sequence="first" />
+    </Package>
+</Wix>

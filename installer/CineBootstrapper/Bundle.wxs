@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:bal="http://wixtoolset.org/schemas/v4/bal"
+     xmlns:util="http://wixtoolset.org/schemas/v4/util">
+
+    <Bundle Name="Cine Media Player"
+            Version="!(bind.packageVersion.CineMsi)"
+            Manufacturer="Cine"
+            UpgradeCode="B5A1C2D3-E4F5-6789-ABCD-EF0123456789"
+            IconSourceFile="..\Assets\Logo.png"
+            HelpUrl="https://github.com/diegopvlk/Cine">
+
+        <!-- Custom Burn theme -->
+        <BootstrapperApplication>
+            <bal:WixStandardBootstrapperApplication
+                ThemeFile="Theme\Theme.xml"
+                LocalizationFile="Theme\Theme.wxl"
+                LogoFile="..\Assets\Logo.png"
+                BackgroundCacheFolder="CineSetup" />
+        </BootstrapperApplication>
+
+        <!-- =========================================================================
+             .NET 10 Runtime Detection
+             Searches registry for installed .NET 10 Desktop Runtime.
+             ========================================================================= -->
+
+        <!-- Search for .NET 10 Runtime in registry -->
+        <util:RegistrySearch Id="DotNet10Search"
+                             Root="HKLM"
+                             Key="SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.NETCore.App\10.0.0"
+                             Value="Version"
+                             Variable="DotNet10Version"
+                             Result="value" />
+
+        <!-- Also check for .NET 10 Desktop Runtime (includes WPF/WinForms) -->
+        <util:RegistrySearch Id="DotNet10DesktopSearch"
+                             Root="HKLM"
+                             Key="SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.WindowsDesktop.App\10.0.0"
+                             Value="Version"
+                             Variable="DotNet10DesktopVersion"
+                             Result="value" />
+
+        <!-- Fallback: check if any .NET 10 runtime is installed at all -->
+        <util:RegistrySearch Id="DotNet10BaseSearch"
+                             Root="HKLM"
+                             Key="SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.NETCore.App"
+                             Variable="DotNet10Base"
+                             Result="exists" />
+
+        <!-- =========================================================================
+             Conditions
+             ========================================================================= -->
+
+        <!-- If .NET 10 Desktop Runtime not found, show blocking message with download link -->
+        <bal:Condition Message="Cine requires the **.NET 10 Desktop Runtime** which is not installed.&#xD;&#xA;&#xD;&#xA;Please download and install it from:&#xD;&#xA;https://dotnet.microsoft.com/en-us/download/dotnet/10.0&#xD;&#xA;&#xD;&#xA;After installing the runtime, run this installer again."
+                       Package="CineMsi"
+                       Condition="DotNet10DesktopVersion" />
+
+        <!-- =========================================================================
+             Chain: MSI install
+             ========================================================================= -->
+        <Chain>
+            <MsiPackage Id="CineMsi"
+                        SourceFile="..\CineMsi\bin\Release\Cine.msi"
+                        DisplayInternalUI="no"
+                        Vital="yes"
+                        Compressed="yes"
+                        After="PrepareDotNet">
+                <MsiProperty Name="ARPPRODUCTICON" Value="AppIcon.ico" />
+            </MsiPackage>
+
+            <!-- If .NET runtime is missing, the condition above blocks the MSI install
+                 and shows the error message instead. The chain won't execute. -->
+        </Chain>
+
+        <!-- =========================================================================
+             Detect-only package for .NET runtime
+             Used to drive the Condition block above
+             ========================================================================= -->
+        <ExePackage Id="PrepareDotNet"
+                    DetectCondition="DotNet10DesktopVersion"
+                    Vital="no"
+                    Permanent="yes"
+                    Compressed="no"
+                    DisplayInternalUI="no">
+        </ExePackage>
+
+        <!-- =========================================================================
+             Variables
+             ========================================================================= -->
+        <Variable Name="InstallFolder"
+                  Type="string"
+                  Value="[ProgramFiles64Folder]Cine" />
+
+        <!-- Logging -->
+        <Log PathVariable="%TEMP%\CineSetup.log" Prefix="CineSetup_" Extension=".log" />
+    </Bundle>
+</Wix>

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Text;
@@ -9,6 +10,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
+using Cine.Avalonia.Helpers;
 using Cine.Avalonia.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -17,23 +19,6 @@ namespace Cine.Avalonia;
 public class App : global::Avalonia.Application
 {
     private IServiceProvider? _serviceProvider;
-    private static readonly string LogFile = CreateLogFilePath();
-
-    private static string CreateLogFilePath()
-    {
-        try
-        {
-            var dir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Cine");
-            Directory.CreateDirectory(dir);
-            return Path.Combine(dir, "cine_startup.log");
-        }
-        catch
-        {
-            return Path.Combine(Path.GetTempPath(), "cine_startup.log");
-        }
-    }
 
     #region debug-point A:runtime-reporter
     private static readonly HttpClient DebugHttpClient = new();
@@ -114,31 +99,26 @@ public class App : global::Avalonia.Application
 
     private static void Log(string msg)
     {
-        try { File.AppendAllText(LogFile, $"[{DateTime.Now:HH:mm:ss.fff}] {msg}{Environment.NewLine}"); }
-        catch { }
+        CrashReporter.LogError(msg);
         Console.WriteLine(msg);
     }
 
     public static void Main(string[] args)
     {
+        CrashReporter.InstallGlobalHandlers();
+
         try
         {
-            AppDomain.CurrentDomain.UnhandledException += (_, e) =>
-            {
-                try { Log($"UnhandledException: {e.ExceptionObject}"); } catch { }
-            };
-            TaskScheduler.UnobservedTaskException += (_, e) =>
-            {
-                try { Log($"UnobservedTaskException: {e.Exception}"); } catch { }
-                try { e.SetObserved(); } catch { }
-            };
-
             Log("=== Cine.Avalonia starting ===");
+            var sw = Stopwatch.StartNew();
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+            sw.Stop();
+            Log($"App exited gracefully after {sw.Elapsed.TotalSeconds:F1}s");
         }
         catch (Exception ex)
         {
-            Log($"FATAL: {ex}");
+            CrashReporter.Dump(ex, "FATAL: Main entry point");
+            Log($"FATAL: {ex.Message}");
         }
     }
 
