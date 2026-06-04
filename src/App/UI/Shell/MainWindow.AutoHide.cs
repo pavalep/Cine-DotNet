@@ -109,20 +109,21 @@ public partial class MainWindow
         _uiVisible = true;
         _autoHideTimer?.Stop();
 
-        // Header bar: always visible (handles start-page, menu, window controls).
-        // Just restore opacity.
+        bool isFullscreen = WindowState == global::Avalonia.Controls.WindowState.FullScreen;
+
+        // Header bar: always show unless in fullscreen
         if (_headerBar.HeaderBar != null)
         {
-            _headerBar.HeaderBar.IsVisible = true;
-            _headerBar.HeaderBar.Opacity = 1;
+            _headerBar.HeaderBar.IsVisible = !isFullscreen;
+            _headerBar.HeaderBar.Opacity = isFullscreen ? 0 : 1;
         }
         // Fullscreen header: only visible when in fullscreen mode
-        if (_fullscreenHeader.FullscreenHeader != null && _playerService?.Player?.IsFullscreen == true)
+        if (_fullscreenHeader.FullscreenHeader != null)
         {
-            _fullscreenHeader.FullscreenHeader.IsVisible = true;
-            _fullscreenHeader.FullscreenHeader.Opacity = 1;
+            _fullscreenHeader.FullscreenHeader.IsVisible = isFullscreen;
+            _fullscreenHeader.FullscreenHeader.Opacity = isFullscreen ? 1 : 0;
         }
-        // Controls box: always show (contains seekbar, transport, etc.)
+        // Controls box: always show
         if (_controlsBox.ControlsBox != null)
         {
             _controlsBox.ControlsBox.IsVisible = true;
@@ -137,10 +138,18 @@ public partial class MainWindow
         _uiVisible = false;
         _autoHideTimer?.Stop();
 
-        // HeaderBar: fade to transparent but keep IsVisible = true
-        // (it's always in the layer stack, just invisible when media is playing).
-        _headerBar.HeaderBar.Opacity = 0;
-        _fullscreenHeader.FullscreenHeader.IsVisible = false;
+        bool isFullscreen = WindowState == global::Avalonia.Controls.WindowState.FullScreen;
+
+        // Header bar: hide in fullscreen, just opacity otherwise
+        if (isFullscreen)
+        {
+            _headerBar.HeaderBar.IsVisible = false;
+            _headerBar.HeaderBar.Opacity = 0;
+        }
+        else
+        {
+            _headerBar.HeaderBar.Opacity = 0;
+        }
         _fullscreenHeader.FullscreenHeader.Opacity = 0;
         _controlsBox.ControlsBox.IsVisible = false;
         _controlsBox.ControlsBox.Opacity = 0;

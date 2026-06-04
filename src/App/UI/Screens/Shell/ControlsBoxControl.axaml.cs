@@ -98,11 +98,13 @@ public partial class ControlsBoxControl : AvaloniaUserControl
         {
             FullscreenIconPath.Kind = Material.Icons.MaterialIconKind.FullscreenExit;
             ToolTip.SetTip(BtnFullscreen, "Exit Fullscreen (F)");
+            BtnFullscreen.IsChecked = true;
         }
         else
         {
             FullscreenIconPath.Kind = Material.Icons.MaterialIconKind.Fullscreen;
             ToolTip.SetTip(BtnFullscreen, "Fullscreen (F)");
+            BtnFullscreen.IsChecked = false;
         }
     }
 

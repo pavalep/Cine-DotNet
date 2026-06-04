@@ -67,80 +67,92 @@
                                     </Grid>
 
                                     <!-- Brightness Slider -->
-                                    <Grid ColumnDefinitions="Auto,*,Auto">
-                                        <TextBlock Text="Brightness" FontSize="11" Width="60"
-                                                   VerticalAlignment="Center"
+                                    <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,2">
+                                        <TextBlock Text="Brightness" FontSize="11"
+                                                   VerticalAlignment="Center" Width="72"
                                                    Foreground="{StaticResource OsdForeground}" />
                                         <Slider Grid.Column="1" Value="{Binding BrightnessValue}"
-                                                Minimum="-100" Maximum="100" Height="24" />
+                                                Minimum="-100" Maximum="100" Height="22"
+                                                Margin="4,0" />
                                         <TextBlock Grid.Column="2"
                                                    Text="{Binding BrightnessValue, StringFormat='{}{0:+0;−0;0}'}"
                                                    FontSize="11" Width="30" TextAlignment="Right"
+                                                   VerticalAlignment="Center"
                                                    Foreground="{StaticResource OsdForeground}" />
                                     </Grid>
 
                                     <!-- Contrast Slider -->
-                                    <Grid ColumnDefinitions="Auto,*,Auto">
-                                        <TextBlock Text="Contrast" FontSize="11" Width="60"
-                                                   VerticalAlignment="Center"
+                                    <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,2">
+                                        <TextBlock Text="Contrast" FontSize="11"
+                                                   VerticalAlignment="Center" Width="72"
                                                    Foreground="{StaticResource OsdForeground}" />
                                         <Slider Grid.Column="1" Value="{Binding ContrastValue}"
-                                                Minimum="-100" Maximum="100" Height="24" />
+                                                Minimum="-100" Maximum="100" Height="22"
+                                                Margin="4,0" />
                                         <TextBlock Grid.Column="2"
                                                    Text="{Binding ContrastValue, StringFormat='{}{0:+0;−0;0}'}"
                                                    FontSize="11" Width="30" TextAlignment="Right"
+                                                   VerticalAlignment="Center"
                                                    Foreground="{StaticResource OsdForeground}" />
                                     </Grid>
 
                                     <!-- Gamma Slider -->
-                                    <Grid ColumnDefinitions="Auto,*,Auto">
-                                        <TextBlock Text="Gamma" FontSize="11" Width="60"
-                                                   VerticalAlignment="Center"
+                                    <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,2">
+                                        <TextBlock Text="Gamma" FontSize="11"
+                                                   VerticalAlignment="Center" Width="72"
                                                    Foreground="{StaticResource OsdForeground}" />
                                         <Slider Grid.Column="1" Value="{Binding GammaValue}"
-                                                Minimum="-100" Maximum="100" Height="24" />
+                                                Minimum="-100" Maximum="100" Height="22"
+                                                Margin="4,0" />
                                         <TextBlock Grid.Column="2"
                                                    Text="{Binding GammaValue, StringFormat='{}{0:+0;−0;0}'}"
                                                    FontSize="11" Width="30" TextAlignment="Right"
+                                                   VerticalAlignment="Center"
                                                    Foreground="{StaticResource OsdForeground}" />
                                     </Grid>
 
                                     <!-- Saturation Slider -->
-                                    <Grid ColumnDefinitions="Auto,*,Auto">
-                                        <TextBlock Text="Saturation" FontSize="11" Width="60"
-                                                   VerticalAlignment="Center"
+                                    <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,2">
+                                        <TextBlock Text="Saturation" FontSize="11"
+                                                   VerticalAlignment="Center" Width="72"
                                                    Foreground="{StaticResource OsdForeground}" />
                                         <Slider Grid.Column="1" Value="{Binding SaturationValue}"
-                                                Minimum="-100" Maximum="100" Height="24" />
+                                                Minimum="-100" Maximum="100" Height="22"
+                                                Margin="4,0" />
                                         <TextBlock Grid.Column="2"
                                                    Text="{Binding SaturationValue, StringFormat='{}{0:+0;−0;0}'}"
                                                    FontSize="11" Width="30" TextAlignment="Right"
+                                                   VerticalAlignment="Center"
                                                    Foreground="{StaticResource OsdForeground}" />
                                     </Grid>
 
                                     <!-- Hue Slider -->
-                                    <Grid ColumnDefinitions="Auto,*,Auto">
-                                        <TextBlock Text="Hue" FontSize="11" Width="60"
-                                                   VerticalAlignment="Center"
+                                    <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,2">
+                                        <TextBlock Text="Hue" FontSize="11"
+                                                   VerticalAlignment="Center" Width="72"
                                                    Foreground="{StaticResource OsdForeground}" />
                                         <Slider Grid.Column="1" Value="{Binding HueValue}"
-                                                Minimum="-100" Maximum="100" Height="24" />
+                                                Minimum="-100" Maximum="100" Height="22"
+                                                Margin="4,0" />
                                         <TextBlock Grid.Column="2"
                                                    Text="{Binding HueValue, StringFormat='{}{0:+0;−0;0}'}"
                                                    FontSize="11" Width="30" TextAlignment="Right"
+                                                   VerticalAlignment="Center"
                                                    Foreground="{StaticResource OsdForeground}" />
                                     </Grid>
 
                                     <!-- Zoom Slider -->
-                                    <Grid ColumnDefinitions="Auto,*,Auto">
-                                        <TextBlock Text="Zoom" FontSize="11" Width="60"
-                                                   VerticalAlignment="Center"
+                                    <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,2">
+                                        <TextBlock Text="Zoom" FontSize="11"
+                                                   VerticalAlignment="Center" Width="72"
                                                    Foreground="{StaticResource OsdForeground}" />
                                         <Slider Grid.Column="1" Value="{Binding ZoomValue}"
-                                                Minimum="-3" Maximum="3" Height="24" TickFrequency="0.05" />
+                                                Minimum="-3" Maximum="3" Height="22"
+                                                TickFrequency="0.05" Margin="4,0" />
                                         <TextBlock Grid.Column="2"
                                                    Text="{Binding ZoomValue, StringFormat='0.00'}"
                                                    FontSize="11" Width="30" TextAlignment="Right"
+                                                   VerticalAlignment="Center"
                                                    Foreground="{StaticResource OsdForeground}" />
                                     </Grid>
                                 </StackPanel>

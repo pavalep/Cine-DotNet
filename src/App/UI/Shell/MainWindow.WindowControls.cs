@@ -56,20 +56,23 @@ public partial class MainWindow
         if (isFullscreen)
         {
             ExtendClientAreaToDecorationsHint = false;
-            ToolTip.SetTip(_controlsBox.BtnFullscreen, "Exit Fullscreen (F)");
             _headerBar.IsVisible = false;
             _headerBar.IsHitTestVisible = false;
             _fullscreenHeader.Show();
+            _fullscreenHeader.FullscreenHeader.IsVisible = false;
+            _fullscreenHeader.FullscreenHeader.Opacity = 0;
             _headerBar.HideOpenMenu();
             _headerBar.HidePrimaryMenu();
             _headerBar.HideWindowControls();
             _headerBar.HideFullscreenClose();
             _headerBar.SetPipVisibility(false);
+
+            // Immediately show controls with correct fullscreen icon
+            ShowUiControls();
         }
         else
         {
             ExtendClientAreaToDecorationsHint = true;
-            ToolTip.SetTip(_controlsBox.BtnFullscreen, "Fullscreen (F)");
             _headerBar.IsVisible = true;
             _headerBar.IsHitTestVisible = true;
             _fullscreenHeader.Hide();
@@ -80,6 +83,9 @@ public partial class MainWindow
                 _headerBar.ShowOpenMenu();
             else
                 _headerBar.HideOpenMenu();
+
+            // Restore controls to visible state after leaving fullscreen
+            ShowUiControls();
         }
         _headerBar.UpdateMaximizeIcon(WindowState == WindowState.Maximized);
     }

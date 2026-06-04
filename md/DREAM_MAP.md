@@ -25,6 +25,7 @@ Phase 9 — Audio/Video Enh ★★★★☆    4/6 COMPLETED ✅
 Phase 10 — Perf & Stab ★★★★★    6/6 COMPLETED ✅
 Phase 11 — Platform & Dist ★★★★☆    4/5 COMPLETED ✅
 Phase 12 — Layout & Hover   ★★★★★    5/5 COMPLETED ✅
+Phase 13 — Controls Polish  ★★★★★    5/5 COMPLETED ✅
 PIP (Picture-in-Pic)      ★★★★★    Done — gold standard
 Seek Bar Click/Drag       ★★★★★    FIXED (P0.1+P0.2) + time toggle (P1.3)
 Transport Controls        ★★★★★    Great — scale fx, shadows, dividers added
@@ -257,6 +258,20 @@ Audio Filtering/Equalizer ★★★★☆    10-band EQ (P9.1) + normalization (
 
 > **Phase 12 target: layout parity with Python reference** — ✅ 5/5 complete. Controls no longer push video off-screen. Hover-triggered auto-hide now works reliably via per-element PointerEntered/Exited matching Python's EventController pattern. Aspect ratio changes now apply to entire window, not just the video region.
 
+---
+
+## Phase 13 — Controls Polish (P13 — UI Quality)
+
+| # | Item | Status | Detail | Files | Effort |
+|---|---|---|---|---|---|
+| **13.1** | **Preferences dialog sizing** | ✅ Done | Replaced fixed `Height="360"` with `SizeToContent="Height"` + `MaxHeight="700"` + `ScrollViewer`. Mirrors Python's `Adw.Dialog` which auto-sizes to content. Window no longer cuts off elements. Added `x:DataType` for compiled binding on `IsAudioNormalizationEnabled` toggle. | `PreferencesDialog.axaml`, `PreferencesDialog.axaml.cs` | **1 hr** |
+| **13.2** | **Options flyout slider thumbs** | ✅ Done | Slider label width increased from `Width="60"` to `Width="72"` — prevents "Brightness" overlapping slider thumb. `ColumnDefinitions="Auto,*,Auto"` with slider in star-sized column ensures consistent layout. `Margin="0,2"` added between rows to prevent cut-off. Height reduced from 24 to 22 for tighter spacing. | `OptionsMenuButton.axaml` | **1 hr** |
+| **13.3** | **Preferences content structure** | ✅ Done | Rewritten with proper sections (General → Audio Norm toggle, Keyboard Shortcuts → 13 shortcut rows). Each row uses `Grid ColumnDefinitions="120,*"` — key on left, action on right — matching Python's consistent row layout. No custom controls — pure XAML for stability. | `PreferencesDialog.axaml` | **2 hrs** |
+| **13.4** | **Audio/Subtitle add verification** | ✅ Verified | `OnAddSubtitle()` and `OnAddAudio()` correctly wired: `TrackMenuItem` with `TrackIndex == -1` triggers `RequestSubtitleFileAsync` / `RequestAudioFileAsync` delegates → `OpenSubtitleDialogAsync()` / `OpenAudioDialogAsync()` in `MainWindow.FileDialogs.cs`. Subtitle filter supports `.srt,.ass,.ssa,.sub,.vtt`. Audio filter supports `.mp3,.aac,.m4a,.wav,.flac,.ogg,.opus`. | `MainViewModel.cs`, `MainWindow.FileDialogs.cs`, `MainWindow.Core.cs` | **30 min** |
+| **13.5** | **Control bar layout stability** | ✅ Done | Removed `HorizontalAlignment="Stretch"` from controls inside the Panel overlay — they now use `VerticalAlignment="Bottom"` / `"Top"` only. No more layout competition with video. HeaderBar always visible (opacity-only hide, not IsVisible). ControlsBox visible only when media is playing. | `MainWindow.axaml`, `MainWindow.AutoHide.cs` | **1 hr** |
+
+> **Phase 13 target: polished, stable controls** — ✅ 5/5 complete. Preferences dialog auto-sizes to content. Slider thumbs no longer cut off. Track menus verified working. Layout no longer shifts on video open.
+
 ```
 Phase 0: Foundation Fixes (ship blockers)        ⏱ 2-3 days
     ↓
@@ -283,9 +298,11 @@ Phase 10: Performance & Stability (ship ready)   ⏱ 3-5 days
 Phase 11: Platform & Distribution (ship it)      ⏱ 3-5 days
     ↓
 Phase 12: Layout & Auto-Hide (python alignment)  ⏱ 1-2 days
+    ↓
+Phase 13: Controls Polish (stability & cut-offs)  ⏱ 1-2 days
 ```
 
-**Total estimated effort: 30-45 days of focused development**
+**Total estimated effort: 31-47 days of focused development**
 
 ---
 
