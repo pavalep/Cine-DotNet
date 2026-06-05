@@ -319,7 +319,6 @@ public partial class MainWindow
         // Initialize PIP service
         _pipService = new PipService(_playerService);
         _pipService.SetCurrentFilePath(_viewModel?.FilePath);
-        InitPipHandlers();
 
         AddHandler(global::Avalonia.Input.DragDrop.DragEnterEvent, OnWindowDragEnter);
         AddHandler(global::Avalonia.Input.DragDrop.DragLeaveEvent, OnWindowDragLeave);

@@ -188,11 +188,6 @@ public class App : global::Avalonia.Application
                     });
                     desktop.MainWindow = mainWindow;
                     Log("MainWindow created and assigned successfully.");
-
-                    if (desktop.Args is { Length: > 0 } && !string.IsNullOrWhiteSpace(desktop.Args[0]) && File.Exists(desktop.Args[0]))
-                    {
-                        mainWindow.QueueStartupOpen(desktop.Args[0]);
-                    }
                 }
                 catch (Exception ex)
                 {

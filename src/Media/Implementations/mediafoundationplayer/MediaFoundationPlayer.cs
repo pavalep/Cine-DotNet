@@ -1059,6 +1059,13 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
     public void NextFrame() { /* Not supported in MF */ }
     public void PreviousFrame() { /* Not supported in MF */ }
 
+    public byte[]? ScreenshotRaw(out int width, out int height)
+    {
+        width = 0;
+        height = 0;
+        return null; // Not supported in MF
+    }
+
     public void CycleSubtitleTrack()
     {
         if (_subtitleSources.Length == 0) return;

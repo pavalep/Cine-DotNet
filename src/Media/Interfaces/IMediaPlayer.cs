@@ -107,6 +107,12 @@ public interface IMediaPlayer
     void TakeScreenshot(string outputPath, bool includeSubtitles = true);
     void ScreenshotWithSubtitles();
     void ScreenshotWithoutSubtitles();
+    /// <summary>
+    /// Captures the current video frame as a raw BGRA32 byte buffer.
+    /// Returns null if no frame is available or on failure.
+    /// Width/height are the actual video dimensions.
+    /// </summary>
+    byte[]? ScreenshotRaw(out int width, out int height);
 
     // === Native rendering ===
     void InitializeRenderer(IntPtr hwnd);

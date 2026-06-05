@@ -481,6 +481,111 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
     public void ScreenshotWithSubtitles() => TakeScreenshot(GetDefaultScreenshotPath(), includeSubtitles: true);
     public void ScreenshotWithoutSubtitles() => TakeScreenshot(GetDefaultScreenshotPath(), includeSubtitles: false);
 
+    public byte[]? ScreenshotRaw(out int width, out int height)
+    {
+        width = 0;
+        height = 0;
+        if (!_initialized || _mpv == IntPtr.Zero) return null;
+
+        try
+        {
+            // Build argv: ["screenshot-raw"]
+            var args = new[] { "screenshot-raw" };
+            var argv = BuildUtf8Argv(args);
+
+            try
+            {
+                var err = MpvNative.mpv_command_node(_mpv, argv, out var result);
+                if (err < 0)
+                    return null;
+
+                try
+                {
+                    return ParseScreenshotNode(result, out width, out height);
+                }
+                finally
+                {
+                    MpvNative.mpv_free_node_contents(ref result);
+                }
+            }
+            finally
+            {
+                FreeUtf8Argv(argv, args.Length);
+            }
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static byte[]? ParseScreenshotNode(MpvNative.mpv_node node, out int width, out int height)
+    {
+        width = 0;
+        height = 0;
+        int stride = 0;
+        byte[]? pixelData = null;
+
+        if (node.format != MpvNative.mpv_format_node.MPV_FORMAT_NODE_MAP)
+            return null;
+
+        var list = Marshal.PtrToStructure<MpvNative.mpv_node_list>(node.u.list);
+        if (list.num <= 0 || list.keys == IntPtr.Zero || list.values == IntPtr.Zero)
+            return null;
+
+        for (int i = 0; i < list.num; i++)
+        {
+            // Read key
+            var keyPtr = Marshal.ReadIntPtr(list.keys, i * IntPtr.Size);
+            var key = Marshal.PtrToStringUTF8(keyPtr) ?? "";
+
+            // Read value node
+            var valPtr = IntPtr.Add(list.values, i * Marshal.SizeOf<MpvNative.mpv_node>());
+            var val = Marshal.PtrToStructure<MpvNative.mpv_node>(valPtr);
+
+            switch (key)
+            {
+                case "w":
+                    if (val.format == MpvNative.mpv_format_node.MPV_FORMAT_INT64)
+                        width = (int)val.u.int64;
+                    break;
+                case "h":
+                    if (val.format == MpvNative.mpv_format_node.MPV_FORMAT_INT64)
+                        height = (int)val.u.int64;
+                    break;
+                case "stride":
+                    if (val.format == MpvNative.mpv_format_node.MPV_FORMAT_INT64)
+                        stride = (int)val.u.int64;
+                    break;
+                case "data":
+                    if (val.format == MpvNative.mpv_format_node.MPV_FORMAT_BYTE_ARRAY)
+                    {
+                        var ba = Marshal.PtrToStructure<MpvNative.mpv_byte_array>(val.u.byte_array);
+                        if (ba.data != IntPtr.Zero && ba.size > 0)
+                        {
+                            pixelData = new byte[ba.size];
+                            Marshal.Copy(ba.data, pixelData, 0, (int)ba.size);
+                        }
+                    }
+                    break;
+            }
+        }
+
+        if (pixelData == null || width <= 0 || height <= 0)
+            return null;
+
+        return pixelData;
+    }
+
+
+    private int GetIntProperty(string name)
+    {
+        if (_mpv == IntPtr.Zero) return 0;
+        long val = 0;
+        var err = MpvNative.mpv_get_property(_mpv, name, MpvNative.mpv_format.MPV_FORMAT_INT64, ref val);
+        return err >= 0 ? (int)val : 0;
+    }
+
     public void InitializeRenderer(IntPtr hwnd)
     {
         DebugLog($"InitializeRenderer called with hwnd={hwnd}");
@@ -1132,5 +1237,57 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
             var ptr = mpv_error_string(err);
             return ptr == IntPtr.Zero ? $"err={err}" : Marshal.PtrToStringUTF8(ptr) ?? $"err={err}";
         }
+
+        // ── mpv_node structures for screenshot-raw ──
+
+        internal enum mpv_format_node
+        {
+            MPV_FORMAT_NONE = 0,
+            MPV_FORMAT_STRING = 1,
+            MPV_FORMAT_FLAG = 3,
+            MPV_FORMAT_INT64 = 4,
+            MPV_FORMAT_DOUBLE = 5,
+            MPV_FORMAT_NODE_MAP = 15,
+            MPV_FORMAT_BYTE_ARRAY = 19
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct mpv_byte_array
+        {
+            public IntPtr data;
+            public long size; // size_t on x64 = 8 bytes
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct mpv_node
+        {
+            public mpv_node_union u;
+            public mpv_format_node format;
+        }
+
+        [StructLayout(LayoutKind.Explicit)]
+        internal struct mpv_node_union
+        {
+            [FieldOffset(0)] public IntPtr string_ptr;
+            [FieldOffset(0)] public long int64;
+            [FieldOffset(0)] public double double_;
+            [FieldOffset(0)] public int flag;
+            [FieldOffset(0)] public IntPtr list;       // mpv_node_list*
+            [FieldOffset(0)] public IntPtr byte_array; // mpv_byte_array*
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct mpv_node_list
+        {
+            public int num;
+            public IntPtr keys;   // char**
+            public IntPtr values; // mpv_node*
+        }
+
+        [DllImport("libmpv-2.dll", CallingConvention = CallingConvention.Cdecl)]
+        internal static extern int mpv_command_node(IntPtr ctx, IntPtr args, out mpv_node result);
+
+        [DllImport("libmpv-2.dll", CallingConvention = CallingConvention.Cdecl)]
+        internal static extern void mpv_free_node_contents(ref mpv_node node);
     }
 }

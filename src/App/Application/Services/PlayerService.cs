@@ -34,12 +34,6 @@ namespace Cine.Avalonia.ViewModels
 
     public event EventHandler<string>? Error;
 
-    public IMediaPlayer CreateSecondaryPlayer()
-    {
-        var secondary = new MpvPlayer();
-        return secondary;
-    }
-
         public PlayerService()
         {
         }

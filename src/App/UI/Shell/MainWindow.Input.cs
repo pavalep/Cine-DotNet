@@ -25,31 +25,10 @@ public partial class MainWindow
         var shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
         var ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
 
-        // P2.5: When PIP is active, forward PIP-relevant keys so they control the PIP window
-        if (_pipService is { IsActive: true } && _pipService.Window is { IsVisible: true })
+        if (_pipService is { IsActive: true })
         {
-            var forwarded = false;
-            switch (key)
-            {
-                case Key.Space:
-                case Key.Escape:
-                    _pipService.Window.SimulateKeyPress(key);
-                    forwarded = true;
-                    break;
-                case Key.Left when !ctrl:
-                case Key.Right when !ctrl:
-                case Key.Up:
-                case Key.Down:
-                case Key.M:
-                    _pipService.Window.SimulateKeyPress(key);
-                    forwarded = true;
-                    break;
-            }
-            if (forwarded)
-            {
-                e.Handled = true;
-                return;
-            }
+            e.Handled = true;
+            return;
         }
 
         void Handle(Action action) { action(); e.Handled = true; }
