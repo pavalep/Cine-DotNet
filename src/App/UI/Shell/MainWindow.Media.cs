@@ -31,21 +31,40 @@ public partial class MainWindow
             _isLoading = false;
             _spinnerOverlay.Stop();
 
+            // Hide start page and drop indicator
             if (StartPage != null)
             {
                 StartPage.Opacity = 0;
                 StartPage.IsVisible = false;
             }
 
-            // Dismiss drag-drop overlay if still showing (with fade animation)
+            // Hide opaque playback backdrop so DWM thumbnail shows through
+            PlaybackBackground.IsVisible = false;
+
             if (_dropIndicator.IsShowing)
                 _ = _dropIndicator.Hide();
 
             if (_videoHost != null)
             {
+                // Resize hidden window to match actual video dimensions
+                var player = _playerService?.Player;
+                if (player != null)
+                {
+                    player.GetVideoSize(out int vw, out int vh);
+                    _videoHost.SetVideoSize(vw, vh);
+                }
+
                 _videoHost.IsVideoSurfaceVisible = true;
                 _videoHost.Opacity = 1;
+                SyncThumbnailRect();
+
+                DebugLog($"OnMediaOpened VideoHost: Opacity={_videoHost.Opacity} IsVisible={_videoHost.IsVisible} Bounds={_videoHost.Bounds}");
             }
+
+            // Layer stack dump
+            DebugLog($"OnMediaOpened layers: StartPage.Visible={StartPage?.IsVisible} StartPage.Opacity={StartPage?.Opacity} " +
+                     $"dropIndicator.Showing={_dropIndicator.IsShowing} VideoHost.Opacity={_videoHost?.Opacity} " +
+                     $"VideoHost.Visible={_videoHost?.IsVisible}");
 
             ShowUiControls();
             _headerBar.ShowOpenMenu();

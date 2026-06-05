@@ -118,6 +118,7 @@ public interface IMediaPlayer
     /// Width/height are the actual video dimensions.
     /// </summary>
     byte[]? ScreenshotRaw(out int width, out int height);
+    void GetVideoSize(out int width, out int height);
 
     // === Native rendering ===
     void InitializeRenderer(IntPtr hwnd);

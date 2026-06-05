@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Avalonia;
@@ -328,8 +329,10 @@ public partial class MainWindow
         _pipService = new PipService(_dwmManager);
 
         // Wire PIP player controls
+        _headerBar.PipToggled += OnPipToggled;
         _pipService.PlayPauseRequested += OnPipPlayPauseRequested;
         _pipService.SeekRequested += OnPipSeekRequested;
+        _pipService.PipClosed += OnPipClosed;
 
         AddHandler(global::Avalonia.Input.DragDrop.DragEnterEvent, OnWindowDragEnter);
         AddHandler(global::Avalonia.Input.DragDrop.DragLeaveEvent, OnWindowDragLeave);
@@ -369,29 +372,38 @@ public partial class MainWindow
         }
         catch { }
 
-        var handle = PlatformImplHandle();
-        DebugLog($"Platform handle has value={handle.HasValue} value={handle.GetValueOrDefault()}");
-        if (handle.HasValue && handle.Value != IntPtr.Zero && _videoHost != null)
-        {
-            _videoHost.RegisterMainWindow(handle.Value, _dwmManager!);
-            DebugLog("VideoHost.RegisterMainWindow called");
-        }
-
         if (StartPage != null) StartPage.IsVisible = true;
-        _headerBar.HideOpenMenu();
-        if (VideoHost != null) VideoHost.IsVideoSurfaceVisible = false;
 
-        // Show controls immediately (auto-hide will handle dismissal after media opens)
-        ShowUiControls();
+        // Create hidden window immediately — mpv needs it before OnMediaOpened
+        _videoHost?.CreateHiddenWindow();
+
+        // Register DWM thumbnail on main window
+        TryRegisterDwmThumbnail();
+
+        _headerBar.HideOpenMenu();
+        _headerBar.HidePrimaryMenu();
+        _headerBar.SetPipVisibility(false);
+        if (VideoHost != null) VideoHost.IsVideoSurfaceVisible = false;
+        if (_controlsBox != null) _controlsBox.SetControlsVisibility(false);
+
+        // Show header bar only (window controls + title), not playback controls.
+        // ShowUiControls shows everything — only call when media is loaded.
+        if (_headerBar.HeaderBar != null)
+        {
+            bool isFullscreen = WindowState == global::Avalonia.Controls.WindowState.FullScreen;
+            _headerBar.HeaderBar.IsVisible = !isFullscreen;
+            _headerBar.HeaderBar.Opacity = isFullscreen ? 0 : 1;
+            _headerBar.HeaderBar.IsHitTestVisible = !isFullscreen;
+        }
 
         // P5.1: Resume session only if no command-line file was queued
         if (string.IsNullOrEmpty(_queuedOpenPath))
             _viewModel?.LoadSession();
 
-        RefreshFullscreenUi();
-        _controlsBox.RefreshSubtitleIcon();
-        _controlsBox.RefreshAudioIcon();
-        _controlsBox.RefreshVolumeIcon();
+        _headerBar.UpdateMaximizeIcon(WindowState == global::Avalonia.Controls.WindowState.Maximized);
+        _controlsBox?.RefreshSubtitleIcon();
+        _controlsBox?.RefreshAudioIcon();
+        _controlsBox?.RefreshVolumeIcon();
         ReportWindowState("MainWindow.OnOpened.AfterInitialState");
         Dispatcher.UIThread.OnUiThread(() => ReportWindowState("MainWindow.OnOpened.PostLayout"), DispatcherPriority.Background);
 
@@ -437,7 +449,7 @@ public partial class MainWindow
         Dispatcher.UIThread.OnUiThread(async () =>
         {
             await Task.Delay(100); // Let the first frame render
-            _controlsBox.SeekBarControl.InitializeSeekBar();
+            _controlsBox?.SeekBarControl.InitializeSeekBar();
             DebugLog("Deferred init complete");
         }, DispatcherPriority.Background);
     }
@@ -493,6 +505,56 @@ public partial class MainWindow
             DebugLog($"TryGetPlatformHandle failed: {ex.Message}");
         }
         return IntPtr.Zero;
+    }
+
+    /// <summary>Updates DWM thumbnail rcDestination — video area only, excluding header/controls so DWM doesn't paint over them.</summary>
+    private void SyncThumbnailRect()
+    {
+        if (_videoHost == null) return;
+
+        var pt = _videoHost.TranslatePoint(new global::Avalonia.Point(0, 0), this);
+        if (pt == null) return;
+
+        double scale = RenderScaling;
+        int x = (int)(pt.Value.X * scale);
+        int y = (int)(pt.Value.Y * scale);
+        int w = (int)(_videoHost.Bounds.Width * scale);
+        int h = (int)(_videoHost.Bounds.Height * scale);
+
+        // Exclude header (top 44px) and controls bar (bottom ~120px)
+        // so DWM thumbnail covers only the video area.
+        int headerPx = (int)(44 * scale);
+        int controlsPx = (int)(120 * scale);
+
+        _videoHost.SetThumbnailDestRect(
+            x, y + headerPx,               // top starts below header
+            x + w, y + h - controlsPx);    // bottom ends above controls
+    }
+
+    protected override void OnSizeChanged(SizeChangedEventArgs e)
+    {
+        base.OnSizeChanged(e);
+        SyncThumbnailRect();
+    }
+
+    private void TryRegisterDwmThumbnail()
+    {
+        if (_dwmManager == null || _videoHost == null) return;
+
+        var handle = PlatformImplHandle();
+        if (handle.HasValue && handle.Value != IntPtr.Zero)
+        {
+            _videoHost.RegisterMainWindow(handle.Value, _dwmManager);
+            return;
+        }
+
+        // Retry once after layout completes
+        Dispatcher.UIThread.Post(() =>
+        {
+            var h = PlatformImplHandle();
+            if (h.HasValue && h.Value != IntPtr.Zero)
+                _videoHost!.RegisterMainWindow(h.Value, _dwmManager!);
+        }, DispatcherPriority.Render);
     }
 
     private void OnVideoHostChildCreated(object? sender, EventArgs e)
@@ -582,6 +644,8 @@ public partial class MainWindow
                     // once the player actually opens the file. This avoids a race
                     // where the watcher hides StartPage before the video is ready.
                     _headerBar.ShowOpenMenu();
+                    _headerBar.ShowPrimaryMenu();
+                    _headerBar.SetPipVisibility(Bounds.Width >= MediumBreakpoint);
                     _headerBar.SetTitle(_viewModel.Title);
                     Title = $"Cine — {_viewModel.Title}";
                 }
@@ -590,9 +654,12 @@ public partial class MainWindow
                     _isLoading = false;
                     _spinnerOverlay.Stop();
                     if (StartPage?.IsVisible == false) StartPage.IsVisible = true;
+                    PlaybackBackground.IsVisible = true;
                     _controlsBox.SetControlsVisibility(false);
                     _controlsBox.ControlsBox.IsVisible = false;
                     _headerBar.HideOpenMenu();
+                    _headerBar.HidePrimaryMenu();
+                    _headerBar.SetPipVisibility(false);
                     if (VideoHost != null) VideoHost.IsVideoSurfaceVisible = false;
                     _headerBar.SetTitle("Cine");
                     // ShowUiControls should NOT be called here — when file closes,
@@ -633,5 +700,15 @@ public partial class MainWindow
                     }
                 }
             });
+    }
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetWindowRect(IntPtr hwnd, out RECT lpRect);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT
+    {
+        public int left, top, right, bottom;
     }
 }

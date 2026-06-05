@@ -51,6 +51,7 @@ public partial class MainWindow
         if (_controlsBox == null) return;
 
         bool isFullscreen = WindowState == WindowState.FullScreen;
+        bool hasMedia = !string.IsNullOrEmpty(_viewModel?.FilePath);
         _controlsBox.UpdateFullscreenIcon(isFullscreen);
 
         if (isFullscreen)
@@ -58,14 +59,11 @@ public partial class MainWindow
             ExtendClientAreaToDecorationsHint = false;
             _headerBar.IsVisible = false;
             _headerBar.IsHitTestVisible = false;
-            _headerBar.HideOpenMenu();
-            _headerBar.HidePrimaryMenu();
             _headerBar.HideWindowControls();
             _headerBar.HideFullscreenClose();
-            _headerBar.SetPipVisibility(false);
 
-            // Immediately show controls with correct fullscreen icon
-            ShowUiControls();
+            // Show controls immediately on entering fullscreen
+            if (hasMedia) ShowUiControls();
         }
         else
         {
@@ -74,15 +72,9 @@ public partial class MainWindow
             _headerBar.IsHitTestVisible = true;
             _fullscreenHeader.Hide();
             _headerBar.ShowWindowControls();
-            _headerBar.ShowPrimaryMenu();
-            _headerBar.SetPipVisibility(Bounds.Width >= MediumBreakpoint);
-            if (!string.IsNullOrEmpty(_viewModel?.FilePath))
-                _headerBar.ShowOpenMenu();
-            else
-                _headerBar.HideOpenMenu();
 
             // Restore controls to visible state after leaving fullscreen
-            ShowUiControls();
+            if (hasMedia) ShowUiControls();
         }
         _headerBar.UpdateMaximizeIcon(WindowState == WindowState.Maximized);
     }

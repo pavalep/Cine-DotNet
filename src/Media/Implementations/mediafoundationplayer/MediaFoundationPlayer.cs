@@ -1069,6 +1069,12 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
         return null; // Not supported in MF
     }
 
+    public void GetVideoSize(out int width, out int height)
+    {
+        width = 1920;
+        height = 1080;
+    }
+
     public void CycleSubtitleTrack()
     {
         if (_subtitleSources.Length == 0) return;

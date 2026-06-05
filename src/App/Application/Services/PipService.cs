@@ -33,6 +33,9 @@ public class PipService : IDisposable
     /// <summary>Fires when the user seeks in the PIP window (normalized 0..1).</summary>
     public event EventHandler<double>? SeekRequested;
 
+    /// <summary>Fires when the PIP window is closed (by user or programmatically).</summary>
+    public event EventHandler? PipClosed;
+
     public PipWindow? EnterPip()
     {
         if (_disposed) return null;
@@ -49,7 +52,7 @@ public class PipService : IDisposable
 
             _pipWindow.Show();
 
-            // Wire DWM thumbnail mirroring
+            // Wire DWM thumbnail mirroring (source already set by MainWindow)
             _pipWindow.EnableDwmMirror(_dwmManager);
 
             _isActive = true;
@@ -73,6 +76,7 @@ public class PipService : IDisposable
     {
         _isActive = false;
         _pipWindow = null;
+        PipClosed?.Invoke(this, EventArgs.Empty);
     }
 
     private void CleanupPip()

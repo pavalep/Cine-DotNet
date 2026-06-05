@@ -12,7 +12,7 @@
         Title="Cine"
         Width="800" Height="600"
         MinWidth="332" MinHeight="187"
-        Background="{StaticResource AppBackground}"
+        Background="#FF0C0C0E"
         TransparencyLevelHint="None"
         WindowStartupLocation="CenterScreen"
         ExtendClientAreaToDecorationsHint="True"
@@ -43,7 +43,7 @@
          Panels intercept all mouse events in Avalonia (Panel is always
          hit-testable regardless of background).
          ===================================================================== -->
-    <Grid x:Name="MainOverlay" Background="Black">
+    <Grid x:Name="MainOverlay" Background="Transparent">
 
         <!-- ══════════════════════════════════════════════════════════════ -->
         <!--  LAYER 0: VIDEO + BACKDROP (renders first, behind overlays)   -->
@@ -51,9 +51,10 @@
 
         <!-- Playback background -->
         <Border Background="{StaticResource PlaybackRadialBackground}"
-                IsHitTestVisible="False" />
+                IsHitTestVisible="False"
+                x:Name="PlaybackBackground" />
 
-        <!-- Video Host (Native HWND) -->
+        <!-- Video Host (DWM thumbnail shows through transparent area) -->
         <ctrl:D3D11VideoHost x:Name="VideoHost"
                              IsVideoSurfaceVisible="False"
                              HorizontalAlignment="Stretch" VerticalAlignment="Stretch"

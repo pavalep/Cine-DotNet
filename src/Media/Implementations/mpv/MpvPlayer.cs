@@ -1144,6 +1144,14 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
             Error?.Invoke(this, $"mpv_set_property failed: {name}={value} ({MpvNative.GetError(err)})");
     }
 
+    public void GetVideoSize(out int width, out int height)
+    {
+        width = (int)GetInt64("dwidth");
+        height = (int)GetInt64("dheight");
+        if (width <= 0 || height <= 0)
+        { width = 1920; height = 1080; }
+    }
+
     private double GetDouble(string name)
     {
         if (!_initialized || _mpv == IntPtr.Zero)

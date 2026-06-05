@@ -12,6 +12,13 @@ public partial class MainWindow
         if (_pipService.IsActive)
         {
             _pipService.ExitPip();
+            // Restore video in main window + resync thumbnail rect
+            if (_videoHost != null)
+            {
+                _videoHost.IsVideoSurfaceVisible = true;
+                SyncThumbnailRect();
+            }
+            _headerBar.SetPipChecked(false);
         }
         else
         {
@@ -25,6 +32,11 @@ public partial class MainWindow
 
             if (pipWindow != null)
             {
+                // Hide video in main window — video only visible in PIP
+                if (_videoHost != null) _videoHost.IsVideoSurfaceVisible = false;
+
+                _headerBar.SetPipChecked(true);
+
                 // Sync initial play state
                 pipWindow.SetPlayingState(_viewModel.IsPlaying);
 
@@ -73,5 +85,16 @@ public partial class MainWindow
     {
         if (_pipService is not { IsActive: true }) return;
         _pipService.PipWindow?.SetPlayingState(_viewModel?.IsPlaying == true);
+    }
+
+    /// <summary>Restores main window video when PIP window is closed by user (close button).</summary>
+    private void OnPipClosed(object? sender, EventArgs e)
+    {
+        if (_videoHost != null)
+        {
+            _videoHost.IsVideoSurfaceVisible = true;
+            SyncThumbnailRect();
+        }
+        _headerBar.SetPipChecked(false);
     }
 }

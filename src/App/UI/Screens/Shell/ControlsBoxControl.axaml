@@ -11,6 +11,7 @@
             Background="{StaticResource ControlsGradient}"
             HorizontalAlignment="Stretch"
             IsHitTestVisible="True"
+            IsVisible="False"
             ZIndex="15">
         <Border.Transitions>
             <Transitions>

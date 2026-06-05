@@ -49,12 +49,15 @@ public partial class PipWindow : Window
 
     public void EnableDwmMirror(DwmThumbnailManager manager)
     {
+        if (_dwmManager != null || _thumbnailId > 0) return; // already registered
+
         _dwmManager = manager;
 
         var handle = TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
-        if (handle == IntPtr.Zero) return;
+        if (handle == IntPtr.Zero) return; // OnOpened will retry
 
         _thumbnailId = manager.RegisterTarget(handle);
+        SyncThumbnailRect(); // constrain to video area only
     }
 
     public void DisableDwmMirror()
@@ -65,6 +68,30 @@ public partial class PipWindow : Window
             _thumbnailId = 0;
             _dwmManager = null;
         }
+    }
+
+    /// <summary>Constrains DWM thumbnail to video area only (below titlebar, above seek bar).</summary>
+    private void SyncThumbnailRect()
+    {
+        if (_dwmManager == null || _thumbnailId <= 0 || _isClosing) return;
+
+        double scale = RenderScaling;
+        int w = (int)(Width * scale);
+        int h = (int)(Height * scale);
+
+        // Titlebar = 32px, seek bar + padding = ~80px at bottom
+        int top = (int)(32 * scale);
+        int bottom = (int)(80 * scale);
+
+        _dwmManager.UpdateTarget(_thumbnailId, opacity: 255, visible: true,
+            destLeft: 0, destTop: top,
+            destRight: w, destBottom: h - bottom);
+    }
+
+    protected override void OnSizeChanged(SizeChangedEventArgs e)
+    {
+        base.OnSizeChanged(e);
+        SyncThumbnailRect();
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -122,7 +149,10 @@ public partial class PipWindow : Window
         {
             var handle = TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
             if (handle != IntPtr.Zero)
+            {
                 _thumbnailId = _dwmManager.RegisterTarget(handle);
+                SyncThumbnailRect();
+            }
         }
     }
 
