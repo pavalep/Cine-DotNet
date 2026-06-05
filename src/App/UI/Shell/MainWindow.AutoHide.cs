@@ -51,8 +51,6 @@ public partial class MainWindow
 
     private void OnAutoHideTimerTick(object? sender, EventArgs e)
     {
-        _autoHideTimer?.Stop();
-
         // Python: _hide_ui() checks `motion_header.contains_pointer`
         //        and `motion_controls.contains_pointer` before hiding.
         if (_hoverHeader || _hoverControls || _hoverFullscreenHeader)
@@ -68,7 +66,11 @@ public partial class MainWindow
                             _fullscreenHeader.HasActiveFlyouts ||
                             _headerBar.HasActiveFlyouts ||
                             _dropIndicator.IsShowing;
-        if (isFlyoutOpen) return;
+        if (isFlyoutOpen)
+        {
+            _autoHideTimer?.Start();
+            return;
+        }
 
         HideUiControls();
     }
@@ -116,18 +118,21 @@ public partial class MainWindow
         {
             _headerBar.HeaderBar.IsVisible = !isFullscreen;
             _headerBar.HeaderBar.Opacity = isFullscreen ? 0 : 1;
+            _headerBar.HeaderBar.IsHitTestVisible = !isFullscreen;
         }
         // Fullscreen header: only visible when in fullscreen mode
         if (_fullscreenHeader.FullscreenHeader != null)
         {
             _fullscreenHeader.FullscreenHeader.IsVisible = isFullscreen;
             _fullscreenHeader.FullscreenHeader.Opacity = isFullscreen ? 1 : 0;
+            _fullscreenHeader.FullscreenHeader.IsHitTestVisible = isFullscreen;
         }
         // Controls box: always show
         if (_controlsBox.ControlsBox != null)
         {
             _controlsBox.ControlsBox.IsVisible = true;
             _controlsBox.ControlsBox.Opacity = 1;
+            _controlsBox.ControlsBox.IsHitTestVisible = true;
         }
 
         _autoHideTimer?.Start();
@@ -140,19 +145,26 @@ public partial class MainWindow
 
         bool isFullscreen = WindowState == global::Avalonia.Controls.WindowState.FullScreen;
 
-        // Header bar: hide in fullscreen, just opacity otherwise
         if (isFullscreen)
         {
             _headerBar.HeaderBar.IsVisible = false;
             _headerBar.HeaderBar.Opacity = 0;
+            _headerBar.HeaderBar.IsHitTestVisible = false;
+            _fullscreenHeader.FullscreenHeader.IsVisible = false;
+            _fullscreenHeader.FullscreenHeader.Opacity = 0;
+            _fullscreenHeader.FullscreenHeader.IsHitTestVisible = false;
         }
         else
         {
             _headerBar.HeaderBar.Opacity = 0;
+            _headerBar.HeaderBar.IsHitTestVisible = false;
+            _fullscreenHeader.FullscreenHeader.IsVisible = false;
+            _fullscreenHeader.FullscreenHeader.Opacity = 0;
+            _fullscreenHeader.FullscreenHeader.IsHitTestVisible = false;
         }
-        _fullscreenHeader.FullscreenHeader.Opacity = 0;
         _controlsBox.ControlsBox.IsVisible = false;
         _controlsBox.ControlsBox.Opacity = 0;
+        _controlsBox.ControlsBox.IsHitTestVisible = false;
     }
 
     // ── Fade animation (Python: revealer transition) ──
@@ -172,34 +184,22 @@ public partial class MainWindow
             for (int i = 1; i <= steps; i++)
             {
                 double t = i / (double)steps;
-                if (headerBar != null)
-                    headerBar.Opacity = startHeader + (targetOpacity - startHeader) * t;
-                if (controlsBox != null)
-                    controlsBox.Opacity = startControls + (targetOpacity - startControls) * t;
+                await Dispatcher.UIThread.OnUiThreadAsync(() =>
+                {
+                    if (headerBar != null)
+                        headerBar.Opacity = startHeader + (targetOpacity - startHeader) * t;
+                    if (controlsBox != null)
+                        controlsBox.Opacity = startControls + (targetOpacity - startControls) * t;
+                });
                 await Task.Delay(16);
             }
 
-            if (headerBar != null) headerBar.Opacity = targetOpacity;
-            if (controlsBox != null) controlsBox.Opacity = targetOpacity;
+            await Dispatcher.UIThread.OnUiThreadAsync(() =>
+            {
+                if (headerBar != null) headerBar.Opacity = targetOpacity;
+                if (controlsBox != null) controlsBox.Opacity = targetOpacity;
+            });
         });
     }
 
-    /// <summary>
-    /// Fade a Control's Opacity from→to with optional await.
-    /// Used by OnMediaOpened to fade out StartPage / fade in video.
-    /// </summary>
-    private static async Task FadeVisual(global::Avalonia.Controls.Control target, double from, double to, int durationMs, bool waitUntilComplete)
-    {
-        target.Opacity = from;
-        const int steps = 20;
-        var delay = TimeSpan.FromMilliseconds(durationMs / (double)steps);
-
-        for (int i = 1; i <= steps; i++)
-        {
-            target.Opacity = from + (to - from) * (i / (double)steps);
-            if (waitUntilComplete || i < steps)
-                await Task.Delay(delay);
-        }
-        target.Opacity = to;
-    }
 }

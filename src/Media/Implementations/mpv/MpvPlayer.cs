@@ -39,11 +39,28 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
     private CancellationTokenSource? _cts;
     private IntPtr _hwnd;
     private string? _pendingOpenPath;
+    private bool _isRecoveringFromEof;
 
     // Aspect ratio override (maps to mpv's video-aspect-override)
     private double _aspectOverride = -1; // -1 = auto/default
 
-    private static readonly string DebugLogFile = Path.Combine(AppContext.BaseDirectory, "MpvPlayer.log");
+    private static readonly string DebugLogFile = CreateLogFilePath();
+
+    private static string CreateLogFilePath()
+    {
+        try
+        {
+            var dir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Cine");
+            Directory.CreateDirectory(dir);
+            return Path.Combine(dir, "MpvPlayer.log");
+        }
+        catch
+        {
+            return Path.Combine(Path.GetTempPath(), "MpvPlayer.log");
+        }
+    }
 
     private static void DebugLog(string message)
     {
@@ -171,7 +188,7 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
         }
     }
 
-    public double VolumeMax => 200;
+    public double VolumeMax => 150;
 
     public bool IsMuted
     {
@@ -184,7 +201,7 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
         _isMuted = isMuted;
         if (_initialized)
             SetFlag("mute", _isMuted);
-        VolumeChanged?.Invoke(this, new VolumeChangedEventArgs(_isMuted));
+        VolumeChanged?.Invoke(this, new VolumeChangedEventArgs(isMuted ? 0 : _volume));
     }
 
     public void IncreaseVolume() => Volume = Math.Min(VolumeMax, Volume + 5);
@@ -343,7 +360,52 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
     public void AddAudio(string path) => CommandInternal("audio-add", path, "select");
     public void SelectSubtitleTrack(int trackIndex) => SetInt64("sid", trackIndex);
     public void SelectAudioTrack(int trackIndex) => SetInt64("aid", trackIndex);
+    public void SelectVideoTrack(int trackIndex) => SetInt64("vid", trackIndex);
     public void CycleSubtitleTrack() => CommandInternal("cycle", "sid");
+
+    public AudioTrackInfo[] AudioSources
+    {
+        get
+        {
+            if (!_initialized)
+                return Array.Empty<AudioTrackInfo>();
+
+            var json = GetString("track-list");
+            if (string.IsNullOrWhiteSpace(json) || json == "null")
+                return Array.Empty<AudioTrackInfo>();
+
+            try
+            {
+                return ParseAudioTrackList(json);
+            }
+            catch
+            {
+                return Array.Empty<AudioTrackInfo>();
+            }
+        }
+    }
+
+    public VideoTrackInfo[] VideoSources
+    {
+        get
+        {
+            if (!_initialized)
+                return Array.Empty<VideoTrackInfo>();
+
+            var json = GetString("track-list");
+            if (string.IsNullOrWhiteSpace(json) || json == "null")
+                return Array.Empty<VideoTrackInfo>();
+
+            try
+            {
+                return ParseVideoTrackList(json);
+            }
+            catch
+            {
+                return Array.Empty<VideoTrackInfo>();
+            }
+        }
+    }
 
     public float SubtitleDelay
     {
@@ -359,7 +421,18 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
     public void IncreaseSubtitleDelay() => SubtitleDelay += 0.05f;
     public void DecreaseSubtitleDelay() => SubtitleDelay -= 0.05f;
 
-    public int SubtitlePosition { get; set; }
+    private int _subtitlePosition = 100;
+
+    public int SubtitlePosition
+    {
+        get => _subtitlePosition;
+        set
+        {
+            _subtitlePosition = Math.Clamp(value, 0, 200);
+            if (_initialized)
+                SetInt64("sub-pos", _subtitlePosition);
+        }
+    }
     public void SetSubtitlePosition(int position) => SubtitlePosition = position;
 
     public void SetSubtitleFontSize(double size)
@@ -800,10 +873,14 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
             // any file is loaded or while the file is still buffering). No additional
             // _isFileLoaded guard is needed — FILE_LOADED fires before time-pos is valid
             // (playback hasn't actually started), and that would block our first updates.
-            var pos = GetDouble("time-pos");
+            double pos, dur;
+            lock (_gate)
+            {
+                pos = GetDouble("time-pos");
+                dur = GetDouble("duration");
+            }
             if (pos >= 0 && !double.IsNaN(pos))
             {
-                var dur = GetDouble("duration");
                 PositionChanged?.Invoke(this, new PositionChangedEventArgs(
                     TimeSpan.FromSeconds(pos), TimeSpan.FromSeconds(dur)));
             }
@@ -853,14 +930,50 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
         {
             case "track-list":
                 {
-                    var allTracks = SubtitleSources;
-                    var videoTracks = allTracks.Where(t => t.Type == "video").ToArray();
-                    var audioTracks = allTracks.Where(t => t.Type == "audio").ToArray();
-                    var subtitleTracks = allTracks.Where(t => t.Type == "sub").ToArray();
-                    TrackListChanged?.Invoke(this, new TrackListChangedEventArgs(
-                        audioTracks,
-                        videoTracks,
-                        subtitleTracks));
+                    var json = GetString("track-list");
+                    if (string.IsNullOrWhiteSpace(json) || json == "null")
+                        break;
+
+                    try
+                    {
+                        var tracks = JsonSerializer.Deserialize<JsonElement>(json);
+                        if (tracks.ValueKind != JsonValueKind.Array)
+                            break;
+
+                        var audioTracks = new List<SubtitleSource>();
+                        var videoTracks = new List<SubtitleSource>();
+                        var subtitleTracks = new List<SubtitleSource>();
+
+                        foreach (var t in tracks.EnumerateArray())
+                        {
+                            var kind = t.TryGetProperty("type", out var kindProp) ? kindProp.GetString() ?? "" : "";
+                            var lang = t.TryGetProperty("lang", out var langProp) ? langProp.GetString() ?? "" : "";
+                            var title = t.TryGetProperty("title", out var titleProp) ? titleProp.GetString() ?? "" : "";
+                            var selected = t.TryGetProperty("selected", out var selProp) && selProp.GetBoolean();
+                            var id = t.TryGetProperty("id", out var idProp) ? idProp.GetInt32() : -1;
+
+                            var src = new SubtitleSource
+                            {
+                                PathOrId = id.ToString(),
+                                Language = !string.IsNullOrWhiteSpace(lang) ? lang : title,
+                                Type = kind,
+                                IsEnabled = selected
+                            };
+
+                            switch (kind)
+                            {
+                                case "audio": audioTracks.Add(src); break;
+                                case "video": videoTracks.Add(src); break;
+                                default: subtitleTracks.Add(src); break;
+                            }
+                        }
+
+                        TrackListChanged?.Invoke(this, new TrackListChangedEventArgs(
+                            audioTracks.ToArray(),
+                            videoTracks.ToArray(),
+                            subtitleTracks.ToArray()));
+                    }
+                    catch { /* JSON parse failed — skip */ }
                 }
                 break;
             case "chapter-list":
@@ -878,11 +991,15 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
                 if (GetFlag("eof-reached"))
                 {
                     SetPlaybackState(PlaybackState.Stopped);
-                    // Replay at EOF for continuous playback with keep-open
-                    if (GetFlag("keep-open"))
+                    // Replay at EOF for continuous playback with keep-open.
+                    // Use a guard to prevent re-entrancy if the seek triggers
+                    // another eof-reached event.
+                    if (GetFlag("keep-open") && !_isRecoveringFromEof)
                     {
+                        _isRecoveringFromEof = true;
                         Seek(TimeSpan.Zero);
                         Play();
+                        _isRecoveringFromEof = false;
                     }
                 }
                 break;
@@ -1092,6 +1209,99 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
                 src.Language = title;
 
             result.Add(src);
+        }
+        return result.ToArray();
+    }
+
+    private static AudioTrackInfo[] ParseAudioTrackList(string json)
+    {
+        var tracks = JsonSerializer.Deserialize<JsonElement>(json);
+        if (tracks.ValueKind != JsonValueKind.Array)
+            return Array.Empty<AudioTrackInfo>();
+
+        var result = new List<AudioTrackInfo>();
+        foreach (var t in tracks.EnumerateArray())
+        {
+            var kind = t.TryGetProperty("type", out var kindProp) ? kindProp.GetString() ?? "" : "";
+            if (kind != "audio") continue;
+
+            var id = t.TryGetProperty("id", out var idProp) ? idProp.GetInt32() : -1;
+            var lang = t.TryGetProperty("lang", out var langProp) ? langProp.GetString() ?? "" : "";
+            var title = t.TryGetProperty("title", out var titleProp) ? titleProp.GetString() ?? "" : "";
+            var codec = t.TryGetProperty("codec", out var codecProp) ? codecProp.GetString() ?? "" : "";
+            var selected = t.TryGetProperty("selected", out var selProp) && selProp.GetBoolean();
+            var isDefault = t.TryGetProperty("default", out var defProp) && defProp.GetBoolean();
+
+            // Extract channel count from mpv's audio-channels or demux-channel-count
+            int channels = 0;
+            if (t.TryGetProperty("demux-channel-count", out var chProp) && chProp.ValueKind == JsonValueKind.Number)
+                channels = chProp.GetInt32();
+            else if (t.TryGetProperty("audio-channels", out var acProp) && acProp.ValueKind == JsonValueKind.Number)
+                channels = acProp.GetInt32();
+
+            // Extract sample rate
+            int sampleRate = 0;
+            if (t.TryGetProperty("demux-samplerate", out var srProp) && srProp.ValueKind == JsonValueKind.Number)
+                sampleRate = srProp.GetInt32();
+
+            var info = new AudioTrackInfo
+            {
+                Id = id,
+                Language = lang,
+                Title = !string.IsNullOrWhiteSpace(title) ? title : lang,
+                Codec = codec,
+                Channels = channels,
+                SampleRate = sampleRate,
+                IsSelected = selected,
+                IsDefault = isDefault
+            };
+
+            result.Add(info);
+        }
+        return result.ToArray();
+    }
+
+    private static VideoTrackInfo[] ParseVideoTrackList(string json)
+    {
+        var tracks = JsonSerializer.Deserialize<JsonElement>(json);
+        if (tracks.ValueKind != JsonValueKind.Array)
+            return Array.Empty<VideoTrackInfo>();
+
+        var result = new List<VideoTrackInfo>();
+        foreach (var t in tracks.EnumerateArray())
+        {
+            var kind = t.TryGetProperty("type", out var kindProp) ? kindProp.GetString() ?? "" : "";
+            if (kind != "video") continue;
+
+            var id = t.TryGetProperty("id", out var idProp) ? idProp.GetInt32() : -1;
+            var title = t.TryGetProperty("title", out var titleProp) ? titleProp.GetString() ?? "" : "";
+            var codec = t.TryGetProperty("codec", out var codecProp) ? codecProp.GetString() ?? "" : "";
+            var selected = t.TryGetProperty("selected", out var selProp) && selProp.GetBoolean();
+            var isDefault = t.TryGetProperty("default", out var defProp) && defProp.GetBoolean();
+
+            int width = 0, height = 0;
+            if (t.TryGetProperty("demux-w", out var wProp) && wProp.ValueKind == JsonValueKind.Number)
+                width = wProp.GetInt32();
+            if (t.TryGetProperty("demux-h", out var hProp) && hProp.ValueKind == JsonValueKind.Number)
+                height = hProp.GetInt32();
+
+            double fps = 0;
+            if (t.TryGetProperty("demux-fps", out var fpsProp) && fpsProp.ValueKind == JsonValueKind.Number)
+                fps = fpsProp.GetDouble();
+
+            var info = new VideoTrackInfo
+            {
+                Id = id,
+                Title = title,
+                Codec = codec,
+                Width = width,
+                Height = height,
+                Fps = fps,
+                IsSelected = selected,
+                IsDefault = isDefault
+            };
+
+            result.Add(info);
         }
         return result.ToArray();
     }

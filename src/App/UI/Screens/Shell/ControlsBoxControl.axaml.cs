@@ -24,8 +24,6 @@ namespace Cine.Avalonia.Controls;
 
 public partial class ControlsBoxControl : AvaloniaUserControl
 {
-    public event EventHandler? PlaylistDialogRequested;
-
     private MainViewModel? _viewModel;
     private int _activeFlyouts;
     private PlaylistDialog? _playlistDialog;
@@ -267,7 +265,7 @@ public partial class ControlsBoxControl : AvaloniaUserControl
             {
                 Text = "No tracks available",
                 FontSize = 12,
-                Foreground = new SolidColorBrush(Color.FromArgb(0x88, 0xE5, 0xE5, 0xE5)),
+                Foreground = AppColors.TextTertiary,
                 Padding = new Thickness(10, 7)
             };
             stackPanel.Children.Add(text);
@@ -280,8 +278,8 @@ public partial class ControlsBoxControl : AvaloniaUserControl
                 Width = 6, Height = 6,
                 CornerRadius = new CornerRadius(3),
                 Background = track.IsSelected && !track.IsPseudoEntry
-                    ? new SolidColorBrush(Color.FromArgb(0xFF, 0x6C, 0xB4, 0xFF))
-                    : new SolidColorBrush(Color.FromArgb(0x30, 0xFF, 0xFF, 0xFF)),
+                    ? AppColors.Accent
+                    : AppColors.IconDim,
                 VerticalAlignment = AvaloniaLayout.VerticalAlignment.Center,
                 Margin = new Thickness(0, 0, 8, 0)
             };
@@ -291,7 +289,7 @@ public partial class ControlsBoxControl : AvaloniaUserControl
                 Text = track.DisplayName,
                 FontWeight = track.IsSelected ? FontWeight.SemiBold : FontWeight.Normal,
                 FontSize = 12,
-                Foreground = new SolidColorBrush(Color.FromArgb(0xFF, 0xE5, 0xE5, 0xE5))
+                Foreground = AppColors.TextPrimary
             };
 
             var grid = new Grid
@@ -309,7 +307,7 @@ public partial class ControlsBoxControl : AvaloniaUserControl
             var button = new Button
             {
                 Content = grid,
-                Background = Brushes.Transparent,
+                Background = AppColors.Transparent,
                 BorderThickness = new Thickness(0),
                 Padding = new Thickness(10, 7),
                 HorizontalContentAlignment = AvaloniaLayout.HorizontalAlignment.Stretch,
@@ -319,9 +317,9 @@ public partial class ControlsBoxControl : AvaloniaUserControl
             };
 
             button.PointerEntered += (_, _) =>
-                button.Background = new SolidColorBrush(Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF));
+                button.Background = AppColors.HoverSubtle;
             button.PointerExited += (_, _) =>
-                button.Background = Brushes.Transparent;
+                button.Background = AppColors.Transparent;
 
             stackPanel.Children.Add(button);
         }

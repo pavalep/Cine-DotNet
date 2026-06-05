@@ -33,11 +33,11 @@
                 <!-- Icon (Cine app icon — circle + triangle per canvas) -->
                 <Panel Width="128" Height="128" Margin="0,0,0,24" HorizontalAlignment="Center">
                     <Path Data="M 64 4 A 60 60 0 1 1 64 124 A 60 60 0 1 1 64 4 Z"
-                          Fill="#14FFFFFF"
-                          Stroke="#26FFFFFF"
+                          Fill="{StaticResource AppHoverSubtle}"
+                          Stroke="{StaticResource AppDivider}"
                           StrokeThickness="2" />
                     <Path Data="M 50 40 L 90 64 L 50 88 Z"
-                          Fill="#E5E5E5" />
+                          Fill="{StaticResource AppTextPrimary}" />
                 </Panel>
 
                 <!-- Drop text -->
@@ -79,7 +79,7 @@
 
             <!-- Keyboard shortcut hint -->
             <TextBlock Text="Space to play  ·  F for fullscreen  ·  Esc to exit"
-                       FontSize="11" Foreground="#60FFFFFF"
+                       FontSize="11" Foreground="{StaticResource AppTextOnDarkSubtle}"
                        HorizontalAlignment="Center" VerticalAlignment="Bottom"
                        Margin="0,0,0,24" />
         </Grid>

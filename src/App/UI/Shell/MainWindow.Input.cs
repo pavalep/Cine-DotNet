@@ -122,8 +122,6 @@ public partial class MainWindow
             Handle(() => { if (shift) _playerService?.Player?.ScreenshotWithoutSubtitles(); else _playerService?.Player?.ScreenshotWithSubtitles(); });
         else if (ctrl && shift && key == Key.E)
             Handle(() => { var dlg = new EqualizerDialog(_viewModel!); dlg.Show(this); });
-        else if (key == Key.I) 
-            Handle(() => { });
         else if (key == Key.L && shift) 
             Handle(() => _viewModel?.ToggleLoopFile());
         // ── Phase 4: Global Keyboard Shortcuts ──
@@ -254,7 +252,7 @@ public partial class MainWindow
                 var iconPath = new global::Avalonia.Controls.Shapes.Path
                 {
                     Data = iconData,
-                    Fill = new SolidColorBrush(Color.FromArgb(0xFF, 0xE5, 0xE5, 0xE5)),
+                    Fill = AppColors.TextPrimary,
                     Width = 14, Height = 14,
                     Stretch = Stretch.Uniform,
                     VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center
@@ -267,8 +265,7 @@ public partial class MainWindow
             {
                 Text = text,
                 FontSize = 13,
-                Foreground = new SolidColorBrush(Color.FromArgb(0xFF, 0xE5, 0xE5, 0xE5)),
-                Margin = new Thickness(10, 0, 0, 0),
+                Foreground = AppColors.TextPrimary,
                 VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center
             };
             Grid.SetColumn(textBlock, 1);
@@ -280,7 +277,7 @@ public partial class MainWindow
                 {
                     Text = shortcut,
                     FontSize = 11,
-                    Foreground = new SolidColorBrush(Color.FromArgb(0x50, 0xFF, 0xFF, 0xFF)),
+                    Foreground = AppColors.TextOnDarkDisabled,
                     VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center
                 };
                 Grid.SetColumn(shortcutBlock, 2);
@@ -290,7 +287,7 @@ public partial class MainWindow
             var btn = new Button
             {
                 Content = grid,
-                Background = Brushes.Transparent,
+                Background = AppColors.Transparent,
                 BorderThickness = new Thickness(0),
                 Padding = new Thickness(10, 7),
                 HorizontalContentAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch,
@@ -298,9 +295,9 @@ public partial class MainWindow
             };
 
             btn.PointerEntered += (_, _) =>
-                btn.Background = new SolidColorBrush(Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF));
+                btn.Background = AppColors.HoverSubtle;
             btn.PointerExited += (_, _) =>
-                btn.Background = Brushes.Transparent;
+                btn.Background = AppColors.Transparent;
             btn.Click += (_, _) => { action(); flyout.Hide(); };
 
             stack.Children.Add(btn);
@@ -311,7 +308,7 @@ public partial class MainWindow
 
         stack.Children.Add(new Separator
         {
-            Background = new SolidColorBrush(Color.FromArgb(0x33, 0xFF, 0xFF, 0xFF)),
+            Background = AppColors.DividerStrong,
             Margin = new Thickness(4, 2)
         });
 
@@ -322,7 +319,7 @@ public partial class MainWindow
 
         stack.Children.Add(new Separator
         {
-            Background = new SolidColorBrush(Color.FromArgb(0x33, 0xFF, 0xFF, 0xFF)),
+            Background = AppColors.DividerStrong,
             Margin = new Thickness(4, 2)
         });
 
@@ -333,7 +330,7 @@ public partial class MainWindow
         {
             Text = "Aspect Ratio",
             FontSize = 13,
-            Foreground = new SolidColorBrush(Color.FromArgb(0xFF, 0xE5, 0xE5, 0xE5)),
+            Foreground = AppColors.TextPrimary,
             Margin = new Thickness(10, 7, 0, 7),
             VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center
         };
@@ -349,7 +346,7 @@ public partial class MainWindow
         {
             Text = "Speed",
             FontSize = 13,
-            Foreground = new SolidColorBrush(Color.FromArgb(0xFF, 0xE5, 0xE5, 0xE5)),
+            Foreground = AppColors.TextPrimary,
             Margin = new Thickness(10, 7, 0, 7),
             VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center
         };
@@ -362,7 +359,7 @@ public partial class MainWindow
 
         stack.Children.Add(new Separator
         {
-            Background = new SolidColorBrush(Color.FromArgb(0x33, 0xFF, 0xFF, 0xFF)),
+            Background = AppColors.DividerStrong,
             Margin = new Thickness(4, 2)
         });
 
@@ -371,8 +368,8 @@ public partial class MainWindow
 
         flyout.Content = new Border
         {
-            Background = new SolidColorBrush(Color.FromArgb(0xF0, 0x1E, 0x1E, 0x2E)),
-            BorderBrush = new SolidColorBrush(Color.FromArgb(0x33, 0xFF, 0xFF, 0xFF)),
+            Background = AppColors.DialogSurface,
+            BorderBrush = AppColors.DividerStrong,
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(8),
             Padding = new Thickness(4),

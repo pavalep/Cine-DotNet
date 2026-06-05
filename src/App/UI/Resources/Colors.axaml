@@ -142,5 +142,49 @@
     <!-- ======================== -->
     <SolidColorBrush x:Key="WindowButtonHoverBackground" Color="#2BFFFFFF" />
     <SolidColorBrush x:Key="WindowCloseButtonHoverBackground" Color="#E81123" />
+
+    <!-- ======================== -->
+    <!--  APP COLOR SYSTEM        -->
+    <!--  Matches AppColors.cs    -->
+    <!-- ======================== -->
+    <SolidColorBrush x:Key="AppBackground" Color="#FF0C0C0E" />
+    <SolidColorBrush x:Key="AppSurface" Color="#FF1A1A2E" />
+    <SolidColorBrush x:Key="AppSurfaceLight" Color="#FF2A2A3E" />
+    <SolidColorBrush x:Key="AppDialogSurface" Color="#F01E1E2E" />
+
+    <SolidColorBrush x:Key="AppAccent" Color="#FF6CB4FF" />
+    <SolidColorBrush x:Key="AppAccentDim" Color="#804AA3FF" />
+    <SolidColorBrush x:Key="AppAccentLight" Color="#FF4AA3FF" />
+
+    <SolidColorBrush x:Key="AppTextPrimary" Color="{StaticResource Gray100}" />
+    <SolidColorBrush x:Key="AppTextOnDarkPrimary" Color="#CCFFFFFF" />
+    <SolidColorBrush x:Key="AppTextOnDarkSecondary" Color="#AAFFFFFF" />
+    <SolidColorBrush x:Key="AppTextOnDarkHint" Color="#99FFFFFF" />
+    <SolidColorBrush x:Key="AppTextOnDarkDisabled" Color="#50FFFFFF" />
+    <SolidColorBrush x:Key="AppTextOnDarkTertiary" Color="#80FFFFFF" />
+    <SolidColorBrush x:Key="AppTextOnDarkSubtle" Color="#60FFFFFF" />
+
+    <SolidColorBrush x:Key="AppOverlay" Color="#B0000000" />
+    <SolidColorBrush x:Key="AppOverlayLight" Color="#80000000" />
+    <SolidColorBrush x:Key="AppOverlayDark" Color="#66000000" />
+    <SolidColorBrush x:Key="AppOverlayChrome" Color="#BD000000" />
+
+    <SolidColorBrush x:Key="AppDivider" Color="#26FFFFFF" />
+    <SolidColorBrush x:Key="AppDividerStrong" Color="#33FFFFFF" />
+    <SolidColorBrush x:Key="AppBorderLight" Color="#40FFFFFF" />
+    <SolidColorBrush x:Key="AppBorderDim" Color="#20FFFFFF" />
+
+    <SolidColorBrush x:Key="AppHoverSubtle" Color="#14FFFFFF" />
+    <SolidColorBrush x:Key="AppHover" Color="#1FFFFFFF" />
+    <SolidColorBrush x:Key="AppHoverStrong" Color="#2BFFFFFF" />
+    <SolidColorBrush x:Key="AppPressed" Color="#40FFFFFF" />
+
+    <SolidColorBrush x:Key="AppIconLight" Color="#44FFFFFF" />
+    <SolidColorBrush x:Key="AppIconDim" Color="#30FFFFFF" />
+    <SolidColorBrush x:Key="AppTextMuted" Color="#AAAAAA" />
+
+    <!-- Drag-drop accent (Windows blue) -->
+    <SolidColorBrush x:Key="AppDragAccent" Color="#FF0078D7" />
+    <SolidColorBrush x:Key="AppDragAccentDim" Color="#400078D7" />
 </Styles.Resources>
 </Styles>

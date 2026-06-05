@@ -6,7 +6,6 @@
             IsVisible="False"
             HorizontalAlignment="Center"
             VerticalAlignment="Bottom"
-            Margin="0,0,0,100"
             Padding="12,8,16,8"
             CornerRadius="8"
             Background="{StaticResource OsdBackground}"

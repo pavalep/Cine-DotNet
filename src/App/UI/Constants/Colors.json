@@ -1,0 +1,43 @@
+{
+  "Background":       "#FF0C0C0E",
+  "Surface":          "#FF1A1A2E",
+  "SurfaceLight":     "#FF2A2A3E",
+  "DialogSurface":    "#F01E1E2E",
+
+  "Accent":           "#FF6CB4FF",
+  "AccentDim":        "#804AA3FF",
+  "AccentLight":      "#FF4AA3FF",
+  "DragAccent":       "#FF0078D7",
+  "DragAccentDim":    "#400078D7",
+
+  "TextPrimary":      "#FFE5E5E5",
+  "TextSecondary":    "#99E5E5E5",
+  "TextTertiary":     "#88E5E5E5",
+  "TextOnDarkPrimary":    "#CCFFFFFF",
+  "TextOnDarkSecondary":   "#AAFFFFFF",
+  "TextOnDarkHint":    "#99FFFFFF",
+  "TextOnDarkDisabled":  "#50FFFFFF",
+  "TextOnDarkTertiary":  "#80FFFFFF",
+  "TextOnDarkSubtle":    "#60FFFFFF",
+  "TextMuted":        "#AAAAAA",
+  "TextOnAccent":     "#000000",
+
+  "Overlay":          "#B0000000",
+  "OverlayLight":     "#80000000",
+  "OverlayDark":      "#66000000",
+  "OverlayOpaque":    "#CC000000",
+  "OverlayChrome":    "#BD000000",
+
+  "Divider":          "#26FFFFFF",
+  "DividerStrong":    "#33FFFFFF",
+  "BorderLight":      "#40FFFFFF",
+  "BorderDim":        "#20FFFFFF",
+
+  "HoverSubtle":      "#14FFFFFF",
+  "Hover":            "#1FFFFFFF",
+  "HoverStrong":      "#2BFFFFFF",
+  "Pressed":          "#40FFFFFF",
+
+  "IconLight":        "#44FFFFFF",
+  "IconDim":          "#30FFFFFF"
+}

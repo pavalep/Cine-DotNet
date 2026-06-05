@@ -33,7 +33,6 @@ public partial class SeekBarControl : AvaloniaUserControl
         UpdatePositionLabel();
     }
 
-    public event EventHandler<double>? SeekRequested;
     public event EventHandler? SeekStarted;
     public event EventHandler? SeekEnded;
     public event EventHandler<double>? SeekWheelChanged;
@@ -124,20 +123,21 @@ public partial class SeekBarControl : AvaloniaUserControl
         UpdateChapterMarkers();
     }
 
+    private double _lastLayoutWidth;
+
     /// <summary>
     /// Fallback re-render when layout changes (catches cases where
     /// SizeChanged might not fire or width is temporarily 0).
+    /// Only re-renders when width actually changes to avoid redundant work.
     /// </summary>
     private void OnSeekAreaLayoutUpdated(object? sender, EventArgs e)
     {
-        if (SeekArea.Bounds.Width <= 0) return;
-        // Only re-render if fill width doesn't match current state
-        var currentFillWidth = SeekFill.Width;
-        if (currentFillWidth <= 0 && (_lastDuration.TotalSeconds > 0))
-        {
-            UpdateSeekBar();
-            UpdateChapterMarkers();
-        }
+        var w = SeekArea.Bounds.Width;
+        if (w <= 0) return;
+        if (Math.Abs(w - _lastLayoutWidth) < 1) return;
+        _lastLayoutWidth = w;
+        UpdateSeekBar();
+        UpdateChapterMarkers();
     }
 
     /// <summary>

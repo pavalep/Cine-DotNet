@@ -7,7 +7,7 @@
             Opacity="0" IsVisible="False"
             IsHitTestVisible="False"
             CornerRadius="8" Padding="16"
-            Background="#80000000">
+            Background="{StaticResource AppOverlayLight}">
         <materialIcons:MaterialIcon Kind="Pause"
               Width="48" Height="48"
               Foreground="White" />

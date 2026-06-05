@@ -12,8 +12,8 @@
         <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="8">
             <Panel Width="64" Height="64" HorizontalAlignment="Center">
                 <Path Data="M 32 2 A 30 30 0 1 1 32 62 A 30 30 0 1 1 32 2 Z"
-                      Fill="#14FFFFFF"
-                      Stroke="#26FFFFFF"
+                      Fill="{StaticResource AppHoverSubtle}"
+                      Stroke="{StaticResource AppDivider}"
                       StrokeThickness="2" />
                 <Path Data="M 25 20 L 45 32 L 25 44 Z"
                       Fill="{StaticResource OsdForeground}" />
@@ -26,7 +26,7 @@
         <Button Grid.Row="1" Content="Close" HorizontalAlignment="Center" Padding="32,8"
                 Click="OnCloseClick"
                 Background="{StaticResource OsdForeground}"
-                Foreground="Black"
+                Foreground="{StaticResource Black}"
                 CornerRadius="20"
                 FontWeight="SemiBold"
                 BorderThickness="0" />

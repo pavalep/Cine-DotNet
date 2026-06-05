@@ -46,8 +46,8 @@ public partial class StartPage : global::Avalonia.Controls.UserControl
             {
                 Content = name,
                 Tag = path,
-                Background = global::Avalonia.Media.Brushes.Transparent,
-                Foreground = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.FromArgb(0xCC, 0xFF, 0xFF, 0xFF)),
+                Background = AppColors.Transparent,
+                Foreground = AppColors.TextOnDarkPrimary,
                 FontSize = 12,
                 HorizontalContentAlignment = global::Avalonia.Layout.HorizontalAlignment.Left,
                 Padding = new global::Avalonia.Thickness(40, 4),
@@ -55,9 +55,9 @@ public partial class StartPage : global::Avalonia.Controls.UserControl
                 Cursor = new global::Avalonia.Input.Cursor(global::Avalonia.Input.StandardCursorType.Arrow)
             };
             btn.PointerEntered += (_, _) =>
-                btn.Background = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF));
+                btn.Background = AppColors.HoverSubtle;
             btn.PointerExited += (_, _) =>
-                btn.Background = global::Avalonia.Media.Brushes.Transparent;
+                btn.Background = AppColors.Transparent;
             btn.Click += (s, _) =>
             {
                 vm.OpenRecentFile(path);

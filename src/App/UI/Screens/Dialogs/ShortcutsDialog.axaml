@@ -132,7 +132,7 @@
                 Margin="0,0,0,12" Padding="48,8"
                 Click="OnCloseClick"
                 Background="{StaticResource OsdForeground}"
-                Foreground="Black"
+                Foreground="{StaticResource Black}"
                 CornerRadius="20"
                 FontWeight="SemiBold"
                 BorderThickness="0" />

@@ -1,30 +1,30 @@
 using System;
 using System.IO;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Media.Imaging;
+using Avalonia.Media;
 using Avalonia.Threading;
-using Key = Avalonia.Input.Key;
+using Cine.Avalonia.Controls;
 using KeyEventArgs = Avalonia.Input.KeyEventArgs;
-using Cine.Avalonia.Helpers;
-using PointerPressedEventArgs = Avalonia.Input.PointerPressedEventArgs;
-using Cine.Media.Interfaces;
 
 namespace Cine.Avalonia.Views.Dialogs;
 
 public partial class PipWindow : Window
 {
-    private readonly IMediaPlayer _mainPlayer;
-    private bool _disposed;
     private bool _isPinned;
     private bool _isClosing;
-    private CancellationTokenSource? _pollCts;
-    private int _frameCount;
+    private bool _isPlaying = true;
+    private DwmThumbnailManager? _dwmManager;
+    private int _thumbnailId;
+    private DispatcherTimer? _hoverTimer;
+    private bool _isUpdatingSeekFromExternal;
+
+    // ────── Player control events ──────
+    public event EventHandler? PlayPauseRequested;
+    public event EventHandler<double>? SeekRequested;
 
     // ────── State persistence ──────
     private static readonly string PipStatePath = Path.Combine(
@@ -33,98 +33,97 @@ public partial class PipWindow : Window
 
     private record PipState(int X, int Y, int W, int H, bool Pinned);
 
-    public PipWindow(IMediaPlayer mainPlayer)
+    public PipWindow()
     {
-        _mainPlayer = mainPlayer;
         InitializeComponent();
         TitleBar.PointerPressed += OnTitleBarPointerPressed;
+        VideoArea.PointerPressed += OnVideoAreaPointerPressed;
         KeyDown += OnKeyDown;
+
+        PipSeekSlider.PropertyChanged += OnSeekSliderChanged;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // DWM THUMBNAIL MIRROR
+    // ═══════════════════════════════════════════════════════════════
+
+    public void EnableDwmMirror(DwmThumbnailManager manager)
+    {
+        _dwmManager = manager;
+
+        var handle = TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
+        if (handle == IntPtr.Zero) return;
+
+        _thumbnailId = manager.RegisterTarget(handle);
+    }
+
+    public void DisableDwmMirror()
+    {
+        if (_dwmManager != null && _thumbnailId > 0)
+        {
+            _dwmManager.UnregisterTarget(_thumbnailId);
+            _thumbnailId = 0;
+            _dwmManager = null;
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // PLAYBACK SYNC (called externally)
+    // ═══════════════════════════════════════════════════════════════
+
+    /// <summary>Update the play/pause icon state from the main player.</summary>
+    public void SetPlayingState(bool isPlaying)
+    {
+        _isPlaying = isPlaying;
+        if (PlayPauseIcon != null)
+            PlayPauseIcon.Data = isPlaying
+                ? (Geometry)this.FindResource("PauseIcon")!
+                : (Geometry)this.FindResource("PlayIcon")!;
+    }
+
+    /// <summary>Update position and duration display.</summary>
+    public void UpdatePosition(double positionSec, double durationSec)
+    {
+        _isUpdatingSeekFromExternal = true;
+        try
+        {
+            if (PipSeekSlider != null && durationSec > 0)
+            {
+                var normalized = Math.Clamp(positionSec / durationSec, 0, 1);
+                PipSeekSlider.Value = normalized * 1000;
+            }
+
+            if (PipTimeLabel != null)
+            {
+                var pos = TimeSpan.FromSeconds(positionSec);
+                var dur = TimeSpan.FromSeconds(durationSec);
+                PipTimeLabel.Text = $"{(int)pos.TotalMinutes:D2}:{pos.Seconds:D2} / {(int)dur.TotalMinutes:D2}:{dur.Seconds:D2}";
+            }
+        }
+        finally
+        {
+            _isUpdatingSeekFromExternal = false;
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════
     // LIFECYCLE
     // ═══════════════════════════════════════════════════════════════
 
-    public void StartPolling()
-    {
-        _pollCts = new CancellationTokenSource();
-        _ = PollFramesAsync(_pollCts.Token);
-    }
-
-    public void StopPolling()
-    {
-        _pollCts?.Cancel();
-        _pollCts?.Dispose();
-        _pollCts = null;
-    }
-
-    private async Task PollFramesAsync(CancellationToken ct)
-    {
-        var timerInterval = TimeSpan.FromMilliseconds(16); // ~60fps
-        var sw = new System.Diagnostics.Stopwatch();
-
-        while (!ct.IsCancellationRequested && !_disposed)
-        {
-            sw.Restart();
-            var raw = _mainPlayer.ScreenshotRaw(out var w, out var h);
-
-            if (raw != null && w > 0 && h > 0 && !ct.IsCancellationRequested)
-            {
-                await Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    if (!_disposed && PipFrameImage != null)
-                    {
-                        try
-                        {
-                            var size = new global::Avalonia.PixelSize(w, h);
-                            var dpi = new global::Avalonia.Vector(96, 96);
-                            int stride = w * 4;
-                            var wb = new WriteableBitmap(size, dpi);
-
-                            using (var fb = wb.Lock())
-                            {
-                                // Copy raw BGRA data row by row (handles stride differences)
-                                int srcStride = raw.Length / h;
-                                for (int y = 0; y < h; y++)
-                                {
-                                    var srcOffset = y * srcStride;
-                                    var dstOffset = y * stride;
-                                    if (srcOffset + stride <= raw.Length)
-                                    {
-                                        System.Runtime.InteropServices.Marshal.Copy(
-                                            raw, srcOffset,
-                                            IntPtr.Add(fb.Address, dstOffset),
-                                            Math.Min(stride, raw.Length - srcOffset));
-                                    }
-                                }
-                            }
-
-                            PipFrameImage.Source = wb;
-                            _frameCount++;
-                        }
-                        catch { }
-                    }
-                }, DispatcherPriority.Normal, ct);
-            }
-
-            var elapsed = sw.ElapsedMilliseconds;
-            var delay = (int)(timerInterval.TotalMilliseconds - elapsed);
-            if (delay > 0)
-                await Task.Delay(delay, ct).ConfigureAwait(false);
-            else
-                await Task.Yield();
-        }
-    }
-
     protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
 
-        if (PipFileNameLabel != null)
-            PipFileNameLabel.Text = "Cine PIP";
-
         RestoreState();
-        StartPolling();
+        SetupHoverTimer();
+
+        // Register DWM thumbnail if manager was set but handle wasn't available yet
+        if (_dwmManager != null && _thumbnailId == 0)
+        {
+            var handle = TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
+            if (handle != IntPtr.Zero)
+                _thumbnailId = _dwmManager.RegisterTarget(handle);
+        }
     }
 
     protected override void OnClosing(WindowClosingEventArgs e)
@@ -132,11 +131,68 @@ public partial class PipWindow : Window
         if (_isClosing) return;
         _isClosing = true;
 
-        StopPolling();
+        _hoverTimer?.Stop();
+        _hoverTimer = null;
+        DisableDwmMirror();
         SaveState();
-        PipFrameImage.Source = null;
 
         base.OnClosing(e);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // HOVER AUTO-HIDE
+    // ═══════════════════════════════════════════════════════════════
+
+    private void SetupHoverTimer()
+    {
+        _hoverTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+        _hoverTimer.Tick += (_, _) =>
+        {
+            if (HoverOverlay != null)
+                HoverOverlay.Opacity = 0;
+            // Auto-hide title bar too — saves vertical space in PIP
+            if (TitleBar != null)
+                TitleBar.Opacity = 0;
+            _hoverTimer?.Stop();
+        };
+    }
+
+    private void OnHoverOverlayPointerEntered(object? sender, PointerEventArgs e)
+    {
+        // Show title bar and controls on hover
+        if (TitleBar != null)
+            TitleBar.Opacity = 1;
+        _hoverTimer?.Stop();
+    }
+
+    private void OnHoverOverlayPointerExited(object? sender, PointerEventArgs e)
+    {
+        _hoverTimer?.Start();
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // PLAYER CONTROLS
+    // ═══════════════════════════════════════════════════════════════
+
+    private void OnPlayPauseClick(object? sender, RoutedEventArgs e)
+    {
+        _isPlaying = !_isPlaying;
+        SetPlayingState(_isPlaying);
+        PlayPauseRequested?.Invoke(this, EventArgs.Empty);
+
+        // Reset hover timer after interaction
+        _hoverTimer?.Stop();
+        _hoverTimer?.Start();
+    }
+
+    private void OnSeekSliderChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
+    {
+        if (_isUpdatingSeekFromExternal) return;
+        if (e.Property == Slider.ValueProperty && PipSeekSlider != null)
+        {
+            var normalized = PipSeekSlider.Value / 1000.0;
+            SeekRequested?.Invoke(this, normalized);
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -184,6 +240,17 @@ public partial class PipWindow : Window
             BeginMoveDrag(e);
     }
 
+    private void OnVideoAreaPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        // Click on video area toggles play/pause
+        OnPlayPauseClick(sender, e);
+    }
+
+    private void OnMinimizeClick(object? sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState.Minimized;
+    }
+
     private void OnPinToggle(object? sender, RoutedEventArgs e)
     {
         _isPinned = !_isPinned;
@@ -200,7 +267,10 @@ public partial class PipWindow : Window
 
     private void OnCloseClick(object? sender, RoutedEventArgs e)
     {
-        StopPolling();
+        _isClosing = true;
+        _hoverTimer?.Stop();
+        _hoverTimer = null;
+        DisableDwmMirror();
         SaveState();
         Close();
     }
@@ -209,8 +279,8 @@ public partial class PipWindow : Window
     {
         if (e.Key == Key.Escape)
             OnCloseClick(sender, e);
-        if (e.Key == Key.F)
-            OnCloseClick(sender, e);
+        if (e.Key == Key.Space)
+            OnPlayPauseClick(sender, e);
     }
 
     public new void Close()
@@ -218,9 +288,10 @@ public partial class PipWindow : Window
         if (!_isClosing)
         {
             _isClosing = true;
-            StopPolling();
+            _hoverTimer?.Stop();
+            _hoverTimer = null;
+            DisableDwmMirror();
             SaveState();
-            PipFrameImage.Source = null;
         }
         base.Close();
     }

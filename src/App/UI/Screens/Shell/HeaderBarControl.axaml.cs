@@ -262,10 +262,22 @@ public partial class HeaderBarControl : AvaloniaUserControl
 
     private void OnHeaderPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        var props = e.GetCurrentPoint(this).Properties;
+        if (props.IsLeftButtonPressed)
         {
             var w = GetParentWindow();
-            if (w != null) w.BeginMoveDrag(e);
+            if (w == null) return;
+
+            // Double-click to maximize/restore
+            if (e.ClickCount >= 2)
+            {
+                w.WindowState = w.WindowState == WindowState.Maximized
+                    ? WindowState.Normal
+                    : WindowState.Maximized;
+                return;
+            }
+
+            w.BeginMoveDrag(e);
         }
     }
 

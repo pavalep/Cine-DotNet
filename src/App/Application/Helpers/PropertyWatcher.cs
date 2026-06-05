@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using System.Linq.Expressions;
+using Avalonia.Threading;
 
 namespace Cine.Avalonia.Helpers;
 
@@ -41,6 +42,15 @@ public class PropertyWatcher : IDisposable
 
     private void OnPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        // PropertyChanged may fire from background threads (e.g. RefreshState
+        // after await continuation). All watcher callbacks touch UI, so marshal
+        // to UI thread if needed.
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.OnUiThread(() => OnPropertyChanged(sender, e));
+            return;
+        }
+
         foreach (var (name, handler) in _watches)
         {
             if (name != e.PropertyName) continue;

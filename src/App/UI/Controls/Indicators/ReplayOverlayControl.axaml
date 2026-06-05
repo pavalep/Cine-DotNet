@@ -6,7 +6,7 @@
     <Border x:Name="ReplayOverlay"
             ZIndex="30" IsVisible="False"
             HorizontalAlignment="Center" VerticalAlignment="Center"
-            Background="#80000000" CornerRadius="12" Padding="24">
+            Background="{StaticResource AppOverlayLight}" CornerRadius="12" Padding="24">
         <StackPanel Spacing="8" HorizontalAlignment="Center">
             <Button x:Name="BtnReplay"
                     Classes="circular-transport" Width="56" Height="56"

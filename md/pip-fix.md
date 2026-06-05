@@ -352,60 +352,132 @@ public PipWindow? EnterPip()
 }
 ```
 
-### Flow Summary
+### Step-by-Step Execution Plan
 
-```
-App startup:
-  1. D3D11VideoHost attaches → creates hidden WS_POPUP window
-  2. MpvPlayer.InitializeRenderer(hiddenHwnd) → mpv renders to hidden window
-  3. DwmThumbnailManager.SetSource(hiddenHwnd)
-  4. DwmThumbnailManager.RegisterTarget(mainWindowHwnd) → main window shows video
+Follow these sub-steps **in order**. Build after each step to catch errors immediately.
 
-PIP button clicked:
-  5. PipWindow.Show()
-  6. PipWindow.EnableDwmMirror(dwmManager) → DWM shows same video in PIP
+#### Step 3.1 — Clean: Remove dead code from Phase 2
 
-PIP closed:
-  7. DwmThumbnailManager.UnregisterTarget(pipId)
-  8. PipWindow.Close()
-```
+**Do this first** — clean slate before Phase 3.
 
-### Cost Summary
+| Sub-step | File | Action |
+|----------|------|--------|
+| 3.1.1 | `PipService.cs` | Remove `_playerService` field and constructor parameter (unused). Remove `PipOpened`, `PipError`, `PipClosed` events (zero subscribers). Remove `SetCurrentFilePath()` (used only for CanPip check — can be simplified). |
+| 3.1.2 | `PipWindow.axaml.cs` | Remove `_frameCount` field (written never read). Remove `using Cine.Avalonia.Helpers` (unused). |
+| 3.1.3 | `PipWindow.axaml` | Remove `PipVolumeSlider`, `PipSyncLabel`, volume icon Grid entirely (dead UI). |
+| 3.1.4 | `MainWindow.Input.cs` | Remove `case Key.I: Handle(() => { });` (empty handler, line 151). |
+| 3.1.5 | `pip-fix.md` | Mark Phase 2 as "Cleaned" after build verification. |
 
-| Resource | Phase 2 (Screenshot) | Phase 3 (DWM Thumbnail) |
-|----------|---------------------|------------------------|
-| **GPU decode** | 1× | 1× (same) |
-| **CPU per frame** | ~1-2ms memcpy | **0ms** |
-| **RAM** | 1 GPU texture + 1 CPU buffer | **1 GPU texture only** |
-| **Main FPS** | 60fps | **60fps** (same) |
-| **PIP FPS** | ~30fps | **60fps** |
-| **Extra cost per frame** | memcpy + PNG decode | **one GPU composition** (~0%) |
+**Build check:** `dotnet build` — 0 errors, 0 warnings.
 
-### Files to Create
+#### Step 3.2 — Create: DwmThumbnailManager.cs
 
-| File | Lines | Purpose |
-|------|-------|---------|
-| `DwmThumbnailManager.cs` | ~150 | DWM thumbnail registration, P/Invoke, target management |
+| Sub-step | Action |
+|----------|--------|
+| 3.2.1 | Create new file `src/App/UI/Controls/Video/DwmThumbnailManager.cs` |
+| 3.2.2 | Add `DwmRegisterThumbnail`, `DwmUnregisterThumbnail`, `DwmUpdateThumbnailProperties` P/Invokes |
+| 3.2.3 | Add `DWM_THUMBNAIL_PROPERTIES` struct with `dwFlags`, `opacity`, `fVisible`, `rcSource`, `fSourceClientAreaOnly` |
+| 3.2.4 | Implement `SetSource(IntPtr)`, `RegisterTarget(destHwnd, sourceRect)`, `UnregisterTarget(id)`, `UpdateTarget(id, rect)`, `Dispose()` |
+| 3.2.5 | Add `public IntPtr SourceHwnd => _sourceHwnd;` for D3D11VideoHost to read |
 
-### Files to Modify
+**Build check:** `dotnet build` — 0 errors.
 
-| File | Change |
-|------|--------|
-| `D3D11VideoHost.cs` | Replace `WS_CHILD` with `WS_POPUP` hidden window. Use DWM thumbnails instead of child window positioning. Remove `UpdateVideoRegion()`, `WndProc`, `WM_NCHITTEST` forwarding. |
-| `PipWindow.axaml.cs` | Remove screenshot polling timer. Add DWM mirror methods. |
-| `PipWindow.axaml` | No changes (already has Image control) |
-| `PipService.cs` | Pass `DwmThumbnailManager` instead of `IMediaPlayer` |
-| `MainWindow.Core.cs` | Create `DwmThumbnailManager` as singleton, wire into PipService |
-| `MainWindow.Pip.cs` | No changes needed |
+#### Step 3.3 — Rewrite: D3D11VideoHost.cs
 
-### Files Unchanged
+Replace child window with hidden top-level window.
 
-| File | Reason |
-|------|--------|
-| `MpvPlayer.cs` | mpv still gets a HWND, doesn't care if it's hidden or visible |
-| `PlayerService.cs` | No changes needed |
-| `IMediaPlayer.cs` | ScreenshotRaw stays for screenshots, but PIP no longer needs it |
-| `MainWindow.Input.cs` | No changes |
+| Sub-step | Action |
+|----------|--------|
+| 3.3.1 | Rename `_childHwnd` → `_hiddenHwnd` (field). Rename `ChildWindowCreated` → `HiddenWindowCreated`. Rename `VideoHwnd` → `HiddenWindowHwnd` (public property). |
+| 3.3.2 | In `TryCreateNow()` / `CreateChildWindow()`: change `WS_CHILD` → `WS_POPUP`. Remove `_parentHwnd` requirement — hidden window is top-level, no parent. Add `WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW`. Remove `SetWindowRgn` (no more clipping). |
+| 3.3.3 | In `ArrangeOverride()`: remove `TranslatePoint` (no child positioning needed). Instead, call `DwmThumbnailManager.UpdateTarget()` for main window's thumbnail position. |
+| 3.3.4 | Remove `WndProc`, `WM_NCHITTEST`, `WM_ERASEBKGND`, `WM_MOUSEACTIVATE` handlers (child-window specific). |
+| 3.3.5 | Remove `UpdateVideoRegion()` (not needed for top-level window). |
+| 3.3.6 | Remove `IsVideoSurfaceVisibleProperty` (hidden window is always visible to DWM). |
+| 3.3.7 | Add `DwmThumbnailManager` as a dependency — accept via constructor or property. |
+| 3.3.8 | Update `MainWindow.Core.cs` `OnOpened`: instead of `_videoHost.ParentHwnd = handle`, call `_videoHost.SetMainHwnd(handle)` which registers a DWM thumbnail for the main window. |
+
+**Build check:** `dotnet build` — 0 errors. Run app, verify video plays normally in main window.
+
+#### Step 3.4 — Rewrite: PipWindow.axaml.cs
+
+Remove screenshot timer, add DWM mirror.
+
+| Sub-step | Action |
+|----------|--------|
+| 3.4.1 | Remove `_mainPlayer` field, constructor parameter (no longer needed). |
+| 3.4.2 | Remove `_pollCts`, `_frameCount`, `StartPolling()`, `StopPolling()`, `PollFramesAsync()` entirely. |
+| 3.4.3 | Add `_dwmManager` field, `_thumbnailId` field (int). |
+| 3.4.4 | Add `public void EnableDwmMirror(DwmThumbnailManager manager)`: calls `manager.RegisterTarget(pipHwnd, ...)`. |
+| 3.4.5 | Add `public void DisableDwmMirror()`: calls `manager.UnregisterTarget(_thumbnailId)`. |
+| 3.4.6 | In `OnClosing`/`Close()`: call `DisableDwmMirror()` instead of `StopPolling()`. |
+| 3.4.7 | In `OnOpened()`: remove `StartPolling()` call. |
+| 3.4.8 | Remove `using System.Text.Json` (no longer needed if state persistence removed). |
+| 3.4.9 | Remove `PipFrameImage.Source = null` cleanup (DWM thumbnail dies with the window). |
+
+**Build check:** `dotnet build` — 0 errors.
+
+#### Step 3.5 — Update: PipService.cs
+
+Remove Phase 2 logic, wire DWM manager.
+
+| Sub-step | Action |
+|----------|--------|
+| 3.5.1 | Remove constructor dependency on `PlayerService` (field + parameter). |
+| 3.5.2 | Add `DwmThumbnailManager` as constructor dependency. |
+| 3.5.3 | Remove `_mainPlayer` field. Remove `Initialize(IMediaPlayer)`. Remove `SetCurrentFilePath(string)`. Remove `CanPip` property. |
+| 3.5.4 | Simplify `EnterPip()`: create `PipWindow()` (no args), `pipWindow.Show()`, `pipWindow.EnableDwmMirror(_dwmManager)`, return. |
+| 3.5.5 | Remove `_playerService` field, `CleanupPip()` with `Closed -= handler` (not needed). |
+| 3.5.6 | Add `_canPip` flag (set from outside, or check if main player has file loaded). |
+
+**Build check:** `dotnet build` — 0 errors.
+
+#### Step 3.6 — Update: MainWindow (Core + Pip)
+
+Wire everything together.
+
+| Sub-step | Action |
+|----------|--------|
+| 3.6.1 | `MainWindow.Core.cs`: Create `DwmThumbnailManager` as singleton, pass to `PipService` constructor. |
+| 3.6.2 | `MainWindow.Core.cs`: On `_videoHost.HiddenWindowCreated`, call `_dwmManager.SetSource(hiddenHwnd)`. |
+| 3.6.3 | `MainWindow.Pip.cs`: Simplify `OnPipToggled` — remove `_pipService.Initialize()`, `SetCurrentFilePath()` calls. |
+
+**Build check:** `dotnet build` — 0 errors. Run app, verify video plays in main window.
+
+#### Step 3.7 — Wire PIP button to DWM mirror
+
+| Sub-step | Action |
+|----------|--------|
+| 3.7.1 | In `OnPipToggled`: call `_pipService.EnterPip()` which internally does `_dwmManager.RegisterTarget(pipHwnd)`. |
+| 3.7.2 | In `OnPipToggled` on exit: call `_pipService.ExitPip()` which internally does `_dwmManager.UnregisterTarget(pipId)`. |
+
+**Build check:** `dotnet build` — 0 errors. Run app, open video, test PIP button.
+
+#### Step 3.8 — Handle resize of main window
+
+| Sub-step | Action |
+|----------|--------|
+| 3.8.1 | In `D3D11VideoHost.ArrangeOverride`: after computing new bounds, call `_dwmManager.UpdateTarget(mainWindowThumbId, sourceRect)` to reposition the video display area. |
+
+**Build check:** Run app, resize main window, verify video display area stays correct.
+
+#### Step 3.9 — Handle resize of PIP window
+
+| Sub-step | Action |
+|----------|--------|
+| 3.9.1 | In `PipWindow` constructor or `OnOpened`: subscribe to `SizeChanged` event. On resize, call `_dwmManager.UpdateTarget(_thumbnailId, sourceRect)`. |
+
+**Build check:** Run app, resize PIP window, verify video fills correctly.
+
+#### Step 3.10 — Final cleanup pass
+
+| Sub-step | Action |
+|----------|--------|
+| 3.10.1 | Remove any remaining Phase 2 leftovers: `using Cine.Media.Interfaces` from PipWindow (if unused), `ScreenshotRaw()` call references in PIP code. |
+| 3.10.2 | Validate: `dotnet build`, run app, test: open video → PIP on → PIP off → PIP on again → close app. |
+| 3.10.3 | Check debug logs in `cine_startup.log` for any DWM-related errors. |
+
+---
 
 ### Rollback Plan
 

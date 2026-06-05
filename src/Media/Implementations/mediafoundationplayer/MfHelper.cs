@@ -133,7 +133,7 @@ internal sealed class MfHelper : IDisposable
     {
         ppv = IntPtr.Zero;
         if (unk == IntPtr.Zero) return unchecked((int)0x80004003);
-        return Marshal.QueryInterface(unk, ref iid, out ppv);
+        return Marshal.QueryInterface(unk, in iid, out ppv);
     }
     #endregion
 

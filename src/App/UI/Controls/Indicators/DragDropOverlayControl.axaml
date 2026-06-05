@@ -5,11 +5,11 @@
     <Border x:Name="DragDropOverlay"
             IsVisible="False"
             IsHitTestVisible="False"
-            Background="#B0000000"
+            Background="{StaticResource AppOverlay}"
             CornerRadius="8"
             Margin="12"
             BorderThickness="2"
-            BorderBrush="#804aa3ff"
+            BorderBrush="{StaticResource AppAccentDim}"
             VerticalAlignment="Stretch"
             HorizontalAlignment="Stretch">
         <Border.Transitions>

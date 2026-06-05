@@ -28,12 +28,12 @@ public partial class MainWindow
                 var dt = sp.FindControl<Border>("DropTarget");
                 if (dt != null)
                 {
-                    dt.BorderBrush = new SolidColorBrush(Color.FromArgb(0xFF, 0x00, 0x78, 0xD7));
-                    dt.Background = new SolidColorBrush(Color.FromArgb(0x40, 0x00, 0x78, 0xD7));
+                    dt.BorderBrush = AppColors.DragAccent;
+                    dt.Background = AppColors.DragAccentDim;
                 }
             }
 
-            _dropIndicator.Show();
+            _ = _dropIndicator.Show();
         }
         else
         {
@@ -44,7 +44,7 @@ public partial class MainWindow
     private void OnWindowDragLeave(object? sender, RoutedEventArgs e)
     {
         ResetStartPageDragVisuals();
-        _dropIndicator.Hide();
+        _ = _dropIndicator.Hide();
     }
 
     private void OnWindowDrop(object? sender, DragEventArgs e)
@@ -85,8 +85,8 @@ public partial class MainWindow
         var dt = sp.FindControl<Border>("DropTarget");
         if (dt != null)
         {
-            dt.BorderBrush = new SolidColorBrush(Color.FromArgb(0x40, 0xFF, 0xFF, 0xFF));
-            dt.Background = new SolidColorBrush(Color.FromArgb(0x20, 0xFF, 0xFF, 0xFF));
+            dt.BorderBrush = AppColors.BorderLight;
+            dt.Background = AppColors.BorderDim;
         }
     }
 }

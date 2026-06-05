@@ -11,7 +11,7 @@ namespace Cine.Avalonia;
 
 public partial class MainWindow
 {
-    private DispatcherTimer? _pauseIndicatorTimer;
+    private TimeSpan _lastPositionTextTime = TimeSpan.MinValue;
 
     private async void OnMediaOpened(object? sender, EventArgs e)
     {
@@ -30,30 +30,23 @@ public partial class MainWindow
             _viewModel?.RefreshState();
             _isLoading = false;
             _spinnerOverlay.Stop();
-        });
 
-        if (StartPage != null)
-        {
-            await FadeVisual(StartPage, 1, 0, 200, true);
-            await Dispatcher.UIThread.OnUiThreadAsync(() =>
+            if (StartPage != null)
             {
+                StartPage.Opacity = 0;
                 StartPage.IsVisible = false;
-                StartPage.Opacity = 1;
-            });
-        }
+            }
 
-        if (_videoHost != null)
-        {
-            await Dispatcher.UIThread.OnUiThreadAsync(() =>
+            // Dismiss drag-drop overlay if still showing (with fade animation)
+            if (_dropIndicator.IsShowing)
+                _ = _dropIndicator.Hide();
+
+            if (_videoHost != null)
             {
                 _videoHost.IsVideoSurfaceVisible = true;
-                _videoHost.Opacity = 0;
-            });
-            await FadeVisual(_videoHost, 0, 1, 300, false);
-        }
+                _videoHost.Opacity = 1;
+            }
 
-        await Dispatcher.UIThread.OnUiThreadAsync(() =>
-        {
             ShowUiControls();
             _headerBar.ShowOpenMenu();
 
@@ -92,6 +85,13 @@ public partial class MainWindow
         {
             if (e.IsPaused)
                 _pauseOverlay.Show();
+            else
+                _pauseOverlay.Hide();
+
+            _controlsBox.UpdatePlayPauseIcon();
+
+            // Sync PIP play state
+            SyncPipPlayState();
         });
     }
 
@@ -100,6 +100,7 @@ public partial class MainWindow
         Dispatcher.UIThread.OnUiThread(() =>
         {
             _replayOverlay.Show();
+            _controlsBox.UpdatePlayPauseIcon();
         });
     }
 
@@ -115,9 +116,18 @@ public partial class MainWindow
             {
                 seekBar.UpdatePosition(_lastPosition);
                 seekBar.UpdateDuration(_lastDuration);
-                seekBar.SetPositionText(SeekBarControl.FormatTimeSpan(_lastPosition));
-                seekBar.SetDurationText(SeekBarControl.FormatTimeSpan(_lastDuration));
+
+                // Throttle text updates to ~10fps (only update when the second changes)
+                if (Math.Abs((e.Position - _lastPositionTextTime).TotalSeconds) >= 0.1)
+                {
+                    _lastPositionTextTime = e.Position;
+                    seekBar.SetPositionText(SeekBarControl.FormatTimeSpan(_lastPosition));
+                    seekBar.SetDurationText(SeekBarControl.FormatTimeSpan(_lastDuration));
+                }
             }
+
+            // Sync PIP position if active
+            SyncPipPosition(sender, e);
         });
     }
 
@@ -139,20 +149,17 @@ public partial class MainWindow
             _viewModel?.ClearSession();
             if (pos.TotalSeconds > 0)
             {
+                var player = _playerService?.Player;
+                if (player == null) return;
+
                 EventHandler? handler = null;
-                handler = (s, args) =>
+                handler = (_, _) =>
                 {
-                    var player = _playerService?.Player;
-                    if (player != null)
-                    {
-                        player.Seek(pos);
-                        player.Play();
-                    }
-                    if (player != null)
-                        player.Opened -= handler;
+                    player.Seek(pos);
+                    player.Play();
+                    player.Opened -= handler;
                 };
-                var p = _playerService?.Player;
-                if (p != null) p.Opened += handler;
+                player.Opened += handler;
             }
         }
     }

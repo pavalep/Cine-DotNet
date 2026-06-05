@@ -318,6 +318,9 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
     }
     public int CurrentChapter => _currentChapter;
     public ChapterInfo[] ChapterList => _chapters;
+    public AudioTrackInfo[] AudioSources => Array.Empty<AudioTrackInfo>();
+    public VideoTrackInfo[] VideoSources => Array.Empty<VideoTrackInfo>();
+    public void SelectVideoTrack(int trackIndex) { }
     public HwdecMode HardwareDecoding
     {
         get => _hardwareDecoding; set { _hardwareDecoding = value; ApplyHardwareDecoding(); }

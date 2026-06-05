@@ -12,7 +12,7 @@
         Title="Cine"
         Width="800" Height="600"
         MinWidth="332" MinHeight="187"
-        Background="#FF0C0C0E"
+        Background="{StaticResource AppBackground}"
         TransparencyLevelHint="None"
         WindowStartupLocation="CenterScreen"
         ExtendClientAreaToDecorationsHint="True"
@@ -37,15 +37,17 @@
     </Window.Resources>
 
     <!-- =====================================================================
-         SINGLE OVERLAY PANEL
-         All children overlap — video fills entire window, controls float on top.
-         No row definitions — nothing pushes video off-screen.
+         LAYERED LAYOUT
+         All children overlap in a single Grid cell. Elements declared later
+         render on top. No explicit Panel wrappers — using them would make
+         Panels intercept all mouse events in Avalonia (Panel is always
+         hit-testable regardless of background).
          ===================================================================== -->
-    <Panel x:Name="MainOverlay" Background="Black">
+    <Grid x:Name="MainOverlay" Background="Black">
 
-        <!-- ================================================= -->
-        <!--  LAYER 0: VIDEO + BACKDROP (fills entire window)  -->
-        <!-- ================================================= -->
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <!--  LAYER 0: VIDEO + BACKDROP (renders first, behind overlays)   -->
+        <!-- ══════════════════════════════════════════════════════════════ -->
 
         <!-- Playback background -->
         <Border Background="{StaticResource PlaybackRadialBackground}"
@@ -67,11 +69,11 @@
         <Border Background="{StaticResource VignetteOverlay}"
                 IsHitTestVisible="False" />
 
-        <!-- ================================================= -->
-        <!--  LAYER 5: UI OVERLAYS (no layout impact on video)  -->
-        <!-- ================================================= -->
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <!--  LAYER 1: UI OVERLAYS (floats on top of video)               -->
+        <!-- ══════════════════════════════════════════════════════════════ -->
 
-        <!-- Start Page -->
+        <!-- Start Page — full viewport, opaque background -->
         <local:StartPage x:Name="StartPage" />
 
         <!-- Loading Spinner -->
@@ -110,6 +112,5 @@
         <controls:OsdNotificationControl x:Name="OsdNotificationControl"
                                           VerticalAlignment="Bottom"
                                           HorizontalAlignment="Center" />
-
-    </Panel>
+    </Grid>
 </Window>

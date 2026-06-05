@@ -317,7 +317,7 @@
         <Setter Property="Margin" Value="12" />
         <Setter Property="Padding" Value="8,4" />
         <Setter Property="CornerRadius" Value="4" />
-        <Setter Property="Background" Value="#BD000000" />
+        <Setter Property="Background" Value="{StaticResource AppOverlayChrome}" />
     </Style>
     
     <!-- ======================== -->
@@ -417,7 +417,7 @@
     <Style Selector="TextBlock.status-text">
         <Setter Property="FontFamily" Value="{StaticResource NumericFont}" />
         <Setter Property="FontSize" Value="11" />
-        <Setter Property="Foreground" Value="#AAAAAA" />
+        <Setter Property="Foreground" Value="{StaticResource AppTextMuted}" />
     </Style>
     
     <!-- Seek Slider -->
@@ -473,9 +473,9 @@
     <!--  NUMERICUPDOWN DARK THEME -->
     <!-- ======================== -->
     <Style Selector="NumericUpDown">
-        <Setter Property="Background" Value="#1E1E1E" />
+        <Setter Property="Background" Value="{StaticResource Gray900}" />
         <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
-        <Setter Property="BorderBrush" Value="#3D3D3D" />
+        <Setter Property="BorderBrush" Value="{StaticResource Gray700}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="CornerRadius" Value="4" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
@@ -491,16 +491,16 @@
     <Style Selector="NumericUpDown /template/ RepeatButton">
         <Setter Property="Background" Value="#2D2D30" />
         <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
-        <Setter Property="BorderBrush" Value="#3D3D3D" />
+        <Setter Property="BorderBrush" Value="{StaticResource Gray700}" />
     </Style>
     <Style Selector="NumericUpDown /template/ RepeatButton:pointerover">
         <Setter Property="Background" Value="#3D3D3D" />
     </Style>
     <Style Selector="NumericUpDown /template/ RepeatButton:pressed">
-        <Setter Property="Background" Value="#555555" />
+        <Setter Property="Background" Value="{StaticResource Gray600}" />
     </Style>
     <Style Selector="NumericUpDown /template/ TextBox">
-        <Setter Property="Background" Value="#1E1E1E" />
+        <Setter Property="Background" Value="{StaticResource Gray900}" />
         <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
         <Setter Property="BorderThickness" Value="0" />
     </Style>
@@ -521,7 +521,7 @@
         <Setter Property="Background" Value="#21FFFFFF" />
     </Style>
     <Style Selector="Button.window-control.close:pointerover">
-        <Setter Property="Background" Value="#E81123" />
+        <Setter Property="Background" Value="{StaticResource WindowCloseButtonHoverBackground}" />
     </Style>
 
     <!-- ======================== -->
@@ -592,9 +592,9 @@
     </Style>
 
     <Style Selector="ComboBox">
-        <Setter Property="Background" Value="#1E1E1E" />
+        <Setter Property="Background" Value="{StaticResource Gray900}" />
         <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
-        <Setter Property="BorderBrush" Value="#3D3D3D" />
+        <Setter Property="BorderBrush" Value="{StaticResource Gray700}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="CornerRadius" Value="4" />
         <Setter Property="Padding" Value="8,4" />

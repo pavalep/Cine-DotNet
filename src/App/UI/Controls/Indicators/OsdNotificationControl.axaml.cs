@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -15,41 +16,76 @@ namespace Cine.Avalonia.Controls;
 public partial class OsdNotificationControl : AvaloniaUserControl
 {
     private CancellationTokenSource? _osdCts;
+    private readonly Queue<OsdMessage> _queue = new();
+    private bool _isShowing;
+
+    private record OsdMessage(string Text, MaterialIconKind? Icon, double DurationMs);
 
     public event EventHandler? NotificationClicked;
 
     public bool IsControlsBoxVisible { get; set; } = true;
+
+    /// <summary>
+    /// Offset from the bottom of the window when controls box is visible.
+    /// Updated by MainWindow when controls layout changes.
+    /// </summary>
+    public double ControlsBoxHeight { get; set; } = 110;
 
     public OsdNotificationControl()
     {
         InitializeComponent();
     }
 
-    public async void Show(string text, double durationMs = 2000)
+    public void Show(string text, double durationMs = 2000)
     {
-        // Hide icon for text-only notifications
-        OsdIcon.IsVisible = false;
-        _osdCts?.Cancel();
-        _osdCts = new CancellationTokenSource();
-        await ShowInternal(text, durationMs, _osdCts.Token);
+        Enqueue(new OsdMessage(text, null, durationMs));
     }
 
-    // P6.1: Icon indicator overload
-    public async void ShowWithIcon(MaterialIconKind iconKind, string text, double durationMs = 2000)
+    public void ShowWithIcon(MaterialIconKind iconKind, string text, double durationMs = 2000)
     {
-        OsdIcon.IsVisible = true;
-        OsdIcon.Kind = iconKind;
-        _osdCts?.Cancel();
-        _osdCts = new CancellationTokenSource();
-        await ShowInternal(text, durationMs, _osdCts.Token);
+        Enqueue(new OsdMessage(text, iconKind, durationMs));
     }
 
-    private async Task ShowInternal(string text, double durationMs, CancellationToken ct)
+    private void Enqueue(OsdMessage msg)
     {
+        _queue.Enqueue(msg);
+        _ = ProcessQueueAsync();
+    }
+
+    private async Task ProcessQueueAsync()
+    {
+        if (_isShowing) return;
+        _isShowing = true;
+
+        while (_queue.Count > 0)
+        {
+            var msg = _queue.Dequeue();
+            await ShowInternal(msg);
+        }
+
+        _isShowing = false;
+    }
+
+    private async Task ShowInternal(OsdMessage msg)
+    {
+        _osdCts?.Cancel();
+        _osdCts = new CancellationTokenSource();
+        var ct = _osdCts.Token;
+
+        if (msg.Icon.HasValue)
+        {
+            OsdIcon.IsVisible = true;
+            OsdIcon.Kind = msg.Icon.Value;
+        }
+        else
+        {
+            OsdIcon.IsVisible = false;
+        }
+
         if (IsControlsBoxVisible)
         {
             OsdNotificationBorder.VerticalAlignment = AvaloniaLayout.VerticalAlignment.Bottom;
-            OsdNotificationBorder.Margin = new Thickness(0, 0, 0, 110);
+            OsdNotificationBorder.Margin = new Thickness(0, 0, 0, ControlsBoxHeight);
         }
         else
         {
@@ -57,19 +93,19 @@ public partial class OsdNotificationControl : AvaloniaUserControl
             OsdNotificationBorder.Margin = new Thickness(0);
         }
 
-        OsdNotificationText.Text = text;
+        OsdNotificationText.Text = msg.Text;
         OsdNotificationBorder.IsVisible = true;
         OsdNotificationBorder.Opacity = 0;
 
         try
         {
-            await FadeTo(1, 200, ct);
+            await FadeTo(1, 150, ct);
             if (ct.IsCancellationRequested) return;
 
-            await Task.Delay((int)durationMs, ct);
+            await Task.Delay((int)msg.DurationMs, ct);
             if (ct.IsCancellationRequested) return;
 
-            await FadeTo(0, 300, ct);
+            await FadeTo(0, 200, ct);
             if (!ct.IsCancellationRequested)
                 OsdNotificationBorder.IsVisible = false;
         }
@@ -79,6 +115,7 @@ public partial class OsdNotificationControl : AvaloniaUserControl
     public void Hide()
     {
         _osdCts?.Cancel();
+        _queue.Clear();
         OsdNotificationBorder.IsVisible = false;
     }
 
@@ -106,4 +143,3 @@ public partial class OsdNotificationControl : AvaloniaUserControl
         NotificationClicked?.Invoke(this, EventArgs.Empty);
     }
 }
-

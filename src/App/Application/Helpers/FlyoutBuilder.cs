@@ -45,13 +45,13 @@ public class FlyoutBuilder
         var btn = new global::Avalonia.Controls.Button
         {
             Content = content,
-            Background = global::Avalonia.Media.Brushes.Transparent,
+            Background = AppColors.Transparent,
             BorderThickness = new Thickness(0),
             HorizontalContentAlignment = AvaloniaLayout.HorizontalAlignment.Stretch,
             Cursor = new global::Avalonia.Input.Cursor(StandardCursorType.Arrow)
         };
-        btn.PointerEntered += (_, _) => btn.Background = new SolidColorBrush(global::Avalonia.Media.Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF));
-        btn.PointerExited += (_, _) => btn.Background = global::Avalonia.Media.Brushes.Transparent;
+        btn.PointerEntered += (_, _) => btn.Background = AppColors.HoverSubtle;
+        btn.PointerExited += (_, _) => btn.Background = AppColors.Transparent;
         return btn;
     }
 
@@ -101,7 +101,7 @@ public class FlyoutBuilder
         {
             Text = rightText,
             FontSize = 11,
-            Foreground = new SolidColorBrush(global::Avalonia.Media.Color.FromArgb(0x99, 0xFF, 0xFF, 0xFF)),
+            Foreground = AppColors.TextOnDarkHint,
             VerticalAlignment = AvaloniaLayout.VerticalAlignment.Center,
             Padding = new Thickness(4, 6, 10, 6)
         };

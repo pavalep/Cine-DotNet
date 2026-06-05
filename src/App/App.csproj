@@ -36,5 +36,6 @@
 
   <ItemGroup>
     <AvaloniaResource Include="UI\Resources\**\*" />
+    <EmbeddedResource Include="UI\Constants\Colors.json" />
   </ItemGroup>
 </Project>

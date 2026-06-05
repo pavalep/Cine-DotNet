@@ -69,6 +69,11 @@ public interface IMediaPlayer
     void SetSubtitlePosition(int position);
     void SetSubtitleFontSize(double size);
 
+    // === Audio / Video Track Enumeration ===
+    AudioTrackInfo[] AudioSources { get; }
+    VideoTrackInfo[] VideoSources { get; }
+    void SelectVideoTrack(int trackIndex);
+
     // === Video filters ===
     double Zoom { get; set; }
     double AspectRatio { get; set; }

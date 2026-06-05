@@ -44,8 +44,6 @@ public partial class MainWindow
     private DateTime _lastSeekWheel = DateTime.MinValue;
 
     // Seek bar
-    private bool _isSeeking;
-    private double _lastSeekNormalized;
     private TimeSpan _lastPosition;
     private TimeSpan _lastDuration;
 
@@ -64,6 +62,7 @@ public partial class MainWindow
 
     // PIP / compact mini-player mode
     private PipService? _pipService;
+    private DwmThumbnailManager? _dwmManager;
 
     // Session save
     private DispatcherTimer? _sessionSaveTimer;
@@ -191,7 +190,7 @@ public partial class MainWindow
         {
             DebugLog($"Player initialization FAILED: {ex}");
             _isDisposed = true;
-            Dispatcher.UIThread.OnUiThreadAsync(async () =>
+            _ = Dispatcher.UIThread.OnUiThreadAsync(async () =>
             {
                 await ShowErrorDialog("Failed to initialize media player.", ex.Message);
                 Close();
@@ -203,7 +202,7 @@ public partial class MainWindow
         if (player == null)
         {
             _isDisposed = true;
-            Dispatcher.UIThread.OnUiThreadAsync(async () =>
+            _ = Dispatcher.UIThread.OnUiThreadAsync(async () =>
             {
                 await ShowErrorDialog("Media player returned null.", "The application cannot continue.");
                 Close();
@@ -221,7 +220,7 @@ public partial class MainWindow
             _queuedOpenPath = path;
             _sessionResumePosition = pos;
             ShowOsdNotification($"Resume {Path.GetFileName(path)} from {pos.Minutes:D2}:{pos.Seconds:D2}?", 5000);
-            Dispatcher.UIThread.OnUiThreadAsync(async () =>
+            _ = Dispatcher.UIThread.OnUiThreadAsync(async () =>
             {
                 await Task.Delay(4000);
                 if (!string.IsNullOrEmpty(_queuedOpenPath) && File.Exists(_queuedOpenPath))
@@ -268,7 +267,12 @@ public partial class MainWindow
 
         _playerService.Error += (_, error) =>
         {
-            Dispatcher.UIThread.OnUiThread(() => ShowOsdNotification($"Error: {error}", 4000));
+            Dispatcher.UIThread.OnUiThread(() =>
+            {
+                _spinnerOverlay.Stop();
+                _isLoading = false;
+                ShowOsdNotification($"Error: {error}", 4000);
+            });
         };
 
         _videoHost.ChildWindowCreated += OnVideoHostChildCreated;
@@ -292,15 +296,18 @@ public partial class MainWindow
 
         if (_viewModel != null)
         {
-            _viewModel.PropertyChanged += OnViewModelPropertyChanged;
             SetupPropertyWatchers();
         }
 
         // Wire up component events
         _replayOverlay.ReplayRequested += (_, _) =>
         {
-            _playerService?.Player?.Seek(TimeSpan.Zero);
-            _playerService?.Player?.Play();
+            var player = _playerService?.Player;
+            if (player == null) return;
+            // Force reset from EOF state: stop, seek to start, then play
+            player.Stop();
+            player.Seek(TimeSpan.Zero);
+            player.Play();
         };
 
         _osdNotification.NotificationClicked += OnOsdNotificationClicked;
@@ -316,9 +323,13 @@ public partial class MainWindow
         InitializeSessionSave();
         InitializeResponsiveLayout();
 
-        // Initialize PIP service
-        _pipService = new PipService(_playerService);
-        _pipService.SetCurrentFilePath(_viewModel?.FilePath);
+        // Initialize DWM thumbnail manager and PIP service
+        _dwmManager = new DwmThumbnailManager();
+        _pipService = new PipService(_dwmManager);
+
+        // Wire PIP player controls
+        _pipService.PlayPauseRequested += OnPipPlayPauseRequested;
+        _pipService.SeekRequested += OnPipSeekRequested;
 
         AddHandler(global::Avalonia.Input.DragDrop.DragEnterEvent, OnWindowDragEnter);
         AddHandler(global::Avalonia.Input.DragDrop.DragLeaveEvent, OnWindowDragLeave);
@@ -362,8 +373,8 @@ public partial class MainWindow
         DebugLog($"Platform handle has value={handle.HasValue} value={handle.GetValueOrDefault()}");
         if (handle.HasValue && handle.Value != IntPtr.Zero && _videoHost != null)
         {
-            _videoHost.ParentHwnd = handle.Value;
-            DebugLog("VideoHost.ParentHwnd assigned");
+            _videoHost.RegisterMainWindow(handle.Value, _dwmManager!);
+            DebugLog("VideoHost.RegisterMainWindow called");
         }
 
         if (StartPage != null) StartPage.IsVisible = true;
@@ -393,18 +404,28 @@ public partial class MainWindow
                 var json = File.ReadAllText(WindowStatePath);
                 using var doc = JsonDocument.Parse(json);
                 var root = doc.RootElement;
-                if (root.TryGetProperty("Width", out var wEl) && root.TryGetProperty("Height", out var hEl))
+
+                // Read maximized flag first to decide whether to set Width/Height
+                var shouldBeMaximized = root.TryGetProperty("Maximized", out var maxEl) && maxEl.GetBoolean();
+
+                if (!shouldBeMaximized)
                 {
-                    var w = wEl.GetDouble();
-                    var h = hEl.GetDouble();
-                    if (w >= 800 && h >= 400) { Width = w; Height = h; }
+                    if (root.TryGetProperty("Width", out var wEl) && root.TryGetProperty("Height", out var hEl))
+                    {
+                        var w = wEl.GetDouble();
+                        var h = hEl.GetDouble();
+                        if (w >= 800 && h >= 400) { Width = w; Height = h; }
+                    }
+                    if (root.TryGetProperty("X", out var xEl) && root.TryGetProperty("Y", out var yEl))
+                    {
+                        var x = xEl.GetInt32();
+                        var y = yEl.GetInt32();
+                        if (x >= 0 && y >= 0) Position = new PixelPoint(x, y);
+                    }
                 }
-                if (root.TryGetProperty("X", out var xEl) && root.TryGetProperty("Y", out var yEl))
-                {
-                    var x = xEl.GetInt32();
-                    var y = yEl.GetInt32();
-                    if (x >= 0 && y >= 0) Position = new PixelPoint(x, y);
-                }
+
+                if (shouldBeMaximized)
+                    WindowState = WindowState.Maximized;
             });
         }, DispatcherPriority.Background);
 
@@ -427,12 +448,19 @@ public partial class MainWindow
 
     protected override void OnClosed(EventArgs e)
     {
-        // P5.2: Save window position and size
+        // P5.2: Save window position, size, and state
         Result.From(() =>
         {
             var dir = Path.GetDirectoryName(WindowStatePath);
             if (dir != null) Directory.CreateDirectory(dir);
-            var state = new { Width, Height, X = Position.X, Y = Position.Y };
+            var state = new
+            {
+                Width,
+                Height,
+                X = Position.X,
+                Y = Position.Y,
+                Maximized = WindowState == WindowState.Maximized
+            };
             File.WriteAllText(WindowStatePath, JsonSerializer.Serialize(state));
         });
 
@@ -440,9 +468,12 @@ public partial class MainWindow
         _autoHideTimer = null;
         _sessionSaveTimer?.Stop();
         _sessionSaveTimer = null;
+        _propertyWatcher?.Dispose();
+        _propertyWatcher = null;
         _viewModel?.SaveSession();
         _playerService?.Dispose();
         _pipService?.Dispose();
+        _dwmManager?.Dispose();
         base.OnClosed(e);
     }
 
@@ -486,77 +517,6 @@ public partial class MainWindow
     }
 
     private PropertyWatcher? _propertyWatcher;
-
-    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(MainViewModel.FilePath))
-        {
-            if (!string.IsNullOrEmpty(_viewModel?.FilePath))
-            {
-                if (_isLoading) return;
-                _isLoading = true;
-                _spinnerOverlay.Start();
-                if (StartPage?.IsVisible == true) StartPage.IsVisible = false;
-                _headerBar.ShowOpenMenu();
-                _headerBar.SetTitle(_viewModel.Title);
-                Title = $"Cine — {_viewModel.Title}";
-            }
-            else
-            {
-                if (StartPage?.IsVisible == false) StartPage.IsVisible = true;
-                _controlsBox.SetControlsVisibility(false);
-                _headerBar.HideOpenMenu();
-                if (VideoHost != null) VideoHost.IsVideoSurfaceVisible = false;
-                _headerBar.SetTitle("Cine");
-
-                ShowUiControls();
-            }
-        }
-        else if (e.PropertyName == nameof(MainViewModel.IsPlaying) ||
-                 e.PropertyName == nameof(MainViewModel.IsPaused))
-        {
-            _controlsBox.UpdatePlayPauseIcon();
-        }
-        else if (e.PropertyName == nameof(MainViewModel.IsSubtitleEnabled))
-        {
-            _controlsBox.RefreshSubtitleIcon();
-        }
-        else if (e.PropertyName == nameof(MainViewModel.IsAudioEnabled))
-        {
-            _controlsBox.RefreshAudioIcon();
-        }
-        else if (e.PropertyName == nameof(MainViewModel.IsMuted) ||
-                 e.PropertyName == nameof(MainViewModel.VolumeValue))
-        {
-            _controlsBox.RefreshVolumeIcon();
-            if (_viewModel != null)
-            {
-                if (_viewModel.IsMuted || _viewModel.VolumeValue == 0)
-                    ShowOsdNotification(MaterialIconKind.VolumeOff, "Muted");
-                else
-                    ShowOsdNotification(MaterialIconKind.VolumeHigh, $"Volume: {_viewModel.VolumeValue}%");
-            }
-        }
-        else if (e.PropertyName == nameof(MainViewModel.SpeedValue))
-        {
-            if (_viewModel != null)
-                ShowOsdNotification(MaterialIconKind.Speedometer, $"Speed: {_viewModel.SpeedValue:F1}x", 3000);
-        }
-        else if (e.PropertyName == nameof(MainViewModel.SeekValue))
-        {
-            if (!_isSeeking)
-            {
-                var seekBar = _controlsBox?.SeekBarControl;
-                if (seekBar != null)
-                {
-                    _lastPosition = _viewModel?.Position ?? TimeSpan.Zero;
-                    _lastDuration = _viewModel?.Duration ?? TimeSpan.Zero;
-                    seekBar.UpdatePosition(_lastPosition);
-                    seekBar.UpdateDuration(_lastDuration);
-                }
-            }
-        }
-    }
 
     private void InitializeSessionSave()
     {
@@ -618,19 +578,25 @@ public partial class MainWindow
                     if (_isLoading) return;
                     _isLoading = true;
                     _spinnerOverlay.Start();
-                    if (StartPage?.IsVisible == true) StartPage.IsVisible = false;
+                    // Don't hide StartPage here — OnMediaOpened handles fade-out
+                    // once the player actually opens the file. This avoids a race
+                    // where the watcher hides StartPage before the video is ready.
                     _headerBar.ShowOpenMenu();
                     _headerBar.SetTitle(_viewModel.Title);
                     Title = $"Cine — {_viewModel.Title}";
                 }
                 else
                 {
+                    _isLoading = false;
+                    _spinnerOverlay.Stop();
                     if (StartPage?.IsVisible == false) StartPage.IsVisible = true;
                     _controlsBox.SetControlsVisibility(false);
+                    _controlsBox.ControlsBox.IsVisible = false;
                     _headerBar.HideOpenMenu();
                     if (VideoHost != null) VideoHost.IsVideoSurfaceVisible = false;
                     _headerBar.SetTitle("Cine");
-                    ShowUiControls();
+                    // ShowUiControls should NOT be called here — when file closes,
+                    // controls should stay hidden since StartPage covers them.
                 }
             })
             .Watch(nameof(MainViewModel.IsPlaying), () => _controlsBox.UpdatePlayPauseIcon())
@@ -655,7 +621,7 @@ public partial class MainWindow
                 ShowOsdNotification(MaterialIconKind.Speedometer, $"Speed: {speed:F1}x", 3000))
             .Watch(() => _viewModel.SeekValue, _ =>
             {
-                if (!_isSeeking)
+                if (_viewModel is { IsSeeking: false })
                 {
                     var seekBar = _controlsBox?.SeekBarControl;
                     if (seekBar != null)

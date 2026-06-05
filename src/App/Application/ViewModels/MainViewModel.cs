@@ -190,7 +190,10 @@ public class MainViewModel : INotifyPropertyChanged
 
         if (item.DisplayName == "None")
         {
-            // Fallback/No audio
+            // Disable audio
+            _player.SelectAudioTrack(-1);
+            foreach (var t in AudioTracks) t.RefreshSelection(false);
+            item.RefreshSelection(true);
             return;
         }
 
@@ -204,9 +207,23 @@ public class MainViewModel : INotifyPropertyChanged
 
     private void OnSelectVideo(TrackMenuItem item)
     {
+        if (item.DisplayName == "Add Video Track…")
+        {
+            // Video external loading not directly supported via mpv — OSD notification
+            return;
+        }
+
+        if (item.DisplayName == "None")
+        {
+            _player.SelectVideoTrack(-1);
+            foreach (var t in VideoTracks) t.RefreshSelection(false);
+            item.RefreshSelection(true);
+            return;
+        }
+
         if (item.TrackIndex >= 0)
         {
-            _player.SelectAudioTrack(item.TrackIndex); // Uses existing track indexer under hood
+            _player.SelectVideoTrack(item.TrackIndex);
             foreach (var t in VideoTracks) t.RefreshSelection(false);
             item.RefreshSelection(true);
         }
@@ -256,18 +273,12 @@ public class MainViewModel : INotifyPropertyChanged
     // --- Playback commands ---
     public void PlayPause()
     {
-        State = _player.State;
-
-        if (IsPlaying)
-        {
+        // Toggle based on actual player state (not cached state) to avoid
+        // race conditions where EOF or external events change state between read and call.
+        if (_player.IsPlaying)
             _player.Pause();
-            State = PlaybackState.Paused;
-        }
         else
-        {
             _player.Play();
-            State = PlaybackState.Playing;
-        }
     }
 
     public void Stop() => _player.Stop();
@@ -298,25 +309,21 @@ public class MainViewModel : INotifyPropertyChanged
     public void SeekForward()
     {
         _player.Seek(Position + TimeSpan.FromSeconds(5));
-        NotifyPipSync?.Invoke();
     }
 
     public void SeekBackward()
     {
         _player.Seek(Position - TimeSpan.FromSeconds(5));
-        NotifyPipSync?.Invoke();
     }
 
     public void SeekLargeForward()
     {
         _player.Seek(Position + TimeSpan.FromSeconds(60));
-        NotifyPipSync?.Invoke();
     }
 
     public void SeekLargeBackward()
     {
         _player.Seek(Position - TimeSpan.FromSeconds(60));
-        NotifyPipSync?.Invoke();
     }
     public void IncreaseVolume() => VolumeValue = Math.Min(VolumeMax, VolumeValue + 5);
     public void DecreaseVolume() => VolumeValue = Math.Max(0, VolumeValue - 5);
@@ -402,41 +409,36 @@ public class MainViewModel : INotifyPropertyChanged
     {
         try
         {
-            var bands = new List<string>();
+            var filters = new List<string>();
+
+            // Add equalizer bands
             for (int i = 0; i < 10; i++)
             {
                 if (Math.Abs(_equalizerBands[i]) > 0.5)
-                    bands.Add($"equalizer=f={EqualizerFrequencies[i]}:t=q:width=1:g={_equalizerBands[i]:F1}");
+                    filters.Add($"equalizer=f={EqualizerFrequencies[i]}:t=q:width=1:g={_equalizerBands[i]:F1}");
             }
 
-            if (bands.Count > 0)
-                _player.Command("set_property", "af", string.Join(",", bands));
-            else
-                _player.Command("set_property", "af", "");
+            // Add normalization if enabled
+            if (_isAudioNormalizationEnabled)
+                filters.Add("drc");
+
+            var afValue = filters.Count > 0 ? string.Join(",", filters) : "";
+            _player.Command("set_property", "af", afValue);
         }
         catch { /* player not ready */ }
     }
 
-    // === Audio Normalization (P9.2) ===
+    public void ToggleAudioNormalization()
+    {
+        IsAudioNormalizationEnabled = !IsAudioNormalizationEnabled;
+        ApplyEqualizer(); // Re-apply to combine both
+    }
 
     private bool _isAudioNormalizationEnabled;
     public bool IsAudioNormalizationEnabled
     {
         get => _isAudioNormalizationEnabled;
         set { _isAudioNormalizationEnabled = value; OnPropertyChanged(); }
-    }
-
-    public void ToggleAudioNormalization()
-    {
-        IsAudioNormalizationEnabled = !IsAudioNormalizationEnabled;
-        try
-        {
-            if (_isAudioNormalizationEnabled)
-                _player.Command("set_property", "af", "drc");
-            else
-                _player.Command("set_property", "af", "");
-        }
-        catch { /* player not ready */ }
     }
 
     private static double[] GetPreset(string name) => name switch
@@ -746,11 +748,7 @@ public class MainViewModel : INotifyPropertyChanged
         }
         
         _player.Seek(target);
-        NotifyPipSync?.Invoke();
     }
-
-    // Optional callback for PIP sync
-    public Action? NotifyPipSync { get; set; }
 
     public bool IsMuted
     {
@@ -908,6 +906,10 @@ public class MainViewModel : INotifyPropertyChanged
     }
 
     // --- Internal helpers ---
+    private TimeSpan _lastPosTextTime = TimeSpan.MinValue;
+
+    private double _lastSeekValue;
+
     private void OnPositionChanged(object? sender, PositionChangedEventArgs e)
     {
         Dispatcher.UIThread.OnUiThread(() =>
@@ -918,9 +920,24 @@ public class MainViewModel : INotifyPropertyChanged
             try
             {
                 State = _player.State;
-                PositionText = FormatTime(e.Position);
-                DurationText = FormatTime(e.Duration);
-                SeekValue = e.NormalizedPosition;
+
+                // Throttle text allocation: only update PositionText/DurationText
+                // when the second changes (~10fps max for text)
+                if (Math.Abs((e.Position - _lastPosTextTime).TotalSeconds) >= 0.1)
+                {
+                    _lastPosTextTime = e.Position;
+                    PositionText = FormatTime(e.Position);
+                    DurationText = FormatTime(e.Duration);
+                }
+
+                // Throttle SeekValue: only fire when normalized position changes
+                // by more than 0.001 (~1 pixel). This reduces slider refresh from
+                // 60fps to roughly 2fps during normal playback.
+                if (Math.Abs(e.NormalizedPosition - _lastSeekValue) >= 0.001)
+                {
+                    _lastSeekValue = e.NormalizedPosition;
+                    SeekValue = e.NormalizedPosition;
+                }
             }
             finally
             {
@@ -1018,6 +1035,8 @@ public class MainViewModel : INotifyPropertyChanged
 
             // --- Video tracks ---
             VideoTracks.Clear();
+            VideoTracks.Add(new TrackMenuItem("Add Video Track…", TrackType.Video, -1, OnSelectVideo));
+            VideoTracks.Add(new TrackMenuItem("None", TrackType.Video, -2, OnSelectVideo));
             if (e.VideoTracks != null && e.VideoTracks.Any())
             {
                 int idx = 0;

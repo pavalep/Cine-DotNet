@@ -46,7 +46,7 @@ public partial class EqualizerDialog : Window
             {
                 Text = _freqLabels[idx],
                 FontSize = 10,
-                Foreground = new SolidColorBrush(Color.FromArgb(0xAA, 0xFF, 0xFF, 0xFF)),
+                Foreground = AppColors.TextOnDarkSecondary,
                 HorizontalAlignment = AvaloniaLayout.HorizontalAlignment.Center,
                 Margin = new Thickness(0, 0, 0, 2)
             });
@@ -77,7 +77,7 @@ public partial class EqualizerDialog : Window
             {
                 Text = "0",
                 FontSize = 9,
-                Foreground = new SolidColorBrush(Color.FromArgb(0x88, 0xFF, 0xFF, 0xFF)),
+                Foreground = AppColors.TextOnDarkHint,
                 HorizontalAlignment = AvaloniaLayout.HorizontalAlignment.Center,
                 Margin = new Thickness(0, 2, 0, 0)
             };

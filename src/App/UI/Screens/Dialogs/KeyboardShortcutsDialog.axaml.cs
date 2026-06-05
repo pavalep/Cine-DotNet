@@ -117,7 +117,7 @@ public partial class KeyboardShortcutsDialog : Window
         {
             Text = action,
             FontSize = 12,
-            Foreground = new SolidColorBrush(global::Avalonia.Media.Color.FromArgb(0x99, 0xFF, 0xFF, 0xFF)),
+            Foreground = AppColors.TextOnDarkHint,
             VerticalAlignment = Layout.VerticalAlignment.Center,
             HorizontalAlignment = Layout.HorizontalAlignment.Right
         };

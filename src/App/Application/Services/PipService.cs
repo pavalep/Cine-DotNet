@@ -1,71 +1,62 @@
 using System;
+using Cine.Avalonia.Controls;
 using Cine.Avalonia.Views.Dialogs;
-using Cine.Media.Interfaces;
 
 namespace Cine.Avalonia.ViewModels;
 
 /// <summary>
-/// Manages PIP (Picture-in-Picture) lifecycle by screenshot-polling the main player.
-/// No secondary decoder — pulls frames from the existing player at ~30fps.
+/// Manages PIP (Picture-in-Picture) lifecycle.
+/// Creates PipWindow and wires DWM thumbnail mirroring.
+/// Exposes player control events from the PipWindow.
 /// </summary>
 public class PipService : IDisposable
 {
-    private readonly PlayerService _playerService;
-    private IMediaPlayer? _mainPlayer;
-    private string? _currentFilePath;
     private PipWindow? _pipWindow;
     private bool _isActive;
     private bool _disposed;
+    private readonly DwmThumbnailManager _dwmManager;
 
-    public PipService(PlayerService playerService)
+    public PipService(DwmThumbnailManager dwmManager)
     {
-        _playerService = playerService;
+        _dwmManager = dwmManager ?? throw new ArgumentNullException(nameof(dwmManager));
     }
 
     /// <summary>Whether PIP mode is currently active.</summary>
     public bool IsActive => _isActive;
 
-    /// <summary>Whether PIP is feasible (main player + file loaded).</summary>
-    public bool CanPip => _mainPlayer != null && !string.IsNullOrEmpty(_currentFilePath);
+    /// <summary>The active PipWindow, if any.</summary>
+    public PipWindow? PipWindow => _pipWindow;
 
-    /// <summary>Fired when PIP window opens.</summary>
-    public event EventHandler? PipOpened;
+    /// <summary>Fires when the user clicks play/pause in the PIP window.</summary>
+    public event EventHandler? PlayPauseRequested;
 
-    /// <summary>Fired when PIP encounters an error.</summary>
-    public event EventHandler<string>? PipError;
-
-    /// <summary>Fired when PIP window closes.</summary>
-    public event EventHandler? PipClosed;
-
-    public void Initialize(IMediaPlayer mainPlayer)
-    {
-        _mainPlayer = mainPlayer;
-    }
-
-    public void SetCurrentFilePath(string filePath)
-    {
-        _currentFilePath = filePath;
-    }
+    /// <summary>Fires when the user seeks in the PIP window (normalized 0..1).</summary>
+    public event EventHandler<double>? SeekRequested;
 
     public PipWindow? EnterPip()
     {
         if (_disposed) return null;
         if (_isActive) return _pipWindow;
-        if (!CanPip) return null;
 
         try
         {
-            _pipWindow = new PipWindow(_mainPlayer!);
+            _pipWindow = new PipWindow();
             _pipWindow.Closed += OnPipWindowClosed;
-            _pipWindow.Show();
-            _isActive = true;
 
-            PipOpened?.Invoke(this, EventArgs.Empty);
+            // Forward player control events
+            _pipWindow.PlayPauseRequested += (s, e) => PlayPauseRequested?.Invoke(s, e);
+            _pipWindow.SeekRequested += (s, pos) => SeekRequested?.Invoke(s, pos);
+
+            _pipWindow.Show();
+
+            // Wire DWM thumbnail mirroring
+            _pipWindow.EnableDwmMirror(_dwmManager);
+
+            _isActive = true;
             return _pipWindow;
         }
-        catch (Exception ex)
+        catch
         {
-            PipError?.Invoke(this, $"PIP failed: {ex.Message}");
             CleanupPip();
             return null;
         }
@@ -82,7 +73,6 @@ public class PipService : IDisposable
     {
         _isActive = false;
         _pipWindow = null;
-        PipClosed?.Invoke(this, EventArgs.Empty);
     }
 
     private void CleanupPip()

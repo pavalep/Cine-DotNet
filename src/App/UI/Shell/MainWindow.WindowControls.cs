@@ -58,9 +58,6 @@ public partial class MainWindow
             ExtendClientAreaToDecorationsHint = false;
             _headerBar.IsVisible = false;
             _headerBar.IsHitTestVisible = false;
-            _fullscreenHeader.Show();
-            _fullscreenHeader.FullscreenHeader.IsVisible = false;
-            _fullscreenHeader.FullscreenHeader.Opacity = 0;
             _headerBar.HideOpenMenu();
             _headerBar.HidePrimaryMenu();
             _headerBar.HideWindowControls();

@@ -14,9 +14,23 @@ namespace Cine.Avalonia.ViewModels
         private IMediaPlayer? _player;
         private bool _disposed;
         #region debug-point player-service-log
-        private static readonly string DebugLogFile = Path.Combine(
-            AppContext.BaseDirectory,
-            "cine_startup.log");
+        private static readonly string DebugLogFile = CreateLogFilePath();
+
+        private static string CreateLogFilePath()
+        {
+            try
+            {
+                var dir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "Cine");
+                Directory.CreateDirectory(dir);
+                return Path.Combine(dir, "cine_startup.log");
+            }
+            catch
+            {
+                return Path.Combine(Path.GetTempPath(), "cine_startup.log");
+            }
+        }
 
         private static void DebugLog(string message)
         {
