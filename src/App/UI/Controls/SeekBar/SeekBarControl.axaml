@@ -31,7 +31,11 @@
                     Height="4"
                     VerticalAlignment="Center"
                     HorizontalAlignment="Left"
-                    IsHitTestVisible="False" />
+                    IsHitTestVisible="False">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="6" OffsetY="0" Color="#400078D4" />
+                </Border.Effect>
+            </Border>
 
             <Border x:Name="SeekThumb"
                     Width="16" Height="16"
@@ -40,8 +44,15 @@
                     HorizontalAlignment="Left"
                     VerticalAlignment="Center">
                 <Border.Effect>
-                    <DropShadowEffect BlurRadius="4" OffsetY="1" Color="#80000000" />
+                    <DropShadowEffect BlurRadius="6" OffsetY="1" Color="#80000000" />
                 </Border.Effect>
+                <Border.Styles>
+                    <Style Selector="Border:pointerover">
+                        <Setter Property="Width" Value="20" />
+                        <Setter Property="Height" Value="20" />
+                        <Setter Property="CornerRadius" Value="10" />
+                    </Style>
+                </Border.Styles>
             </Border>
 
             <ItemsControl x:Name="ChapterMarkersControl"

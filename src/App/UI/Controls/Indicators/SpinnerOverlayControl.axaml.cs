@@ -20,9 +20,10 @@ public partial class SpinnerOverlayControl : AvaloniaUserControl
 
     public async void Start()
     {
+        SpinnerTrack.IsVisible = true;
         LoadingSpinner.IsVisible = true;
         LoadingSpinner.Opacity = 0;
-        await FadeTo(0.7, 200);
+        await FadeTo(0.9, 250);
 
         if (_spinnerTimer == null)
         {
@@ -41,6 +42,7 @@ public partial class SpinnerOverlayControl : AvaloniaUserControl
     public void Stop()
     {
         _spinnerTimer?.Stop();
+        SpinnerTrack.IsVisible = false;
         LoadingSpinner.IsVisible = false;
         LoadingSpinner.RenderTransform = null;
         LoadingSpinner.Opacity = 0;

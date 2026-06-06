@@ -162,16 +162,16 @@
         </Style>
     </Style>
     
-    <!-- Circular Menu Button (matches reference) -->
+    <!-- Circular Menu Button -->
     <Style Selector="Button.circular-menu">
-        <Setter Property="Width" Value="30" />
-        <Setter Property="Height" Value="30" />
+        <Setter Property="Width" Value="32" />
+        <Setter Property="Height" Value="32" />
         <Setter Property="Padding" Value="0" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="15" />
+        <Setter Property="CornerRadius" Value="16" />
         <Setter Property="RenderTransform">
             <Setter.Value>
                 <ScaleTransform ScaleX="1" ScaleY="1" />
@@ -223,6 +223,29 @@
                     <ScaleTransform ScaleX="0.95" ScaleY="0.95" />
                 </Setter.Value>
             </Setter>
+        </Style>
+    </Style>
+    
+    <!-- Circular Menu ToggleButton -->
+    <Style Selector="ToggleButton.circular-menu">
+        <Setter Property="Width" Value="32" />
+        <Setter Property="Height" Value="32" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="16" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <BrushTransition Property="Background" Duration="0:0:0.12" />
+            </Transitions>
+        </Setter>
+        <Style Selector="^:pointerover">
+            <Setter Property="Background" Value="{StaticResource ButtonHoverBackground}" />
+        </Style>
+        <Style Selector="^:pressed">
+            <Setter Property="Background" Value="{StaticResource ButtonActiveBackground}" />
         </Style>
     </Style>
     

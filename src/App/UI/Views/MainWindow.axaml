@@ -64,6 +64,7 @@
         <Border x:Name="VideoClickOverlay"
                 Background="Transparent"
                 HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                IsTabStop="False"
                 PointerPressed="OnVideoPointerPressed" />
 
         <!-- Vignette overlay -->

@@ -46,10 +46,15 @@ public partial class FullscreenHeaderControl : UserControl
             .AddItem("FastForward", "Seek +10s", "→", () => _viewModel?.SeekForward())
             .AddSeparator()
             .AddSection("TOOLS")
+            .AddItem("ClockOutline", "Go to Time…", "Ctrl+G", () =>
+            {
+                var w = TopLevel.GetTopLevel(this) as Window;
+                if (w != null && _viewModel != null) new GoToTimeDialog { DataContext = _viewModel }.Show(w);
+            })
             .AddItem("Keyboard", "Keyboard Shortcuts", null, () =>
             {
                 var w = TopLevel.GetTopLevel(this) as Window;
-                if (w != null) new ShortcutsDialog { DataContext = _viewModel }.Show(w);
+                if (w != null) new KeyboardShortcutsDialog().Show(w);
             })
             .AddItem("Cog", "Preferences", null, () =>
             {
@@ -119,7 +124,7 @@ public partial class FullscreenHeaderControl : UserControl
     private void OnShortcutsClick(object? sender, RoutedEventArgs e)
     {
         var w = TopLevel.GetTopLevel(this) as Window;
-        if (w != null) new ShortcutsDialog { DataContext = _viewModel }.Show(w);
+        if (w != null) new KeyboardShortcutsDialog().Show(w);
     }
 
     private void OnPreferencesClick(object? sender, RoutedEventArgs e)

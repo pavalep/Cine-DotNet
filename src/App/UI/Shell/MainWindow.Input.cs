@@ -151,6 +151,8 @@ public partial class MainWindow
             Handle(() => _viewModel?.ToggleShuffle());
         else if (ctrl && key == Key.OemQuestion)
             Handle(() => { var dlg = new KeyboardShortcutsDialog(); dlg.Show(this); });
+        else if (ctrl && key == Key.G && !shift)
+            Handle(() => { var dlg = new GoToTimeDialog { DataContext = _viewModel }; dlg.Show(this); });
     }
 
     private void CloseOpenFlyouts()

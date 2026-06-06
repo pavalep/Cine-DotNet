@@ -132,7 +132,7 @@ public partial class MainWindow
                 videoHostVisible = videoHost?.IsVisible
             });
         }
-        catch { }
+        catch { Debug.WriteLine("DumpState failed"); }
     }
     #endregion
 
@@ -374,7 +374,7 @@ public partial class MainWindow
 
             Activate();
         }
-        catch { }
+        catch { Debug.WriteLine("Centering/Activate failed"); }
 
         if (StartPage != null) StartPage.IsVisible = true;
 
@@ -695,7 +695,8 @@ public partial class MainWindow
             .Watch(() => _viewModel.VolumeValue, vol =>
             {
                 _controlsBox.RefreshVolumeIcon();
-                if (vol > 0)
+                // Show volume notification only if not muted (mute toggle handles its own notification)
+                if (vol > 0 && !_viewModel.IsMuted)
                     ShowOsdNotification(MaterialIconKind.VolumeHigh, $"Volume: {vol}%");
             })
             .Watch(() => _viewModel.SpeedValue, speed =>

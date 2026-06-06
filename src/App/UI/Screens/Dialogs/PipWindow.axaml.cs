@@ -38,11 +38,9 @@ public partial class PipWindow : Window
     {
         InitializeComponent();
         TitleBar.PointerPressed += OnTitleBarPointerPressed;
-        VideoArea.PointerPressed += OnVideoAreaPointerPressed;
         KeyDown += OnKeyDown;
 
         PipSeekSlider.PropertyChanged += OnSeekSliderChanged;
-        ResizeGrip.PointerPressed += OnResizeGripPointerPressed;
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -51,15 +49,15 @@ public partial class PipWindow : Window
 
     public void EnableDwmMirror(DwmThumbnailManager manager)
     {
-        if (_dwmManager != null || _thumbnailId > 0) return; // already registered
+        if (_dwmManager != null || _thumbnailId > 0) return;
 
         _dwmManager = manager;
 
         var handle = TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
-        if (handle == IntPtr.Zero) return; // OnOpened will retry
+        if (handle == IntPtr.Zero) return;
 
         _thumbnailId = manager.RegisterTarget(handle);
-        SyncThumbnailRect(); // constrain to video area only
+        SyncThumbnailRect();
     }
 
     public void DisableDwmMirror()
@@ -72,7 +70,7 @@ public partial class PipWindow : Window
         }
     }
 
-    /// <summary>Constrains DWM thumbnail to video area only (below titlebar, above seek bar).</summary>
+    /// <summary>Constrains DWM thumbnail to video area (below titlebar).</summary>
     private void SyncThumbnailRect()
     {
         if (_dwmManager == null || _thumbnailId <= 0 || _isClosing) return;
@@ -81,9 +79,9 @@ public partial class PipWindow : Window
         int w = (int)(Width * scale);
         int h = (int)(Height * scale);
 
-        // Measure actual titlebar + bottom seek heights at runtime
-        int top = (int)((TitleBar?.Bounds.Height ?? 32) * scale);
-        int bottom = (int)((SeekContainer?.Bounds.Height ?? 80) * scale);
+        int top = (int)((TitleBar?.Bounds.Height ?? 28) * scale);
+        // SeekContainer is inside HoverOverlay which overlays the video; no bottom offset needed
+        int bottom = 0;
 
         _dwmManager.UpdateTarget(_thumbnailId, opacity: 255, visible: true,
             destLeft: 0, destTop: top,
@@ -93,14 +91,6 @@ public partial class PipWindow : Window
     protected override void OnSizeChanged(SizeChangedEventArgs e)
     {
         base.OnSizeChanged(e);
-        // Lock height to aspect ratio when user resizes width
-        if (e.WidthChanged && !e.HeightChanged)
-        {
-            double titleH = TitleBar?.Bounds.Height ?? 32;
-            double newH = e.NewSize.Width / _aspectRatio + titleH;
-            if (Math.Abs(Height - newH) > 2)
-                Height = newH;
-        }
         SyncThumbnailRect();
     }
 
@@ -114,7 +104,6 @@ public partial class PipWindow : Window
     // PLAYBACK SYNC (called externally)
     // ═══════════════════════════════════════════════════════════════
 
-    /// <summary>Update the play/pause icon state from the main player.</summary>
     public void SetPlayingState(bool isPlaying)
     {
         _isPlaying = isPlaying;
@@ -124,7 +113,6 @@ public partial class PipWindow : Window
                 : (Geometry)this.FindResource("PlayIcon")!;
     }
 
-    /// <summary>Update position and duration display.</summary>
     public void UpdatePosition(double positionSec, double durationSec)
     {
         _isUpdatingSeekFromExternal = true;
@@ -160,7 +148,6 @@ public partial class PipWindow : Window
         RestoreState();
         SetupHoverTimer();
 
-        // Register DWM thumbnail if manager was set but handle wasn't available yet
         if (_dwmManager != null && _thumbnailId == 0)
         {
             var handle = TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
@@ -186,46 +173,45 @@ public partial class PipWindow : Window
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // HOVER AUTO-HIDE
+    // HOVER AUTO-HIDE (2s for all controls + file badge)
     // ═══════════════════════════════════════════════════════════════
 
     private void SetupHoverTimer()
     {
-        _hoverTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+        _hoverTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
         _hoverTimer.Tick += (_, _) =>
         {
-            // Hide title bar only — HoverOverlay handles itself via :pointerover CSS
-            if (TitleBar != null)
-                TitleBar.Opacity = 0;
+            HoverOverlay.Opacity = 0;
+            FileBadge.Opacity = 0;
+            TitleBar.Opacity = 0;
             _hoverTimer?.Stop();
         };
     }
 
-    private void ShowControls()
+    public void ShowAllControls()
     {
-        if (HoverOverlay != null)
-            HoverOverlay.Opacity = 1;
-        if (TitleBar != null)
-            TitleBar.Opacity = 1;
+        HoverOverlay.Opacity = 1;
+        TitleBar.Opacity = 1;
+        FileBadge.Opacity = 1;
     }
 
-    private void OnWindowPointerMoved(object? sender, PointerEventArgs e)
+    /// <summary>Starts the hover auto-hide timer externally (e.g., from PipService after EnterPip).</summary>
+    public void StartHoverTimer()
     {
-        ShowControls();
+        if (_hoverTimer == null)
+            SetupHoverTimer();
+        _hoverTimer?.Start();
+    }
+
+    private void ResetHoverTimer()
+    {
+        ShowAllControls();
         _hoverTimer?.Stop();
         _hoverTimer?.Start();
     }
 
-    private void OnHoverOverlayPointerEntered(object? sender, PointerEventArgs e)
-    {
-        ShowControls();
-        _hoverTimer?.Stop();
-    }
-
-    private void OnHoverOverlayPointerExited(object? sender, PointerEventArgs e)
-    {
-        _hoverTimer?.Start();
-    }
+    private void OnOverlayPointerEntered(object? sender, PointerEventArgs e) => ResetHoverTimer();
+    private void OnOverlayPointerExited(object? sender, PointerEventArgs e) => _hoverTimer?.Start();
 
     // ═══════════════════════════════════════════════════════════════
     // PLAYER CONTROLS
@@ -236,10 +222,7 @@ public partial class PipWindow : Window
         _isPlaying = !_isPlaying;
         SetPlayingState(_isPlaying);
         PlayPauseRequested?.Invoke(this, EventArgs.Empty);
-
-        // Reset hover timer after interaction
-        _hoverTimer?.Stop();
-        _hoverTimer?.Start();
+        ResetHoverTimer();
     }
 
     private void OnSeekSliderChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
@@ -264,7 +247,7 @@ public partial class PipWindow : Window
             var json = JsonSerializer.Serialize(state);
             File.WriteAllText(PipStatePath, json);
         }
-        catch { }
+        catch { /* Best-effort PiP state save */ }
     }
 
     private void RestoreState()
@@ -276,7 +259,6 @@ public partial class PipWindow : Window
             var state = JsonSerializer.Deserialize<PipState>(json);
             if (state != null)
             {
-                // Clamp position to ensure window is on-screen
                 var screens = Screens?.All;
                 if (screens != null && screens.Count > 0)
                 {
@@ -287,13 +269,9 @@ public partial class PipWindow : Window
                                      state.Y > primary.WorkingArea.Height - 50;
                     if (offScreen)
                     {
-                        // Default to top-right of primary screen
                         state = new PipState(
                             primary.WorkingArea.Width - state.W - 20,
-                            20,
-                            state.W,
-                            state.H,
-                            state.Pinned);
+                            20, state.W, state.H, state.Pinned);
                     }
                 }
 
@@ -305,7 +283,7 @@ public partial class PipWindow : Window
                 UpdatePinIcon();
             }
         }
-        catch { }
+        catch { /* Best-effort PiP state restore */ }
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -316,12 +294,6 @@ public partial class PipWindow : Window
     {
         if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
             BeginMoveDrag(e);
-    }
-
-    private void OnVideoAreaPointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        // Click on video area toggles play/pause
-        OnPlayPauseClick(sender, e);
     }
 
     private void OnMinimizeClick(object? sender, RoutedEventArgs e)
@@ -343,17 +315,7 @@ public partial class PipWindow : Window
             PinIcon.Opacity = _isPinned ? 1.0 : 0.4;
     }
 
-    private void OnResizeGripPointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
-            BeginResizeDrag(WindowEdge.SouthEast, e);
-    }
-
-    private void OnExpandClick(object? sender, RoutedEventArgs e)
-    {
-        // Return to main window — close PiP, main window restores video via PipClosed
-        OnCloseClick(sender, e);
-    }
+    private void OnExpandClick(object? sender, RoutedEventArgs e) => OnCloseClick(sender, e);
 
     private void OnCloseClick(object? sender, RoutedEventArgs e)
     {
@@ -384,5 +346,57 @@ public partial class PipWindow : Window
             SaveState();
         }
         base.Close();
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // EDGE RESIZE HANDLERS (transparent 8px strips on all edges)
+    // ═══════════════════════════════════════════════════════════════
+
+    private void OnTopEdgePointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            BeginResizeDrag(WindowEdge.North, e);
+    }
+
+    private void OnBottomEdgePointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            BeginResizeDrag(WindowEdge.South, e);
+    }
+
+    private void OnLeftEdgePointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            BeginResizeDrag(WindowEdge.West, e);
+    }
+
+    private void OnRightEdgePointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            BeginResizeDrag(WindowEdge.East, e);
+    }
+
+    private void OnTopLeftCornerPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            BeginResizeDrag(WindowEdge.NorthWest, e);
+    }
+
+    private void OnTopRightCornerPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            BeginResizeDrag(WindowEdge.NorthEast, e);
+    }
+
+    private void OnBottomLeftCornerPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            BeginResizeDrag(WindowEdge.SouthWest, e);
+    }
+
+    private void OnBottomRightCornerPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            BeginResizeDrag(WindowEdge.SouthEast, e);
     }
 }

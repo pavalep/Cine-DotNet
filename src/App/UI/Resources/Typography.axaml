@@ -129,42 +129,6 @@
         </Setter>
     </Style>
     
-    <!-- Circular Menu Button -->
-    <Style Selector="Button.circular-menu">
-        <Setter Property="Width" Value="40" />
-        <Setter Property="Height" Value="40" />
-        <Setter Property="Padding" Value="0" />
-        <Setter Property="HorizontalContentAlignment" Value="Center" />
-        <Setter Property="VerticalContentAlignment" Value="Center" />
-        <Setter Property="Background" Value="{StaticResource ButtonBackground}" />
-        <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="20" />
-        <Setter Property="RenderTransformOrigin" Value="50% 50%" />
-        <Setter Property="RenderTransform">
-            <Setter.Value>
-                <ScaleTransform ScaleX="1" ScaleY="1" />
-            </Setter.Value>
-        </Setter>
-    </Style>
-    
-    <!-- Circular Toggle Button -->
-    <Style Selector="Button.circular-toggle">
-        <Setter Property="Width" Value="40" />
-        <Setter Property="Height" Value="40" />
-        <Setter Property="Padding" Value="0" />
-        <Setter Property="HorizontalContentAlignment" Value="Center" />
-        <Setter Property="VerticalContentAlignment" Value="Center" />
-        <Setter Property="Background" Value="{StaticResource ToggleButtonUncheckedBackground}" />
-        <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="20" />
-        <Setter Property="RenderTransformOrigin" Value="50% 50%" />
-        <Setter Property="RenderTransform">
-            <Setter.Value>
-                <ScaleTransform ScaleX="1" ScaleY="1" />
-            </Setter.Value>
-        </Setter>
-    </Style>
-    
     <!-- Button Hover State -->
     <Style Selector="Button.circular-transport:pointerover">
         <Setter Property="Background" Value="{StaticResource ButtonHoverBackground}" />

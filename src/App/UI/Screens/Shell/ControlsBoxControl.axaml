@@ -30,8 +30,6 @@
                         HorizontalAlignment="Center">
                 <StackPanel.Styles>
                     <Style Selector="Button, ToggleButton">
-                        <Setter Property="Width" Value="34" />
-                        <Setter Property="Height" Value="34" />
                         <Setter Property="Margin" Value="2" />
                         <Setter Property="Background" Value="Transparent" />
                     </Style>

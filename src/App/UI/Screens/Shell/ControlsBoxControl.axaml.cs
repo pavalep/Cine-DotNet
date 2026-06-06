@@ -230,7 +230,7 @@ public partial class ControlsBoxControl : AvaloniaUserControl
     private void OnSubtitlesMenuClick(object? sender, RoutedEventArgs e)
     {
         if (_viewModel == null) return;
-        var flyout = BuildTrackMenuFlyout(_viewModel.SubtitleTracks);
+        var flyout = BuildSubtitleMenuFlyout();
         TrackFlyout(flyout);
         flyout.ShowAt(BtnSubtitlesMenu);
     }
@@ -246,7 +246,7 @@ public partial class ControlsBoxControl : AvaloniaUserControl
     private void OnAudioMenuClick(object? sender, RoutedEventArgs e)
     {
         if (_viewModel == null) return;
-        var flyout = BuildTrackMenuFlyout(_viewModel.AudioTracks);
+        var flyout = BuildAudioMenuFlyout();
         TrackFlyout(flyout);
         flyout.ShowAt(BtnAudioMenu);
     }
@@ -377,6 +377,257 @@ public partial class ControlsBoxControl : AvaloniaUserControl
             CornerRadius = new CornerRadius(8),
             Padding = new Thickness(4),
             MinWidth = 180,
+            Child = scroll
+        };
+
+        return new Flyout { Content = border, Placement = PlacementMode.Top };
+    }
+
+    /// <summary>Subtitle track flyout with delay +/- controls.</summary>
+    private Flyout BuildSubtitleMenuFlyout()
+    {
+        var vm = _viewModel;
+        if (vm == null) return new Flyout();
+        return BuildTrackMenuFlyoutWithDelay(vm.SubtitleTracks,
+            () => vm.SubtitleDelayValue,
+            v => vm.SubtitleDelayValue = (float)Math.Clamp(v, -10, 10),
+            () => vm.ResetSubtitleDelay(),
+            "Subtitle Delay");
+    }
+
+    /// <summary>Audio track flyout with delay +/- controls.</summary>
+    private Flyout BuildAudioMenuFlyout()
+    {
+        var vm = _viewModel;
+        if (vm == null) return new Flyout();
+        return BuildTrackMenuFlyoutWithDelay(vm.AudioTracks,
+            () => vm.AudioDelayValue,
+            v => vm.AudioDelayValue = (float)Math.Clamp(v, -10, 10),
+            () => vm.ResetAudioDelay(),
+            "Audio Delay");
+    }
+
+    /// <summary>Shared builder: track list + separator + delay adjustment row.</summary>
+    private Flyout BuildTrackMenuFlyoutWithDelay(
+        ObservableCollection<TrackMenuItem> tracks,
+        Func<double> getDelay,
+        Action<double> setDelay,
+        Action resetDelay,
+        string delayLabel)
+    {
+        var stackPanel = new global::Avalonia.Controls.StackPanel();
+
+        // Track list
+        var hasRealTracks = tracks.Any(t => !t.IsPseudoEntry);
+        if (!hasRealTracks && tracks.Count == 0)
+        {
+            stackPanel.Children.Add(new TextBlock
+            {
+                Text = "No tracks available",
+                FontSize = 12,
+                Foreground = AppColors.TextTertiary,
+                Padding = new Thickness(10, 7)
+            });
+        }
+
+        foreach (var track in tracks)
+        {
+            var dot = new Border
+            {
+                Width = 6, Height = 6,
+                CornerRadius = new CornerRadius(3),
+                Background = track.IsSelected && !track.IsPseudoEntry
+                    ? AppColors.Accent
+                    : AppColors.IconDim,
+                VerticalAlignment = AvaloniaLayout.VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 8, 0)
+            };
+
+            var text = new TextBlock
+            {
+                Text = track.DisplayName,
+                FontWeight = track.IsSelected ? FontWeight.SemiBold : FontWeight.Normal,
+                FontSize = 12,
+                Foreground = AppColors.TextPrimary
+            };
+
+            var grid = new Grid
+            {
+                ColumnDefinitions = new ColumnDefinitions
+                {
+                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(GridLength.Star)
+                }
+            };
+            grid.Children.Add(dot);
+            grid.Children.Add(text);
+            Grid.SetColumn(text, 1);
+
+            var button = new Button
+            {
+                Content = grid,
+                Background = AppColors.Transparent,
+                BorderThickness = new Thickness(0),
+                Padding = new Thickness(10, 7),
+                HorizontalContentAlignment = AvaloniaLayout.HorizontalAlignment.Stretch,
+                Cursor = new Cursor(StandardCursorType.Arrow),
+                Opacity = track.DisplayOpacity,
+                Command = track.SelectCommand
+            };
+            button.PointerEntered += (_, _) => button.Background = AppColors.HoverSubtle;
+            button.PointerExited += (_, _) => button.Background = AppColors.Transparent;
+            stackPanel.Children.Add(button);
+        }
+
+        // --- Separator ---
+        stackPanel.Children.Add(new Separator
+        {
+            Background = (IBrush?)global::Avalonia.Application.Current?.FindResource("PopoverBorder"),
+            Margin = new Thickness(4, 2)
+        });
+
+        // --- Delay section label ---
+        stackPanel.Children.Add(new TextBlock
+        {
+            Text = delayLabel,
+            FontSize = 9,
+            FontWeight = FontWeight.Bold,
+            Foreground = (IBrush?)global::Avalonia.Application.Current?.FindResource("OsdForeground"),
+            Opacity = 0.4,
+            LetterSpacing = 0.8,
+            Margin = new Thickness(8, 6, 8, 4)
+        });
+
+        // --- Delay controls ---
+        var delayText = new TextBlock
+        {
+            Text = $"{getDelay():F1}s",
+            FontSize = 13,
+            FontWeight = FontWeight.SemiBold,
+            Foreground = AppColors.TextPrimary,
+            MinWidth = 40,
+            TextAlignment = global::Avalonia.Media.TextAlignment.Center,
+            VerticalAlignment = AvaloniaLayout.VerticalAlignment.Center
+        };
+
+        // Shared click handlers that update both player and label
+        void NudgeDelay(double delta)
+        {
+            var current = getDelay();
+            setDelay(current + delta);
+            delayText.Text = $"{getDelay():F1}s";
+        }
+
+        void ResetDelay()
+        {
+            resetDelay();
+            delayText.Text = $"{getDelay():F1}s";
+        }
+
+        var btnMinus = new Button
+        {
+            Content = new TextBlock
+            {
+                Text = "−",
+                FontSize = 16,
+                FontWeight = FontWeight.Bold,
+                Foreground = AppColors.TextPrimary
+            },
+            Width = 28, Height = 28,
+            CornerRadius = new CornerRadius(14),
+            Background = AppColors.Transparent,
+            BorderThickness = new Thickness(0),
+            Padding = new Thickness(0),
+            HorizontalContentAlignment = AvaloniaLayout.HorizontalAlignment.Center,
+            VerticalContentAlignment = AvaloniaLayout.VerticalAlignment.Center,
+            Cursor = new Cursor(StandardCursorType.Arrow)
+        };
+        btnMinus.Click += (_, _) => NudgeDelay(-0.5);
+        btnMinus.PointerEntered += (_, _) => btnMinus.Background = AppColors.HoverSubtle;
+        btnMinus.PointerExited += (_, _) => btnMinus.Background = AppColors.Transparent;
+
+        var btnPlus = new Button
+        {
+            Content = new TextBlock
+            {
+                Text = "+",
+                FontSize = 16,
+                FontWeight = FontWeight.Bold,
+                Foreground = AppColors.TextPrimary
+            },
+            Width = 28, Height = 28,
+            CornerRadius = new CornerRadius(14),
+            Background = AppColors.Transparent,
+            BorderThickness = new Thickness(0),
+            Padding = new Thickness(0),
+            HorizontalContentAlignment = AvaloniaLayout.HorizontalAlignment.Center,
+            VerticalContentAlignment = AvaloniaLayout.VerticalAlignment.Center,
+            Cursor = new Cursor(StandardCursorType.Arrow)
+        };
+        btnPlus.Click += (_, _) => NudgeDelay(0.5);
+        btnPlus.PointerEntered += (_, _) => btnPlus.Background = AppColors.HoverSubtle;
+        btnPlus.PointerExited += (_, _) => btnPlus.Background = AppColors.Transparent;
+
+        var btnReset = new Button
+        {
+            Content = new TextBlock
+            {
+                Text = "Reset",
+                FontSize = 11,
+                Foreground = AppColors.TextTertiary
+            },
+            Background = AppColors.Transparent,
+            BorderThickness = new Thickness(0),
+            Padding = new Thickness(6, 2),
+            Cursor = new Cursor(StandardCursorType.Arrow)
+        };
+        btnReset.Click += (_, _) => ResetDelay();
+        btnReset.PointerEntered += (_, _) =>
+        {
+            if (btnReset.Content is TextBlock tb) tb.Foreground = AppColors.TextPrimary;
+        };
+        btnReset.PointerExited += (_, _) =>
+        {
+            if (btnReset.Content is TextBlock tb) tb.Foreground = AppColors.TextTertiary;
+        };
+
+        var delayRow = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions
+            {
+                new ColumnDefinition(GridLength.Auto),
+                new ColumnDefinition(GridLength.Star),
+                new ColumnDefinition(GridLength.Auto),
+                new ColumnDefinition(GridLength.Auto)
+            },
+            Margin = new Thickness(4, 0)
+        };
+        Grid.SetColumn(btnMinus, 0);
+        Grid.SetColumn(delayText, 1);
+        Grid.SetColumn(btnPlus, 2);
+        Grid.SetColumn(btnReset, 3);
+        delayRow.Children.Add(btnMinus);
+        delayRow.Children.Add(delayText);
+        delayRow.Children.Add(btnPlus);
+        delayRow.Children.Add(btnReset);
+
+        stackPanel.Children.Add(delayRow);
+
+        // Wrap in scroll
+        var scroll = new ScrollViewer
+        {
+            MaxHeight = 380,
+            Content = stackPanel
+        };
+
+        var border = new Border
+        {
+            Background = (IBrush?)global::Avalonia.Application.Current?.FindResource("PopoverBackground"),
+            BorderBrush = (IBrush?)global::Avalonia.Application.Current?.FindResource("PopoverBorder"),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(4),
+            MinWidth = 200,
             Child = scroll
         };
 

@@ -33,8 +33,6 @@ public partial class KeyboardShortcutsDialog : Window
         AddShortcut("T", "Toggle Time Elapsed / Remaining");
 
         AddSection("Navigation");
-        AddShortcut("N", "Next Playlist Item");
-        AddShortcut("B", "Previous Playlist Item");
         AddShortcut("Ctrl+← / →", "Previous / Next Chapter");
         AddShortcut("Ctrl+[ / ]", "Previous / Next Frame");
         AddShortcut("Page Up / Down", "Subtitle Position ±1");
@@ -44,11 +42,13 @@ public partial class KeyboardShortcutsDialog : Window
         AddShortcut("Ctrl+Shift+O", "Open Folder");
         AddShortcut("Ctrl+Shift+A", "Add Files to Playlist");
         AddShortcut("Ctrl+P", "Toggle Playlist");
-        AddShortcut("Ctrl+S", "Toggle Shuffle");
-        AddShortcut("H", "Toggle Shuffle");
+        AddShortcut("Ctrl+S", "Stop");
         AddShortcut("Ctrl+L", "Toggle Loop File");
         AddShortcut("Shift+L", "Toggle Loop File");
         AddShortcut("Ctrl+I", "Toggle Loop Playlist");
+        AddShortcut("H", "Toggle Shuffle");
+        AddShortcut("N", "Next Playlist Item");
+        AddShortcut("B", "Previous Playlist Item");
 
         AddSection("Subtitles & Audio");
         AddShortcut("C", "Cycle Subtitle Track");
@@ -63,7 +63,9 @@ public partial class KeyboardShortcutsDialog : Window
         AddShortcut("7 / 8", "Saturation – / +");
 
         AddSection("System");
+        AddShortcut("Ctrl+G", "Go to Time");
         AddShortcut("Ctrl+,", "Open Preferences");
+        AddShortcut("Ctrl+Shift+E", "Equalizer");
         AddShortcut("Ctrl+/", "Show Keyboard Shortcuts");
     }
 

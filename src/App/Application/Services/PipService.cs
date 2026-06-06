@@ -55,11 +55,16 @@ public class PipService : IDisposable
             // Wire DWM thumbnail mirroring (source already set by MainWindow)
             _pipWindow.EnableDwmMirror(_dwmManager);
 
+            // Show controls initially, then auto-hide after 5s
+            _pipWindow.ShowAllControls();
+            _pipWindow.StartHoverTimer();
+
             _isActive = true;
             return _pipWindow;
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"[PipService] EnterPip failed: {ex.Message}");
             CleanupPip();
             return null;
         }
@@ -84,7 +89,7 @@ public class PipService : IDisposable
         if (_pipWindow != null)
         {
             _pipWindow.Closed -= OnPipWindowClosed;
-            try { _pipWindow.Close(); } catch { }
+            try { _pipWindow.Close(); } catch { /* Window may already be disposed */ }
             _pipWindow = null;
         }
         _isActive = false;

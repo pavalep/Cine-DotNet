@@ -38,6 +38,7 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    [Conditional("DEBUG")]
     private static void Log(string msg)
     {
         try
@@ -258,17 +259,31 @@ public class MainViewModel : INotifyPropertyChanged
     private async Task OnAddSubtitle()
     {
         if (RequestSubtitleFileAsync == null) return;
-        var path = await RequestSubtitleFileAsync();
-        if (!string.IsNullOrWhiteSpace(path))
-            _player.AddSubtitle(path);
+        try
+        {
+            var path = await RequestSubtitleFileAsync();
+            if (!string.IsNullOrWhiteSpace(path))
+                _player?.AddSubtitle(path);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MainViewModel] AddSubtitle failed: {ex.Message}");
+        }
     }
 
     private async Task OnAddAudio()
     {
         if (RequestAudioFileAsync == null) return;
-        var path = await RequestAudioFileAsync();
-        if (!string.IsNullOrWhiteSpace(path))
-            _player.AddAudio(path);
+        try
+        {
+            var path = await RequestAudioFileAsync();
+            if (!string.IsNullOrWhiteSpace(path))
+                _player?.AddAudio(path);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MainViewModel] AddAudio failed: {ex.Message}");
+        }
     }
 
     // --- Playback commands ---
@@ -478,14 +493,13 @@ public class MainViewModel : INotifyPropertyChanged
             };
             File.WriteAllText(SessionPath, JsonSerializer.Serialize(session));
         }
-        catch { }
+        catch { Debug.WriteLine("SaveSession failed"); }
     }
 
     public void LoadSession()
     {
         try
         {
-            if (!File.Exists(SessionPath)) return;
             var json = File.ReadAllText(SessionPath);
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
@@ -508,13 +522,13 @@ public class MainViewModel : INotifyPropertyChanged
                     OnPropertyChanged(nameof(HasMultiplePlaylistItems));
             }
         }
-        catch { }
+        catch { /* Session save is best-effort */ }
     }
 
     public void ClearSession()
     {
         try { if (File.Exists(SessionPath)) File.Delete(SessionPath); }
-        catch { }
+        catch { /* Best-effort cleanup */ }
     }
 
     // --- Properties for binding ---
@@ -858,7 +872,7 @@ public class MainViewModel : INotifyPropertyChanged
             if (dir != null) Directory.CreateDirectory(dir);
             File.WriteAllText(RecentFilesPath, JsonSerializer.Serialize(RecentFiles.ToList()));
         }
-        catch { }
+        catch { /* Best-effort recent files save */ }
     }
 
     public void LoadRecentFiles()
@@ -917,7 +931,7 @@ public class MainViewModel : INotifyPropertyChanged
     }
 
     // --- Internal helpers ---
-    private TimeSpan _lastPosTextTime = TimeSpan.MinValue;
+    private TimeSpan _lastPosTextTime = TimeSpan.Zero;
 
     private double _lastSeekValue;
 

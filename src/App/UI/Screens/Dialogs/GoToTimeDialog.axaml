@@ -1,0 +1,64 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        mc:Ignorable="d" xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        d:DesignWidth="340" d:DesignHeight="180"
+        x:Class="Cine.Avalonia.Views.Dialogs.GoToTimeDialog"
+        Title="Go to Time"
+        Width="340" Height="180"
+        MinWidth="280" MinHeight="160"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource AppBackground}"
+        ExtendClientAreaToDecorationsHint="True"
+        WindowDecorations="BorderOnly">
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="0">
+        <!-- Header -->
+        <Grid Grid.Row="0" Height="40" ColumnDefinitions="*,Auto"
+              Background="{StaticResource PopoverBackground}">
+            <TextBlock Grid.Column="0" Text="Go to Time" FontWeight="Bold" FontSize="16"
+                       Foreground="{StaticResource OsdForeground}"
+                       Margin="16,0" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Classes="flat" Margin="0,0,8,0"
+                    Click="OnCloseClick" ToolTip.Tip="Close">
+                <materialIcons:MaterialIcon Kind="Close" Width="14" Height="14"
+                    Foreground="{StaticResource OsdForeground}" />
+            </Button>
+        </Grid>
+
+        <!-- Body -->
+        <StackPanel Grid.Row="1" Spacing="12" Margin="16,12,16,0"
+                    VerticalAlignment="Top">
+            <TextBlock Text="Enter time (HH:MM:SS or MM:SS)" FontSize="12"
+                       Foreground="{StaticResource OsdForeground}" Opacity="0.6" />
+            <TextBox x:Name="TimeTextBox"
+                     Text=""
+                     PlaceholderText="e.g. 1:23:45 or 3:30"
+                     FontSize="24"
+                     FontWeight="Bold"
+                     Foreground="{StaticResource OsdForeground}"
+                     Background="{StaticResource PopoverBackground}"
+                     BorderBrush="{StaticResource PopoverBorder}"
+                     BorderThickness="1"
+                     CornerRadius="8"
+                     Padding="12,6"
+                     HorizontalContentAlignment="Center"
+                     KeyDown="OnTimeTextBoxKeyDown" />
+        </StackPanel>
+
+        <!-- Footer -->
+        <Button Grid.Row="2"
+                x:Name="GoButton"
+                Content="Go"
+                FontSize="14" FontWeight="SemiBold"
+                HorizontalAlignment="Stretch"
+                Margin="16,0,16,12"
+                Height="36"
+                CornerRadius="18"
+                Background="{StaticResource AppAccent}"
+                Foreground="White"
+                BorderThickness="0"
+                Click="OnGoClick" />
+    </Grid>
+</Window>

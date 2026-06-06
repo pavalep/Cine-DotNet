@@ -6,7 +6,10 @@
     <Border x:Name="ReplayOverlay"
             ZIndex="30" IsVisible="False"
             HorizontalAlignment="Center" VerticalAlignment="Center"
-            Background="{StaticResource AppOverlayLight}" CornerRadius="12" Padding="24">
+            Background="{StaticResource AppOverlayLight}" CornerRadius="16" Padding="24">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="16" OffsetY="4" Color="#40000000" />
+        </Border.Effect>
         <StackPanel Spacing="8" HorizontalAlignment="Center">
             <Button x:Name="BtnReplay"
                     Classes="circular-transport" Width="56" Height="56"

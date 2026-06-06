@@ -11,7 +11,7 @@ namespace Cine.Avalonia;
 
 public partial class MainWindow
 {
-    private TimeSpan _lastPositionTextTime = TimeSpan.MinValue;
+    private TimeSpan _lastPositionTextTime = TimeSpan.Zero;
 
     private async void OnMediaOpened(object? sender, EventArgs e)
     {

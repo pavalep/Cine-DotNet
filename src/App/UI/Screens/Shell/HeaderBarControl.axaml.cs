@@ -75,15 +75,20 @@ public partial class HeaderBarControl : AvaloniaUserControl
             .AddToggleItem("Repeat", "Loop Playlist", "Ctrl+R",
                 () => _viewModel?.ToggleLoopPlaylist(),
                 () => _viewModel?.IsLoopPlaylistEnabled ?? false)
-            .AddToggleItem("ShuffleVariant", "Shuffle", "Ctrl+S",
+            .AddToggleItem("ShuffleVariant", "Shuffle", "H",
                 () => _viewModel?.ToggleShuffle(),
                 () => _viewModel?.IsShuffleEnabled ?? false)
             .AddSeparator()
             .AddSection("TOOLS")
+            .AddItem("ClockOutline", "Go to Time…", "Ctrl+G", () =>
+            {
+                var w = GetParentWindow();
+                if (w != null && _viewModel != null) new GoToTimeDialog { DataContext = _viewModel }.Show(w);
+            })
             .AddItem("Keyboard", "Keyboard Shortcuts", null, () =>
             {
                 var w = GetParentWindow();
-                if (w != null) new ShortcutsDialog { DataContext = _viewModel }.Show(w);
+                if (w != null) new KeyboardShortcutsDialog().Show(w);
             })
             .AddItem("Cog", "Preferences", null, () =>
             {
@@ -281,7 +286,7 @@ public partial class HeaderBarControl : AvaloniaUserControl
                 stack.Children.Add(recentBtn);
             }
         }
-        catch { }
+        catch { /* Recent files list is best-effort */ }
     }
 
     public void TrackFlyoutClosed(object? sender, EventArgs e)
@@ -375,11 +380,7 @@ public partial class HeaderBarControl : AvaloniaUserControl
     private void OnShortcutsClick(object? sender, RoutedEventArgs e)
     {
         var w = GetParentWindow();
-        if (w != null)
-        {
-            var dlg = new ShortcutsDialog { DataContext = _viewModel };
-            dlg.Show(w);
-        }
+        if (w != null) new KeyboardShortcutsDialog().Show(w);
     }
     private void OnPreferencesClick(object? sender, RoutedEventArgs e)
     {
