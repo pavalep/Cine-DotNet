@@ -40,10 +40,14 @@ public partial class MainWindow
                 // Sync initial play state
                 pipWindow.SetPlayingState(_viewModel.IsPlaying);
 
-                // Wire position updates
+                // Set aspect ratio from video dimensions
                 var player = _playerService?.Player;
                 if (player != null)
                 {
+                    player.GetVideoSize(out int vw, out int vh);
+                    if (vw > 0 && vh > 0)
+                        pipWindow.SetAspectRatio((double)vw / vh);
+
                     // Push current position immediately
                     pipWindow.UpdatePosition(
                         _viewModel.Position.TotalSeconds,

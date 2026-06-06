@@ -66,6 +66,7 @@ public class MainViewModel : INotifyPropertyChanged
     private bool _isLoopPlaylistEnabled;
     private bool _isSubtitleEnabled = true;
     private bool _isAudioEnabled = true;
+    private bool _isFullscreen;
     private bool _hasMultiplePlaylistItems;
     private bool _hasMultipleVideoTracks;
 
@@ -328,7 +329,11 @@ public class MainViewModel : INotifyPropertyChanged
     public void IncreaseVolume() => VolumeValue = Math.Min(VolumeMax, VolumeValue + 5);
     public void DecreaseVolume() => VolumeValue = Math.Max(0, VolumeValue - 5);
     public void ToggleMute() => IsMuted = !IsMuted;
-    public void ToggleFullscreen() => _player.SetFullscreen(!_player.IsFullscreen);
+    public void ToggleFullscreen()
+    {
+        _player.SetFullscreen(!_player.IsFullscreen);
+        IsFullscreen = _player.IsFullscreen;
+    }
     public void NextChapter() => _player.NextChapter();
     public void PreviousChapter() => _player.PreviousChapter();
     public void NextItem() => _player.NextPlaylistItem();
@@ -792,6 +797,12 @@ public class MainViewModel : INotifyPropertyChanged
     {
         get => _isLoopPlaylistEnabled;
         set { _isLoopPlaylistEnabled = value; OnPropertyChanged(); }
+    }
+
+    public bool IsFullscreen
+    {
+        get => _isFullscreen;
+        set { _isFullscreen = value; OnPropertyChanged(); }
     }
 
     public bool IsSubtitleEnabled

@@ -5,7 +5,7 @@
              x:DataType="vm:MainViewModel"
              x:Name="SeekBarRoot"
              Height="37">
-    <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+    <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="4">
 
         <!-- Seek Area (hexpand, with chapter markers) -->
         <Grid Grid.Column="0"
@@ -85,7 +85,7 @@
                    MinWidth="45"
                    Text="{Binding PositionText, Mode=OneWay}"
                    VerticalAlignment="Center"
-                   Margin="-7,0"
+                   Margin="4,0,0,0"
                    PointerPressed="OnPositionTimeLabelPressed"
                    Cursor="Hand" />
 
@@ -102,7 +102,7 @@
                    Classes="time-label"
                    MinWidth="45"
                    Text="{Binding DurationText, Mode=OneWay}"
-                   Margin="0,0,20,0"
+                   Margin="0,0,4,0"
                    VerticalAlignment="Center" />
     </Grid>
 </UserControl>

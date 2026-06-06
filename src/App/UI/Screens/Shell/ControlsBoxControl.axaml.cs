@@ -35,6 +35,25 @@ public partial class ControlsBoxControl : AvaloniaUserControl
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
+
+        // Volume flyout auto-dismiss: close after 1.5s of inactivity on slider
+        BtnVolumeMenu.Flyout!.Opened += (_, _) =>
+        {
+            VolumeSlider.PointerWheelChanged += OnVolumeAutoDismiss;
+            VolumeSlider.PointerReleased += OnVolumeAutoDismiss;
+        };
+        BtnVolumeMenu.Flyout.Closed += (_, _) =>
+        {
+            VolumeSlider.PointerWheelChanged -= OnVolumeAutoDismiss;
+            VolumeSlider.PointerReleased -= OnVolumeAutoDismiss;
+        };
+    }
+
+    private async void OnVolumeAutoDismiss(object? sender, EventArgs e)
+    {
+        await Task.Delay(1500);
+        if (BtnVolumeMenu?.Flyout is Flyout f && f.IsOpen)
+            f.Hide();
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
@@ -67,6 +86,9 @@ public partial class ControlsBoxControl : AvaloniaUserControl
         bool isMuted = _viewModel.IsMuted;
         VolumeArcsPath.IsVisible = !isMuted;
         VolumeMuteCrossPath.IsVisible = isMuted;
+        MuteToggleIcon.Kind = isMuted
+            ? Material.Icons.MaterialIconKind.VolumeOff
+            : Material.Icons.MaterialIconKind.VolumeHigh;
     }
 
     public void RefreshSubtitleIcon()
@@ -145,7 +167,16 @@ public partial class ControlsBoxControl : AvaloniaUserControl
 
     // --- Transport handlers ---
 
-    private void OnPlayPause(object? sender, RoutedEventArgs e) => _viewModel?.PlayPause();
+    private void OnPlayPause(object? sender, RoutedEventArgs e)
+    {
+        if (_viewModel == null) return;
+        // Optimistically toggle icon immediately — don't wait for PlaybackStateChanged event
+        PlayPauseIconPath.Kind = PlayPauseIconPath.Kind == Material.Icons.MaterialIconKind.Pause
+            ? Material.Icons.MaterialIconKind.Play
+            : Material.Icons.MaterialIconKind.Pause;
+        _viewModel.PlayPause();
+    }
+
     private void OnPrevious(object? sender, RoutedEventArgs e)
     {
         if (_viewModel != null)
@@ -170,6 +201,14 @@ public partial class ControlsBoxControl : AvaloniaUserControl
     private void OnToggleLoopFile(object? sender, RoutedEventArgs e) => _viewModel?.ToggleLoopFile();
     private void OnToggleLoopPlaylist(object? sender, RoutedEventArgs e) => _viewModel?.ToggleLoopPlaylist();
     private void OnToggleFullscreen(object? sender, RoutedEventArgs e) => _viewModel?.ToggleFullscreen();
+
+    private void OnVideoEqualizerClick(object? sender, RoutedEventArgs e)
+    {
+        var parent = this.VisualRoot as Window;
+        if (parent == null) return;
+        var dlg = new EqualizerDialog(_viewModel!);
+        dlg.Show(parent);
+    }
 
     // --- Volume handlers ---
 
@@ -324,6 +363,12 @@ public partial class ControlsBoxControl : AvaloniaUserControl
             stackPanel.Children.Add(button);
         }
 
+        var scroll = new ScrollViewer
+        {
+            MaxHeight = 320,
+            Content = stackPanel
+        };
+
         var border = new Border
         {
             Background = (IBrush?)global::Avalonia.Application.Current?.FindResource("PopoverBackground"),
@@ -332,7 +377,7 @@ public partial class ControlsBoxControl : AvaloniaUserControl
             CornerRadius = new CornerRadius(8),
             Padding = new Thickness(4),
             MinWidth = 180,
-            Child = stackPanel
+            Child = scroll
         };
 
         return new Flyout { Content = border, Placement = PlacementMode.Top };

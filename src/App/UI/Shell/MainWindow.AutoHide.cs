@@ -44,7 +44,7 @@ public partial class MainWindow
             Interval = TimeSpan.FromMilliseconds(3000)
         };
         _autoHideTimer.Tick += OnAutoHideTimerTick;
-        _autoHideTimer?.Start();
+        // Timer is started on first ShowUiControls when media is loaded
     }
 
     // ── Auto-hide timer logic (aligned with Python _on_hide_ui) ──
@@ -135,7 +135,10 @@ public partial class MainWindow
             _controlsBox.ControlsBox.IsHitTestVisible = true;
         }
 
-        _autoHideTimer?.Start();
+        // Only start auto-hide timer when media is loaded
+        bool hasMedia = !string.IsNullOrEmpty(_viewModel?.FilePath);
+        if (hasMedia)
+            _autoHideTimer?.Start();
     }
 
     private void HideUiControls()

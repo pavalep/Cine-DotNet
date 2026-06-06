@@ -24,7 +24,12 @@
         <Setter Property="ExtendClientAreaTitleBarHeightHint" Value="0" />
         <Setter Property="WindowDecorations" Value="BorderOnly" />
     </Style>
-    
+
+    <!-- Global ToolTip delay -->
+    <Style Selector="ToolTip">
+        <Setter Property="ShowDelay" Value="600" />
+    </Style>
+
     <!-- ======================== -->
     <!--  TRANSPORT BUTTONS       -->
     <!-- ======================== -->
@@ -93,16 +98,80 @@
         </Style>
     </Style>
     
-    <!-- Circular Menu Button (matches reference) -->
-    <Style Selector="Button.circular-menu">
-        <Setter Property="Width" Value="34" />
-        <Setter Property="Height" Value="34" />
+    <!-- Circular Play Button (larger, 40x40) -->
+    <Style Selector="Button.circular-play">
+        <Setter Property="Width" Value="40" />
+        <Setter Property="Height" Value="40" />
         <Setter Property="Padding" Value="0" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="17" />
+        <Setter Property="CornerRadius" Value="20" />
+        <Setter Property="RenderTransform">
+            <Setter.Value>
+                <ScaleTransform ScaleX="1" ScaleY="1" />
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Transitions">
+            <Transitions>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" />
+            </Transitions>
+        </Setter>
+        <Setter Property="Template">
+            <ControlTemplate TargetType="Button">
+                <Border x:Name="RootBorder"
+                        Background="{TemplateBinding Background}"
+                        CornerRadius="{TemplateBinding CornerRadius}">
+                    <Border.Transitions>
+                        <Transitions>
+                            <BrushTransition Property="Background" Duration="0:0:0.12" />
+                        </Transitions>
+                    </Border.Transitions>
+                    <ContentPresenter x:Name="ContentPresenter"
+                                      Content="{TemplateBinding Content}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                      Margin="{TemplateBinding Padding}" />
+                </Border>
+            </ControlTemplate>
+        </Setter>
+        <Style Selector="^:pointerover /template/ Border#RootBorder">
+            <Setter Property="Background" Value="{StaticResource ButtonHoverBackground}" />
+        </Style>
+        <Style Selector="^:pressed /template/ Border#RootBorder">
+            <Setter Property="Background" Value="{StaticResource ButtonActiveBackground}" />
+        </Style>
+        <Style Selector="^:disabled /template/ ContentPresenter#ContentPresenter">
+            <Setter Property="Opacity" Value="0.4" />
+        </Style>
+        <Style Selector="^:pointerover">
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <ScaleTransform ScaleX="1.08" ScaleY="1.08" />
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style Selector="^:pressed">
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <ScaleTransform ScaleX="0.95" ScaleY="0.95" />
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Style>
+    
+    <!-- Circular Menu Button (matches reference) -->
+    <Style Selector="Button.circular-menu">
+        <Setter Property="Width" Value="30" />
+        <Setter Property="Height" Value="30" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="15" />
         <Setter Property="RenderTransform">
             <Setter.Value>
                 <ScaleTransform ScaleX="1" ScaleY="1" />
@@ -166,7 +235,7 @@
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="17" />
+        <Setter Property="CornerRadius" Value="15" />
         <Setter Property="RenderTransform">
             <Setter.Value>
                 <ScaleTransform ScaleX="1" ScaleY="1" />
@@ -376,6 +445,13 @@
         <Setter Property="Height" Value="56" />
         <Setter Property="VerticalAlignment" Value="Top" />
         <Setter Property="Background" Value="{StaticResource HeaderGradient}" />
+        <Setter Property="Transitions">
+            <Setter.Value>
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.25" />
+                </Transitions>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!-- Header + Controls combined overlay (matches reference .header-and-controls) -->
@@ -391,6 +467,13 @@
         <Setter Property="VerticalAlignment" Value="Bottom" />
         <Setter Property="Background" Value="{StaticResource ControlsGradient}" />
         <Setter Property="Padding" Value="0,0,0,12" />
+        <Setter Property="Transitions">
+            <Setter.Value>
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.25" />
+                </Transitions>
+            </Setter.Value>
+        </Setter>
     </Style>
     
     <!-- ======================== -->
@@ -430,7 +513,6 @@
     <!-- Volume Slider -->
     <Style Selector="Slider.volume-slider">
         <Setter Property="Minimum" Value="0" />
-        <Setter Property="Maximum" Value="130" />
         <Setter Property="Width" Value="32" />
         <Setter Property="Height" Value="120" />
         <Setter Property="HorizontalAlignment" Value="Center" />
@@ -516,24 +598,19 @@
         <Setter Property="CornerRadius" Value="0" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Transitions">
+            <Setter.Value>
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.12" />
+                </Transitions>
+            </Setter.Value>
+        </Setter>
     </Style>
     <Style Selector="Button.window-control:pointerover">
-        <Setter Property="Background" Value="#21FFFFFF" />
+        <Setter Property="Background" Value="#2BFFFFFF" />
     </Style>
     <Style Selector="Button.window-control.close:pointerover">
         <Setter Property="Background" Value="{StaticResource WindowCloseButtonHoverBackground}" />
-    </Style>
-
-    <!-- ======================== -->
-    <!--  TOGGLE CHECKED INVERSION -->
-    <!-- ======================== -->
-    <Style Selector="ToggleButton.circular-toggle:checked /template/ ContentPresenter Path">
-        <Setter Property="Fill" Value="Black" />
-        <Setter Property="Stroke" Value="Black" />
-    </Style>
-    <Style Selector="ToggleButton#BtnMuteToggle:checked /template/ ContentPresenter Path">
-        <Setter Property="Fill" Value="Black" />
-        <Setter Property="Stroke" Value="Black" />
     </Style>
 
     <!-- ======================== -->

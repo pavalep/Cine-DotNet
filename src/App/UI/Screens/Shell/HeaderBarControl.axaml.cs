@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Cine.Avalonia.Helpers;
 using Cine.Avalonia.ViewModels;
 using Cine.Avalonia.Views.Dialogs;
 using Layout = Avalonia.Layout;
@@ -20,16 +21,81 @@ public partial class HeaderBarControl : AvaloniaUserControl
 
     private MainViewModel? _viewModel;
     private int _activeFlyouts;
+    private PrimaryMenuBuilder? _primaryMenuBuilder;
 
     public HeaderBarControl()
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
+
+        // Build primary menu from shared builder
+        _primaryMenuBuilder = BuildPrimaryMenu();
+        BtnPrimaryMenu.Flyout = _primaryMenuBuilder.Build();
+
+        // Sync menu checkmarks when the primary menu opens
+        BtnPrimaryMenu.Flyout.Opened += (_, _) =>
+        {
+            TrackFlyoutOpened(null, EventArgs.Empty);
+            _primaryMenuBuilder?.SyncCheckStates();
+        };
+        BtnPrimaryMenu.Flyout.Closed += TrackFlyoutClosed;
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
         _viewModel = DataContext as MainViewModel;
+    }
+
+    /// <summary>Builds the shared primary menu using PrimaryMenuBuilder.</summary>
+    private PrimaryMenuBuilder BuildPrimaryMenu()
+    {
+        var builder = new PrimaryMenuBuilder();
+        builder
+            .AddSection("PLAYBACK")
+            .AddItem("Play", "Play/Pause", "Space", () => _viewModel?.PlayPause())
+            .AddItem("Stop", "Stop", "Ctrl+S", () => _viewModel?.Stop())
+            .AddItem("Rewind", "Seek -10s", "←", () => _viewModel?.SeekBackward())
+            .AddItem("FastForward", "Seek +10s", "→", () => _viewModel?.SeekForward())
+            .AddSeparator()
+            .AddSection("VIEW")
+            .AddToggleItem("Fullscreen", "Fullscreen", "F",
+                () => _viewModel?.ToggleFullscreen(),
+                () => _viewModel?.IsFullscreen ?? false)
+            .AddItem("PictureInPictureBottomRight", "Picture in Picture", "Ctrl+P", () => PipToggled?.Invoke(this, EventArgs.Empty))
+            .AddItem("Pin", "Always on Top", null, () =>
+            {
+                var w = GetParentWindow();
+                if (w != null) w.Topmost = !w.Topmost;
+            })
+            .AddSeparator()
+            .AddSection("LOOP")
+            .AddToggleItem("RepeatOnce", "Loop File", "L",
+                () => _viewModel?.ToggleLoopFile(),
+                () => _viewModel?.IsLoopFileEnabled ?? false)
+            .AddToggleItem("Repeat", "Loop Playlist", "Ctrl+R",
+                () => _viewModel?.ToggleLoopPlaylist(),
+                () => _viewModel?.IsLoopPlaylistEnabled ?? false)
+            .AddToggleItem("ShuffleVariant", "Shuffle", "Ctrl+S",
+                () => _viewModel?.ToggleShuffle(),
+                () => _viewModel?.IsShuffleEnabled ?? false)
+            .AddSeparator()
+            .AddSection("TOOLS")
+            .AddItem("Keyboard", "Keyboard Shortcuts", null, () =>
+            {
+                var w = GetParentWindow();
+                if (w != null) new ShortcutsDialog { DataContext = _viewModel }.Show(w);
+            })
+            .AddItem("Cog", "Preferences", null, () =>
+            {
+                var w = GetParentWindow();
+                if (w != null) new PreferencesDialog { DataContext = _viewModel }.Show(w);
+            })
+            .AddItem("Information", "About Cine", null, () =>
+            {
+                var w = GetParentWindow();
+                if (w != null) new AboutDialog { DataContext = _viewModel }.Show(w);
+            });
+        return builder;
     }
 
     // P12: Expose inner HeaderBar Border for overlay hover tracking

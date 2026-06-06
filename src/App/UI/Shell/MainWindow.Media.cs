@@ -31,15 +31,27 @@ public partial class MainWindow
             _isLoading = false;
             _spinnerOverlay.Stop();
 
-            // Hide start page and drop indicator
+            // Hide start page
             if (StartPage != null)
             {
                 StartPage.Opacity = 0;
-                StartPage.IsVisible = false;
+                // Don't hide immediately — let fade transition complete
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(350);
+                    await Dispatcher.UIThread.OnUiThreadAsync(() =>
+                    {
+                        if (StartPage != null) StartPage.IsVisible = false;
+                        // Keep PlaybackBackground visible during start page fade,
+                        // then hide after fade completes so there's never a flash of
+                        // the raw window background between layers.
+                        PlaybackBackground.IsVisible = false;
+                    });
+                });
             }
-
-            // Hide opaque playback backdrop so DWM thumbnail shows through
-            PlaybackBackground.IsVisible = false;
+            // If no start page (already hidden), hide playback background immediately
+            if (StartPage == null || !StartPage.IsVisible)
+                PlaybackBackground.IsVisible = false;
 
             if (_dropIndicator.IsShowing)
                 _ = _dropIndicator.Hide();
@@ -66,7 +78,15 @@ public partial class MainWindow
                      $"dropIndicator.Showing={_dropIndicator.IsShowing} VideoHost.Opacity={_videoHost?.Opacity} " +
                      $"VideoHost.Visible={_videoHost?.IsVisible}");
 
-            ShowUiControls();
+            // Delay controls appearance to avoid overlap with fading start page
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(250);
+                await Dispatcher.UIThread.OnUiThreadAsync(() =>
+                {
+                    ShowUiControls();
+                });
+            });
             _headerBar.ShowOpenMenu();
 
             if (_viewModel != null)
@@ -106,6 +126,10 @@ public partial class MainWindow
                 _pauseOverlay.Show();
             else
                 _pauseOverlay.Hide();
+
+            // Show replay overlay when playback ends (end of file)
+            if (e.State == PlaybackState.Stopped && _viewModel?.FilePath != null)
+                _replayOverlay.Show();
 
             _controlsBox.UpdatePlayPauseIcon();
 

@@ -6,19 +6,21 @@
             IsVisible="False"
             HorizontalAlignment="Center"
             VerticalAlignment="Bottom"
-            Padding="12,8,16,8"
-            CornerRadius="8"
-            Background="{StaticResource OsdBackground}"
-            PointerPressed="OnOsdNotificationClick">
+            Padding="16,10,20,10"
+            CornerRadius="20"
+            Background="{StaticResource OsdBackground}">
+        <Border.RenderTransform>
+            <TranslateTransform X="0" Y="20" />
+        </Border.RenderTransform>
         <Border.Transitions>
             <Transitions>
                 <DoubleTransition Property="Opacity" Duration="0:0:0.2" />
             </Transitions>
         </Border.Transitions>
-        <StackPanel Orientation="Horizontal" Spacing="6">
+        <StackPanel Orientation="Horizontal" Spacing="8">
             <materialIcons:MaterialIcon x:Name="OsdIcon"
                                         Kind="Information"
-                                        Width="16" Height="16"
+                                        Width="18" Height="18"
                                         Foreground="{StaticResource OsdForeground}"
                                         VerticalAlignment="Center"
                                         IsVisible="False" />

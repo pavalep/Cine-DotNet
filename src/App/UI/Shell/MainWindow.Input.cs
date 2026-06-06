@@ -121,7 +121,7 @@ public partial class MainWindow
         else if (key == Key.S) 
             Handle(() => { if (shift) _playerService?.Player?.ScreenshotWithoutSubtitles(); else _playerService?.Player?.ScreenshotWithSubtitles(); });
         else if (ctrl && shift && key == Key.E)
-            Handle(() => { var dlg = new EqualizerDialog(_viewModel!); dlg.Show(this); });
+            Handle(() => { if (_viewModel != null) { var dlg = new EqualizerDialog(_viewModel); dlg.Show(this); } });
         else if (key == Key.L && shift) 
             Handle(() => _viewModel?.ToggleLoopFile());
         // ── Phase 4: Global Keyboard Shortcuts ──
@@ -131,12 +131,10 @@ public partial class MainWindow
             Handle(async () => { var folder = await OpenFolderDialogAsync(); if (folder != null) _viewModel?.OpenFiles(new[] { folder }); });
         else if (ctrl && key == Key.U)
             Handle(() => { /* Ctrl+U: Open URL — placeholder for future URL streaming */ });
-        else if (ctrl && key == Key.L)
-            Handle(() => _viewModel?.ToggleLoopFile());
         else if (ctrl && key == Key.I)
             Handle(() => _viewModel?.ToggleLoopPlaylist());
         else if (ctrl && key == Key.S && !shift)
-            Handle(() => _viewModel?.ToggleShuffle());
+            Handle(() => _viewModel?.Stop());
         else if (ctrl && key == Key.P)
             Handle(() => _controlsBox.OpenPlaylistDialog());
         else if (ctrl && key == Key.OemComma)
@@ -161,7 +159,6 @@ public partial class MainWindow
         foreach (var btn in flyoutsToClose)
             if (btn?.Flyout is Flyout f)
                 f.Hide();
-        // BtnOptionsMenu handles its own flyout internally
         var trackMenus = new[] { _controlsBox.BtnSubtitlesMenu, _controlsBox.BtnAudioMenu, _controlsBox.BtnVideoMenu };
         foreach (var btn in trackMenus)
             if (btn?.Flyout is Flyout f)
@@ -218,16 +215,6 @@ public partial class MainWindow
             _controlsBox?.UpdatePlayPauseIcon();
             e.Handled = true;
         }
-    }
-
-    private void OnVolumeButtonScroll(object? sender, PointerWheelEventArgs e)
-    {
-        if (_viewModel == null) return;
-        if (e.Delta.Y > 0)
-            _viewModel.IncreaseVolume();
-        else if (e.Delta.Y < 0)
-            _viewModel.DecreaseVolume();
-        e.Handled = true;
     }
 
     private void BuildVideoContextMenu(Flyout flyout)
@@ -328,10 +315,13 @@ public partial class MainWindow
         // Aspect Ratio sub-menu
         var aspectLabel = new TextBlock
         {
-            Text = "Aspect Ratio",
-            FontSize = 13,
+            Text = "ASPECT RATIO",
+            FontSize = 10,
+            FontWeight = FontWeight.Bold,
             Foreground = AppColors.TextPrimary,
-            Margin = new Thickness(10, 7, 0, 7),
+            Opacity = 0.4,
+            LetterSpacing = 0.8,
+            Margin = new Thickness(10, 6, 8, 4),
             VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center
         };
         stack.Children.Add(aspectLabel);

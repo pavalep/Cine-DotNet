@@ -21,6 +21,7 @@ public partial class PipWindow : Window
     private int _thumbnailId;
     private DispatcherTimer? _hoverTimer;
     private bool _isUpdatingSeekFromExternal;
+    private double _aspectRatio = 16.0 / 9.0;
 
     // ────── Player control events ──────
     public event EventHandler? PlayPauseRequested;
@@ -41,6 +42,7 @@ public partial class PipWindow : Window
         KeyDown += OnKeyDown;
 
         PipSeekSlider.PropertyChanged += OnSeekSliderChanged;
+        ResizeGrip.PointerPressed += OnResizeGripPointerPressed;
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -79,9 +81,9 @@ public partial class PipWindow : Window
         int w = (int)(Width * scale);
         int h = (int)(Height * scale);
 
-        // Titlebar = 32px, seek bar + padding = ~80px at bottom
-        int top = (int)(32 * scale);
-        int bottom = (int)(80 * scale);
+        // Measure actual titlebar + bottom seek heights at runtime
+        int top = (int)((TitleBar?.Bounds.Height ?? 32) * scale);
+        int bottom = (int)((SeekContainer?.Bounds.Height ?? 80) * scale);
 
         _dwmManager.UpdateTarget(_thumbnailId, opacity: 255, visible: true,
             destLeft: 0, destTop: top,
@@ -91,7 +93,21 @@ public partial class PipWindow : Window
     protected override void OnSizeChanged(SizeChangedEventArgs e)
     {
         base.OnSizeChanged(e);
+        // Lock height to aspect ratio when user resizes width
+        if (e.WidthChanged && !e.HeightChanged)
+        {
+            double titleH = TitleBar?.Bounds.Height ?? 32;
+            double newH = e.NewSize.Width / _aspectRatio + titleH;
+            if (Math.Abs(Height - newH) > 2)
+                Height = newH;
+        }
         SyncThumbnailRect();
+    }
+
+    /// <summary>Sets the target aspect ratio for resize locking.</summary>
+    public void SetAspectRatio(double ar)
+    {
+        if (ar > 0) _aspectRatio = ar;
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -178,20 +194,31 @@ public partial class PipWindow : Window
         _hoverTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         _hoverTimer.Tick += (_, _) =>
         {
-            if (HoverOverlay != null)
-                HoverOverlay.Opacity = 0;
-            // Auto-hide title bar too — saves vertical space in PIP
+            // Hide title bar only — HoverOverlay handles itself via :pointerover CSS
             if (TitleBar != null)
                 TitleBar.Opacity = 0;
             _hoverTimer?.Stop();
         };
     }
 
-    private void OnHoverOverlayPointerEntered(object? sender, PointerEventArgs e)
+    private void ShowControls()
     {
-        // Show title bar and controls on hover
+        if (HoverOverlay != null)
+            HoverOverlay.Opacity = 1;
         if (TitleBar != null)
             TitleBar.Opacity = 1;
+    }
+
+    private void OnWindowPointerMoved(object? sender, PointerEventArgs e)
+    {
+        ShowControls();
+        _hoverTimer?.Stop();
+        _hoverTimer?.Start();
+    }
+
+    private void OnHoverOverlayPointerEntered(object? sender, PointerEventArgs e)
+    {
+        ShowControls();
         _hoverTimer?.Stop();
     }
 
@@ -249,6 +276,27 @@ public partial class PipWindow : Window
             var state = JsonSerializer.Deserialize<PipState>(json);
             if (state != null)
             {
+                // Clamp position to ensure window is on-screen
+                var screens = Screens?.All;
+                if (screens != null && screens.Count > 0)
+                {
+                    var primary = screens[0];
+                    bool offScreen = state.X + state.W < 100 ||
+                                     state.X > primary.WorkingArea.Width - 100 ||
+                                     state.Y + state.H < 50 ||
+                                     state.Y > primary.WorkingArea.Height - 50;
+                    if (offScreen)
+                    {
+                        // Default to top-right of primary screen
+                        state = new PipState(
+                            primary.WorkingArea.Width - state.W - 20,
+                            20,
+                            state.W,
+                            state.H,
+                            state.Pinned);
+                    }
+                }
+
                 Position = new PixelPoint(state.X, state.Y);
                 Width = state.W;
                 Height = state.H;
@@ -293,6 +341,18 @@ public partial class PipWindow : Window
     {
         if (PinIcon != null)
             PinIcon.Opacity = _isPinned ? 1.0 : 0.4;
+    }
+
+    private void OnResizeGripPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            BeginResizeDrag(WindowEdge.SouthEast, e);
+    }
+
+    private void OnExpandClick(object? sender, RoutedEventArgs e)
+    {
+        // Return to main window — close PiP, main window restores video via PipClosed
+        OnCloseClick(sender, e);
     }
 
     private void OnCloseClick(object? sender, RoutedEventArgs e)

@@ -8,6 +8,8 @@
              x:Name="HeaderBarRoot">
     <Border x:Name="HeaderBar" Classes="header-bar"
             Background="{StaticResource HeaderGradient}"
+            BorderBrush="#1AFFFFFF"
+            BorderThickness="0,0,0,1"
             VerticalAlignment="Top"
             HorizontalAlignment="Stretch"
             Height="56"
@@ -157,158 +159,7 @@
                         Foreground="{StaticResource OsdForeground}" />
                     <Button.Flyout>
                         <Flyout Placement="Bottom"
-                                Opened="TrackFlyoutOpened" Closed="TrackFlyoutClosed">
-                            <Border Classes="primary-menu-content"
-                                    Background="{StaticResource PopoverBackground}"
-                                    BorderBrush="{StaticResource PopoverBorder}"
-                                    BorderThickness="1"
-                                    CornerRadius="8"
-                                    Padding="6">
-                                <StackPanel Width="240">
-                                    <StackPanel.Styles>
-                                        <Style Selector="Button.flyout-item">
-                                            <Setter Property="Background" Value="Transparent" />
-                                            <Setter Property="BorderThickness" Value="0" />
-                                            <Setter Property="Padding" Value="10,7" />
-                                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                            <Setter Property="Cursor" Value="Arrow" />
-                                        </Style>
-                                        <Style Selector="Button.flyout-item:pointerover">
-                                            <Setter Property="Background" Value="rgba(255,255,255,0.08)" />
-                                        </Style>
-                                        <Style Selector="Button.flyout-item TextBlock">
-                                            <Setter Property="FontSize" Value="13" />
-                                            <Setter Property="FontWeight" Value="500" />
-                                            <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
-                                        </Style>
-                                        <Style Selector="Button.flyout-item TextBlock.shortcut">
-                                            <Setter Property="FontSize" Value="11" />
-                                            <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
-                                            <Setter Property="Opacity" Value="0.3" />
-                                        </Style>
-                                    </StackPanel.Styles>
-                                    <TextBlock Text="PLAYBACK" FontSize="9" FontWeight="Bold"
-                                               Foreground="{StaticResource OsdForeground}"
-                                               Opacity="0.4" LetterSpacing="0.8"
-                                               Margin="8,6,8,4" />
-                                    <Button x:Name="MnuPlayPause" Classes="flyout-item" Click="OnPlayPause">
-                                        <Grid ColumnDefinitions="Auto,*,Auto">
-                                            <materialIcons:MaterialIcon x:Name="MnuPlayPauseIcon" Kind="Play" Width="14" Height="14"
-                                                Foreground="{StaticResource OsdForeground}" />
-                                            <TextBlock x:Name="MnuPlayPauseLabel" Grid.Column="1" Text="Play/Pause" Margin="10,0,0,0" />
-                                            <TextBlock Grid.Column="2" Text="Space" Classes="shortcut" />
-                                        </Grid>
-                                    </Button>
-                                    <Button Classes="flyout-item" Click="OnStop">
-                                        <Grid ColumnDefinitions="Auto,*,Auto">
-                                            <materialIcons:MaterialIcon Kind="Stop" Width="14" Height="14"
-                                                Foreground="{StaticResource OsdForeground}" />
-                                            <TextBlock Grid.Column="1" Text="Stop" Margin="10,0,0,0" />
-                                            <TextBlock Grid.Column="2" Text="Ctrl+S" Classes="shortcut" />
-                                        </Grid>
-                                    </Button>
-                                    <Button Classes="flyout-item" Click="OnSeekBackward">
-                                        <Grid ColumnDefinitions="Auto,*,Auto">
-                                            <materialIcons:MaterialIcon Kind="Rewind" Width="14" Height="14"
-                                                Foreground="{StaticResource OsdForeground}" />
-                                            <TextBlock Grid.Column="1" Text="Seek -10s" Margin="10,0,0,0" />
-                                            <TextBlock Grid.Column="2" Text="←" Classes="shortcut" />
-                                        </Grid>
-                                    </Button>
-                                    <Button Classes="flyout-item" Click="OnSeekForward">
-                                        <Grid ColumnDefinitions="Auto,*,Auto">
-                                            <materialIcons:MaterialIcon Kind="FastForward" Width="14" Height="14"
-                                                Foreground="{StaticResource OsdForeground}" />
-                                            <TextBlock Grid.Column="1" Text="Seek +10s" Margin="10,0,0,0" />
-                                            <TextBlock Grid.Column="2" Text="→" Classes="shortcut" />
-                                        </Grid>
-                                    </Button>
-                                    <Separator Background="{StaticResource PopoverBorder}" />
-                                    <TextBlock Text="VIEW" FontSize="9" FontWeight="Bold"
-                                               Foreground="{StaticResource OsdForeground}"
-                                               Opacity="0.4" LetterSpacing="0.8"
-                                               Margin="8,6,8,4" />
-                                    <Button Classes="flyout-item" Click="OnToggleFullscreen">
-                                        <Grid ColumnDefinitions="Auto,*,Auto">
-                                            <materialIcons:MaterialIcon Kind="Fullscreen" Width="14" Height="14"
-                                                Foreground="{StaticResource OsdForeground}" />
-                                            <TextBlock Grid.Column="1" Text="Fullscreen" Margin="10,0,0,0" />
-                                            <TextBlock Grid.Column="2" Text="F" Classes="shortcut" />
-                                        </Grid>
-                                    </Button>
-                                    <Button Classes="flyout-item" Click="OnTogglePip">
-                                        <Grid ColumnDefinitions="Auto,*,Auto">
-                                            <materialIcons:MaterialIcon Kind="PictureInPictureBottomRight" Width="14" Height="14"
-                                                Foreground="{StaticResource OsdForeground}" />
-                                            <TextBlock Grid.Column="1" Text="Picture-in-Picture" Margin="10,0,0,0" />
-                                            <TextBlock Grid.Column="2" Text="I" Classes="shortcut" />
-                                        </Grid>
-                                    </Button>
-                                    <Button Classes="flyout-item" Click="OnToggleAlwaysOnTop">
-                                        <Grid ColumnDefinitions="Auto,*,Auto">
-                                            <materialIcons:MaterialIcon Kind="Pin" Width="14" Height="14"
-                                                Foreground="{StaticResource OsdForeground}" />
-                                            <TextBlock Grid.Column="1" Text="Always on Top" Margin="10,0,0,0" />
-                                        </Grid>
-                                    </Button>
-                                    <Separator Background="{StaticResource PopoverBorder}" />
-                                    <TextBlock Text="LOOP" FontSize="9" FontWeight="Bold"
-                                               Foreground="{StaticResource OsdForeground}"
-                                               Opacity="0.4" LetterSpacing="0.8"
-                                               Margin="8,6,8,4" />
-                                    <Button Classes="flyout-item" Click="OnToggleLoopFile">
-                                        <Grid ColumnDefinitions="Auto,*,Auto">
-                                            <materialIcons:MaterialIcon Kind="RepeatOnce" Width="14" Height="14"
-                                                Foreground="{StaticResource OsdForeground}" />
-                                            <TextBlock Grid.Column="1" Text="Loop File" Margin="10,0,0,0" />
-                                            <TextBlock Grid.Column="2" Text="L" Classes="shortcut" />
-                                        </Grid>
-                                    </Button>
-                                    <Button Classes="flyout-item" Click="OnToggleLoopPlaylist">
-                                        <Grid ColumnDefinitions="Auto,*,Auto">
-                                            <materialIcons:MaterialIcon Kind="Repeat" Width="14" Height="14"
-                                                Foreground="{StaticResource OsdForeground}" />
-                                            <TextBlock Grid.Column="1" Text="Loop Playlist" Margin="10,0,0,0" />
-                                            <TextBlock Grid.Column="2" Text="Ctrl+R" Classes="shortcut" />
-                                        </Grid>
-                                    </Button>
-                                    <Button Classes="flyout-item" Click="OnToggleShuffle">
-                                        <Grid ColumnDefinitions="Auto,*,Auto">
-                                            <materialIcons:MaterialIcon Kind="ShuffleVariant" Width="14" Height="14"
-                                                Foreground="{StaticResource OsdForeground}" />
-                                            <TextBlock Grid.Column="1" Text="Shuffle" Margin="10,0,0,0" />
-                                            <TextBlock Grid.Column="2" Text="Ctrl+S" Classes="shortcut" />
-                                        </Grid>
-                                    </Button>
-                                    <Separator Background="{StaticResource PopoverBorder}" />
-                                    <TextBlock Text="TOOLS" FontSize="9" FontWeight="Bold"
-                                               Foreground="{StaticResource OsdForeground}"
-                                               Opacity="0.4" LetterSpacing="0.8"
-                                               Margin="8,6,8,4" />
-                                    <Button Classes="flyout-item" Click="OnShortcutsClick">
-                                        <Grid ColumnDefinitions="Auto,*,Auto">
-                                            <materialIcons:MaterialIcon Kind="Keyboard" Width="14" Height="14"
-                                                Foreground="{StaticResource OsdForeground}" />
-                                            <TextBlock Grid.Column="1" Text="Keyboard Shortcuts" Margin="10,0,0,0" />
-                                        </Grid>
-                                    </Button>
-                                    <Button Classes="flyout-item" Click="OnPreferencesClick">
-                                        <Grid ColumnDefinitions="Auto,*,Auto">
-                                            <materialIcons:MaterialIcon Kind="Cog" Width="14" Height="14"
-                                                Foreground="{StaticResource OsdForeground}" />
-                                            <TextBlock Grid.Column="1" Text="Preferences" Margin="10,0,0,0" />
-                                        </Grid>
-                                    </Button>
-                                    <Button Classes="flyout-item" Click="OnAboutClick">
-                                        <Grid ColumnDefinitions="Auto,*,Auto">
-                                            <materialIcons:MaterialIcon Kind="Information" Width="14" Height="14"
-                                                Foreground="{StaticResource OsdForeground}" />
-                                            <TextBlock Grid.Column="1" Text="About Cine" Margin="10,0,0,0" />
-                                        </Grid>
-                                    </Button>
-                                </StackPanel>
-                            </Border>
-                        </Flyout>
+                                Opened="TrackFlyoutOpened" Closed="TrackFlyoutClosed" />
                     </Button.Flyout>
                 </Button>
 
@@ -331,7 +182,7 @@
                     <Button x:Name="BtnMinimize" Click="OnMinimizeClick"
                             Classes="window-control"
                             ToolTip.Tip="Minimize">
-                        <materialIcons:MaterialIcon Kind="WindowMinimize" Width="12" Height="12"
+                        <materialIcons:MaterialIcon Kind="WindowMinimize" Width="14" Height="14"
                             Foreground="{StaticResource OsdForeground}" />
                     </Button>
                     <Button x:Name="BtnMaximizeRestore" Click="OnMaximizeRestoreClick"

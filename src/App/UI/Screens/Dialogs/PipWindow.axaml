@@ -61,7 +61,7 @@
 
         <Style Selector="TextBlock.pip-title-text">
             <Setter Property="FontSize" Value="12" />
-            <Setter Property="Foreground" Value="#E5E5E5" />
+            <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="TextTrimming" Value="CharacterEllipsis" />
         </Style>
@@ -132,7 +132,7 @@
             <Setter Property="Padding" Value="8,0" />
         </Style>
         <Style Selector="TextBlock.pip-time-text">
-            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontSize" Value="12" />
             <Setter Property="Foreground" Value="#AAFFFFFF" />
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="FontFamily" Value="{StaticResource NumericFont}" />
@@ -153,7 +153,7 @@
 
             <!-- ═══ ROW 0: TITLE BAR ═══ -->
             <Border Grid.Row="0" Classes="pip-titlebar" x:Name="TitleBar">
-                <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
+                <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto">
                     <!-- Film icon + filename -->
                     <TextBlock Grid.Column="0"
                                x:Name="PipFileNameLabel"
@@ -187,8 +187,19 @@
                               Fill="{StaticResource AppTextPrimary}" />
                     </Button>
 
-                    <!-- Close -->
+                    <!-- Return to Main -->
                     <Button Grid.Column="4"
+                            x:Name="ExpandButton"
+                            Classes="pip-title-button"
+                            ToolTip.Tip="Return to Main Window"
+                            Click="OnExpandClick">
+                        <Path Data="{StaticResource MaxRestoreIcon}"
+                              Width="12" Height="12" Stretch="Uniform"
+                              Fill="{StaticResource AppTextPrimary}" />
+                    </Button>
+
+                    <!-- Close -->
+                    <Button Grid.Column="5"
                             x:Name="CloseButton"
                             Classes="pip-title-button pip-close-button"
                             ToolTip.Tip="Close PIP (Esc)"
@@ -203,7 +214,8 @@
             <!-- ═══ ROW 1: VIDEO + OVERLAYS ═══ -->
             <Grid Grid.Row="1">
                 <!-- Layer 0: DWM video surface (transparent) -->
-                <Border Background="Transparent" ClipToBounds="True"
+                <Border Background="#0D000000" ClipToBounds="True"
+                        CornerRadius="12"
                         x:Name="VideoArea" />
 
                 <!-- Layer 1: Hover controls -->
@@ -227,7 +239,7 @@
                         </Button>
 
                         <!-- Seek bar + time -->
-                        <Border Grid.Row="1" Classes="pip-seek-container">
+                        <Border Grid.Row="1" Classes="pip-seek-container" x:Name="SeekContainer">
                             <Grid ColumnDefinitions="*,Auto">
                                 <Slider Grid.Column="0"
                                         x:Name="PipSeekSlider"
@@ -253,7 +265,7 @@
                         Background="#66000000"
                         Padding="8,3">
                     <Grid ColumnDefinitions="Auto,Auto">
-                        <Border Classes="pip-live-badge" Grid.Column="0">
+                        <Border Classes="pip-live-badge" Grid.Column="0" IsVisible="False">
                             <TextBlock Classes="pip-live-text" Text="live" />
                         </Border>
                         <TextBlock Grid.Column="1"
@@ -269,7 +281,7 @@
             </Grid>
 
             <!-- ═══ ROW 2: RESIZE GRIP ═══ -->
-            <Border Grid.Row="2" Classes="pip-resize-grip">
+            <Border Grid.Row="2" Classes="pip-resize-grip" x:Name="ResizeGrip">
                 <Path Data="M 0 16 L 16 0 L 16 16 Z"
                       Fill="{StaticResource AppIconLight}"
                       Width="16" Height="16" Stretch="Uniform" />

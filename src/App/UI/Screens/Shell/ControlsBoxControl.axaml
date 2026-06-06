@@ -1,7 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Cine.Avalonia.ViewModels"
-             xmlns:components="using:Cine.Avalonia.Components"
              xmlns:controls="clr-namespace:Cine.Avalonia.Controls"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Cine.Avalonia.Controls.ControlsBoxControl"
@@ -48,10 +47,10 @@
                             Foreground="{StaticResource OsdForeground}" />
                     </Button>
                     <Button x:Name="BtnPlayPause"
-                            Classes="circular-transport"
+                            Classes="circular-play"
                             Click="OnPlayPause"
                             ToolTip.Tip="Play/Pause (Space)">
-                        <materialIcons:MaterialIcon x:Name="PlayPauseIconPath" Kind="Play" Width="18" Height="18"
+                        <materialIcons:MaterialIcon x:Name="PlayPauseIconPath" Kind="Play" Width="22" Height="22"
                             Foreground="{StaticResource OsdForeground}" />
                     </Button>
                     <Button x:Name="BtnNext"
@@ -100,7 +99,7 @@
                                                       ToolTip.Tip="Mute"
                                                       Width="40" Height="40"
                                                       HorizontalAlignment="Center">
-                                            <materialIcons:MaterialIcon Kind="VolumeHigh" Width="20" Height="20"
+                                            <materialIcons:MaterialIcon x:Name="MuteToggleIcon" Kind="VolumeHigh" Width="20" Height="20"
                                                 Foreground="{StaticResource OsdForeground}" />
                                         </ToggleButton>
                                         <Slider x:Name="VolumeSlider"
@@ -207,7 +206,13 @@
                         <materialIcons:MaterialIcon Kind="BookmarkOutline" Width="16" Height="16"
                             Foreground="{StaticResource OsdForeground}" />
                     </Button>
-                    <components:OptionsMenuButton x:Name="BtnOptionsMenu" />
+                    <Button x:Name="BtnVideoEqualizer"
+                            Classes="circular-menu"
+                            ToolTip.Tip="Video Equalizer"
+                            Click="OnVideoEqualizerClick">
+                        <materialIcons:MaterialIcon Kind="Tune" Width="16" Height="16"
+                            Foreground="{StaticResource OsdForeground}" />
+                    </Button>
                     <ToggleButton x:Name="BtnFullscreen"
                                   Classes="circular-toggle"
                                   Click="OnToggleFullscreen"
@@ -221,7 +226,7 @@
             <!-- ROW 1: SEEK BAR + TIME -->
             <controls:SeekBarControl Grid.Row="1"
                                      x:Name="SeekBar"
-                                     Margin="3,0,20,5" />
+                                     Margin="12,0,12,5" />
         </Grid>
     </Border>
 </UserControl>

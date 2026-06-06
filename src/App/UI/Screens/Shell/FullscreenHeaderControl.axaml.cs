@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using Cine.Avalonia.Helpers;
 using Cine.Avalonia.ViewModels;
 using RoutedEventArgs = Avalonia.Interactivity.RoutedEventArgs;
 using Cine.Avalonia.Views.Dialogs;
@@ -15,16 +16,58 @@ public partial class FullscreenHeaderControl : UserControl
 
     private MainViewModel? _viewModel;
     private int _activeFlyouts;
+    private PrimaryMenuBuilder? _fullscreenMenuBuilder;
 
     public FullscreenHeaderControl()
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
+
+        // Build menu from shared builder
+        _fullscreenMenuBuilder = BuildFullscreenMenu();
+        BtnFullscreenMenu.Flyout = _fullscreenMenuBuilder.Build();
+        BtnFullscreenMenu.Flyout.Opened += (_, _) => _fullscreenMenuBuilder?.SyncCheckStates();
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
         _viewModel = DataContext as MainViewModel;
+    }
+
+    /// <summary>Builds the fullscreen menu using shared PrimaryMenuBuilder.</summary>
+    private PrimaryMenuBuilder BuildFullscreenMenu()
+    {
+        var builder = new PrimaryMenuBuilder();
+        builder
+            .AddSection("PLAYBACK")
+            .AddItem("Play", "Play/Pause", "Space", () => _viewModel?.PlayPause())
+            .AddItem("Stop", "Stop", "Ctrl+S", () => _viewModel?.Stop())
+            .AddItem("Rewind", "Seek -10s", "←", () => _viewModel?.SeekBackward())
+            .AddItem("FastForward", "Seek +10s", "→", () => _viewModel?.SeekForward())
+            .AddSeparator()
+            .AddSection("TOOLS")
+            .AddItem("Keyboard", "Keyboard Shortcuts", null, () =>
+            {
+                var w = TopLevel.GetTopLevel(this) as Window;
+                if (w != null) new ShortcutsDialog { DataContext = _viewModel }.Show(w);
+            })
+            .AddItem("Cog", "Preferences", null, () =>
+            {
+                var w = TopLevel.GetTopLevel(this) as Window;
+                if (w != null) new PreferencesDialog { DataContext = _viewModel }.Show(w);
+            })
+            .AddItem("Information", "About Cine", null, () =>
+            {
+                var w = TopLevel.GetTopLevel(this) as Window;
+                if (w != null) new AboutDialog { DataContext = _viewModel }.Show(w);
+            })
+            .AddSeparator()
+            .AddItem("Pin", "Always on Top", null, () =>
+            {
+                var w = TopLevel.GetTopLevel(this) as Window;
+                if (w != null) w.Topmost = !w.Topmost;
+            });
+        return builder;
     }
 
     public bool HasActiveFlyouts => _activeFlyouts > 0;

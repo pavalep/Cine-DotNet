@@ -356,16 +356,20 @@ public partial class MainWindow
             if (WindowState == WindowState.Minimized)
                 WindowState = WindowState.Normal;
 
-            var primary = Screens?.Primary;
-            if (primary != null)
+            // Only center manually if no saved state exists — prevents race with restore
+            if (!File.Exists(WindowStatePath))
             {
-                var work = primary.WorkingArea;
-                double scale = RenderScaling;
-                int w = (int)Math.Max(332 * scale, Bounds.Width * scale);
-                int h = (int)Math.Max(187 * scale, Bounds.Height * scale);
-                int x = work.X + Math.Max(0, (work.Width - w) / 2);
-                int y = work.Y + Math.Max(0, (work.Height - h) / 2);
-                Position = new PixelPoint(x, y);
+                var primary = Screens?.Primary;
+                if (primary != null)
+                {
+                    var work = primary.WorkingArea;
+                    double scale = RenderScaling;
+                    int w = (int)Math.Max(600 * scale, Bounds.Width * scale);
+                    int h = (int)Math.Max(337 * scale, Bounds.Height * scale);
+                    int x = work.X + Math.Max(0, (work.Width - w) / 2);
+                    int y = work.Y + Math.Max(0, (work.Height - h) / 2);
+                    Position = new PixelPoint(x, y);
+                }
             }
 
             Activate();
@@ -521,10 +525,20 @@ public partial class MainWindow
         int w = (int)(_videoHost.Bounds.Width * scale);
         int h = (int)(_videoHost.Bounds.Height * scale);
 
-        // Exclude header (top 44px) and controls bar (bottom ~120px)
-        // so DWM thumbnail covers only the video area.
-        int headerPx = (int)(44 * scale);
-        int controlsPx = (int)(120 * scale);
+        // Measure actual header + controls heights at runtime instead of hardcoding 44/120px
+        double headerH = _uiVisible
+            ? (_viewModel?.IsFullscreen == true
+                ? _fullscreenHeader.Bounds.Height
+                : _headerBar.Bounds.Height)
+            : 0;
+        double controlsH = _uiVisible ? _controlsBox.Bounds.Height : 0;
+
+        // If measured values are 0 (not yet laid out), fall back to reasonable defaults
+        if (headerH <= 0) headerH = _viewModel?.IsFullscreen == true ? 44 : 56;
+        if (controlsH <= 0) controlsH = 84;
+
+        int headerPx = (int)(headerH * scale);
+        int controlsPx = (int)(controlsH * scale);
 
         _videoHost.SetThumbnailDestRect(
             x, y + headerPx,               // top starts below header

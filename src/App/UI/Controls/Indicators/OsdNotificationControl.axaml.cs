@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Media;
 using Avalonia.Threading;
 using Material.Icons;
 using Material.Icons.Avalonia;
@@ -96,16 +97,21 @@ public partial class OsdNotificationControl : AvaloniaUserControl
         OsdNotificationText.Text = msg.Text;
         OsdNotificationBorder.IsVisible = true;
         OsdNotificationBorder.Opacity = 0;
+        // Start slightly below for slide-up effect
+        if (OsdNotificationBorder.RenderTransform is TranslateTransform tt)
+            tt.Y = 20;
 
         try
         {
-            await FadeTo(1, 150, ct);
+            // Fade in + slide up
+            await FadeTo(1, 150, ct, slideUp: true);
             if (ct.IsCancellationRequested) return;
 
             await Task.Delay((int)msg.DurationMs, ct);
             if (ct.IsCancellationRequested) return;
 
-            await FadeTo(0, 200, ct);
+            // Fade out + slide down
+            await FadeTo(0, 200, ct, slideUp: false);
             if (!ct.IsCancellationRequested)
                 OsdNotificationBorder.IsVisible = false;
         }
@@ -119,9 +125,11 @@ public partial class OsdNotificationControl : AvaloniaUserControl
         OsdNotificationBorder.IsVisible = false;
     }
 
-    private async Task FadeTo(double targetOpacity, double durationMs, CancellationToken ct)
+    private async Task FadeTo(double targetOpacity, double durationMs, CancellationToken ct, bool slideUp = false)
     {
         var startOpacity = OsdNotificationBorder.Opacity;
+        var startY = OsdNotificationBorder.RenderTransform is TranslateTransform stt ? stt.Y : 0;
+        var targetY = slideUp ? 0 : 20;
         var sw = System.Diagnostics.Stopwatch.StartNew();
         while (sw.Elapsed.TotalMilliseconds < durationMs)
         {
@@ -131,11 +139,20 @@ public partial class OsdNotificationControl : AvaloniaUserControl
                 ? 1 - Math.Cos(progress * Math.PI / 2)
                 : Math.Sin(progress * Math.PI / 2);
             await Dispatcher.UIThread.OnUiThreadAsync(() =>
-                OsdNotificationBorder.Opacity = startOpacity + (targetOpacity - startOpacity) * eased);
+            {
+                OsdNotificationBorder.Opacity = startOpacity + (targetOpacity - startOpacity) * eased;
+                if (OsdNotificationBorder.RenderTransform is TranslateTransform ftt)
+                    ftt.Y = startY + (targetY - startY) * eased;
+            });
             await Task.Delay(16);
         }
         if (!ct.IsCancellationRequested)
-            await Dispatcher.UIThread.OnUiThreadAsync(() => OsdNotificationBorder.Opacity = targetOpacity);
+            await Dispatcher.UIThread.OnUiThreadAsync(() =>
+            {
+                OsdNotificationBorder.Opacity = targetOpacity;
+                if (OsdNotificationBorder.RenderTransform is TranslateTransform ftt)
+                    ftt.Y = targetY;
+            });
     }
 
     private void OnOsdNotificationClick(object? sender, PointerPressedEventArgs e)

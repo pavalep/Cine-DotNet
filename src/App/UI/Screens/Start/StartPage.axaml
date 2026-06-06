@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Cine.Avalonia.ViewModels"
              xmlns:local="using:Cine.Avalonia.Controls"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Cine.Avalonia.Controls.StartPage"
              x:DataType="vm:MainViewModel">
 
@@ -19,13 +20,29 @@
         <Grid>
             <!-- Drop Target Overlay Visuals -->
             <Border x:Name="DropTarget"
-                    Margin="12"
+                    Margin="16"
                     BorderThickness="2"
-                    CornerRadius="12"
-                    BorderBrush="#40FFFFFF"
-                    Background="#20FFFFFF"
+                    CornerRadius="16"
+                    BorderBrush="{StaticResource AppAccent}"
+                    Background="#1A0078D4"
                     IsHitTestVisible="False"
-                    IsVisible="False" />
+                    IsVisible="False">
+                <Border.OpacityMask>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Offset="0" Color="#00000000" />
+                        <GradientStop Offset="0.3" Color="#00000000" />
+                        <GradientStop Offset="0.5" Color="#FFFFFFFF" />
+                        <GradientStop Offset="0.7" Color="#00000000" />
+                        <GradientStop Offset="1" Color="#00000000" />
+                    </LinearGradientBrush>
+                </Border.OpacityMask>
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                    <materialIcons:MaterialIcon Kind="PlayCircle" Width="48" Height="48"
+                        Foreground="{StaticResource AppAccent}" HorizontalAlignment="Center" />
+                    <TextBlock Text="Drop to Play" FontSize="24" FontWeight="Bold"
+                        Foreground="{StaticResource AppAccent}" HorizontalAlignment="Center" />
+                </StackPanel>
+            </Border>
 
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
                         Spacing="12" Margin="0,48,0,0">

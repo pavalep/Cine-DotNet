@@ -217,6 +217,11 @@ public partial class SeekBarControl : AvaloniaUserControl
     private void OnSeekAreaPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
         if (!_isSeeking) return;
+
+        // Force visual update to seek position BEFORE clearing _isSeeking
+        // This prevents the thumb from snapping back to the old _lastPosition
+        // while waiting for the next PositionChanged event
+        UpdateSeekBar();
         _isSeeking = false;
 
         // Perform the actual seek only on release (not every mouse move)
@@ -227,7 +232,6 @@ public partial class SeekBarControl : AvaloniaUserControl
         }
 
         SeekEnded?.Invoke(this, EventArgs.Empty);
-        UpdateSeekBar();
         e.Handled = true;
     }
 
