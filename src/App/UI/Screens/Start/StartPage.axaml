@@ -45,7 +45,8 @@
             </Border>
 
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
-                        Spacing="12" Margin="0,48,0,0">
+                        Spacing="12" Margin="0,48,0,0"
+                        MaxWidth="480">
 
                 <!-- Icon (Cine app icon — circle + triangle per canvas) -->
                 <Panel Width="128" Height="128" Margin="0,0,0,24" HorizontalAlignment="Center">
@@ -59,10 +60,10 @@
 
                 <!-- Drop text -->
                 <TextBlock Text="Drag and Drop Files Here"
-                           FontFamily="{StaticResource SystemFont}"
+                           FontFamily="{StaticResource font-family-default}"
                            FontSize="28"
                            FontWeight="Bold"
-                           Foreground="#E5E5E5"
+                           Foreground="{StaticResource AppTextOnDarkPrimary}"
                            HorizontalAlignment="Center"
                            LetterSpacing="-0.01"
                            Margin="0,0,0,24" />
@@ -87,7 +88,7 @@
                 <StackPanel Spacing="4" Margin="0,16,0,0"
                             IsVisible="{Binding HasRecentFiles}">
                     <TextBlock Text="Recent" FontSize="12" FontWeight="SemiBold"
-                               Foreground="#80FFFFFF" Margin="40,0,40,4" />
+                               Foreground="{StaticResource AppTextOnDarkTertiary}" Margin="40,0,40,4" />
                     <ScrollViewer MaxHeight="160" HorizontalScrollBarVisibility="Disabled">
                         <StackPanel x:Name="RecentFilesList" Spacing="0" />
                     </ScrollViewer>

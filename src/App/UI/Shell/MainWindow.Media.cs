@@ -78,14 +78,12 @@ public partial class MainWindow
                      $"dropIndicator.Showing={_dropIndicator.IsShowing} VideoHost.Opacity={_videoHost?.Opacity} " +
                      $"VideoHost.Visible={_videoHost?.IsVisible}");
 
-            // Delay controls appearance to avoid overlap with fading start page
-            _ = Task.Run(async () =>
+            // Delay controls appearance to avoid overlap with fading start page.
+            // ShowUiControls calls InvalidateMeasure() to ensure correct height.
+            _ = Dispatcher.UIThread.OnUiThreadAsync(async () =>
             {
                 await Task.Delay(250);
-                await Dispatcher.UIThread.OnUiThreadAsync(() =>
-                {
-                    ShowUiControls();
-                });
+                ShowUiControls();
             });
             _headerBar.ShowOpenMenu();
 

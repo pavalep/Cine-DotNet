@@ -16,7 +16,7 @@
             IsHitTestVisible="True"
             ZIndex="20"
             PointerPressed="OnHeaderPointerPressed">
-        <Grid x:Name="HeaderGrid" Margin="0,0,0,0">
+        <Grid x:Name="HeaderGrid" Margin="{StaticResource space-h-2}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
@@ -105,22 +105,6 @@
                                         <TextBlock Grid.Column="1" Text="Add Files" Margin="10,0,0,0" />
                                     </Grid>
                                 </Button>
-                                <Button Classes="flyout-item"
-                                        Command="{Binding AddSubtitleCommand}">
-                                    <Grid ColumnDefinitions="Auto,*">
-                                        <materialIcons:MaterialIcon Kind="Subtitles" Width="14" Height="14"
-                                            Foreground="{StaticResource OsdForeground}" />
-                                        <TextBlock Grid.Column="1" Text="Add Subtitle Track" Margin="10,0,0,0" />
-                                    </Grid>
-                                </Button>
-                                <Button Classes="flyout-item"
-                                        Command="{Binding AddAudioCommand}">
-                                    <Grid ColumnDefinitions="Auto,*">
-                                        <materialIcons:MaterialIcon Kind="Music" Width="14" Height="14"
-                                            Foreground="{StaticResource OsdForeground}" />
-                                        <TextBlock Grid.Column="1" Text="Add Audio Track" Margin="10,0,0,0" />
-                                    </Grid>
-                                </Button>
                             </StackPanel>
                         </Border>
                     </Flyout>
@@ -129,20 +113,18 @@
 
             <!-- Col 1: Window Title (centered) -->
             <Border Grid.Column="1"
-                    CornerRadius="10"
-                    Background="#40000000"
-                    Padding="12,3"
+                    CornerRadius="{StaticResource radius-xs}"
+                    Background="{StaticResource AppOverlayLight}"
+                    Padding="{StaticResource space-3}"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center">
                 <TextBlock x:Name="TitleText" Text="Cine"
                            Foreground="{StaticResource OsdForeground}"
                            FontSize="14" FontWeight="SemiBold"
                            HorizontalAlignment="Center"
-                           VerticalAlignment="Center">
-                    <TextBlock.Effect>
-                        <DropShadowEffect BlurRadius="6" OffsetY="1" Color="#80000000" />
-                    </TextBlock.Effect>
-                </TextBlock>
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"
+                           MaxWidth="300" />
             </Border>
 
             <!-- Col 2: PIP + Menu + Window Controls -->
@@ -154,7 +136,7 @@
                               Margin="0,0,4,0"
                               Click="OnTogglePip"
                               ToolTip.Tip="Picture-in-Picture">
-                    <materialIcons:MaterialIcon Kind="PictureInPictureBottomRight" Width="16" Height="16"
+                    <materialIcons:MaterialIcon Kind="PictureInPictureBottomRight" Width="18" Height="18"
                         Foreground="{StaticResource OsdForeground}" />
                 </ToggleButton>
 
@@ -162,9 +144,8 @@
                 <Button x:Name="BtnPrimaryMenu" IsVisible="False"
                         Classes="circular-menu"
                         ToolTip.Tip="Main Menu"
-                        Width="34" Height="34"
                         Margin="0,0,4,0">
-                    <materialIcons:MaterialIcon Kind="DotsHorizontal" Width="16" Height="16"
+                    <materialIcons:MaterialIcon Kind="DotsHorizontal" Width="18" Height="18"
                         Foreground="{StaticResource OsdForeground}" />
                     <Button.Flyout>
                         <Flyout Placement="Bottom"
@@ -178,9 +159,8 @@
                         ToolTip.Tip="Close"
                         Click="OnFullscreenCloseClick"
                         IsVisible="False"
-                        Width="34" Height="34"
                         Margin="0,0,4,0">
-                    <materialIcons:MaterialIcon Kind="Close" Width="12" Height="12"
+                    <materialIcons:MaterialIcon Kind="Close" Width="18" Height="18"
                         Foreground="{StaticResource OsdForeground}" />
                 </Button>
 

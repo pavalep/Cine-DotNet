@@ -75,12 +75,12 @@ public partial class OsdNotificationControl : AvaloniaUserControl
 
         if (msg.Icon.HasValue)
         {
-            OsdIcon.IsVisible = true;
+            OsdIcon.Opacity = 1;
             OsdIcon.Kind = msg.Icon.Value;
         }
         else
         {
-            OsdIcon.IsVisible = false;
+            OsdIcon.Opacity = 0;
         }
 
         if (IsControlsBoxVisible)

@@ -12,8 +12,6 @@ namespace Cine.Avalonia.Controls;
 
 public partial class FullscreenHeaderControl : UserControl
 {
-    public event EventHandler? ExitFullscreenRequested;
-
     private MainViewModel? _viewModel;
     private int _activeFlyouts;
     private PrimaryMenuBuilder? _fullscreenMenuBuilder;
@@ -104,11 +102,6 @@ public partial class FullscreenHeaderControl : UserControl
     }
 
     // --- Menu handlers ---
-
-    private void OnExitFullscreen(object? sender, RoutedEventArgs e)
-    {
-        ExitFullscreenRequested?.Invoke(this, EventArgs.Empty);
-    }
 
     private void OnPlayPause(object? sender, RoutedEventArgs e) => _viewModel?.PlayPause();
     private void OnStop(object? sender, RoutedEventArgs e) => _viewModel?.Stop();

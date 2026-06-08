@@ -71,6 +71,16 @@ public class MainViewModel : INotifyPropertyChanged
     private bool _hasMultiplePlaylistItems;
     private bool _hasMultipleVideoTracks;
 
+    // Track persistence: stores the currently selected track IDs for
+    // save/restore across sessions. Updated on every user selection.
+    private int _currentSubtitleTrackId = -1;
+    private int _currentAudioTrackId = -1;
+
+    // Pending track restore values loaded from session data. Applied
+    // once the track list is populated after a file open.
+    private int? _pendingSubtitleTrackId;
+    private int? _pendingAudioTrackId;
+
     // --- Typed track collections (replaces plain string lists) ---
     public ObservableCollection<TrackMenuItem> SubtitleTracks { get; } = new();
     public ObservableCollection<TrackMenuItem> AudioTracks { get; } = new();
@@ -98,6 +108,9 @@ public class MainViewModel : INotifyPropertyChanged
     public Func<Task<string?>>? RequestSubtitleFileAsync { get; set; }
     public Func<Task<string?>>? RequestAudioFileAsync { get; set; }
 
+    /// <summary>Fired when an error occurs during async operations.</summary>
+    public event EventHandler<string>? OnError;
+
     public string Title => !string.IsNullOrEmpty(_filePath)
         ? TruncateFilename(Path.GetFileName(_filePath))
         : "Cine";
@@ -118,6 +131,7 @@ public class MainViewModel : INotifyPropertyChanged
         _player.Volume = _volumeValue;
 
         // Wire player events
+        _player.Opened += OnPlayerOpened;
         _player.TrackListChanged += OnTrackListChanged;
         _player.PlaylistChanged += OnPlaylistChanged;
         _player.LoopChangedEvent += OnLoopChanged;
@@ -155,6 +169,63 @@ public class MainViewModel : INotifyPropertyChanged
         VideoTracks.Add(new TrackMenuItem("No video tracks", TrackType.Video, -1, OnSelectVideo));
     }
 
+    // ---- Player events ----
+
+    /// <summary>
+    /// Fired when a new file is loaded. Forces a track list refresh from the
+    /// current player state to ensure subtitle/audio/video menus are populated
+    /// even if the async track-list property observer hasn't fired yet.
+    /// </summary>
+    private void OnPlayerOpened(object? sender, EventArgs e)
+    {
+        // Read mpv track data on the background thread (mpv's event loop thread),
+        // then dispatch only the UI update to the UI thread.
+        // This prevents blocking the UI thread on native mpv property reads.
+        SubtitleSource[] subtitleSources;
+        SubtitleSource[] audioSources;
+        SubtitleSource[] videoSources;
+        try
+        {
+            subtitleSources = _player.SubtitleSources ?? Array.Empty<SubtitleSource>();
+            audioSources = (_player.AudioSources ?? Array.Empty<AudioTrackInfo>())
+                .Select(a => new SubtitleSource
+                {
+                    PathOrId = a.Id.ToString(),
+                    Language = a.Language,
+                    Type = "audio",
+                    IsEnabled = a.IsSelected
+                }).ToArray();
+            videoSources = (_player.VideoSources ?? Array.Empty<VideoTrackInfo>())
+                .Select(v => new SubtitleSource
+                {
+                    PathOrId = v.Id.ToString(),
+                    Language = v.Title,
+                    Type = "video",
+                    IsEnabled = v.IsSelected
+                }).ToArray();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MainViewModel] OnPlayerOpened track read failed: {ex.Message}");
+            // If track read fails, the async observer will populate menus later — bail out.
+            return;
+        }
+
+        // Now dispatch only the menu-rebuild to UI thread
+        Dispatcher.UIThread.OnUiThread(() =>
+        {
+            try
+            {
+                OnTrackListChanged(null, new TrackListChangedEventArgs(
+                    audioSources, videoSources, subtitleSources));
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MainViewModel] OnPlayerOpened UI update failed: {ex.Message}");
+            }
+        });
+    }
+
     // ---- Track selection handlers ----
 
     private void OnSelectSubtitle(TrackMenuItem item)
@@ -169,6 +240,7 @@ public class MainViewModel : INotifyPropertyChanged
         {
             // Just select a negative track index to turn off subtitles in mpv
             _player.SelectSubtitleTrack(-1);
+            _currentSubtitleTrackId = -1;
             foreach (var t in SubtitleTracks) t.RefreshSelection(false);
             item.RefreshSelection(true);
             return;
@@ -177,6 +249,7 @@ public class MainViewModel : INotifyPropertyChanged
         if (item.TrackIndex >= 0)
         {
             _player.SelectSubtitleTrack(item.TrackIndex);
+            _currentSubtitleTrackId = item.TrackIndex;
             foreach (var t in SubtitleTracks) t.RefreshSelection(false);
             item.RefreshSelection(true);
         }
@@ -194,6 +267,7 @@ public class MainViewModel : INotifyPropertyChanged
         {
             // Disable audio
             _player.SelectAudioTrack(-1);
+            _currentAudioTrackId = -1;
             foreach (var t in AudioTracks) t.RefreshSelection(false);
             item.RefreshSelection(true);
             return;
@@ -202,6 +276,7 @@ public class MainViewModel : INotifyPropertyChanged
         if (item.TrackIndex >= 0)
         {
             _player.SelectAudioTrack(item.TrackIndex);
+            _currentAudioTrackId = item.TrackIndex;
             foreach (var t in AudioTracks) t.RefreshSelection(false);
             item.RefreshSelection(true);
         }
@@ -263,11 +338,15 @@ public class MainViewModel : INotifyPropertyChanged
         {
             var path = await RequestSubtitleFileAsync();
             if (!string.IsNullOrWhiteSpace(path))
+            {
                 _player?.AddSubtitle(path);
+                System.Diagnostics.Debug.WriteLine($"[MainViewModel] Subtitle added: {Path.GetFileName(path)}");
+            }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[MainViewModel] AddSubtitle failed: {ex.Message}");
+            // User-facing error would be better here, but requires UI access
         }
     }
 
@@ -278,11 +357,56 @@ public class MainViewModel : INotifyPropertyChanged
         {
             var path = await RequestAudioFileAsync();
             if (!string.IsNullOrWhiteSpace(path))
+            {
                 _player?.AddAudio(path);
+                System.Diagnostics.Debug.WriteLine($"[MainViewModel] Audio track added: {Path.GetFileName(path)}");
+            }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[MainViewModel] AddAudio failed: {ex.Message}");
+            // User-facing error would be better here, but requires UI access
+        }
+    }
+
+    /// <summary>
+    /// Load an external subtitle file directly (bypasses file dialog).
+    /// Used by drag-drop and future automation features.
+    /// </summary>
+    public void LoadExternalSubtitle(string filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath) || _player == null) return;
+        try
+        {
+            _player.AddSubtitle(filePath);
+            System.Diagnostics.Debug.WriteLine($"[MainViewModel] External subtitle loaded: {Path.GetFileName(filePath)}");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MainViewModel] LoadExternalSubtitle failed: {ex.Message}");
+            OnError?.Invoke(this, $"Failed to load subtitle: {ex.Message}");
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Load an external audio file directly (bypasses file dialog).
+    /// Used by drag-drop and future automation features.
+    /// </summary>
+    public void LoadExternalAudio(string filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath) || _player == null) return;
+        try
+        {
+            _player.AddAudio(filePath);
+            System.Diagnostics.Debug.WriteLine($"[MainViewModel] External audio loaded: {Path.GetFileName(filePath)}");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MainViewModel] LoadExternalAudio failed: {ex.Message}");
+            // Add user-facing error notification
+            OnError?.Invoke(this, $"Failed to load audio track: {ex.Message}");
+            throw; // Re-throw to allow caller to show user error
         }
     }
 
@@ -489,6 +613,10 @@ public class MainViewModel : INotifyPropertyChanged
                 FilePath = _filePath,
                 Position = _player.Position.Ticks,
                 Playlist = Playlist.ToList(),
+                SubtitleTrackId = _currentSubtitleTrackId,
+                AudioTrackId = _currentAudioTrackId,
+                SubtitleDelay = _player.SubtitleDelay,
+                AudioDelay = _player.AudioDelay,
                 // P5.2: Window bounds saved by MainWindow before close
             };
             File.WriteAllText(SessionPath, JsonSerializer.Serialize(session));
@@ -521,6 +649,16 @@ public class MainViewModel : INotifyPropertyChanged
                 if (Playlist.Count > 0)
                     OnPropertyChanged(nameof(HasMultiplePlaylistItems));
             }
+            // Load pending track restore values
+            if (root.TryGetProperty("SubtitleTrackId", out var subIdEl))
+                _pendingSubtitleTrackId = subIdEl.GetInt32();
+            if (root.TryGetProperty("AudioTrackId", out var audIdEl))
+                _pendingAudioTrackId = audIdEl.GetInt32();
+            // Load delay values and apply immediately (they are player-wide, not per-file)
+            if (root.TryGetProperty("SubtitleDelay", out var subDelayEl))
+                _player.SubtitleDelay = (float)subDelayEl.GetDouble();
+            if (root.TryGetProperty("AudioDelay", out var audDelayEl))
+                _player.AudioDelay = (float)audDelayEl.GetDouble();
         }
         catch { /* Session save is best-effort */ }
     }
@@ -905,6 +1043,10 @@ public class MainViewModel : INotifyPropertyChanged
         if (string.IsNullOrWhiteSpace(path)) return;
         AddRecentFile(path);
         FilePath = path;
+        // Reset track state for the new file; session restore values
+        // will be applied by OnTrackListChanged if LoadSession() populated them.
+        _currentSubtitleTrackId = -1;
+        _currentAudioTrackId = -1;
         // Ensure UI binding propagation before loading media
         await Dispatcher.UIThread.OnUiThreadAsync(() => { }, DispatcherPriority.Render);
         try
@@ -1032,7 +1174,7 @@ public class MainViewModel : INotifyPropertyChanged
                     idx++;
                 }
             }
-            IsSubtitleEnabled = e.SubtitleTracks?.Any(t => t.IsEnabled) ?? true;
+            IsSubtitleEnabled = e.SubtitleTracks?.Any(t => t.IsEnabled) ?? false;
 
             // --- Audio tracks ---
             AudioTracks.Clear();
@@ -1056,7 +1198,7 @@ public class MainViewModel : INotifyPropertyChanged
                     idx++;
                 }
             }
-            IsAudioEnabled = e.AudioTracks?.Any(t => t.IsEnabled) ?? true;
+            IsAudioEnabled = e.AudioTracks?.Any(t => t.IsEnabled) ?? false;
 
             // --- Video tracks ---
             VideoTracks.Clear();
@@ -1085,6 +1227,28 @@ public class MainViewModel : INotifyPropertyChanged
                 VideoTracks.Add(new TrackMenuItem("No video tracks", TrackType.Video, -1, OnSelectVideo));
             }
             HasMultipleVideoTracks = e.VideoTracks?.Count() > 1;
+
+            // ── Auto-restore saved track selections ─────────────────
+            if (_pendingSubtitleTrackId.HasValue)
+            {
+                var subTrack = SubtitleTracks.FirstOrDefault(t =>
+                    t.TrackIndex == _pendingSubtitleTrackId.Value && !t.IsPseudoEntry);
+                if (subTrack != null && subTrack.SelectCommand?.CanExecute(subTrack) == true)
+                {
+                    subTrack.SelectCommand.Execute(subTrack);
+                }
+                _pendingSubtitleTrackId = null;
+            }
+            if (_pendingAudioTrackId.HasValue)
+            {
+                var audTrack = AudioTracks.FirstOrDefault(t =>
+                    t.TrackIndex == _pendingAudioTrackId.Value && !t.IsPseudoEntry);
+                if (audTrack != null && audTrack.SelectCommand?.CanExecute(audTrack) == true)
+                {
+                    audTrack.SelectCommand.Execute(audTrack);
+                }
+                _pendingAudioTrackId = null;
+            }
         });
     }
 

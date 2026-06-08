@@ -9,24 +9,17 @@
             IsVisible="False"
             Background="{StaticResource HeaderGradient}"
             ZIndex="25">
-        <Grid ColumnDefinitions="Auto,*,Auto" Margin="8,0">
+        <Grid ColumnDefinitions="Auto,*,Auto" Margin="{StaticResource space-h-3}">
             <TextBlock Grid.Column="0"
                        Text="{Binding Title}"
                        Foreground="{StaticResource OsdForeground}"
                        FontSize="13" FontWeight="SemiBold"
                        VerticalAlignment="Center" />
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
-                <Button x:Name="BtnFullscreenExit"
-                        Classes="circular-menu"
-                        Click="OnExitFullscreen"
-                        ToolTip.Tip="Exit Fullscreen (F)">
-                    <materialIcons:MaterialIcon Kind="FullscreenExit" Width="12" Height="12"
-                        Foreground="{StaticResource OsdForeground}" />
-                </Button>
                 <Button x:Name="BtnFullscreenMenu"
                         Classes="circular-menu"
                         ToolTip.Tip="Menu">
-                    <materialIcons:MaterialIcon Kind="DotsHorizontal" Width="12" Height="12"
+                    <materialIcons:MaterialIcon Kind="DotsHorizontal" Width="18" Height="18"
                         Foreground="{StaticResource OsdForeground}" />
                     <Button.Flyout>
                         <Flyout Placement="Bottom"

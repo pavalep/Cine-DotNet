@@ -135,7 +135,7 @@
             <Setter Property="FontSize" Value="12" />
             <Setter Property="Foreground" Value="#AAFFFFFF" />
             <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="FontFamily" Value="{StaticResource NumericFont}" />
+            <Setter Property="FontFamily" Value="{StaticResource font-family-numeric}" />
         </Style>
 
         <!-- File badge — auto-hides after 3s -->

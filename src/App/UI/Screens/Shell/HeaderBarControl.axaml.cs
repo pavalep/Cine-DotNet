@@ -352,6 +352,37 @@ public partial class HeaderBarControl : AvaloniaUserControl
         }
     }
 
+    // --- Responsive layout ---
+
+    /// <summary>
+    /// Adjusts header visibility based on window width.
+    /// On narrow widths: hide secondary controls to prevent overlap.
+    /// </summary>
+    public void UpdateResponsiveLayout(double width)
+    {
+        // Narrow (< 600px): hide PIP button, reduce title max-width
+        // Very narrow (< 400px): hide window controls
+        bool isNarrow = width < 600;
+        bool isVeryNarrow = width < 400;
+
+        if (isNarrow)
+        {
+            SetVis(BtnPip, false);
+            TitleText.MaxWidth = 150;
+        }
+        else
+        {
+            TitleText.MaxWidth = 300;
+        }
+
+        if (isVeryNarrow)
+        {
+            TitleText.MaxWidth = 80;
+        }
+    }
+
+    private static void SetVis(global::Avalonia.Controls.Control? c, bool v) { if (c != null) c.IsVisible = v; }
+
     // --- PIP ---
 
     private void OnTogglePip(object? sender, RoutedEventArgs e)

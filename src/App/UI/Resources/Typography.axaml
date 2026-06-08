@@ -1,179 +1,80 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Styles.Resources>
-        <!-- ======================== -->
-        <!--  FONT FAMILIES           -->
-        <!-- ======================== -->
-        <FontFamily x:Key="NumericFont">Consolas, Courier New, monospace</FontFamily>
-        <FontFamily x:Key="SystemFont">Segoe UI, system-ui, -apple-system, sans-serif</FontFamily>
-        <FontFamily x:Key="SymbolFont">Segoe MDL2 Assets, Symbol, sans-serif</FontFamily>
+
+    <!-- ============================================================
+         Material Design 3 Type Scale — Font Resources
+         Reference: https://m3.material.io/styles/typography
+         ============================================================ -->
+
+    <!-- Font Family Tokens
+         Material Design recommends "Inter" for UI and "JetBrains Mono"
+         for monospace/numeric. To use custom embedded fonts:
+            1. Add .ttf/.otf files to UI/Resources/Fonts/
+            2. Set build action to "AvaloniaResource"
+            3. Update paths to "avares://App/UI/Resources/Fonts#FontName"
+
+         Until then, values below are placeholders — fonts inherit from
+         Window default (defined in App.axaml). -->
+    <FontFamily x:Key="font-family-default">Segoe UI, sans-serif</FontFamily>
+    <FontFamily x:Key="font-family-mono">Consolas, monospace</FontFamily>
+    <FontFamily x:Key="font-family-numeric">Consolas, monospace</FontFamily>
+
     </Styles.Resources>
-    
-    <!-- ======================== -->
-    <!--  TEXT STYLES             -->
-    <!-- ======================== -->
-    
-    <!-- Time Labels (elapsed/duration) -->
-    <Style Selector="TextBlock.time-label">
-        <Setter Property="FontFamily" Value="{StaticResource NumericFont}" />
-        <Setter Property="FontSize" Value="13" />
-        <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
-        <Setter Property="VerticalAlignment" Value="Center" />
-        <Setter Property="Effect">
-            <Setter.Value>
-                <DropShadowEffect BlurRadius="3" OffsetY="1" Color="#80000000" />
-            </Setter.Value>
-        </Setter>
+
+    <!-- ============================================================
+         Material Design 3 Type Ramp — Styles
+         These are the canonical type sizes for the entire app.
+         All TextBlock elements should use these classes.
+         ============================================================ -->
+
+    <!-- 12sp / Regular — helper text, captions, time labels -->
+    <Style Selector="TextBlock.md3-caption">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="Normal"/>
+        <Setter Property="FontFamily" Value="{StaticResource font-family-default}"/>
     </Style>
-    
-    <!-- Time elapsed (with negative margin for separator) -->
-    <Style Selector="TextBlock.time-elapsed">
-        <Setter Property="FontFamily" Value="{StaticResource NumericFont}" />
-        <Setter Property="FontSize" Value="13" />
-        <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
-        <Setter Property="VerticalAlignment" Value="Center" />
-        <Setter Property="Margin" Value="0,0,-7,0" />
-        <Setter Property="Effect">
-            <Setter.Value>
-                <DropShadowEffect BlurRadius="3" OffsetY="1" Color="#80000000" />
-            </Setter.Value>
-        </Setter>
+
+    <!-- 14sp / Regular — secondary body text, metadata -->
+    <Style Selector="TextBlock.md3-body2">
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="Normal"/>
+        <Setter Property="FontFamily" Value="{StaticResource font-family-default}"/>
     </Style>
-    
-    <!-- Time duration -->
-    <Style Selector="TextBlock.time-duration">
-        <Setter Property="FontFamily" Value="{StaticResource NumericFont}" />
-        <Setter Property="FontSize" Value="13" />
-        <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
-        <Setter Property="VerticalAlignment" Value="Center" />
-        <Setter Property="Margin" Value="-7,0,0,0" />
-        <Setter Property="Effect">
-            <Setter.Value>
-                <DropShadowEffect BlurRadius="3" OffsetY="1" Color="#80000000" />
-            </Setter.Value>
-        </Setter>
+
+    <!-- 16sp / Regular — primary body text -->
+    <Style Selector="TextBlock.md3-body1">
+        <Setter Property="FontSize" Value="16"/>
+        <Setter Property="FontWeight" Value="Normal"/>
+        <Setter Property="FontFamily" Value="{StaticResource font-family-default}"/>
     </Style>
-    
-    <!-- Chapter Badge -->
-    <Style Selector="TextBlock.chapter-badge">
-        <Setter Property="FontFamily" Value="{StaticResource SystemFont}" />
-        <Setter Property="FontSize" Value="12" />
-        <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
-        <Setter Property="VerticalAlignment" Value="Center" />
-        <Setter Property="Effect">
-            <Setter.Value>
-                <DropShadowEffect BlurRadius="3" OffsetY="1" Color="#80000000" />
-            </Setter.Value>
-        </Setter>
+
+    <!-- 14sp / SemiBold — section headers, labels -->
+    <Style Selector="TextBlock.md3-subtitle1">
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontFamily" Value="{StaticResource font-family-default}"/>
     </Style>
-    
-    <!-- Header Title -->
-    <Style Selector="TextBlock.header-title">
-        <Setter Property="FontFamily" Value="{StaticResource SystemFont}" />
-        <Setter Property="FontSize" Value="14" />
-        <Setter Property="FontWeight" Value="Medium" />
-        <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
-        <Setter Property="Effect">
-            <Setter.Value>
-                <DropShadowEffect BlurRadius="3" OffsetY="1" Color="#80000000" />
-            </Setter.Value>
-        </Setter>
+
+    <!-- 20sp / Medium — dialog titles, section headings -->
+    <Style Selector="TextBlock.md3-headline6">
+        <Setter Property="FontSize" Value="20"/>
+        <Setter Property="FontWeight" Value="Medium"/>
+        <Setter Property="FontFamily" Value="{StaticResource font-family-default}"/>
     </Style>
-    
-    <!-- Speed Display -->
-    <Style Selector="TextBlock.speed-display">
-        <Setter Property="FontFamily" Value="{StaticResource NumericFont}" />
-        <Setter Property="FontSize" Value="12" />
-        <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
-        <Setter Property="VerticalAlignment" Value="Center" />
-        <Setter Property="Effect">
-            <Setter.Value>
-                <DropShadowEffect BlurRadius="3" OffsetY="1" Color="#80000000" />
-            </Setter.Value>
-        </Setter>
+
+    <!-- 24sp / Regular — page titles -->
+    <Style Selector="TextBlock.md3-headline4">
+        <Setter Property="FontSize" Value="24"/>
+        <Setter Property="FontWeight" Value="Regular"/>
+        <Setter Property="FontFamily" Value="{StaticResource font-family-default}"/>
     </Style>
-    
-    <!-- Toolbar Button Text -->
-    <Style Selector="TextBlock.toolbar-text">
-        <Setter Property="FontFamily" Value="{StaticResource SystemFont}" />
-        <Setter Property="FontSize" Value="11" />
-        <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
+
+    <!-- 34sp / Regular — hero/display text (start page title) -->
+    <Style Selector="TextBlock.md3-headline2">
+        <Setter Property="FontSize" Value="34"/>
+        <Setter Property="FontWeight" Value="Regular"/>
+        <Setter Property="FontFamily" Value="{StaticResource font-family-default}"/>
     </Style>
-    
-    <!-- Status Bar -->
-    <Style Selector="TextBlock.status-text">
-        <Setter Property="FontFamily" Value="{StaticResource NumericFont}" />
-        <Setter Property="FontSize" Value="11" />
-        <Setter Property="Foreground" Value="#AAAAAA" />
-    </Style>
-    
-    <!-- ======================== -->
-    <!--  BUTTON STYLES           -->
-    <!-- ======================== -->
-    
-    <!-- Circular Transport Button -->
-    <Style Selector="Button.circular-transport">
-        <Setter Property="Width" Value="40" />
-        <Setter Property="Height" Value="40" />
-        <Setter Property="Padding" Value="0" />
-        <Setter Property="HorizontalContentAlignment" Value="Center" />
-        <Setter Property="VerticalContentAlignment" Value="Center" />
-        <Setter Property="Background" Value="{StaticResource ButtonBackground}" />
-        <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="20" />
-        <Setter Property="RenderTransformOrigin" Value="50% 50%" />
-        <Setter Property="RenderTransform">
-            <Setter.Value>
-                <ScaleTransform ScaleX="1" ScaleY="1" />
-            </Setter.Value>
-        </Setter>
-    </Style>
-    
-    <!-- Button Hover State -->
-    <Style Selector="Button.circular-transport:pointerover">
-        <Setter Property="Background" Value="{StaticResource ButtonHoverBackground}" />
-    </Style>
-    
-    <Style Selector="Button.circular-menu:pointerover">
-        <Setter Property="Background" Value="{StaticResource ButtonHoverBackground}" />
-    </Style>
-    
-    <Style Selector="Button.circular-toggle:pointerover">
-        <Setter Property="Background" Value="{StaticResource ButtonHoverBackground}" />
-    </Style>
-    
-    <!-- Button Pressed State -->
-    <Style Selector="Button.circular-transport:pressed">
-        <Setter Property="Background" Value="{StaticResource ButtonActiveBackground}" />
-        <Setter Property="RenderTransform">
-            <Setter.Value>
-                <ScaleTransform ScaleX="0.97" ScaleY="0.97" />
-            </Setter.Value>
-        </Setter>
-    </Style>
-    
-    <Style Selector="Button.circular-menu:pressed">
-        <Setter Property="Background" Value="{StaticResource ButtonActiveBackground}" />
-        <Setter Property="RenderTransform">
-            <Setter.Value>
-                <ScaleTransform ScaleX="0.97" ScaleY="0.97" />
-            </Setter.Value>
-        </Setter>
-    </Style>
-    
-    <Style Selector="Button.circular-toggle:pressed">
-        <Setter Property="Background" Value="{StaticResource ButtonActiveBackground}" />
-        <Setter Property="RenderTransform">
-            <Setter.Value>
-                <ScaleTransform ScaleX="0.97" ScaleY="0.97" />
-            </Setter.Value>
-        </Setter>
-    </Style>
-    
-    <!-- Toggle Button Checked State -->
-    <Style Selector="Button.circular-toggle:checked">
-        <Setter Property="Background" Value="{StaticResource ToggleButtonCheckedBackground}" />
-        <Setter Property="Foreground" Value="{StaticResource ToggleButtonCheckedForeground}" />
-    </Style>
-    
+
 </Styles>

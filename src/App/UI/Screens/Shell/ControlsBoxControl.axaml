@@ -14,7 +14,7 @@
             ZIndex="15">
         <Border.Transitions>
             <Transitions>
-                <DoubleTransition Property="Opacity" Duration="0:0:0.3" />
+                <DoubleTransition Property="Opacity" Duration="0:0:0.25" />
             </Transitions>
         </Border.Transitions>
         <Grid>
@@ -26,11 +26,11 @@
             <!-- ROW 0: TRANSPORT BUTTONS -->
             <StackPanel Grid.Row="0"
                         Orientation="Horizontal"
-                        Margin="13,10,13,4"
+                        Margin="{StaticResource space-h-3},8,{StaticResource space-h-3},4"
                         HorizontalAlignment="Center">
                 <StackPanel.Styles>
                     <Style Selector="Button, ToggleButton">
-                        <Setter Property="Margin" Value="2" />
+                        <Setter Property="Margin" Value="0" />
                         <Setter Property="Background" Value="Transparent" />
                     </Style>
                 </StackPanel.Styles>
@@ -41,44 +41,37 @@
                             Classes="circular-transport"
                             Click="OnPrevious"
                             ToolTip.Tip="Previous (Shift+P)">
-                        <materialIcons:MaterialIcon Kind="SkipPrevious" Width="18" Height="18"
+                        <materialIcons:MaterialIcon Kind="SkipPrevious" Width="22" Height="22"
                             Foreground="{StaticResource OsdForeground}" />
                     </Button>
                     <Button x:Name="BtnPlayPause"
                             Classes="circular-play"
                             Click="OnPlayPause"
                             ToolTip.Tip="Play/Pause (Space)">
-                        <materialIcons:MaterialIcon x:Name="PlayPauseIconPath" Kind="Play" Width="22" Height="22"
+                        <materialIcons:MaterialIcon x:Name="PlayPauseIconPath" Kind="Play" Width="24" Height="24"
                             Foreground="{StaticResource OsdForeground}" />
                     </Button>
                     <Button x:Name="BtnNext"
                             Classes="circular-transport"
                             Click="OnNext"
                             ToolTip.Tip="Next (P)">
-                        <materialIcons:MaterialIcon Kind="SkipNext" Width="18" Height="18"
+                        <materialIcons:MaterialIcon Kind="SkipNext" Width="22" Height="22"
                             Foreground="{StaticResource OsdForeground}" />
                     </Button>
                 </StackPanel>
 
                 <!-- Separator -->
                 <Rectangle Width="1" Height="20" Fill="{StaticResource AppDivider}"
-                           VerticalAlignment="Center" Margin="8,0" IsHitTestVisible="False" />
+                           VerticalAlignment="Center" Margin="{StaticResource space-h-2}" IsHitTestVisible="False" />
 
-                <!-- Group 2: Audio/Subtitle -->
                 <StackPanel Orientation="Horizontal" Spacing="2">
                     <Button x:Name="BtnVolumeMenu"
                             Classes="circular-menu"
                             ToolTip.Tip="Volume (M)"
                             PointerWheelChanged="OnVolumeButtonScroll">
-                        <Panel Width="18" Height="18">
-                            <materialIcons:MaterialIcon x:Name="VolumeIconPath" Kind="VolumeHigh" Width="18" Height="18"
+                        <Panel Width="22" Height="22">
+                            <materialIcons:MaterialIcon x:Name="VolumeIconPath" Kind="VolumeHigh" Width="22" Height="22"
                                 Foreground="{StaticResource OsdForeground}" />
-                            <materialIcons:MaterialIcon x:Name="VolumeArcsPath" Kind="VolumeMedium" Width="18" Height="18"
-                                Foreground="{StaticResource OsdForeground}"
-                                Opacity="0" />
-                            <materialIcons:MaterialIcon x:Name="VolumeMuteCrossPath" Kind="VolumeOff" Width="18" Height="18"
-                                Foreground="{StaticResource OsdForeground}"
-                                IsVisible="False" />
                         </Panel>
                         <Button.Flyout>
                             <Flyout Placement="Top">
@@ -86,9 +79,9 @@
                                         Background="{StaticResource PopoverBackground}"
                                         BorderBrush="{StaticResource PopoverBorder}"
                                         BorderThickness="1"
-                                        CornerRadius="8"
-                                        Padding="8">
-                                    <StackPanel Orientation="Vertical" Spacing="10" Width="80"
+                                        CornerRadius="{StaticResource radius-sm}"
+                                        Padding="{StaticResource space-3}">
+                                    <StackPanel Orientation="Vertical" Spacing="10" Width="100"
                                                 HorizontalAlignment="Center">
                                         <ToggleButton x:Name="BtnMuteToggle"
                                                       Classes="circular-toggle"
@@ -97,7 +90,7 @@
                                                       ToolTip.Tip="Mute"
                                                       Width="40" Height="40"
                                                       HorizontalAlignment="Center">
-                                            <materialIcons:MaterialIcon x:Name="MuteToggleIcon" Kind="VolumeHigh" Width="20" Height="20"
+                                            <materialIcons:MaterialIcon x:Name="MuteToggleIcon" Kind="VolumeHigh" Width="22" Height="22"
                                                 Foreground="{StaticResource OsdForeground}" />
                                         </ToggleButton>
                                         <Slider x:Name="VolumeSlider"
@@ -105,7 +98,7 @@
                                                 Minimum="0" Maximum="150"
                                                 Value="{Binding VolumeValue}"
                                                 Orientation="Vertical"
-                                                Height="120"
+                                                Height="104"
                                                 HorizontalAlignment="Center"
                                                 PointerPressed="OnVolumeSliderPointerPressed" />
                                         <TextBlock x:Name="VolumePercentLabel"
@@ -118,25 +111,11 @@
                             </Flyout>
                         </Button.Flyout>
                     </Button>
-                    <Button x:Name="BtnSubtitlesMenu"
-                            Classes="circular-menu"
-                            ToolTip.Tip="Subtitles"
-                            Click="OnSubtitlesMenuClick">
-                        <materialIcons:MaterialIcon x:Name="SubtitleIconPath" Kind="Subtitles" Width="18" Height="18"
-                            Foreground="{StaticResource OsdForeground}" />
-                    </Button>
-                    <Button x:Name="BtnAudioMenu"
-                            Classes="circular-menu"
-                            ToolTip.Tip="Audio Tracks"
-                            Click="OnAudioMenuClick">
-                        <materialIcons:MaterialIcon x:Name="AudioIconPath" Kind="Music" Width="18" Height="18"
-                            Foreground="{StaticResource OsdForeground}" />
-                    </Button>
                     <Button x:Name="BtnEqualizer"
                             Classes="circular-menu"
                             ToolTip.Tip="Equalizer"
                             Click="OnEqualizerClick">
-                        <materialIcons:MaterialIcon Kind="Tune" Width="18" Height="18"
+                        <materialIcons:MaterialIcon Kind="Tune" Width="20" Height="20"
                             Foreground="{StaticResource OsdForeground}" />
                     </Button>
                     <Button x:Name="BtnVideoMenu"
@@ -144,14 +123,14 @@
                             ToolTip.Tip="Video Tracks"
                             IsVisible="{Binding HasMultipleVideoTracks}"
                             Click="OnVideoMenuClick">
-                        <materialIcons:MaterialIcon Kind="Video" Width="18" Height="18"
+                        <materialIcons:MaterialIcon Kind="Video" Width="20" Height="20"
                             Foreground="{StaticResource OsdForeground}" />
                     </Button>
                 </StackPanel>
 
                 <!-- Separator -->
                 <Rectangle Width="1" Height="20" Fill="{StaticResource AppDivider}"
-                           VerticalAlignment="Center" Margin="8,0" IsHitTestVisible="False" />
+                           VerticalAlignment="Center" Margin="{StaticResource space-h-2}" IsHitTestVisible="False" />
 
                 <!-- Group 3: Mode -->
                 <StackPanel Orientation="Horizontal" Spacing="2">
@@ -161,7 +140,7 @@
                                   IsVisible="{Binding HasMultiplePlaylistItems}"
                                   Click="OnToggleShuffle"
                                   ToolTip.Tip="Shuffle Playlist">
-                        <materialIcons:MaterialIcon Kind="ShuffleVariant" Width="16" Height="16"
+                        <materialIcons:MaterialIcon Kind="ShuffleVariant" Width="18" Height="18"
                             Foreground="{StaticResource OsdForeground}" />
                     </ToggleButton>
                     <ToggleButton x:Name="BtnLoopPlaylist"
@@ -170,7 +149,7 @@
                                   IsVisible="{Binding HasMultiplePlaylistItems}"
                                   Click="OnToggleLoopPlaylist"
                                   ToolTip.Tip="Loop Playlist">
-                        <materialIcons:MaterialIcon Kind="Repeat" Width="16" Height="16"
+                        <materialIcons:MaterialIcon Kind="Repeat" Width="18" Height="18"
                             Foreground="{StaticResource OsdForeground}" />
                     </ToggleButton>
                     <ToggleButton x:Name="BtnLoopFile"
@@ -178,21 +157,21 @@
                                   IsChecked="{Binding IsLoopFileEnabled}"
                                   Click="OnToggleLoopFile"
                                   ToolTip.Tip="Loop File (L)">
-                        <materialIcons:MaterialIcon Kind="RepeatOnce" Width="14" Height="14"
+                        <materialIcons:MaterialIcon Kind="RepeatOnce" Width="18" Height="18"
                             Foreground="{StaticResource OsdForeground}" />
                     </ToggleButton>
                     <Button x:Name="BtnPlaylistDialog"
                             Classes="circular-menu"
                             Click="OnOpenPlaylistDialog"
                             ToolTip.Tip="Playlist">
-                        <materialIcons:MaterialIcon Kind="PlaylistMusic" Width="16" Height="16"
+                        <materialIcons:MaterialIcon Kind="PlaylistMusic" Width="18" Height="18"
                             Foreground="{StaticResource OsdForeground}" />
                     </Button>
                 </StackPanel>
 
                 <!-- Separator -->
                 <Rectangle Width="1" Height="20" Fill="{StaticResource AppDivider}"
-                           VerticalAlignment="Center" Margin="8,0" IsHitTestVisible="False" />
+                           VerticalAlignment="Center" Margin="{StaticResource space-h-2}" IsHitTestVisible="False" />
 
                 <!-- Group 4: Tools -->
                 <StackPanel Orientation="Horizontal" Spacing="2">
@@ -201,21 +180,21 @@
                             IsVisible="{Binding HasChapters}"
                             ToolTip.Tip="Chapters"
                             Click="OnChaptersMenuClick">
-                        <materialIcons:MaterialIcon Kind="BookmarkOutline" Width="16" Height="16"
+                        <materialIcons:MaterialIcon Kind="BookmarkOutline" Width="18" Height="18"
                             Foreground="{StaticResource OsdForeground}" />
                     </Button>
                     <Button x:Name="BtnVideoEqualizer"
                             Classes="circular-menu"
                             ToolTip.Tip="Video Equalizer"
                             Click="OnVideoEqualizerClick">
-                        <materialIcons:MaterialIcon Kind="Tune" Width="16" Height="16"
+                        <materialIcons:MaterialIcon Kind="Palette" Width="18" Height="18"
                             Foreground="{StaticResource OsdForeground}" />
                     </Button>
                     <ToggleButton x:Name="BtnFullscreen"
                                   Classes="circular-toggle"
                                   Click="OnToggleFullscreen"
                                   ToolTip.Tip="Fullscreen (F)">
-                        <materialIcons:MaterialIcon x:Name="FullscreenIconPath" Kind="Fullscreen" Width="14" Height="14"
+                        <materialIcons:MaterialIcon x:Name="FullscreenIconPath" Kind="Fullscreen" Width="18" Height="18"
                             Foreground="{StaticResource OsdForeground}" />
                     </ToggleButton>
                 </StackPanel>
@@ -224,7 +203,7 @@
             <!-- ROW 1: SEEK BAR + TIME -->
             <controls:SeekBarControl Grid.Row="1"
                                      x:Name="SeekBar"
-                                     Margin="12,0,12,5" />
+                                     Margin="{StaticResource space-h-3}" />
         </Grid>
     </Border>
 </UserControl>

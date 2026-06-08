@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -8,6 +9,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Cine.Avalonia.Controls;
+using Cine.Avalonia.Helpers;
 using KeyEventArgs = Avalonia.Input.KeyEventArgs;
 
 namespace Cine.Avalonia.Views.Dialogs;
@@ -52,11 +54,20 @@ public partial class PipWindow : Window
         if (_dwmManager != null || _thumbnailId > 0) return;
 
         _dwmManager = manager;
+        
+        // Check if DWM manager has a valid source (the hidden video window)
+        if (manager.SourceHwnd == IntPtr.Zero)
+        {
+            System.Diagnostics.Debug.WriteLine("[PipWindow] DWM source not set - no video to display");
+            return;
+        }
 
         var handle = TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
         if (handle == IntPtr.Zero) return;
 
+        // Register PipWindow as a target to mirror the source video HWND
         _thumbnailId = manager.RegisterTarget(handle);
+        System.Diagnostics.Debug.WriteLine($"[PipWindow] DWM thumbnail registered: id={_thumbnailId}, source=0x{manager.SourceHwnd:X}");
         SyncThumbnailRect();
     }
 
@@ -88,16 +99,31 @@ public partial class PipWindow : Window
             destRight: w, destBottom: h - bottom);
     }
 
-    protected override void OnSizeChanged(SizeChangedEventArgs e)
-    {
-        base.OnSizeChanged(e);
-        SyncThumbnailRect();
-    }
-
     /// <summary>Sets the target aspect ratio for resize locking.</summary>
     public void SetAspectRatio(double ar)
     {
-        if (ar > 0) _aspectRatio = ar;
+        if (ar > 0)
+        {
+            _aspectRatio = ar;
+            // Apply immediately if already sized
+            if (Width > 0 && Height > 0)
+                ApplyAspectRatioConstraint();
+        }
+    }
+
+    /// <summary>Applies aspect ratio constraint after resize completes</summary>
+    private void ApplyAspectRatioConstraint()
+    {
+        if (_aspectRatio <= 0 || Width <= 0 || Height <= 0) return;
+
+        var currentRatio = Width / Height;
+        const double tolerance = 0.01; // 1% tolerance
+
+        if (Math.Abs(currentRatio - _aspectRatio) > tolerance)
+        {
+            var newWidth = Height * _aspectRatio;
+            Width = newWidth;
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -147,6 +173,12 @@ public partial class PipWindow : Window
 
         RestoreState();
         SetupHoverTimer();
+
+        // Apply aspect ratio constraint if set
+        if (_aspectRatio > 0 && Width > 0 && Height > 0)
+        {
+            ApplyAspectRatioConstraint();
+        }
 
         if (_dwmManager != null && _thumbnailId == 0)
         {
@@ -296,6 +328,17 @@ public partial class PipWindow : Window
             BeginMoveDrag(e);
     }
 
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
+    {
+        base.OnPointerReleased(e);
+        // Snap to edge after drag finishes (with a short delay to avoid flicker)
+        _ = Dispatcher.UIThread.OnUiThreadAsync(async () =>
+        {
+            await Task.Delay(150);
+            SnapToEdge();
+        });
+    }
+
     private void OnMinimizeClick(object? sender, RoutedEventArgs e)
     {
         WindowState = WindowState.Minimized;
@@ -313,6 +356,41 @@ public partial class PipWindow : Window
     {
         if (PinIcon != null)
             PinIcon.Opacity = _isPinned ? 1.0 : 0.4;
+    }
+
+    /// <summary>Snap window to nearest screen edge ( international PiP standard behavior)</summary>
+    public void SnapToEdge()
+    {
+        var screens = Screens?.All;
+        if (screens == null || screens.Count == 0) return;
+
+        var currentScreen = screens.FirstOrDefault(s =>
+            Position.X >= s.WorkingArea.X &&
+            Position.X <= s.WorkingArea.X + s.WorkingArea.Width &&
+            Position.Y >= s.WorkingArea.Y &&
+            Position.Y <= s.WorkingArea.Y + s.WorkingArea.Height)
+            ?? screens[0];
+
+        var work = currentScreen.WorkingArea;
+        var x = Position.X;
+        var y = Position.Y;
+        const int snapThreshold = 50;
+
+        // Snap left edge
+        if (Math.Abs(x - work.X) < snapThreshold)
+            x = work.X;
+        // Snap right edge
+        else if (Math.Abs((x + Width) - (work.X + work.Width)) < snapThreshold)
+            x = (int)(work.X + work.Width - Width);
+        // Snap top edge
+        if (Math.Abs(y - work.Y) < snapThreshold)
+            y = work.Y;
+        // Snap bottom edge
+        else if (Math.Abs((y + Height) - (work.Y + work.Height)) < snapThreshold)
+            y = (int)(work.Y + work.Height - Height);
+
+        Position = new PixelPoint(x, y);
+        SaveState();
     }
 
     private void OnExpandClick(object? sender, RoutedEventArgs e) => OnCloseClick(sender, e);

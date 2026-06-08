@@ -6,7 +6,7 @@
             IsVisible="False"
             HorizontalAlignment="Center"
             VerticalAlignment="Bottom"
-            Padding="16,10,20,10"
+            Padding="16,10,16,10"
             CornerRadius="20"
             Background="{StaticResource OsdBackground}">
         <Border.RenderTransform>
@@ -23,7 +23,7 @@
                                         Width="18" Height="18"
                                         Foreground="{StaticResource OsdForeground}"
                                         VerticalAlignment="Center"
-                                        IsVisible="False" />
+                                        Opacity="0" />
             <TextBlock x:Name="OsdNotificationText"
                        Text=""
                        FontSize="14"

@@ -14,11 +14,15 @@ public partial class MainWindow
     {
         this.SizeChanged += OnWindowSizeChanged;
         _controlsBox.UpdateResponsiveLayout(Bounds.Width, _viewModel?.HasMultipleVideoTracks ?? false);
+        _headerBar.UpdateResponsiveLayout(Bounds.Width);
+        UpdateSubtitleAudioOverlayVisibility(Bounds.Width);
     }
 
     private void OnWindowSizeChanged(object? sender, SizeChangedEventArgs e)
     {
         _controlsBox.UpdateResponsiveLayout(e.NewSize.Width, _viewModel?.HasMultipleVideoTracks ?? false);
+        _headerBar.UpdateResponsiveLayout(e.NewSize.Width);
+        UpdateSubtitleAudioOverlayVisibility(e.NewSize.Width);
         App.DebugReport("VT", "MainWindow.OnWindowSizeChanged", "SizeChangedEvent.", new
         {
             newSize = e.NewSize.ToString(),
@@ -34,5 +38,18 @@ public partial class MainWindow
             if (w > 0 && h > 0)
                 player.NotifyResize(w, h);
         }
+    }
+
+    /// <summary>
+    /// Shows/hides the standalone subtitle and audio selector overlay buttons
+    /// based on window width, matching the ControlsBox responsive behavior.
+    /// </summary>
+    private void UpdateSubtitleAudioOverlayVisibility(double width)
+    {
+        bool isNarrow = width < 495;
+        if (SubtitleOverlayControl != null)
+            SubtitleOverlayControl.IsVisible = !isNarrow;
+        if (AudioTrackSelectorControl != null)
+            AudioTrackSelectorControl.IsVisible = !isNarrow;
     }
 }

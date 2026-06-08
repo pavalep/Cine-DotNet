@@ -161,10 +161,11 @@ public partial class MainWindow
         foreach (var btn in flyoutsToClose)
             if (btn?.Flyout is Flyout f)
                 f.Hide();
-        var trackMenus = new[] { _controlsBox.BtnSubtitlesMenu, _controlsBox.BtnAudioMenu, _controlsBox.BtnVideoMenu };
-        foreach (var btn in trackMenus)
-            if (btn?.Flyout is Flyout f)
-                f.Hide();
+        // Close subtitle & audio flyouts from standalone overlay controls
+        SubtitleOverlayControl?.HideFlyout();
+        AudioTrackSelectorControl?.HideFlyout();
+        if (_controlsBox.BtnVideoMenu?.Flyout is Flyout fv)
+            fv.Hide();
     }
 
     // Guard against duplicate PointerPressed from both VideoClickOverlay and _videoHost

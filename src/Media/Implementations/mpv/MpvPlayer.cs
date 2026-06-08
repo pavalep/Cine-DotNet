@@ -358,10 +358,27 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
     }
     public void AddSubtitle(string path) => CommandInternal("sub-add", path, "select");
     public void AddAudio(string path) => CommandInternal("audio-add", path, "select");
-    public void SelectSubtitleTrack(int trackIndex) => SetInt64("sid", trackIndex);
+    public void SelectSubtitleTrack(int trackIndex)
+    {
+        if (trackIndex > 0)
+        {
+            SetFlag("sub-visibility", true);
+            SetInt64("sid", trackIndex);
+        }
+        else
+        {
+            SetFlag("sub-visibility", false);
+            SetInt64("sid", -1);
+        }
+    }
     public void SelectAudioTrack(int trackIndex) => SetInt64("aid", trackIndex);
     public void SelectVideoTrack(int trackIndex) => SetInt64("vid", trackIndex);
-    public void CycleSubtitleTrack() => CommandInternal("cycle", "sid");
+    public void CycleSubtitleTrack()
+    {
+        CommandInternal("cycle", "sid");
+        // Ensure subtitles become visible when cycling (in case they were off)
+        SetFlag("sub-visibility", true);
+    }
 
     public AudioTrackInfo[] AudioSources
     {
@@ -1200,6 +1217,9 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
         foreach (var t in tracks.EnumerateArray())
         {
             var kind = t.TryGetProperty("type", out var kindProp) ? kindProp.GetString() ?? "" : "";
+            // Only include subtitle tracks (exclude audio and video)
+            if (kind == "audio" || kind == "video")
+                continue;
             var lang = t.TryGetProperty("lang", out var langProp) ? langProp.GetString() ?? "" : "";
             var title = t.TryGetProperty("title", out var titleProp) ? titleProp.GetString() ?? "" : "";
             var selected = t.TryGetProperty("selected", out var selProp) && selProp.GetBoolean();

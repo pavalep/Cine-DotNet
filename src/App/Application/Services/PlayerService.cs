@@ -26,8 +26,9 @@ namespace Cine.Avalonia.ViewModels
                 Directory.CreateDirectory(dir);
                 return Path.Combine(dir, "cine_startup.log");
             }
-            catch
+            catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"[PlayerService] Log path creation failed: {ex.Message}");
                 return Path.Combine(Path.GetTempPath(), "cine_startup.log");
             }
         }
@@ -38,8 +39,9 @@ namespace Cine.Avalonia.ViewModels
             {
                 File.AppendAllText(DebugLogFile, $"[{DateTime.Now:HH:mm:ss.fff}] [PlayerService] {message}{Environment.NewLine}");
             }
-            catch
+            catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"[PlayerService] DebugLog failed: {ex.Message}");
             }
         }
         #endregion
@@ -80,16 +82,38 @@ namespace Cine.Avalonia.ViewModels
 
         public void Dispose()
         {
-            if (_disposed) return;
-            _disposed = true;
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
 
-            if (_player != null)
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed) return;
+
+            if (disposing)
             {
-                _player.Stop();
-                if (_player is IDisposable disposable)
-                    disposable.Dispose();
-                _player = null;
+                try
+                {
+                    if (_player != null)
+                    {
+                        _player.Stop();
+                        (_player as IDisposable)?.Dispose();
+                        _player = null;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    DebugLog($"[PlayerService] Dispose error: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"[PlayerService] Dispose error: {ex.Message}");
+                }
             }
+
+            _disposed = true;
+        }
+
+        ~PlayerService()
+        {
+            Dispose(false);
         }
 
         private void OnError(object? sender, string error)

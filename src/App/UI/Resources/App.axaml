@@ -10,6 +10,9 @@
     <StyleInclude Source="avares://App/UI/Resources/Colors.axaml" />
     <StyleInclude Source="avares://App/UI/Resources/Typography.axaml" />
     <StyleInclude Source="avares://App/UI/Resources/Icons.axaml" />
+    <StyleInclude Source="avares://App/UI/Resources/Spacing.axaml" />
+    <StyleInclude Source="avares://App/UI/Resources/Elevation.axaml" />
+    <StyleInclude Source="avares://App/UI/Resources/Radius.axaml" />
     
     <!-- ======================== -->
     <!--  GLOBAL STYLES           -->
@@ -34,16 +37,16 @@
     <!--  TRANSPORT BUTTONS       -->
     <!-- ======================== -->
     
-    <!-- Circular Transport Button (matches reference) -->
+    <!-- Circular Transport Button (40×40 — MD3 minimum touch target) -->
     <Style Selector="Button.circular-transport">
-        <Setter Property="Width" Value="34" />
-        <Setter Property="Height" Value="34" />
+        <Setter Property="Width" Value="40" />
+        <Setter Property="Height" Value="40" />
         <Setter Property="Padding" Value="0" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="17" />
+        <Setter Property="CornerRadius" Value="20" />
         <Setter Property="RenderTransform">
             <Setter.Value>
                 <ScaleTransform ScaleX="1" ScaleY="1" />
@@ -162,16 +165,16 @@
         </Style>
     </Style>
     
-    <!-- Circular Menu Button -->
+    <!-- Circular Menu Button (40×40 — MD3 minimum touch target) -->
     <Style Selector="Button.circular-menu">
-        <Setter Property="Width" Value="32" />
-        <Setter Property="Height" Value="32" />
+        <Setter Property="Width" Value="40" />
+        <Setter Property="Height" Value="40" />
         <Setter Property="Padding" Value="0" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="16" />
+        <Setter Property="CornerRadius" Value="20" />
         <Setter Property="RenderTransform">
             <Setter.Value>
                 <ScaleTransform ScaleX="1" ScaleY="1" />
@@ -226,16 +229,16 @@
         </Style>
     </Style>
     
-    <!-- Circular Menu ToggleButton -->
+    <!-- Circular Menu ToggleButton (40×40) -->
     <Style Selector="ToggleButton.circular-menu">
-        <Setter Property="Width" Value="32" />
-        <Setter Property="Height" Value="32" />
+        <Setter Property="Width" Value="40" />
+        <Setter Property="Height" Value="40" />
         <Setter Property="Padding" Value="0" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="16" />
+        <Setter Property="CornerRadius" Value="20" />
         <Setter Property="Transitions">
             <Transitions>
                 <BrushTransition Property="Background" Duration="0:0:0.12" />
@@ -249,16 +252,16 @@
         </Style>
     </Style>
     
-    <!-- Circular Toggle Button (matches reference) -->
+    <!-- Circular Toggle Button (40×40) -->
     <Style Selector="ToggleButton.circular-toggle">
-        <Setter Property="Width" Value="34" />
-        <Setter Property="Height" Value="34" />
+        <Setter Property="Width" Value="40" />
+        <Setter Property="Height" Value="40" />
         <Setter Property="Padding" Value="0" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="15" />
+        <Setter Property="CornerRadius" Value="20" />
         <Setter Property="RenderTransform">
             <Setter.Value>
                 <ScaleTransform ScaleX="1" ScaleY="1" />
@@ -489,7 +492,7 @@
     <Style Selector="Border.controls-box">
         <Setter Property="VerticalAlignment" Value="Bottom" />
         <Setter Property="Background" Value="{StaticResource ControlsGradient}" />
-        <Setter Property="Padding" Value="0,0,0,12" />
+        <Setter Property="Padding" Value="{StaticResource space-bottom-2}" />
         <Setter Property="Transitions">
             <Setter.Value>
                 <Transitions>
@@ -503,27 +506,12 @@
     <!--  TEXT STYLES             -->
     <!-- ======================== -->
     
-    <!-- Time Labels -->
+    <!-- Time Labels (font 12 → md3-caption, with NumericFont for monospace alignment) -->
     <Style Selector="TextBlock.time-label">
-        <Setter Property="FontFamily" Value="{StaticResource NumericFont}" />
-        <Setter Property="FontSize" Value="13" />
-        <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
-        <Setter Property="VerticalAlignment" Value="Center" />
-    </Style>
-    
-    <!-- Speed Display -->
-    <Style Selector="TextBlock.speed-display">
-        <Setter Property="FontFamily" Value="{StaticResource NumericFont}" />
+        <Setter Property="FontFamily" Value="{StaticResource font-family-numeric}" />
         <Setter Property="FontSize" Value="12" />
         <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
         <Setter Property="VerticalAlignment" Value="Center" />
-    </Style>
-    
-    <!-- Status Text -->
-    <Style Selector="TextBlock.status-text">
-        <Setter Property="FontFamily" Value="{StaticResource NumericFont}" />
-        <Setter Property="FontSize" Value="11" />
-        <Setter Property="Foreground" Value="{StaticResource AppTextMuted}" />
     </Style>
     
     <!-- Seek Slider -->

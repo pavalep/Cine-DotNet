@@ -133,6 +133,14 @@ public partial class MainWindow
             _controlsBox.ControlsBox.IsVisible = true;
             _controlsBox.ControlsBox.Opacity = 1;
             _controlsBox.ControlsBox.IsHitTestVisible = true;
+            // Force a full layout measure pass.
+            // The ControlsBox starts IsVisible="False" in XAML. When made visible,
+            // the layout system may not fully re-measure Auto-sized rows unless
+            // explicitly invalidated. This ensures the height is correct on first
+            // show (fixes: height was wrong on initial load, correct after
+            // fullscreen toggle which triggered a full window re-layout via
+            // ExtendClientAreaToDecorationsHint changes).
+            _controlsBox.ControlsBox.InvalidateMeasure();
         }
 
         // Only start auto-hide timer when media is loaded

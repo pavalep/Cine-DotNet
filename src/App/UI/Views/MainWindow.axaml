@@ -78,8 +78,8 @@
         <!-- Start Page — full viewport, opaque background -->
         <local:StartPage x:Name="StartPage" />
 
-        <!-- Loading Spinner -->
-        <controls:SpinnerOverlayControl x:Name="LoadingSpinnerOverlay" />
+        <!-- Loading Spinner — ZIndex=30 so it renders above all other overlays -->
+        <controls:SpinnerOverlayControl x:Name="LoadingSpinnerOverlay" ZIndex="30" />
 
         <!-- Pause Indicator -->
         <controls:PauseOverlayControl x:Name="PauseOverlay" />
@@ -96,23 +96,45 @@
         <!-- Drag-drop indicator overlay -->
         <controls:DragDropOverlayControl x:Name="DropIndicatorOverlay" />
 
-        <!-- HEADER BAR — top, floats over video -->
+        <!-- HEADER BAR — ZIndex=20, top, floats over video -->
         <controls:HeaderBarControl x:Name="HeaderBarControl"
                                    VerticalAlignment="Top"
                                    HorizontalAlignment="Stretch" />
 
-        <!-- FULLSCREEN HEADER — top, floats over video -->
+        <!-- FULLSCREEN HEADER — ZIndex=25, top, floats over video -->
         <controls:FullscreenHeaderControl x:Name="FullscreenHeaderControl"
                                           VerticalAlignment="Top" Height="44" />
 
-        <!-- CONTROLS BOX — bottom, floats over video -->
+        <!-- CONTROLS BOX — ZIndex=15, bottom, floats over video -->
         <controls:ControlsBoxControl x:Name="ControlsBoxControl"
                                      VerticalAlignment="Bottom"
                                      HorizontalAlignment="Stretch" />
 
-        <!-- OSD Notification — bottom center, floats over everything -->
+        <!-- ── Controls Overlay Area ──────────────────────────────────
+             Sits above ControlsBox. ZIndex=20 ensures buttons render
+             above the ControlsBox (15) but below FullscreenHeader (25).
+             
+             Positioned using a full-width Grid so subtitle/audio buttons
+             can use HorizontalAlignment + Margin relative to the bottom
+             area rather than the window center. The 66px bottom margin
+             lifts them above the ControlsBox's approximate height. -->
+        <Grid VerticalAlignment="Bottom" Height="80"
+              IsHitTestVisible="False" ZIndex="20">
+            <controls:SubtitleOverlayControl x:Name="SubtitleOverlayControl"
+                                             HorizontalAlignment="Center"
+                                             Margin="-115,0,0,66"
+                                             IsVisible="False" />
+            <controls:AudioTrackSelectorControl x:Name="AudioTrackSelectorControl"
+                                                HorizontalAlignment="Center"
+                                                Margin="-35,0,0,66"
+                                                IsVisible="False" />
+        </Grid>
+
+        <!-- OSD Notification — bottom center, floats above ControlsBox.
+             Bottom margin lifts it above the ControlsBox (which is ~100-110px tall). -->
         <controls:OsdNotificationControl x:Name="OsdNotificationControl"
                                           VerticalAlignment="Bottom"
-                                          HorizontalAlignment="Center" />
+                                          HorizontalAlignment="Center"
+                                          Margin="0,0,0,110" />
     </Grid>
 </Window>

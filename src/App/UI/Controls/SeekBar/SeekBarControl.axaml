@@ -3,14 +3,13 @@
              xmlns:vm="using:Cine.Avalonia.ViewModels"
              x:Class="Cine.Avalonia.Controls.SeekBarControl"
              x:DataType="vm:MainViewModel"
-             x:Name="SeekBarRoot"
-             Height="37">
+             x:Name="SeekBarRoot">
     <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="4">
 
         <!-- Seek Area (hexpand, with chapter markers) -->
         <Grid Grid.Column="0"
               x:Name="SeekArea"
-              Margin="8,0,3,0"
+              Margin="{StaticResource space-h-2}"
               PointerMoved="OnSeekAreaPointerMoved"
               PointerExited="OnSeekAreaPointerExited"
               PointerWheelChanged="OnSeekAreaPointerWheelChanged"
@@ -38,8 +37,8 @@
             </Border>
 
             <Border x:Name="SeekThumb"
-                    Width="16" Height="16"
-                    CornerRadius="8"
+                    Width="20" Height="20"
+                    CornerRadius="10"
                     Background="{StaticResource ProgressSliderBackground}"
                     HorizontalAlignment="Left"
                     VerticalAlignment="Center">
@@ -48,9 +47,9 @@
                 </Border.Effect>
                 <Border.Styles>
                     <Style Selector="Border:pointerover">
-                        <Setter Property="Width" Value="20" />
-                        <Setter Property="Height" Value="20" />
-                        <Setter Property="CornerRadius" Value="10" />
+                        <Setter Property="Width" Value="24" />
+                        <Setter Property="Height" Value="24" />
+                        <Setter Property="CornerRadius" Value="12" />
                     </Style>
                 </Border.Styles>
             </Border>
@@ -78,10 +77,10 @@
                     Background="{StaticResource PopoverBackground}"
                     BorderBrush="{StaticResource PopoverBorder}"
                     BorderThickness="1"
-                    CornerRadius="6"
-                    Padding="8,4"
+                    CornerRadius="{StaticResource radius-sm}"
+                    Padding="{StaticResource space-2}"
                     Margin="0,-34,0,0"
-                    BoxShadow="0 4 12 0 #80000000">
+                    BoxShadow="{StaticResource elevation-4}">
                 <TextBlock x:Name="ChapterPreviewText"
                            Text="Chapter"
                            FontSize="12"
@@ -96,13 +95,13 @@
                    MinWidth="45"
                    Text="{Binding PositionText, Mode=OneWay}"
                    VerticalAlignment="Center"
-                   Margin="4,0,0,0"
+                   Margin="{StaticResource space-h-1}"
                    PointerPressed="OnPositionTimeLabelPressed"
                    Cursor="Hand" />
 
         <Border Grid.Column="2"
                 Width="2" Height="16"
-                Margin="10,0"
+                Margin="{StaticResource space-h-2}"
                 CornerRadius="2"
                 Background="{StaticResource TimeSeparatorBackground}"
                 Opacity="0.4"
@@ -113,7 +112,7 @@
                    Classes="time-label"
                    MinWidth="45"
                    Text="{Binding DurationText, Mode=OneWay}"
-                   Margin="0,0,4,0"
+                   Margin="{StaticResource space-h-1}"
                    VerticalAlignment="Center" />
     </Grid>
 </UserControl>

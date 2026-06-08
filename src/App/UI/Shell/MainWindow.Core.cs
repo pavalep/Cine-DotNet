@@ -313,6 +313,14 @@ public partial class MainWindow
 
         _osdNotification.NotificationClicked += OnOsdNotificationClicked;
 
+        // Wire external file drop events from standalone overlay controls
+        SubtitleOverlayControl.ExternalFileDropped += (_, path) =>
+            ShowOsdNotification(MaterialIconKind.ClosedCaption,
+                $"Subtitle loaded: {Path.GetFileName(path)}");
+        AudioTrackSelectorControl.ExternalFileDropped += (_, path) =>
+            ShowOsdNotification(MaterialIconKind.Music,
+                $"Audio track loaded: {Path.GetFileName(path)}");
+
         _controlsBox.SeekBarControl.InitializeSeekBar();
         _controlsBox.SeekBarControl.SeekWheelChanged += (_, delta) =>
         {
@@ -405,8 +413,8 @@ public partial class MainWindow
             _viewModel?.LoadSession();
 
         _headerBar.UpdateMaximizeIcon(WindowState == global::Avalonia.Controls.WindowState.Maximized);
-        _controlsBox?.RefreshSubtitleIcon();
-        _controlsBox?.RefreshAudioIcon();
+        SubtitleOverlayControl?.RefreshIcon();
+        AudioTrackSelectorControl?.RefreshIcon();
         _controlsBox?.RefreshVolumeIcon();
         ReportWindowState("MainWindow.OnOpened.AfterInitialState");
         Dispatcher.UIThread.OnUiThread(() => ReportWindowState("MainWindow.OnOpened.PostLayout"), DispatcherPriority.Background);
@@ -682,8 +690,8 @@ public partial class MainWindow
             })
             .Watch(nameof(MainViewModel.IsPlaying), () => _controlsBox.UpdatePlayPauseIcon())
             .Watch(nameof(MainViewModel.IsPaused), () => _controlsBox.UpdatePlayPauseIcon())
-            .Watch(nameof(MainViewModel.IsSubtitleEnabled), () => _controlsBox.RefreshSubtitleIcon())
-            .Watch(nameof(MainViewModel.IsAudioEnabled), () => _controlsBox.RefreshAudioIcon())
+            .Watch(nameof(MainViewModel.IsSubtitleEnabled), () => SubtitleOverlayControl?.RefreshIcon())
+            .Watch(nameof(MainViewModel.IsAudioEnabled), () => AudioTrackSelectorControl?.RefreshIcon())
             .Watch(nameof(MainViewModel.IsMuted), () =>
             {
                 _controlsBox.RefreshVolumeIcon();
