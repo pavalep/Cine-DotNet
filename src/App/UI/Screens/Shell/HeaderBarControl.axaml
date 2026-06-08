@@ -135,7 +135,8 @@
                               Classes="circular-menu"
                               Margin="0,0,4,0"
                               Click="OnTogglePip"
-                              ToolTip.Tip="Picture-in-Picture">
+                              ToolTip.Tip="Picture-in-Picture"
+                              AutomationProperties.Name="Picture in Picture">
                     <materialIcons:MaterialIcon Kind="PictureInPictureBottomRight" Width="18" Height="18"
                         Foreground="{StaticResource OsdForeground}" />
                 </ToggleButton>
@@ -144,7 +145,8 @@
                 <Button x:Name="BtnPrimaryMenu" IsVisible="False"
                         Classes="circular-menu"
                         ToolTip.Tip="Main Menu"
-                        Margin="0,0,4,0">
+                        Margin="0,0,4,0"
+                        AutomationProperties.Name="Main menu">
                     <materialIcons:MaterialIcon Kind="DotsHorizontal" Width="18" Height="18"
                         Foreground="{StaticResource OsdForeground}" />
                     <Button.Flyout>

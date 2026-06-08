@@ -10,6 +10,7 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using Cine.Avalonia.Controls;
 using Cine.Avalonia.Helpers;
+using Cine.Core;
 using KeyEventArgs = Avalonia.Input.KeyEventArgs;
 
 namespace Cine.Avalonia.Views.Dialogs;
@@ -58,7 +59,7 @@ public partial class PipWindow : Window
         // Check if DWM manager has a valid source (the hidden video window)
         if (manager.SourceHwnd == IntPtr.Zero)
         {
-            System.Diagnostics.Debug.WriteLine("[PipWindow] DWM source not set - no video to display");
+            Log.ForContext<PipWindow>().Warning("DWM source not set - no video to display");
             return;
         }
 
@@ -67,7 +68,7 @@ public partial class PipWindow : Window
 
         // Register PipWindow as a target to mirror the source video HWND
         _thumbnailId = manager.RegisterTarget(handle);
-        System.Diagnostics.Debug.WriteLine($"[PipWindow] DWM thumbnail registered: id={_thumbnailId}, source=0x{manager.SourceHwnd:X}");
+        Log.ForContext<PipWindow>().Info("DWM thumbnail registered: id={Id}, source=0x{Source:X}", _thumbnailId, manager.SourceHwnd);
         SyncThumbnailRect();
     }
 

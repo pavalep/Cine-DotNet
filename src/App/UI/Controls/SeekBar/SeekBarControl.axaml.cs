@@ -43,6 +43,8 @@ public partial class SeekBarControl : AvaloniaUserControl
     private TimeSpan _lastPosition;
     private TimeSpan _lastDuration;
     private DateTime _lastSeekWheel = DateTime.MinValue;
+    private DateTime _lastSeekMove = DateTime.MinValue;
+    private const int SeekMoveDebounceMs = 16; // ~60fps
 
     private const double SeekThumbHalf = 8.0;
 
@@ -239,6 +241,12 @@ public partial class SeekBarControl : AvaloniaUserControl
     {
         if (_viewModel == null) return;
 
+        // Debounce to ~60fps to prevent excessive UI updates
+        var now = DateTime.UtcNow;
+        if ((now - _lastSeekMove).TotalMilliseconds < SeekMoveDebounceMs)
+            return;
+        _lastSeekMove = now;
+
         var p = e.GetPosition(SeekArea);
         var trackWidth = Math.Max(1.0, SeekArea.Bounds.Width);
         var normalized = Math.Clamp(p.X / trackWidth, 0, 1);
@@ -310,7 +318,9 @@ public partial class SeekBarControl : AvaloniaUserControl
     public static string FormatTimeSpan(TimeSpan ts)
     {
         if (ts < TimeSpan.Zero)
-            return "-" + TimeSpan.FromTicks(-ts.Ticks).ToString("hh\\:mm\\:ss");
-        return ts.ToString("hh\\:mm\\:ss");
+            return "-" + FormatTimeSpan(TimeSpan.FromTicks(-ts.Ticks));
+        if (ts.TotalHours >= 1)
+            return ts.ToString("h\\:mm\\:ss");
+        return ts.ToString("mm\\:ss");
     }
 }

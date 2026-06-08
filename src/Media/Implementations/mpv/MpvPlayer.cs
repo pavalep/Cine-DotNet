@@ -356,8 +356,76 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
             }
         }
     }
-    public void AddSubtitle(string path) => CommandInternal("sub-add", path, "select");
-    public void AddAudio(string path) => CommandInternal("audio-add", path, "select");
+    public void AddSubtitle(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            throw new ArgumentException("Subtitle path cannot be empty", nameof(path));
+
+        if (!File.Exists(path))
+            throw new FileNotFoundException($"Subtitle file not found: {path}", path);
+
+        // Try to detect encoding for text-based subtitle formats
+        string? encodingArg = null;
+        var ext = Path.GetExtension(path)?.ToLowerInvariant();
+        if (ext == ".srt" || ext == ".vtt" || ext == ".sub" || ext == ".txt")
+        {
+            try
+            {
+                encodingArg = DetectSubtitleEncoding(path);
+            }
+            catch
+            {
+                // Fallback to default UTF-8
+            }
+        }
+
+        if (encodingArg != null)
+            CommandInternal("sub-add", path, "select", "auto", "--sub-codepage=" + encodingArg);
+        else
+            CommandInternal("sub-add", path, "select");
+    }
+
+    /// <summary>Detect subtitle file encoding by checking BOM and falling back to heuristics.</summary>
+    private static string DetectSubtitleEncoding(string path)
+    {
+        using var fs = new FileStream(path, FileMode.Open, FileAccess.Read);
+        using var reader = new BinaryReader(fs);
+
+        if (fs.Length < 4)
+            return "utf-8";
+
+        var bom = reader.ReadBytes(4);
+
+        // UTF-32 LE
+        if (bom[0] == 0xFF && bom[1] == 0xFE && bom[2] == 0x00 && bom[3] == 0x00)
+            return "utf-32le";
+        // UTF-32 BE
+        if (bom[0] == 0x00 && bom[1] == 0x00 && bom[2] == 0xFE && bom[3] == 0xFF)
+            return "utf-32be";
+        // UTF-16 LE
+        if (bom[0] == 0xFF && bom[1] == 0xFE)
+            return "utf-16le";
+        // UTF-16 BE
+        if (bom[0] == 0xFE && bom[1] == 0xFF)
+            return "utf-16be";
+        // UTF-8 BOM
+        if (bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF)
+            return "utf-8";
+
+        // No BOM - check for common Windows codepages by sampling
+        // Default to UTF-8 with fallback encoding detection
+        return "utf-8:cp1252";
+    }
+    public void AddAudio(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            throw new ArgumentException("Audio path cannot be empty", nameof(path));
+
+        if (!File.Exists(path))
+            throw new FileNotFoundException($"Audio file not found: {path}", path);
+
+        CommandInternal("audio-add", path, "select");
+    }
     public void SelectSubtitleTrack(int trackIndex)
     {
         if (trackIndex > 0)

@@ -265,6 +265,10 @@ public partial class PlaylistDialog : Window
     {
         if (e.Key == Key.Enter && PlaylistListBox?.SelectedItem is PlaylistItemViewModel item)
             item.Play();
+        else if (e.Key == Key.Delete && PlaylistListBox?.SelectedItem is PlaylistItemViewModel deleteItem)
+            deleteItem.Remove();
+        else if (e.Key == Key.Escape)
+            Close();
     }
 
     private void OnWindowDragEnter(object? sender, DragEventArgs e)

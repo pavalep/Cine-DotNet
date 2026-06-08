@@ -1,5 +1,6 @@
 using System;
 using Cine.Avalonia.Controls;
+using Cine.Core;
 using Cine.Avalonia.Views.Dialogs;
 
 namespace Cine.Avalonia.ViewModels;
@@ -64,7 +65,7 @@ public class PipService : IDisposable
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[PipService] EnterPip failed: {ex.Message}");
+            Log.ForContext<PipService>().Error(ex, "EnterPip failed");
             CleanupPip();
             return null;
         }

@@ -28,6 +28,7 @@ public class App : global::Avalonia.Application
 
     internal static void DebugReport(string hypothesisId, string location, string msg, object? data = null, string runId = "pre-fix")
     {
+#if DEBUG
         try
         {
             EnsureDebugEnvLoaded();
@@ -49,6 +50,7 @@ public class App : global::Avalonia.Application
         catch
         {
         }
+#endif
     }
 
     private static void EnsureDebugEnvLoaded()
@@ -188,6 +190,9 @@ public class App : global::Avalonia.Application
                     });
                     desktop.MainWindow = mainWindow;
                     Log("MainWindow created and assigned successfully.");
+
+                    // Register file associations for double-click support
+                    try { Cine.Avalonia.Services.FileAssociationService.Register(); } catch { }
                 }
                 catch (Exception ex)
                 {

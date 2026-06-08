@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Cine.Core;
 using Cine.Media.Interfaces;
 using Cine.Media.Implementations;
 
@@ -28,7 +29,7 @@ namespace Cine.Avalonia.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[PlayerService] Log path creation failed: {ex.Message}");
+                Log.ForContext<PlayerService>().Error(ex, "Log path creation failed");
                 return Path.Combine(Path.GetTempPath(), "cine_startup.log");
             }
         }
@@ -41,7 +42,7 @@ namespace Cine.Avalonia.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[PlayerService] DebugLog failed: {ex.Message}");
+                Log.ForContext<PlayerService>().Error(ex, "DebugLog failed");
             }
         }
         #endregion
@@ -75,7 +76,7 @@ namespace Cine.Avalonia.ViewModels
                 #region debug-point player-service-init-fail
                 DebugLog($"Initialize failed: {ex}");
                 #endregion
-                System.Diagnostics.Debug.WriteLine($"[PlayerService] Player creation FAILED: {ex}");
+                Log.ForContext<PlayerService>().Error(ex, "Player creation FAILED");
                 throw;
             }
         }
@@ -103,8 +104,8 @@ namespace Cine.Avalonia.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    DebugLog($"[PlayerService] Dispose error: {ex.Message}");
-                    System.Diagnostics.Debug.WriteLine($"[PlayerService] Dispose error: {ex.Message}");
+                    DebugLog($"Dispose error: {ex.Message}");
+                    Log.ForContext<PlayerService>().Error(ex, "Dispose error");
                 }
             }
 
@@ -119,8 +120,7 @@ namespace Cine.Avalonia.ViewModels
         private void OnError(object? sender, string error)
         {
             DebugLog($"[Error] {error}");
-            System.Diagnostics.Debug.WriteLine($"[PlayerService Error] {error}");
-            System.Diagnostics.Trace.WriteLine($"[PlayerService Error] {error}");
+            Log.ForContext<PlayerService>().Error(new Exception(error), "Player error");
             Error?.Invoke(this, error);
         }
     }

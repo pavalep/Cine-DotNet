@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using Avalonia.Threading;
 using Cine.Avalonia.Helpers;
+using Cine.Core;
 using Cine.Media.Interfaces;
 using Cine.Media.Models;
 using Cine.Media.Events;
@@ -20,7 +21,7 @@ namespace Cine.Avalonia.ViewModels;
 /// <summary>
 /// ViewModel for the main player window. Wraps IMediaPlayer for MVVM binding.
 /// </summary>
-public class MainViewModel : INotifyPropertyChanged
+public class MainViewModel : INotifyPropertyChanged, IDisposable
 {
     private static string GetLogPath()
     {
@@ -51,6 +52,7 @@ public class MainViewModel : INotifyPropertyChanged
     }
 
     private readonly IMediaPlayer _player;
+    private bool _disposed;
     // --- Bindable state ---
     private PlaybackState _state = PlaybackState.Stopped;
     private string _positionText = string.Empty;
@@ -206,8 +208,7 @@ public class MainViewModel : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[MainViewModel] OnPlayerOpened track read failed: {ex.Message}");
-            // If track read fails, the async observer will populate menus later — bail out.
+            global::Cine.Core.Log.ForContext<MainViewModel>().Error(ex, "OnPlayerOpened track read failed");
             return;
         }
 
@@ -221,7 +222,7 @@ public class MainViewModel : INotifyPropertyChanged
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[MainViewModel] OnPlayerOpened UI update failed: {ex.Message}");
+                global::Cine.Core.Log.ForContext<MainViewModel>().Warning("OnPlayerOpened UI update failed: {Error}", ex.Message);
             }
         });
     }
@@ -340,13 +341,12 @@ public class MainViewModel : INotifyPropertyChanged
             if (!string.IsNullOrWhiteSpace(path))
             {
                 _player?.AddSubtitle(path);
-                System.Diagnostics.Debug.WriteLine($"[MainViewModel] Subtitle added: {Path.GetFileName(path)}");
+                global::Cine.Core.Log.ForContext<MainViewModel>().Info("Subtitle added: {Path}", Path.GetFileName(path));
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[MainViewModel] AddSubtitle failed: {ex.Message}");
-            // User-facing error would be better here, but requires UI access
+            global::Cine.Core.Log.ForContext<MainViewModel>().Error(ex, "AddSubtitle failed");
         }
     }
 
@@ -359,13 +359,12 @@ public class MainViewModel : INotifyPropertyChanged
             if (!string.IsNullOrWhiteSpace(path))
             {
                 _player?.AddAudio(path);
-                System.Diagnostics.Debug.WriteLine($"[MainViewModel] Audio track added: {Path.GetFileName(path)}");
+                global::Cine.Core.Log.ForContext<MainViewModel>().Info("Audio track added: {Path}", Path.GetFileName(path));
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[MainViewModel] AddAudio failed: {ex.Message}");
-            // User-facing error would be better here, but requires UI access
+            global::Cine.Core.Log.ForContext<MainViewModel>().Error(ex, "AddAudio failed");
         }
     }
 
@@ -379,11 +378,11 @@ public class MainViewModel : INotifyPropertyChanged
         try
         {
             _player.AddSubtitle(filePath);
-            System.Diagnostics.Debug.WriteLine($"[MainViewModel] External subtitle loaded: {Path.GetFileName(filePath)}");
+            global::Cine.Core.Log.ForContext<MainViewModel>().Info("External subtitle loaded: {Path}", Path.GetFileName(filePath));
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[MainViewModel] LoadExternalSubtitle failed: {ex.Message}");
+            global::Cine.Core.Log.ForContext<MainViewModel>().Error(ex, "LoadExternalSubtitle failed");
             OnError?.Invoke(this, $"Failed to load subtitle: {ex.Message}");
             throw;
         }
@@ -399,12 +398,11 @@ public class MainViewModel : INotifyPropertyChanged
         try
         {
             _player.AddAudio(filePath);
-            System.Diagnostics.Debug.WriteLine($"[MainViewModel] External audio loaded: {Path.GetFileName(filePath)}");
+            global::Cine.Core.Log.ForContext<MainViewModel>().Info("External audio loaded: {Path}", Path.GetFileName(filePath));
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[MainViewModel] LoadExternalAudio failed: {ex.Message}");
-            // Add user-facing error notification
+            global::Cine.Core.Log.ForContext<MainViewModel>().Error(ex, "LoadExternalAudio failed");
             OnError?.Invoke(this, $"Failed to load audio track: {ex.Message}");
             throw; // Re-throw to allow caller to show user error
         }
@@ -621,7 +619,7 @@ public class MainViewModel : INotifyPropertyChanged
             };
             File.WriteAllText(SessionPath, JsonSerializer.Serialize(session));
         }
-        catch { Debug.WriteLine("SaveSession failed"); }
+        catch (Exception ex) { global::Cine.Core.Log.ForContext<MainViewModel>().Error(ex, "SaveSession failed"); }
     }
 
     public void LoadSession()
@@ -1350,4 +1348,25 @@ public class MainViewModel : INotifyPropertyChanged
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged([CallerMemberName] string? name = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
+    // --- IDisposable ---
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        // Unsubscribe from all player events to prevent memory leaks
+        _player.Opened -= OnPlayerOpened;
+        _player.TrackListChanged -= OnTrackListChanged;
+        _player.PlaylistChanged -= OnPlaylistChanged;
+        _player.LoopChangedEvent -= OnLoopChanged;
+        _player.PositionChanged -= OnPositionChanged;
+        _player.PlaybackStateChangedEvent -= OnPlaybackStateChanged;
+        _player.VolumeChanged -= OnVolumeChanged;
+
+        if (_player is IDisposable disposable)
+            disposable.Dispose();
+
+        global::Cine.Core.Log.ForContext<MainViewModel>().Info("MainViewModel disposed");
+    }
 }

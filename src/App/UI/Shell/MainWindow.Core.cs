@@ -15,6 +15,7 @@ using Cine.Avalonia.Controls;
 using Cine.Avalonia.Helpers;
 using Cine.Avalonia.ViewModels;
 using Cine.Avalonia.Views.Dialogs;
+using Cine.Core;
 using Cine.Media.Interfaces;
 using App = global::Avalonia.Application;
 using Button = Avalonia.Controls.Button;
@@ -132,7 +133,7 @@ public partial class MainWindow
                 videoHostVisible = videoHost?.IsVisible
             });
         }
-        catch { Debug.WriteLine("DumpState failed"); }
+        catch (Exception ex) { Log.ForContext<MainWindow>().Error(ex, "DumpState failed"); }
     }
     #endregion
 
@@ -382,7 +383,7 @@ public partial class MainWindow
 
             Activate();
         }
-        catch { Debug.WriteLine("Centering/Activate failed"); }
+        catch (Exception ex) { Log.ForContext<MainWindow>().Error(ex, "Centering/Activate failed"); }
 
         if (StartPage != null) StartPage.IsVisible = true;
 
@@ -444,7 +445,18 @@ public partial class MainWindow
                     {
                         var x = xEl.GetInt32();
                         var y = yEl.GetInt32();
-                        if (x >= 0 && y >= 0) Position = new PixelPoint(x, y);
+                        // Validate position is visible on at least one screen
+                        var proposedPos = new PixelPoint(x, y);
+                        var isOnScreen = Screens?.All.Any(s =>
+                        {
+                            var b = s.Bounds;
+                            return proposedPos.X >= b.X && proposedPos.X < b.X + b.Width - 100 &&
+                                   proposedPos.Y >= b.Y && proposedPos.Y < b.Y + b.Height - 50;
+                        }) ?? false;
+                        if (isOnScreen)
+                            Position = proposedPos;
+                        else
+                            WindowStartupLocation = WindowStartupLocation.CenterScreen;
                     }
                 }
 

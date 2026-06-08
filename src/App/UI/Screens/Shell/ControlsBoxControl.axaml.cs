@@ -212,6 +212,23 @@ public partial class ControlsBoxControl : AvaloniaUserControl
         e.Handled = true;
     }
 
+    // --- Volume preset handlers ---
+
+    private void OnPresetVolume25(object? sender, RoutedEventArgs e)
+    {
+        if (_viewModel != null) _viewModel.VolumeValue = 37.5;
+    }
+
+    private void OnPresetVolume50(object? sender, RoutedEventArgs e)
+    {
+        if (_viewModel != null) _viewModel.VolumeValue = 75;
+    }
+
+    private void OnPresetVolume100(object? sender, RoutedEventArgs e)
+    {
+        if (_viewModel != null) _viewModel.VolumeValue = 100;
+    }
+
     // --- Track menu handlers ---
 
     private void OnEqualizerClick(object? sender, RoutedEventArgs e)

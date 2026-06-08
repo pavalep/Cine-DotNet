@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Cine.Core;
 
 namespace Cine.Avalonia.Helpers;
 
@@ -22,7 +23,7 @@ public static class ErrorBoundary
         catch (Exception ex)
         {
             onError?.Invoke(ex);
-            System.Diagnostics.Debug.WriteLine($"[ErrorBoundary] {ex.Message}");
+            Log.ForContext("ErrorBoundary").Error(ex, "WrapFireAsync caught");
         }
     }
 
@@ -38,7 +39,7 @@ public static class ErrorBoundary
         catch (Exception ex)
         {
             onError?.Invoke(ex);
-            System.Diagnostics.Debug.WriteLine($"[ErrorBoundary] {ex.Message}");
+            Log.ForContext("ErrorBoundary").Error(ex, "WrapFireAsync caught");
         }
     }
 
@@ -54,7 +55,7 @@ public static class ErrorBoundary
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[ErrorBoundary] {ex.Message}");
+            Log.ForContext("ErrorBoundary").Error(ex, "WrapFireAsync caught");
             return Result.Fail(ex.Message);
         }
     }
