@@ -21,6 +21,7 @@ public partial class PipWindow : Window
     private bool _isPinned;
     private bool _isClosing;
     private bool _isPlaying = true;
+    private bool _isEnded;
     private bool _isMuted;
     private DwmThumbnailManager? _dwmManager;
     private int _thumbnailId;
@@ -236,9 +237,28 @@ public partial class PipWindow : Window
     {
         _isPlaying = isPlaying;
         if (PlayPauseIcon != null)
-            PlayPauseIcon.Kind = isPlaying
-                ? Material.Icons.MaterialIconKind.Pause
-                : Material.Icons.MaterialIconKind.Play;
+        {
+            if (_isEnded)
+            {
+                PlayPauseIcon.Kind = Material.Icons.MaterialIconKind.Replay;
+            }
+            else
+            {
+                PlayPauseIcon.Kind = isPlaying
+                    ? Material.Icons.MaterialIconKind.Pause
+                    : Material.Icons.MaterialIconKind.Play;
+            }
+        }
+    }
+
+    /// <summary>Shows replay icon when video ends (no next track). Clears on resume.</summary>
+    public void SetReplayMode(bool showReplay)
+    {
+        _isEnded = showReplay;
+        if (showReplay && PlayPauseIcon != null)
+            PlayPauseIcon.Kind = Material.Icons.MaterialIconKind.Replay;
+        else if (!showReplay)
+            SetPlayingState(_isPlaying);
     }
 
     public void UpdatePosition(double positionSec, double durationSec)

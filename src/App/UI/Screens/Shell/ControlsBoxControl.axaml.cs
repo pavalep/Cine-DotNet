@@ -25,6 +25,7 @@ namespace Cine.Avalonia.Controls;
 public partial class ControlsBoxControl : AvaloniaUserControl
 {
     private MainViewModel? _viewModel;
+    private bool _replayMode;
     private int _activeFlyouts;
     private PlaylistDialog? _playlistDialog;
 
@@ -70,13 +71,34 @@ public partial class ControlsBoxControl : AvaloniaUserControl
     public void UpdatePlayPauseIcon()
     {
         if (_viewModel == null) return;
+        if (_replayMode)
+        {
+            PlayPauseIconPath.Kind = Material.Icons.MaterialIconKind.Replay;
+            return;
+        }
         PlayPauseIconPath.Kind = _viewModel.IsPlaying
             ? Material.Icons.MaterialIconKind.Pause
             : Material.Icons.MaterialIconKind.Play;
     }
 
+    public void SetReplayMode(bool showReplay)
+    {
+        _replayMode = showReplay;
+        if (PlayPauseIconPath != null)
+            PlayPauseIconPath.Kind = showReplay
+                ? Material.Icons.MaterialIconKind.Replay
+                : _viewModel?.IsPlaying == true
+                    ? Material.Icons.MaterialIconKind.Pause
+                    : Material.Icons.MaterialIconKind.Play;
+    }
+
     public void SetPlayPauseIconFromPlayerState(PlaybackState state)
     {
+        if (_replayMode)
+        {
+            PlayPauseIconPath.Kind = Material.Icons.MaterialIconKind.Replay;
+            return;
+        }
         PlayPauseIconPath.Kind = state == PlaybackState.Playing
             ? Material.Icons.MaterialIconKind.Pause
             : Material.Icons.MaterialIconKind.Play;
@@ -159,6 +181,14 @@ public partial class ControlsBoxControl : AvaloniaUserControl
     private void OnPlayPause(object? sender, RoutedEventArgs e)
     {
         if (_viewModel == null) return;
+        // If in replay mode, clicking play restarts the video from beginning
+        if (_replayMode)
+        {
+            _replayMode = false;
+            PlayPauseIconPath.Kind = Material.Icons.MaterialIconKind.Pause;
+            _viewModel.PlayPause(); // ViewModel handles stop+seek+play internally
+            return;
+        }
         // Optimistically toggle icon immediately — don't wait for PlaybackStateChanged event
         PlayPauseIconPath.Kind = PlayPauseIconPath.Kind == Material.Icons.MaterialIconKind.Pause
             ? Material.Icons.MaterialIconKind.Play

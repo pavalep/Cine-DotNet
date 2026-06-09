@@ -113,6 +113,12 @@ public partial class MainWindow
         _pipService.PipWindow?.SetPlayingState(_viewModel?.IsPlaying == true);
     }
 
+    private void SyncPipReplayMode(bool isEnded)
+    {
+        if (_pipService is not { IsActive: true }) return;
+        _pipService.PipWindow?.SetReplayMode(isEnded);
+    }
+
     /// <summary>Restores main window video when PIP window is closed by user (close button).</summary>
     private void OnPipClosed(object? sender, EventArgs e)
     {

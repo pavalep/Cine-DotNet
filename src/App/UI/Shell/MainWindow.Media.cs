@@ -32,6 +32,10 @@ public partial class MainWindow
             _isLoading = false;
             _spinnerOverlay.Stop();
 
+            // Clear replay mode when new media opens
+            _controlsBox.SetReplayMode(false);
+            _replayOverlay.Hide();
+
             // Hide start page
             if (StartPage != null)
             {
@@ -121,19 +125,30 @@ public partial class MainWindow
         #endregion
         Dispatcher.UIThread.OnUiThread(() =>
         {
+            // Clear replay mode when playback resumes (either by user click or auto)
+            if (!e.IsPaused && e.State == PlaybackState.Playing)
+            {
+                _controlsBox.SetReplayMode(false);
+                SyncPipReplayMode(false);
+            }
+
             if (e.IsPaused)
                 _pauseOverlay.Show();
             else
                 _pauseOverlay.Hide();
 
             // Show replay overlay when playback ends (end of file)
-            if (e.State == PlaybackState.Stopped && _viewModel?.FilePath != null)
+            bool isEnded = e.State == PlaybackState.Stopped && _viewModel?.FilePath != null;
+            if (isEnded)
+            {
                 _replayOverlay.Show();
+            }
 
             _controlsBox.UpdatePlayPauseIcon();
 
-            // Sync PIP play state
+            // Sync PIP play state BEFORE replay mode so the final icon state wins
             SyncPipPlayState();
+            SyncPipReplayMode(isEnded);
         });
     }
 
@@ -142,7 +157,9 @@ public partial class MainWindow
         Dispatcher.UIThread.OnUiThread(() =>
         {
             _replayOverlay.Show();
+            _controlsBox.SetReplayMode(true);
             _controlsBox.UpdatePlayPauseIcon();
+            SyncPipReplayMode(true);
         });
     }
 

@@ -711,7 +711,11 @@ public partial class MainWindow
                     // controls should stay hidden since StartPage covers them.
                 }
             })
-            .Watch(nameof(MainViewModel.IsPlaying), () => _controlsBox.UpdatePlayPauseIcon())
+            .Watch(nameof(MainViewModel.IsPlaying), () =>
+            {
+                _controlsBox.UpdatePlayPauseIcon();
+                SyncPipPlayState();
+            })
             .Watch(nameof(MainViewModel.IsPaused), () => _controlsBox.UpdatePlayPauseIcon())
             .Watch(nameof(MainViewModel.IsSubtitleEnabled), () => _controlsBox?.SubtitleOverlayCtrl?.RefreshIcon())
             .Watch(nameof(MainViewModel.IsAudioEnabled), () => _controlsBox?.AudioTrackSelectorCtrl?.RefreshIcon())
