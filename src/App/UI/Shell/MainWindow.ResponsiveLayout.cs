@@ -47,9 +47,9 @@ public partial class MainWindow
     private void UpdateSubtitleAudioOverlayVisibility(double width)
     {
         bool isNarrow = width < 495;
-        if (SubtitleOverlayControl != null)
-            SubtitleOverlayControl.IsVisible = !isNarrow;
-        if (AudioTrackSelectorControl != null)
-            AudioTrackSelectorControl.IsVisible = !isNarrow;
+        if (_controlsBox?.SubtitleOverlayCtrl != null)
+            _controlsBox.SubtitleOverlayCtrl.IsVisible = !isNarrow;
+        if (_controlsBox?.AudioTrackSelectorCtrl != null)
+            _controlsBox.AudioTrackSelectorCtrl.IsVisible = !isNarrow;
     }
 }

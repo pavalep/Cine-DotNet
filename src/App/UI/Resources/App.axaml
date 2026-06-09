@@ -22,7 +22,7 @@
     <Style Selector="Window">
         <Setter Property="Background" Value="#FF0C0C0E" />
         <Setter Property="FontSize" Value="14" />
-        <Setter Property="FontFamily" Value="{StaticResource SystemFont}" />
+        <Setter Property="FontFamily" Value="{StaticResource font-family-default}" />
         <Setter Property="ExtendClientAreaToDecorationsHint" Value="True" />
         <Setter Property="ExtendClientAreaTitleBarHeightHint" Value="0" />
         <Setter Property="WindowDecorations" Value="BorderOnly" />

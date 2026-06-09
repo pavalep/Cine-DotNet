@@ -29,6 +29,8 @@ public partial class ControlsBoxControl : AvaloniaUserControl
     private PlaylistDialog? _playlistDialog;
 
     public SeekBarControl SeekBarControl => SeekBar;
+    public SubtitleOverlayControl? SubtitleOverlayCtrl => SubOverlayCtrl;
+    public AudioTrackSelectorControl? AudioTrackSelectorCtrl => AudioOverlayCtrl;
     public global::Avalonia.Controls.Border ControlsBoxElement => ControlsBox;
 
     public ControlsBoxControl()

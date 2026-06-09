@@ -51,6 +51,12 @@ public partial class SeekBarControl : AvaloniaUserControl
     private bool _showRemaining;
     private string _lastPositionText = "00:00:00";
     private string _lastDurationText = "00:00:00";
+    private DateTime _lastSeekVisualUpdate = DateTime.MinValue;
+    private bool _awaitingSeekSettle;
+    private double _pendingSeekNormalized;
+    private DateTime _pendingSeekStarted = DateTime.MinValue;
+    private const int SeekSettleWindowMs = 400;
+    private const double SeekSettleTolerance = 0.03;
 
     public SeekBarControl()
     {
@@ -66,8 +72,29 @@ public partial class SeekBarControl : AvaloniaUserControl
     public void UpdatePosition(TimeSpan position)
     {
         _lastPosition = position;
+        if (_awaitingSeekSettle && _lastDuration.TotalSeconds > 0)
+        {
+            var elapsed = (DateTime.UtcNow - _pendingSeekStarted).TotalMilliseconds;
+            var normalized = Math.Clamp(_lastPosition.TotalSeconds / _lastDuration.TotalSeconds, 0.0, 1.0);
+            if (elapsed < SeekSettleWindowMs &&
+                Math.Abs(normalized - _pendingSeekNormalized) > SeekSettleTolerance)
+            {
+                // Ignore stale pre-seek position events for a short window after release.
+                return;
+            }
+
+            _awaitingSeekSettle = false;
+        }
         if (!_isSeeking)
-            UpdateSeekBar();
+        {
+            // Throttle seek bar visual updates to ~30fps
+            var now = DateTime.UtcNow;
+            if ((now - _lastSeekVisualUpdate).TotalMilliseconds >= 33)
+            {
+                _lastSeekVisualUpdate = now;
+                UpdateSeekBar();
+            }
+        }
     }
 
     public void UpdateDuration(TimeSpan duration)
@@ -209,7 +236,9 @@ public partial class SeekBarControl : AvaloniaUserControl
         _lastSeekNormalized = Math.Clamp(p.X / trackWidth, 0, 1);
 
         _isSeeking = true;
+        _awaitingSeekSettle = false;
         _viewModel.IsSeeking = true;
+        e.Pointer.Capture(SeekArea);
         SeekStarted?.Invoke(this, EventArgs.Empty);
         // Update visual immediately
         UpdateSeekBar();
@@ -219,20 +248,25 @@ public partial class SeekBarControl : AvaloniaUserControl
     private void OnSeekAreaPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
         if (!_isSeeking) return;
+        var targetNormalized = _lastSeekNormalized;
 
         // Force visual update to seek position BEFORE clearing _isSeeking
         // This prevents the thumb from snapping back to the old _lastPosition
         // while waiting for the next PositionChanged event
         UpdateSeekBar();
         _isSeeking = false;
+        _awaitingSeekSettle = true;
+        _pendingSeekNormalized = targetNormalized;
+        _pendingSeekStarted = DateTime.UtcNow;
 
         // Perform the actual seek only on release (not every mouse move)
         if (_viewModel != null)
         {
+            _viewModel.SeekTo(targetNormalized);
             _viewModel.IsSeeking = false;
-            _viewModel.SeekTo(_lastSeekNormalized);
         }
 
+        e.Pointer.Capture(null);
         SeekEnded?.Invoke(this, EventArgs.Empty);
         e.Handled = true;
     }

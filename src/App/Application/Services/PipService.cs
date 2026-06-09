@@ -39,11 +39,26 @@ public class PipService : IDisposable
 
     public PipWindow? EnterPip()
     {
-        if (_disposed) return null;
-        if (_isActive) return _pipWindow;
+        var logPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Cine", "cine_pip.log");
+        try { File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] EnterPip start{Environment.NewLine}"); } catch { }
+
+        if (_disposed)
+        {
+            try { File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] EnterPip: disposed{Environment.NewLine}"); } catch { }
+            Log.ForContext<PipService>().Warning("EnterPip: disposed");
+            return null;
+        }
+        if (_isActive)
+        {
+            try { File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] EnterPip: already active{Environment.NewLine}"); } catch { }
+            Log.ForContext<PipService>().Info("EnterPip: already active");
+            return _pipWindow;
+        }
 
         try
         {
+            try { File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] Creating PipWindow...{Environment.NewLine}"); } catch { }
+            Log.ForContext<PipService>().Info("EnterPip: creating PipWindow");
             _pipWindow = new PipWindow();
             _pipWindow.Closed += OnPipWindowClosed;
 
@@ -51,9 +66,14 @@ public class PipService : IDisposable
             _pipWindow.PlayPauseRequested += (s, e) => PlayPauseRequested?.Invoke(s, e);
             _pipWindow.SeekRequested += (s, pos) => SeekRequested?.Invoke(s, pos);
 
+            Log.ForContext<PipService>().Info("EnterPip: calling Show()");
             _pipWindow.Show();
+            try { File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] Show() returned{Environment.NewLine}"); } catch { }
 
             // Wire DWM thumbnail mirroring (source already set by MainWindow)
+            var srcHwnd = _dwmManager.SourceHwnd;
+            try { File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] SourceHwnd=0x{srcHwnd:X}{Environment.NewLine}"); } catch { }
+            Log.ForContext<PipService>().Info("EnterPip: calling EnableDwmMirror, sourceHwnd=0x{Source:X}", srcHwnd);
             _pipWindow.EnableDwmMirror(_dwmManager);
 
             // Show controls initially, then auto-hide after 5s
@@ -61,10 +81,13 @@ public class PipService : IDisposable
             _pipWindow.StartHoverTimer();
 
             _isActive = true;
+            try { File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] EnterPip success{Environment.NewLine}"); } catch { }
+            Log.ForContext<PipService>().Info("EnterPip: success, hwnd=0x{Hwnd:X}", _pipWindow.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero);
             return _pipWindow;
         }
         catch (Exception ex)
         {
+            try { File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] EnterPip EXCEPTION: {ex}{Environment.NewLine}"); } catch { }
             Log.ForContext<PipService>().Error(ex, "EnterPip failed");
             CleanupPip();
             return null;

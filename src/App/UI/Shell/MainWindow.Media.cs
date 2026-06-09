@@ -12,6 +12,7 @@ namespace Cine.Avalonia;
 public partial class MainWindow
 {
     private TimeSpan _lastPositionTextTime = TimeSpan.Zero;
+    private TimeSpan _lastReportedDuration = TimeSpan.Zero;
 
     private async void OnMediaOpened(object? sender, EventArgs e)
     {
@@ -153,18 +154,24 @@ public partial class MainWindow
             _lastDuration = e.Duration;
 
             var seekBar = _controlsBox?.SeekBarControl;
-            if (seekBar != null)
-            {
-                seekBar.UpdatePosition(_lastPosition);
-                seekBar.UpdateDuration(_lastDuration);
+            if (seekBar == null) return;
 
-                // Throttle text updates to ~10fps (only update when the second changes)
-                if (Math.Abs((e.Position - _lastPositionTextTime).TotalSeconds) >= 0.1)
-                {
-                    _lastPositionTextTime = e.Position;
-                    seekBar.SetPositionText(SeekBarControl.FormatTimeSpan(_lastPosition));
-                    seekBar.SetDurationText(SeekBarControl.FormatTimeSpan(_lastDuration));
-                }
+            // Update seek bar visual (throttled internally to ~30fps)
+            seekBar.UpdatePosition(_lastPosition);
+
+            // Duration rarely changes during playback — update only on meaningful change
+            if (Math.Abs((_lastDuration - _lastReportedDuration).TotalSeconds) >= 0.5)
+            {
+                _lastReportedDuration = _lastDuration;
+                seekBar.UpdateDuration(_lastDuration);
+            }
+
+            // Throttle text updates to ~10fps (only update when the second changes)
+            if (Math.Abs((e.Position - _lastPositionTextTime).TotalSeconds) >= 0.1)
+            {
+                _lastPositionTextTime = e.Position;
+                seekBar.SetPositionText(SeekBarControl.FormatTimeSpan(_lastPosition));
+                seekBar.SetDurationText(SeekBarControl.FormatTimeSpan(_lastDuration));
             }
 
             // Sync PIP position if active

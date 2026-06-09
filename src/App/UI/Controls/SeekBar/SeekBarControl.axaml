@@ -93,7 +93,7 @@
                    x:Name="PositionTimeLabel"
                    Classes="time-label"
                    MinWidth="45"
-                   Text="{Binding PositionText, Mode=OneWay}"
+                   Text="00:00"
                    VerticalAlignment="Center"
                    Margin="{StaticResource space-h-1}"
                    PointerPressed="OnPositionTimeLabelPressed"
@@ -111,7 +111,7 @@
                    x:Name="DurationTimeLabel"
                    Classes="time-label"
                    MinWidth="45"
-                   Text="{Binding DurationText, Mode=OneWay}"
+                   Text="00:00"
                    Margin="{StaticResource space-h-1}"
                    VerticalAlignment="Center" />
     </Grid>

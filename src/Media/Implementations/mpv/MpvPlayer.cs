@@ -917,7 +917,7 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
                     continue;
                 }
 
-                var evPtr = MpvNative.mpv_wait_event(_mpv, 0.1);
+                var evPtr = MpvNative.mpv_wait_event(_mpv, 0.03);
                 if (evPtr != IntPtr.Zero)
                 {
                     var ev = Marshal.PtrToStructure<MpvNative.mpv_event>(evPtr);
@@ -953,7 +953,7 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
                     }
                 }
 
-                // Poll time-pos every loop iteration (~100ms).
+                // Poll time-pos every loop iteration (~30ms).
             // The pos >= 0 guard naturally filters out invalid positions (e.g. before
             // any file is loaded or while the file is still buffering). No additional
             // _isFileLoaded guard is needed — FILE_LOADED fires before time-pos is valid
@@ -1437,9 +1437,15 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
         if (err < 0 || ptr == IntPtr.Zero)
             return string.Empty;
 
-        var value = Marshal.PtrToStringUTF8(ptr);
-        Marshal.FreeHGlobal(ptr);
-        return value ?? string.Empty;
+        try
+        {
+            var value = Marshal.PtrToStringUTF8(ptr);
+            return value ?? string.Empty;
+        }
+        finally
+        {
+            MpvNative.mpv_free(ptr);
+        }
     }
 
     private static class MpvNative
@@ -1523,6 +1529,9 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
 
         [DllImport("libmpv-2.dll", CallingConvention = CallingConvention.Cdecl)]
         internal static extern int mpv_get_property_string(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string name, out IntPtr data);
+
+        [DllImport("libmpv-2.dll", CallingConvention = CallingConvention.Cdecl)]
+        internal static extern void mpv_free(IntPtr data);
 
         [DllImport("libmpv-2.dll", CallingConvention = CallingConvention.Cdecl)]
         internal static extern int mpv_get_property(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string name, mpv_format format, ref int data);

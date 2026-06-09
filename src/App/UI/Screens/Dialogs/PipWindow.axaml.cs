@@ -25,6 +25,9 @@ public partial class PipWindow : Window
     private DispatcherTimer? _hoverTimer;
     private bool _isUpdatingSeekFromExternal;
     private double _aspectRatio = 16.0 / 9.0;
+    private DispatcherTimer? _mirrorRetryTimer;
+    private int _mirrorRetryAttempts;
+    private const int MirrorRetryMaxAttempts = 50;
 
     // ────── Player control events ──────
     public event EventHandler? PlayPauseRequested;
@@ -52,34 +55,119 @@ public partial class PipWindow : Window
 
     public void EnableDwmMirror(DwmThumbnailManager manager)
     {
-        if (_dwmManager != null || _thumbnailId > 0) return;
-
-        _dwmManager = manager;
-        
-        // Check if DWM manager has a valid source (the hidden video window)
-        if (manager.SourceHwnd == IntPtr.Zero)
+        if (_thumbnailId > 0)
         {
-            Log.ForContext<PipWindow>().Warning("DWM source not set - no video to display");
+            Log.ForContext<PipWindow>().Info("EnableDwmMirror: already enabled, id={Id}", _thumbnailId);
+            return;
+        }
+        _dwmManager = manager;
+        if (TryEnableMirrorNow())
+        {
+            StopMirrorRetry();
             return;
         }
 
-        var handle = TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
-        if (handle == IntPtr.Zero) return;
+        Log.ForContext<PipWindow>().Warning(
+            "EnableDwmMirror: waiting for valid source/handle (source=0x{Source:X}, handle=0x{Handle:X})",
+            _dwmManager.SourceHwnd, TryGetPlatformHandle()?.Handle ?? IntPtr.Zero);
+        this.Opened -= OnOpenedRetryMirror;
+        this.Opened += OnOpenedRetryMirror;
+        StartMirrorRetry();
+    }
 
-        // Register PipWindow as a target to mirror the source video HWND
-        _thumbnailId = manager.RegisterTarget(handle);
-        Log.ForContext<PipWindow>().Info("DWM thumbnail registered: id={Id}, source=0x{Source:X}", _thumbnailId, manager.SourceHwnd);
-        SyncThumbnailRect();
+    private void OnOpenedRetryMirror(object? sender, EventArgs e)
+    {
+        this.Opened -= OnOpenedRetryMirror;
+        if (TryEnableMirrorNow())
+        {
+            StopMirrorRetry();
+            return;
+        }
+        StartMirrorRetry();
+    }
+
+    private bool TryEnableMirrorNow()
+    {
+        if (_dwmManager == null || _thumbnailId > 0 || _isClosing)
+            return _thumbnailId > 0;
+
+        var handle = TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
+        if (handle == IntPtr.Zero || _dwmManager.SourceHwnd == IntPtr.Zero)
+            return false;
+
+        DoEnableMirror(handle);
+        return _thumbnailId > 0;
+    }
+
+    private void StartMirrorRetry()
+    {
+        if (_mirrorRetryTimer != null) return;
+
+        _mirrorRetryAttempts = 0;
+        _mirrorRetryTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(100)
+        };
+        _mirrorRetryTimer.Tick += OnMirrorRetryTick;
+        _mirrorRetryTimer.Start();
+    }
+
+    private void StopMirrorRetry()
+    {
+        if (_mirrorRetryTimer == null) return;
+        _mirrorRetryTimer.Stop();
+        _mirrorRetryTimer.Tick -= OnMirrorRetryTick;
+        _mirrorRetryTimer = null;
+        _mirrorRetryAttempts = 0;
+    }
+
+    private void OnMirrorRetryTick(object? sender, EventArgs e)
+    {
+        if (TryEnableMirrorNow())
+        {
+            StopMirrorRetry();
+            return;
+        }
+
+        _mirrorRetryAttempts++;
+        if (_mirrorRetryAttempts >= MirrorRetryMaxAttempts)
+        {
+            Log.ForContext<PipWindow>().Warning(
+                "Mirror retry exhausted after {Attempts} attempts (source=0x{Source:X}, handle=0x{Handle:X})",
+                _mirrorRetryAttempts,
+                _dwmManager?.SourceHwnd ?? IntPtr.Zero,
+                TryGetPlatformHandle()?.Handle ?? IntPtr.Zero);
+            StopMirrorRetry();
+        }
+    }
+
+    private void DoEnableMirror(IntPtr handle)
+    {
+        if (_dwmManager == null || _thumbnailId > 0 || handle == IntPtr.Zero || _dwmManager.SourceHwnd == IntPtr.Zero)
+        {
+            Log.ForContext<PipWindow>().Info("DoEnableMirror: skipped, mgr={Mgr} id={Id}", _dwmManager != null, _thumbnailId);
+            return;
+        }
+
+        Log.ForContext<PipWindow>().Info("DoEnableMirror: Registering target, dest=0x{Dest:X} source=0x{Source:X}", handle, _dwmManager.SourceHwnd);
+        _thumbnailId = _dwmManager.RegisterTarget(handle);
+        Log.ForContext<PipWindow>().Info("DoEnableMirror: registered id={Id}", _thumbnailId);
+        if (_thumbnailId > 0)
+        {
+            StopMirrorRetry();
+            SyncThumbnailRect();
+        }
     }
 
     public void DisableDwmMirror()
     {
+        StopMirrorRetry();
         if (_dwmManager != null && _thumbnailId > 0)
         {
             _dwmManager.UnregisterTarget(_thumbnailId);
-            _thumbnailId = 0;
-            _dwmManager = null;
         }
+        _thumbnailId = 0;
+        _dwmManager = null;
     }
 
     /// <summary>Constrains DWM thumbnail to video area (below titlebar).</summary>
@@ -181,15 +269,8 @@ public partial class PipWindow : Window
             ApplyAspectRatioConstraint();
         }
 
-        if (_dwmManager != null && _thumbnailId == 0)
-        {
-            var handle = TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
-            if (handle != IntPtr.Zero)
-            {
-                _thumbnailId = _dwmManager.RegisterTarget(handle);
-                SyncThumbnailRect();
-            }
-        }
+        if (!TryEnableMirrorNow())
+            StartMirrorRetry();
     }
 
     protected override void OnClosing(WindowClosingEventArgs e)
@@ -199,6 +280,7 @@ public partial class PipWindow : Window
 
         _hoverTimer?.Stop();
         _hoverTimer = null;
+        StopMirrorRetry();
         DisableDwmMirror();
         SaveState();
 
@@ -421,6 +503,7 @@ public partial class PipWindow : Window
             _isClosing = true;
             _hoverTimer?.Stop();
             _hoverTimer = null;
+            StopMirrorRetry();
             DisableDwmMirror();
             SaveState();
         }

@@ -181,6 +181,10 @@ public partial class MainWindow
         if (_videoHost == null)
             throw new InvalidOperationException("VideoHost control was not found in MainWindow.axaml.");
 
+        // Initialize DWM thumbnail (sets up hidden window + registers thumbnail)
+        _videoHost.EnsureHiddenWindowCreated();
+        DebugLog("VideoHost hidden window created");
+
         ReportWindowState("MainWindow.OnWindowInitialized.AfterResolve");
 
         _playerService = new PlayerService();
@@ -277,7 +281,11 @@ public partial class MainWindow
             });
         };
 
-        _videoHost.ChildWindowCreated += OnVideoHostChildCreated;
+        _videoHost.VideoWindowCreated += OnVideoHostVideoWindowCreated;
+        // Hidden window may already be created (from AttachedToVisualTree during AXAML parsing).
+        // If so, fire the handler now so mpv gets its HWND.
+        if (_videoHost.VideoHwnd != IntPtr.Zero)
+            OnVideoHostVideoWindowCreated(this, EventArgs.Empty);
         KeyDown += OnKeyDown;
 
         // Pointer events on transparent overlay (topmost, catches all mouse activity)
@@ -315,12 +323,14 @@ public partial class MainWindow
         _osdNotification.NotificationClicked += OnOsdNotificationClicked;
 
         // Wire external file drop events from standalone overlay controls
-        SubtitleOverlayControl.ExternalFileDropped += (_, path) =>
-            ShowOsdNotification(MaterialIconKind.ClosedCaption,
-                $"Subtitle loaded: {Path.GetFileName(path)}");
-        AudioTrackSelectorControl.ExternalFileDropped += (_, path) =>
-            ShowOsdNotification(MaterialIconKind.Music,
-                $"Audio track loaded: {Path.GetFileName(path)}");
+        if (_controlsBox.SubtitleOverlayCtrl != null)
+            _controlsBox.SubtitleOverlayCtrl.ExternalFileDropped += (_, path) =>
+                ShowOsdNotification(MaterialIconKind.ClosedCaption,
+                    $"Subtitle loaded: {Path.GetFileName(path)}");
+        if (_controlsBox.AudioTrackSelectorCtrl != null)
+            _controlsBox.AudioTrackSelectorCtrl.ExternalFileDropped += (_, path) =>
+                ShowOsdNotification(MaterialIconKind.Music,
+                    $"Audio track loaded: {Path.GetFileName(path)}");
 
         _controlsBox.SeekBarControl.InitializeSeekBar();
         _controlsBox.SeekBarControl.SeekWheelChanged += (_, delta) =>
@@ -333,7 +343,7 @@ public partial class MainWindow
         InitializeSessionSave();
         InitializeResponsiveLayout();
 
-        // Initialize DWM thumbnail manager and PIP service
+        // Initialize PIP service and DWM thumbnail manager
         _dwmManager = new DwmThumbnailManager();
         _pipService = new PipService(_dwmManager);
 
@@ -387,10 +397,8 @@ public partial class MainWindow
 
         if (StartPage != null) StartPage.IsVisible = true;
 
-        // Create hidden window immediately — mpv needs it before OnMediaOpened
-        _videoHost?.CreateHiddenWindow();
-
-        // Register DWM thumbnail on main window
+        // Create hidden window for mpv + register DWM thumbnail
+        _videoHost?.EnsureHiddenWindowCreated();
         TryRegisterDwmThumbnail();
 
         _headerBar.HideOpenMenu();
@@ -414,8 +422,8 @@ public partial class MainWindow
             _viewModel?.LoadSession();
 
         _headerBar.UpdateMaximizeIcon(WindowState == global::Avalonia.Controls.WindowState.Maximized);
-        SubtitleOverlayControl?.RefreshIcon();
-        AudioTrackSelectorControl?.RefreshIcon();
+        _controlsBox?.SubtitleOverlayCtrl?.RefreshIcon();
+        _controlsBox?.AudioTrackSelectorCtrl?.RefreshIcon();
         _controlsBox?.RefreshVolumeIcon();
         ReportWindowState("MainWindow.OnOpened.AfterInitialState");
         Dispatcher.UIThread.OnUiThread(() => ReportWindowState("MainWindow.OnOpened.PostLayout"), DispatcherPriority.Background);
@@ -531,7 +539,7 @@ public partial class MainWindow
         return IntPtr.Zero;
     }
 
-    /// <summary>Updates DWM thumbnail rcDestination — video area only, excluding header/controls so DWM doesn't paint over them.</summary>
+    /// <summary>Updates DWM thumbnail rcDestination to video area only (between header and controls).</summary>
     private void SyncThumbnailRect()
     {
         if (_videoHost == null) return;
@@ -545,7 +553,7 @@ public partial class MainWindow
         int w = (int)(_videoHost.Bounds.Width * scale);
         int h = (int)(_videoHost.Bounds.Height * scale);
 
-        // Measure actual header + controls heights at runtime instead of hardcoding 44/120px
+        // Measure actual header + controls heights at runtime
         double headerH = _uiVisible
             ? (_viewModel?.IsFullscreen == true
                 ? _fullscreenHeader.Bounds.Height
@@ -553,7 +561,6 @@ public partial class MainWindow
             : 0;
         double controlsH = _uiVisible ? _controlsBox.Bounds.Height : 0;
 
-        // If measured values are 0 (not yet laid out), fall back to reasonable defaults
         if (headerH <= 0) headerH = _viewModel?.IsFullscreen == true ? 44 : 56;
         if (controlsH <= 0) controlsH = 84;
 
@@ -561,8 +568,8 @@ public partial class MainWindow
         int controlsPx = (int)(controlsH * scale);
 
         _videoHost.SetThumbnailDestRect(
-            x, y + headerPx,               // top starts below header
-            x + w, y + h - controlsPx);    // bottom ends above controls
+            x, y + headerPx,
+            x + w, y + h - controlsPx);
     }
 
     protected override void OnSizeChanged(SizeChangedEventArgs e)
@@ -582,7 +589,6 @@ public partial class MainWindow
             return;
         }
 
-        // Retry once after layout completes
         Dispatcher.UIThread.Post(() =>
         {
             var h = PlatformImplHandle();
@@ -591,10 +597,10 @@ public partial class MainWindow
         }, DispatcherPriority.Render);
     }
 
-    private void OnVideoHostChildCreated(object? sender, EventArgs e)
+    private void OnVideoHostVideoWindowCreated(object? sender, EventArgs e)
     {
         var videoHwnd = _videoHost?.VideoHwnd ?? IntPtr.Zero;
-        DebugLog($"OnVideoHostChildCreated hwnd={videoHwnd}");
+        DebugLog($"OnVideoHostVideoWindowCreated hwnd=0x{videoHwnd:X}");
         if (videoHwnd == IntPtr.Zero) return;
         var player = _playerService?.Player;
         if (player != null)
@@ -673,7 +679,10 @@ public partial class MainWindow
                 {
                     if (_isLoading) return;
                     _isLoading = true;
-                    _spinnerOverlay.Start();
+                    // Only show loader if StartPage is already hidden (switching files).
+                    // On landing page, StartPage IS the loading indicator.
+                    if (StartPage?.IsVisible == false)
+                        _spinnerOverlay.Start();
                     // Don't hide StartPage here — OnMediaOpened handles fade-out
                     // once the player actually opens the file. This avoids a race
                     // where the watcher hides StartPage before the video is ready.
@@ -702,8 +711,8 @@ public partial class MainWindow
             })
             .Watch(nameof(MainViewModel.IsPlaying), () => _controlsBox.UpdatePlayPauseIcon())
             .Watch(nameof(MainViewModel.IsPaused), () => _controlsBox.UpdatePlayPauseIcon())
-            .Watch(nameof(MainViewModel.IsSubtitleEnabled), () => SubtitleOverlayControl?.RefreshIcon())
-            .Watch(nameof(MainViewModel.IsAudioEnabled), () => AudioTrackSelectorControl?.RefreshIcon())
+            .Watch(nameof(MainViewModel.IsSubtitleEnabled), () => _controlsBox?.SubtitleOverlayCtrl?.RefreshIcon())
+            .Watch(nameof(MainViewModel.IsAudioEnabled), () => _controlsBox?.AudioTrackSelectorCtrl?.RefreshIcon())
             .Watch(nameof(MainViewModel.IsMuted), () =>
             {
                 _controlsBox.RefreshVolumeIcon();

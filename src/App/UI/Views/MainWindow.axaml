@@ -54,11 +54,10 @@
                 IsHitTestVisible="False"
                 x:Name="PlaybackBackground" />
 
-        <!-- Video Host (DWM thumbnail shows through transparent area) -->
+        <!-- Video Host (DWM thumbnail composited above background, below controls) -->
         <ctrl:D3D11VideoHost x:Name="VideoHost"
                              IsVideoSurfaceVisible="False"
-                             HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                             Opacity="0" />
+                             HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
 
         <!-- Video click overlay — fills window, captures hover for auto-hide -->
         <Border x:Name="VideoClickOverlay"
@@ -109,26 +108,6 @@
         <controls:ControlsBoxControl x:Name="ControlsBoxControl"
                                      VerticalAlignment="Bottom"
                                      HorizontalAlignment="Stretch" />
-
-        <!-- ── Controls Overlay Area ──────────────────────────────────
-             Sits above ControlsBox. ZIndex=20 ensures buttons render
-             above the ControlsBox (15) but below FullscreenHeader (25).
-             
-             Positioned using a full-width Grid so subtitle/audio buttons
-             can use HorizontalAlignment + Margin relative to the bottom
-             area rather than the window center. The 66px bottom margin
-             lifts them above the ControlsBox's approximate height. -->
-        <Grid VerticalAlignment="Bottom" Height="80"
-              IsHitTestVisible="False" ZIndex="20">
-            <controls:SubtitleOverlayControl x:Name="SubtitleOverlayControl"
-                                             HorizontalAlignment="Center"
-                                             Margin="-115,0,0,66"
-                                             IsVisible="False" />
-            <controls:AudioTrackSelectorControl x:Name="AudioTrackSelectorControl"
-                                                HorizontalAlignment="Center"
-                                                Margin="-35,0,0,66"
-                                                IsVisible="False" />
-        </Grid>
 
         <!-- OSD Notification — bottom center, floats above ControlsBox.
              Bottom margin lifts it above the ControlsBox (which is ~100-110px tall). -->

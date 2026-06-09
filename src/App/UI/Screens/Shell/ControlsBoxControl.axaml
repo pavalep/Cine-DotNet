@@ -99,35 +99,26 @@
                                                        FontSize="13" FontWeight="SemiBold"
                                                        Foreground="{StaticResource OsdForeground}" />
                                         </Grid>
-                                        <!-- Horizontal slider with level markers -->
-                                        <Grid>
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="Auto" />
-                                                <RowDefinition Height="Auto" />
-                                            </Grid.RowDefinitions>
-                                            <Slider Grid.Row="0"
-                                                    x:Name="VolumeSlider"
-                                                    Classes="volume-slider"
-                                                    Minimum="0" Maximum="150"
-                                                    Value="{Binding VolumeValue}"
-                                                    Orientation="Horizontal"
-                                                    Height="24"
-                                                    HorizontalAlignment="Stretch"
-                                                    PointerPressed="OnVolumeSliderPointerPressed" />
-                                            <!-- Level indicator ticks -->
-                                            <Grid Grid.Row="1" 
-                                                  ColumnDefinitions="*,*,*,*,*,*"
-                                                  Height="6"
-                                                  HorizontalAlignment="Stretch"
-                                                  Margin="4,0,4,0">
-                                                <Rectangle Grid.Column="0" Fill="{StaticResource AppDivider}" Opacity="0.5" Height="3" Margin="1,0" VerticalAlignment="Center" />
-                                                <Rectangle Grid.Column="1" Fill="{StaticResource AppDivider}" Opacity="0.5" Height="3" Margin="1,0" VerticalAlignment="Center" />
-                                                <Rectangle Grid.Column="2" Fill="{StaticResource AppDivider}" Opacity="0.5" Height="3" Margin="1,0" VerticalAlignment="Center" />
-                                                <Rectangle Grid.Column="3" Fill="{StaticResource AppDivider}" Opacity="0.5" Height="3" Margin="1,0" VerticalAlignment="Center" />
-                                                <Rectangle Grid.Column="4" Fill="{StaticResource AppDivider}" Opacity="0.5" Height="3" Margin="1,0" VerticalAlignment="Center" />
-                                                <Rectangle Grid.Column="5" Fill="{StaticResource AppDivider}" Opacity="0.5" Height="3" Margin="1,0" VerticalAlignment="Center" />
-                                            </Grid>
-                                        </Grid>
+                                        <!-- Horizontal slider -->
+                                        <Slider x:Name="VolumeSlider"
+                                                Minimum="0" Maximum="150"
+                                                Value="{Binding VolumeValue}"
+                                                Orientation="Horizontal"
+                                                Height="24"
+                                                HorizontalAlignment="Stretch"
+                                                PointerPressed="OnVolumeSliderPointerPressed">
+                                            <Slider.Resources>
+                                                <SolidColorBrush x:Key="SliderTrackFill">#39FFFFFF</SolidColorBrush>
+                                                <SolidColorBrush x:Key="SliderTrackFillPointerOver">#50FFFFFF</SolidColorBrush>
+                                                <SolidColorBrush x:Key="SliderTrackFillPressed">#50FFFFFF</SolidColorBrush>
+                                                <SolidColorBrush x:Key="SliderTrackValueFill">White</SolidColorBrush>
+                                                <SolidColorBrush x:Key="SliderTrackValueFillPointerOver">White</SolidColorBrush>
+                                                <SolidColorBrush x:Key="SliderTrackValueFillPressed">White</SolidColorBrush>
+                                                <SolidColorBrush x:Key="SliderThumbBackground">White</SolidColorBrush>
+                                                <SolidColorBrush x:Key="SliderThumbBackgroundPointerOver">#E5E5E5</SolidColorBrush>
+                                                <SolidColorBrush x:Key="SliderThumbBackgroundPressed">#D6D6D6</SolidColorBrush>
+                                            </Slider.Resources>
+                                        </Slider>
                                         <!-- Volume presets row -->
                                         <Grid ColumnDefinitions="*,*,*,*" Margin="0,2,0,0">
                                             <Button Grid.Column="0" Classes="circular-sm" 
@@ -243,6 +234,14 @@
                         <materialIcons:MaterialIcon Kind="Palette" Width="18" Height="18"
                             Foreground="{StaticResource OsdForeground}" />
                     </Button>
+                    <controls:SubtitleOverlayControl x:Name="SubOverlayCtrl"
+                                                     Width="40" Height="40"
+                                                     Padding="0"
+                                                     VerticalAlignment="Center" />
+                    <controls:AudioTrackSelectorControl x:Name="AudioOverlayCtrl"
+                                                        Width="40" Height="40"
+                                                        Padding="0"
+                                                        VerticalAlignment="Center" />
                     <ToggleButton x:Name="BtnFullscreen"
                                   Classes="circular-toggle"
                                   Click="OnToggleFullscreen"

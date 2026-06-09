@@ -162,9 +162,9 @@ public partial class MainWindow
             if (btn?.Flyout is Flyout f)
                 f.Hide();
         // Close subtitle & audio flyouts from standalone overlay controls
-        SubtitleOverlayControl?.HideFlyout();
-        AudioTrackSelectorControl?.HideFlyout();
-        if (_controlsBox.BtnVideoMenu?.Flyout is Flyout fv)
+        _controlsBox?.SubtitleOverlayCtrl?.HideFlyout();
+        _controlsBox?.AudioTrackSelectorCtrl?.HideFlyout();
+        if (_controlsBox?.BtnVideoMenu?.Flyout is Flyout fv)
             fv.Hide();
     }
 
