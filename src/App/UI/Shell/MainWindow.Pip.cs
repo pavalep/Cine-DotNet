@@ -48,6 +48,12 @@ public partial class MainWindow
 
                 // Sync initial play state
                 pipWindow.SetPlayingState(_viewModel.IsPlaying);
+                pipWindow.SetMuted(_viewModel.IsMuted);
+
+                // Pass file info
+                string fileName = Path.GetFileName(_viewModel.FilePath);
+                string folder = Path.GetFileName(Path.GetDirectoryName(_viewModel.FilePath)) ?? "";
+                pipWindow.SetFileName(fileName, folder);
 
                 // Set aspect ratio from video dimensions
                 var player = _playerService?.Player;
@@ -87,6 +93,12 @@ public partial class MainWindow
             var target = TimeSpan.FromSeconds(normalizedPos * duration);
             player.Seek(target);
         }
+    }
+
+    private void OnPipMuteToggled(object? sender, EventArgs e)
+    {
+        if (_viewModel != null)
+            _viewModel.IsMuted = !_viewModel.IsMuted;
     }
 
     private void SyncPipPosition(object? sender, PositionChangedEventArgs e)

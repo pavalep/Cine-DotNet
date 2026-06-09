@@ -61,7 +61,7 @@ public partial class HeaderBarControl : AvaloniaUserControl
             .AddToggleItem("Fullscreen", "Fullscreen", "F",
                 () => _viewModel?.ToggleFullscreen(),
                 () => _viewModel?.IsFullscreen ?? false)
-            .AddItem("PictureInPictureBottomRight", "Picture in Picture", "Ctrl+P", () => PipToggled?.Invoke(this, EventArgs.Empty))
+            .AddItem("PictureInPictureBottomRight", "Picture in Picture", "Ctrl+Shift+P", () => PipToggled?.Invoke(this, EventArgs.Empty))
             .AddItem("Pin", "Always on Top", null, () =>
             {
                 var w = GetParentWindow();

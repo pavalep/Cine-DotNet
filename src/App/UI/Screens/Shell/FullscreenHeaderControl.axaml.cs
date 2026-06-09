@@ -12,6 +12,8 @@ namespace Cine.Avalonia.Controls;
 
 public partial class FullscreenHeaderControl : UserControl
 {
+    public event EventHandler? PipToggled;
+
     private MainViewModel? _viewModel;
     private int _activeFlyouts;
     private PrimaryMenuBuilder? _fullscreenMenuBuilder;
@@ -64,6 +66,13 @@ public partial class FullscreenHeaderControl : UserControl
                 var w = TopLevel.GetTopLevel(this) as Window;
                 if (w != null) new AboutDialog { DataContext = _viewModel }.Show(w);
             })
+            .AddSeparator()
+            .AddSection("VIEW")
+            .AddItem("Fullscreen", "Exit Fullscreen", "F", () =>
+            {
+                _viewModel?.ToggleFullscreen();
+            })
+            .AddItem("PictureInPictureBottomRight", "Picture in Picture", "Ctrl+Shift+P", () => PipToggled?.Invoke(this, EventArgs.Empty))
             .AddSeparator()
             .AddItem("Pin", "Always on Top", null, () =>
             {

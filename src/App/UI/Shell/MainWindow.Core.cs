@@ -349,8 +349,10 @@ public partial class MainWindow
 
         // Wire PIP player controls
         _headerBar.PipToggled += OnPipToggled;
+        _fullscreenHeader.PipToggled += OnPipToggled;
         _pipService.PlayPauseRequested += OnPipPlayPauseRequested;
         _pipService.SeekRequested += OnPipSeekRequested;
+        _pipService.MuteToggled += OnPipMuteToggled;
         _pipService.PipClosed += OnPipClosed;
 
         AddHandler(global::Avalonia.Input.DragDrop.DragEnterEvent, OnWindowDragEnter);

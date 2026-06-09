@@ -1,9 +1,10 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         x:Class="Cine.Avalonia.Views.Dialogs.PipWindow"
         Title="Cine — PIP"
         Width="480" Height="320"
-        MinWidth="240" MinHeight="160"
+        MinWidth="280" MinHeight="180"
         MaxWidth="1920" MaxHeight="1080"
         WindowStartupLocation="Manual"
         SizeToContent="Manual"
@@ -11,147 +12,91 @@
         Topmost="True"
         TransparencyLevelHint="Transparent"
         WindowDecorations="None"
-        ExtendClientAreaToDecorationsHint="False"
-        Background="Transparent">
+        Background="Transparent"
+        PointerMoved="OnPipWindowPointerMoved">
 
     <Window.Styles>
-        <!-- Container with outer border -->
         <Style Selector="Border.pip-container">
-            <Setter Property="CornerRadius" Value="10" />
-            <Setter Property="BoxShadow" Value="0 4 24 0 #80000000, 0 0 0 1 #30FFFFFF" />
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Margin" Value="1" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="BoxShadow" Value="0 6 32 0 #AA000000, 0 0 0 1 #25FFFFFF" />
+            <Setter Property="Background" Value="#FF0D0D0D" />
+            <Setter Property="ClipToBounds" Value="True" />
         </Style>
-
-        <!-- Titlebar: slimmer, translucent dark -->
-        <Style Selector="Border.pip-titlebar">
-            <Setter Property="Background" Value="#CC252540" />
-            <Setter Property="Height" Value="28" />
-            <Setter Property="Padding" Value="8,0,4,0" />
-            <Setter Property="CornerRadius" Value="10,10,0,0" />
-            <Setter Property="Transitions">
-                <Transitions>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
-                </Transitions>
-            </Setter>
-        </Style>
-
-        <Style Selector="Button.pip-title-button">
-            <Setter Property="Width" Value="24" />
-            <Setter Property="Height" Value="24" />
-            <Setter Property="Padding" Value="0" />
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="CornerRadius" Value="5" />
-            <Setter Property="HorizontalContentAlignment" Value="Center" />
-            <Setter Property="VerticalContentAlignment" Value="Center" />
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="Background" Duration="0:0:0.12" />
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="Button.pip-title-button:pointerover">
-            <Setter Property="Background" Value="#2BFFFFFF" />
-        </Style>
-        <Style Selector="Button.pip-title-button:pressed">
-            <Setter Property="Background" Value="#40FFFFFF" />
-        </Style>
-        <Style Selector="Button.pip-close-button:pointerover">
-            <Setter Property="Background" Value="#E81123" />
-        </Style>
-
-        <Style Selector="TextBlock.pip-title-text">
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
-            <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
-        </Style>
-
-        <!-- Hover overlay — fades out when not hovering -->
         <Style Selector="Border.pip-hover-overlay">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Opacity" Value="1" />
+            <Setter Property="IsHitTestVisible" Value="True" />
             <Setter Property="Transitions">
                 <Transitions>
                     <DoubleTransition Property="Opacity" Duration="0:0:0.2" />
                 </Transitions>
             </Setter>
         </Style>
-
-        <!-- Center play button: 40×40 with scale animation -->
+        <Style Selector="Grid.pip-top-bar">
+            <Setter Property="Background" Value="#AA000000" />
+        </Style>
+        <Style Selector="Grid.pip-bottom-bar">
+            <Setter Property="Background" Value="#AA000000" />
+        </Style>
+        <Style Selector="Button.pip-top-btn">
+            <Setter Property="Width" Value="28" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.pip-top-btn:pointerover">
+            <Setter Property="Background" Value="#2BFFFFFF" />
+        </Style>
+        <Style Selector="Button.pip-close-btn:pointerover">
+            <Setter Property="Background" Value="#E81123" />
+        </Style>
         <Style Selector="Button.pip-center-play">
-            <Setter Property="Width" Value="40" />
-            <Setter Property="Height" Value="40" />
+            <Setter Property="Width" Value="44" />
+            <Setter Property="Height" Value="44" />
             <Setter Property="Padding" Value="0" />
             <Setter Property="Background" Value="#33000000" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="CornerRadius" Value="20" />
+            <Setter Property="CornerRadius" Value="22" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="Background" Duration="0:0:0.12" />
-                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" />
-                </Transitions>
-            </Setter>
         </Style>
         <Style Selector="Button.pip-center-play:pointerover">
             <Setter Property="Background" Value="#55000000" />
-            <Setter Property="RenderTransform">
-                <Setter.Value>
-                    <ScaleTransform ScaleX="1.08" ScaleY="1.08" />
-                </Setter.Value>
-            </Setter>
         </Style>
-        <Style Selector="Button.pip-center-play:pressed">
-            <Setter Property="RenderTransform">
-                <Setter.Value>
-                    <ScaleTransform ScaleX="0.95" ScaleY="0.95" />
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- Live badge -->
-        <Style Selector="Border.pip-live-badge">
-            <Setter Property="CornerRadius" Value="4" />
-            <Setter Property="Background" Value="#00FF8822" />
-            <Setter Property="Padding" Value="6,2" />
-            <Setter Property="Margin" Value="0,0,6,0" />
-        </Style>
-        <Style Selector="TextBlock.pip-live-text">
-            <Setter Property="FontSize" Value="10" />
-            <Setter Property="Foreground" Value="#FF00FF88" />
+        <Style Selector="Border.pip-seek-thumb">
+            <Setter Property="Width" Value="14" />
+            <Setter Property="Height" Value="14" />
+            <Setter Property="CornerRadius" Value="7" />
+            <Setter Property="Background" Value="#FFFFFFFF" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
             <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="IsHitTestVisible" Value="True" />
         </Style>
-
-        <!-- Seek bar container — shows on hover -->
-        <Style Selector="Border.pip-seek-container">
-            <Setter Property="Padding" Value="8,0" />
-            <Setter Property="Margin" Value="0,0,0,6" />
+        <Style Selector="Border.pip-seek-thumb:pointerover">
+            <Setter Property="Width" Value="18" />
+            <Setter Property="Height" Value="18" />
+            <Setter Property="CornerRadius" Value="9" />
         </Style>
-        <Style Selector="TextBlock.pip-time-text">
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="Foreground" Value="#AAFFFFFF" />
-            <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="FontFamily" Value="{StaticResource font-family-numeric}" />
-        </Style>
-
-        <!-- File badge — auto-hides after 3s -->
-        <Style Selector="Border.pip-file-badge">
+        <Style Selector="Button.pip-mute-btn">
+            <Setter Property="Width" Value="28" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
             <Setter Property="CornerRadius" Value="6" />
-            <Setter Property="Background" Value="#66000000" />
-            <Setter Property="Padding" Value="8,3" />
-            <Setter Property="Margin" Value="8,8,0,0" />
-            <Setter Property="Transitions">
-                <Transitions>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
-                </Transitions>
-            </Setter>
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
-
-        <!-- Edge resize handles (transparent, large hit targets) -->
+        <Style Selector="Button.pip-mute-btn:pointerover">
+            <Setter Property="Background" Value="#2BFFFFFF" />
+        </Style>
+        <Style Selector="Border.pip-file-badge">
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Background" Value="#AA000000" />
+            <Setter Property="Padding" Value="10,6" />
+        </Style>
         <Style Selector="Border.pip-resize-edge">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="IsHitTestVisible" Value="True" />
@@ -159,122 +104,186 @@
     </Window.Styles>
 
     <Grid>
-        <Border Classes="pip-container" x:Name="RootContainer">
-            <Grid RowDefinitions="Auto,*">
+        <Border Classes="pip-container">
+            <Grid>
+                <!-- Layer 0: DWM video surface -->
+                <Border x:Name="VideoArea"
+                        Background="#FF0D0D0D"
+                        ClipToBounds="True"
+                        CornerRadius="12"
+                        PointerPressed="OnVideoAreaPointerPressed" />
 
-                <!-- ═══ ROW 0: TITLE BAR (28px) ═══ -->
-                <Border Grid.Row="0" Classes="pip-titlebar" x:Name="TitleBar">
-                    <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto">
-                        <TextBlock Grid.Column="0"
-                                   x:Name="PipFileNameLabel"
-                                   Classes="pip-title-text"
-                                   Text="Cine PIP"
-                                   Margin="4,0,8,0" />
-                        <Border Grid.Column="1" />
-                        <!-- Minimize -->
-                        <Button Grid.Column="2" x:Name="MinimizeButton"
-                                Classes="pip-title-button"
-                                ToolTip.Tip="Minimize"
-                                Click="OnMinimizeClick">
-                            <Path Data="{StaticResource MinimizeIcon}"
-                                  Width="10" Height="10" Stretch="Uniform"
-                                  Fill="{StaticResource AppTextPrimary}" />
+                <!-- Layer 0.5: Loading overlay -->
+                <Border x:Name="LoadingOverlay"
+                        Background="#99000000"
+                        IsVisible="False"
+                        IsHitTestVisible="False"
+                        CornerRadius="12">
+                    <TextBlock Text="Starting Picture-in-Picture&#x2026;"
+                               Foreground="White"
+                               FontSize="13"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Center" />
+                </Border>
+
+                <!-- Layer 1: Hover overlay -->
+                <Border x:Name="HoverOverlay"
+                        Classes="pip-hover-overlay"
+                        Opacity="1">
+                    <Grid RowDefinitions="Auto,*,Auto">
+
+                        <!-- ROW 0: Top bar -->
+                        <Grid Grid.Row="0" Classes="pip-top-bar"
+                              Height="48"
+                              ColumnDefinitions="Auto,*,Auto,Auto,Auto"
+                              PointerEntered="OnTopBarPointerEntered"
+                              PointerExited="OnTopBarPointerExited">
+                            <Border Grid.Column="0"
+                                    Width="28" Height="28"
+                                    CornerRadius="6"
+                                    Background="#2BFFFFFF"
+                                    VerticalAlignment="Center"
+                                    Margin="10,0,8,0">
+                                <materialIcons:MaterialIcon Kind="MovieOpenOutline"
+                                    Width="16" Height="16"
+                                    Foreground="#DDFFFFFF"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center" />
+                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock x:Name="PipFileName"
+                                           FontSize="12" FontWeight="SemiBold"
+                                           Foreground="#DDFFFFFF"
+                                           VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis"
+                                           Text="Cine PIP" />
+                                <TextBlock x:Name="PipFileSubtitle"
+                                           FontSize="10"
+                                           Foreground="#88FFFFFF"
+                                           VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis"
+                                           Text="" />
+                            </StackPanel>
+                            <Button Grid.Column="2" x:Name="PinButton"
+                                    Classes="pip-top-btn"
+                                    ToolTip.Tip="Keep on top"
+                                    Click="OnPinToggle">
+                                <materialIcons:MaterialIcon x:Name="PinIcon"
+                                    Kind="PinOutline" Width="16" Height="16"
+                                    Foreground="{StaticResource OsdForeground}"
+                                    Opacity="0.4" />
+                            </Button>
+                            <Button Grid.Column="3" x:Name="ExpandButton"
+                                    Classes="pip-top-btn"
+                                    ToolTip.Tip="Return to Main Window"
+                                    Click="OnExpandClick">
+                                <materialIcons:MaterialIcon Kind="PictureInPictureBottomRightOutline"
+                                    Width="16" Height="16"
+                                    Foreground="{StaticResource OsdForeground}" />
+                            </Button>
+                            <Button Grid.Column="4"
+                                    Classes="pip-top-btn pip-close-btn"
+                                    ToolTip.Tip="Close (Esc)"
+                                    Margin="0,0,6,0"
+                                    Click="OnCloseClick">
+                                <materialIcons:MaterialIcon Kind="Close"
+                                    Width="16" Height="16"
+                                    Foreground="{StaticResource OsdForeground}" />
+                            </Button>
+                        </Grid>
+
+                        <!-- ROW 1: Center play/pause -->
+                        <Button Grid.Row="1" x:Name="PlayPauseButton"
+                                Classes="pip-center-play"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                PointerEntered="OnCenterPointerEntered"
+                                PointerExited="OnCenterPointerExited"
+                                Click="OnPlayPauseClick">
+                            <materialIcons:MaterialIcon x:Name="PlayPauseIcon"
+                                Kind="Play" Width="22" Height="22"
+                                Foreground="{StaticResource OsdForeground}" />
                         </Button>
-                        <!-- Pin toggle -->
-                        <Button Grid.Column="3" x:Name="PinButton"
-                                Classes="pip-title-button"
-                                ToolTip.Tip="Keep on top"
-                                Click="OnPinToggle">
-                            <Path x:Name="PinIcon"
-                                  Data="{StaticResource PinIcon}"
-                                  Width="12" Height="12" Stretch="Uniform"
-                                  Fill="{StaticResource AppTextPrimary}" />
-                        </Button>
-                        <!-- Expand to Main -->
-                        <Button Grid.Column="4" x:Name="ExpandButton"
-                                Classes="pip-title-button"
-                                ToolTip.Tip="Return to Main Window"
-                                Click="OnExpandClick">
-                            <Path Data="{StaticResource MaxRestoreIcon}"
-                                  Width="12" Height="12" Stretch="Uniform"
-                                  Fill="{StaticResource AppTextPrimary}" />
-                        </Button>
-                        <!-- Close -->
-                        <Button Grid.Column="5" x:Name="CloseButton"
-                                Classes="pip-title-button pip-close-button"
-                                ToolTip.Tip="Close PIP (Esc)"
-                                Click="OnCloseClick">
-                            <Path Data="{StaticResource CloseIcon}"
-                                  Width="10" Height="10" Stretch="Uniform"
-                                  Fill="{StaticResource AppTextPrimary}" />
-                        </Button>
+
+                        <!-- ROW 2: Bottom controls -->
+                        <Grid Grid.Row="2" Classes="pip-bottom-bar"
+                              ColumnDefinitions="*,Auto,Auto"
+                              PointerEntered="OnBottomBarPointerEntered"
+                              PointerExited="OnBottomBarPointerExited"
+                              PointerPressed="OnBottomBarPointerPressed">
+                            <Grid Grid.Column="0" x:Name="PipSeekArea"
+                                  Height="28"
+                                  Margin="10,0,4,0"
+                                  Background="Transparent"
+                                  PointerMoved="OnPipSeekPointerMoved"
+                                  PointerPressed="OnPipSeekPointerPressed"
+                                  PointerReleased="OnPipSeekPointerReleased"
+                                  PointerExited="OnPipSeekPointerExited"
+                                  Cursor="Hand">
+                                <Border x:Name="PipSeekTrack"
+                                        Height="4" CornerRadius="2"
+                                        Background="#40FFFFFF"
+                                        VerticalAlignment="Center"
+                                        IsHitTestVisible="False" />
+                                <Border x:Name="PipSeekFill"
+                                        Height="4" CornerRadius="2"
+                                        HorizontalAlignment="Left"
+                                        Background="{StaticResource ProgressSliderBackground}"
+                                        VerticalAlignment="Center"
+                                        IsHitTestVisible="False" />
+                                <Border x:Name="PipSeekThumb"
+                                        Classes="pip-seek-thumb"
+                                        IsVisible="False" />
+                                <Border x:Name="PipSeekPreviewDot"
+                                        Width="10" Height="10"
+                                        CornerRadius="5"
+                                        Background="#88FFFFFF"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Center"
+                                        IsVisible="False"
+                                        IsHitTestVisible="False" />
+                            </Grid>
+                            <TextBlock Grid.Column="1" x:Name="PipTimeLabel"
+                                       FontSize="11"
+                                       Foreground="#AAFFFFFF"
+                                       VerticalAlignment="Center"
+                                       FontFamily="{StaticResource font-family-numeric}"
+                                       Margin="6,0,0,0"
+                                       Text="00:00 / 00:00" />
+                            <Button Grid.Column="2" x:Name="MuteButton"
+                                    Classes="pip-mute-btn"
+                                    ToolTip.Tip="Toggle mute"
+                                    Margin="0,0,6,0"
+                                    Click="OnMuteToggle">
+                                <materialIcons:MaterialIcon x:Name="MuteIcon"
+                                    Kind="VolumeHigh"
+                                    Width="18" Height="18"
+                                    Foreground="{StaticResource OsdForeground}" />
+                            </Button>
+                        </Grid>
                     </Grid>
                 </Border>
 
-                <!-- ═══ ROW 1: VIDEO + OVERLAYS ═══ -->
-                <Grid Grid.Row="1">
-                    <!-- Layer 0: DWM video surface -->
-                    <Border x:Name="VideoArea"
-                            Background="#0D000000" ClipToBounds="True"
-                            CornerRadius="0,0,10,10" />
-
-                    <!-- Layer 1: Hover controls (auto-hide) -->
-                    <Border Classes="pip-hover-overlay"
-                            x:Name="HoverOverlay"
-                            PointerEntered="OnOverlayPointerEntered"
-                            PointerExited="OnOverlayPointerExited">
-                        <Grid RowDefinitions="*,Auto">
-                            <!-- Center Play/Pause button -->
-                            <Button Grid.Row="0" x:Name="PlayPauseButton"
-                                    Classes="pip-center-play"
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Center"
-                                    Click="OnPlayPauseClick">
-                                <Path x:Name="PlayPauseIcon"
-                                      Data="{StaticResource PlayIcon}"
-                                      Width="20" Height="20" Stretch="Uniform"
-                                      Fill="{StaticResource AppTextPrimary}" />
-                            </Button>
-                            <!-- Seek bar + time -->
-                            <Border Grid.Row="1" Classes="pip-seek-container" x:Name="SeekContainer">
-                                <Grid ColumnDefinitions="*,Auto">
-                                    <Slider Grid.Column="0" x:Name="PipSeekSlider"
-                                            Minimum="0" Maximum="1000" Value="0"
-                                            IsEnabled="True"
-                                            Classes="seek-slider" />
-                                    <TextBlock Grid.Column="1" x:Name="PipTimeLabel"
-                                               Classes="pip-time-text"
-                                               Text="00:00 / 00:00"
-                                               Margin="8,0,0,0" />
-                                </Grid>
-                            </Border>
-                        </Grid>
-                    </Border>
-
-                    <!-- Layer 2: File info badge (top-left, auto-hides) -->
-                    <Border Classes="pip-file-badge"
-                            x:Name="FileBadge"
-                            HorizontalAlignment="Left"
-                            VerticalAlignment="Top"
-                            IsHitTestVisible="False">
-                        <Grid ColumnDefinitions="Auto,Auto">
-                            <Border Classes="pip-live-badge" Grid.Column="0" IsVisible="False">
-                                <TextBlock Classes="pip-live-text" Text="live" />
-                            </Border>
-                            <TextBlock Grid.Column="1" x:Name="PipBadgeLabel"
-                                       Text="Cine PIP"
-                                       FontSize="11"
-                                       Foreground="{StaticResource AppTextOnDarkPrimary}"
-                                       VerticalAlignment="Center"
-                                       TextTrimming="CharacterEllipsis"
-                                       MaxWidth="140" />
-                        </Grid>
-                    </Border>
-                </Grid>
+                <!-- Layer 2: File badge -->
+                <Border Classes="pip-file-badge"
+                        x:Name="FileBadge"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Top"
+                        IsHitTestVisible="False"
+                        Opacity="0"
+                        Margin="10,10,0,0">
+                    <TextBlock x:Name="PipBadgeLabel"
+                               Text=""
+                               FontSize="11"
+                               Foreground="#DDFFFFFF"
+                               VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis"
+                               MaxWidth="140" />
+                </Border>
             </Grid>
         </Border>
 
-        <!-- ═══ Edge resize handles (transparent, full edge hit targets) ═══ -->
+        <!-- Resize handles -->
         <Border Classes="pip-resize-edge"
                 HorizontalAlignment="Stretch" VerticalAlignment="Top"
                 Height="8" Cursor="SizeNorthSouth"
@@ -293,19 +302,19 @@
                 PointerPressed="OnRightEdgePointerPressed" />
         <Border Classes="pip-resize-edge"
                 HorizontalAlignment="Left" VerticalAlignment="Top"
-                Width="12" Height="12" Cursor="SizeNorthWestSouthEast"
+                Width="14" Height="14" Cursor="TopLeftCorner"
                 PointerPressed="OnTopLeftCornerPointerPressed" />
         <Border Classes="pip-resize-edge"
                 HorizontalAlignment="Right" VerticalAlignment="Top"
-                Width="12" Height="12" Cursor="SizeNorthEastSouthWest"
+                Width="14" Height="14" Cursor="TopRightCorner"
                 PointerPressed="OnTopRightCornerPointerPressed" />
         <Border Classes="pip-resize-edge"
                 HorizontalAlignment="Left" VerticalAlignment="Bottom"
-                Width="12" Height="12" Cursor="SizeNorthEastSouthWest"
+                Width="14" Height="14" Cursor="BottomLeftCorner"
                 PointerPressed="OnBottomLeftCornerPointerPressed" />
         <Border Classes="pip-resize-edge"
                 HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                Width="12" Height="12" Cursor="SizeNorthWestSouthEast"
+                Width="14" Height="14" Cursor="BottomRightCorner"
                 PointerPressed="OnBottomRightCornerPointerPressed" />
     </Grid>
 </Window>

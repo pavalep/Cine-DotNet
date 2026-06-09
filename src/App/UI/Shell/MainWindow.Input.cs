@@ -135,8 +135,10 @@ public partial class MainWindow
             Handle(() => _viewModel?.ToggleLoopPlaylist());
         else if (ctrl && key == Key.S && !shift)
             Handle(() => _viewModel?.Stop());
-        else if (ctrl && key == Key.P)
+        else if (ctrl && key == Key.P && !shift)
             Handle(() => _controlsBox.OpenPlaylistDialog());
+        else if (ctrl && shift && key == Key.P)
+            Handle(() => OnPipToggled(null, EventArgs.Empty));
         else if (ctrl && key == Key.OemComma)
             Handle(() => { var prefs = new PreferencesDialog { DataContext = _viewModel }; prefs.Show(this); });
         else if (ctrl && key == Key.A && shift)

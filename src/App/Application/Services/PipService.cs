@@ -34,6 +34,9 @@ public class PipService : IDisposable
     /// <summary>Fires when the user seeks in the PIP window (normalized 0..1).</summary>
     public event EventHandler<double>? SeekRequested;
 
+    /// <summary>Fires when the user toggles mute in the PIP window.</summary>
+    public event EventHandler? MuteToggled;
+
     /// <summary>Fires when the PIP window is closed (by user or programmatically).</summary>
     public event EventHandler? PipClosed;
 
@@ -50,9 +53,19 @@ public class PipService : IDisposable
         }
         if (_isActive)
         {
-            try { File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] EnterPip: already active{Environment.NewLine}"); } catch { }
-            Log.ForContext<PipService>().Info("EnterPip: already active");
-            return _pipWindow;
+            if (_pipWindow == null || _pipWindow.IsClosed)
+            {
+                try { File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] EnterPip: stale _isActive=true, resetting{Environment.NewLine}"); } catch { }
+                Log.ForContext<PipService>().Warning("EnterPip: stale _isActive=true, resetting");
+                _isActive = false;
+                _pipWindow = null;
+            }
+            else
+            {
+                try { File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] EnterPip: already active{Environment.NewLine}"); } catch { }
+                Log.ForContext<PipService>().Info("EnterPip: already active");
+                return _pipWindow;
+            }
         }
 
         try
@@ -65,6 +78,7 @@ public class PipService : IDisposable
             // Forward player control events
             _pipWindow.PlayPauseRequested += (s, e) => PlayPauseRequested?.Invoke(s, e);
             _pipWindow.SeekRequested += (s, pos) => SeekRequested?.Invoke(s, pos);
+            _pipWindow.MuteToggled += (s, e) => MuteToggled?.Invoke(s, e);
 
             Log.ForContext<PipService>().Info("EnterPip: calling Show()");
             _pipWindow.Show();
@@ -73,7 +87,7 @@ public class PipService : IDisposable
             // Wire DWM thumbnail mirroring (source already set by MainWindow)
             var srcHwnd = _dwmManager.SourceHwnd;
             try { File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] SourceHwnd=0x{srcHwnd:X}{Environment.NewLine}"); } catch { }
-            Log.ForContext<PipService>().Info("EnterPip: calling EnableDwmMirror, sourceHwnd=0x{Source:X}", srcHwnd);
+            Log.ForContext<PipService>().Info("EnterPip: calling EnableDwmMirror, sourceHwnd=0x{0:X}", srcHwnd);
             _pipWindow.EnableDwmMirror(_dwmManager);
 
             // Show controls initially, then auto-hide after 5s
@@ -82,7 +96,7 @@ public class PipService : IDisposable
 
             _isActive = true;
             try { File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] EnterPip success{Environment.NewLine}"); } catch { }
-            Log.ForContext<PipService>().Info("EnterPip: success, hwnd=0x{Hwnd:X}", _pipWindow.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero);
+            Log.ForContext<PipService>().Info("EnterPip: success, hwnd=0x{0:X}", _pipWindow.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero);
             return _pipWindow;
         }
         catch (Exception ex)
