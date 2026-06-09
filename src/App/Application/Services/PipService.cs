@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using Cine.Avalonia.Controls;
 using Cine.Core;
 using Cine.Avalonia.Views.Dialogs;

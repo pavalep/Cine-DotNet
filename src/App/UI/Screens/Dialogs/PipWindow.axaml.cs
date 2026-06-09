@@ -31,7 +31,6 @@ public partial class PipWindow : Window
     private bool _hoverCenter;
     private bool _hoverBottomBar;
     private bool _controlsVisible = true;
-    private bool _isUpdatingSeekFromExternal;
     private double _aspectRatio = 16.0 / 9.0;
     private bool _isApplyingAspectRatio;
     private DispatcherTimer? _mirrorRetryTimer;
@@ -69,7 +68,8 @@ public partial class PipWindow : Window
         // Sync DWM thumbnail on resize
         this.SizeChanged += (_, _) =>
         {
-            SyncThumbnailRect();
+            if (!_resizing)
+                SyncThumbnailRect();
             if (!_isApplyingAspectRatio)
                 ApplyAspectRatioConstraint();
         };
@@ -188,7 +188,12 @@ public partial class PipWindow : Window
         _thumbnailId = 0;
     }
 
-    /// <summary>Constrains DWM thumbnail to fill the full window.</summary>
+    /// <summary>
+    /// Constrains DWM thumbnail to the video area only.
+    /// When controls are visible, the thumbnail is restricted to the area between
+    /// the top bar (48px) and bottom bar (~36px) so overlay controls render on top.
+    /// When controls are hidden, the thumbnail fills the entire window.
+    /// </summary>
     private void SyncThumbnailRect()
     {
         if (_dwmManager == null || _thumbnailId <= 0 || _isClosing) return;
@@ -197,8 +202,16 @@ public partial class PipWindow : Window
         int w = Math.Max(1, (int)(Width * scale));
         int h = Math.Max(1, (int)(Height * scale));
 
+        int topOff = 0;
+        int botOff = 0;
+        if (_controlsVisible)
+        {
+            topOff = (int)(48 * scale);           // pip-top-bar fixed height
+            botOff = (int)(36 * scale);           // pip-bottom-bar content height (~28px seek area + margins)
+        }
+
         _dwmManager.UpdateTarget(_thumbnailId, opacity: 255, visible: true,
-            destLeft: 0, destTop: 0, destRight: w, destBottom: h);
+            destLeft: 0, destTop: topOff, destRight: w, destBottom: h - botOff);
     }
 
     /// <summary>Sets the target aspect ratio for resize locking.</summary>
@@ -263,25 +276,17 @@ public partial class PipWindow : Window
 
     public void UpdatePosition(double positionSec, double durationSec)
     {
-        _isUpdatingSeekFromExternal = true;
-        try
+        if (durationSec > 0 && !_isSeeking)
         {
-            if (durationSec > 0)
-            {
-                _seekNormalized = Math.Clamp(positionSec / durationSec, 0, 1);
-                UpdateSeekVisuals(_seekNormalized);
-            }
-
-            if (PipTimeLabel != null)
-            {
-                var pos = TimeSpan.FromSeconds(positionSec);
-                var dur = TimeSpan.FromSeconds(durationSec);
-                PipTimeLabel.Text = $"{(int)pos.TotalMinutes:D2}:{pos.Seconds:D2} / {(int)dur.TotalMinutes:D2}:{dur.Seconds:D2}";
-            }
+            _seekNormalized = Math.Clamp(positionSec / durationSec, 0, 1);
+            UpdateSeekVisuals(_seekNormalized);
         }
-        finally
+
+        if (PipTimeLabel != null)
         {
-            _isUpdatingSeekFromExternal = false;
+            var pos = TimeSpan.FromSeconds(positionSec);
+            var dur = TimeSpan.FromSeconds(durationSec);
+            PipTimeLabel.Text = $"{(int)pos.TotalMinutes:D2}:{pos.Seconds:D2} / {(int)dur.TotalMinutes:D2}:{dur.Seconds:D2}";
         }
     }
 
@@ -296,7 +301,7 @@ public partial class PipWindow : Window
         double fillWidth = normalized * (areaWidth - 14); // 14 = thumb width
         PipSeekFill.Width = Math.Max(0, fillWidth);
 
-        Canvas.SetLeft(PipSeekThumb, fillWidth);
+        PipSeekThumb.Margin = new Thickness(fillWidth, 0, 0, 0);
         PipSeekThumb.IsVisible = _isSeeking || HoverOverlay?.Opacity > 0.5;
     }
 
@@ -395,6 +400,7 @@ public partial class PipWindow : Window
     public void ShowAllControls()
     {
         _controlsVisible = true;
+        SyncThumbnailRect();
         _hoverTimer?.Stop();
 
         if (HoverOverlay != null)
@@ -421,14 +427,27 @@ public partial class PipWindow : Window
 
         if (HoverOverlay != null)
         {
-            HoverOverlay.IsVisible = false;
             HoverOverlay.Opacity = 0;
             HoverOverlay.IsHitTestVisible = false;
+            // Expand DWM to full window AFTER the 200ms opacity transition,
+            // so the fade-out is visible (not instantly covered by DWM).
+            _ = Dispatcher.UIThread.OnUiThreadAsync(async () =>
+            {
+                await Task.Delay(250);
+                SyncThumbnailRect();
+                if (!_controlsVisible && HoverOverlay != null)
+                    HoverOverlay.IsVisible = false;
+            });
         }
         if (FileBadge != null)
         {
-            FileBadge.IsVisible = false;
             FileBadge.Opacity = 0;
+            _ = Dispatcher.UIThread.OnUiThreadAsync(async () =>
+            {
+                await Task.Delay(250);
+                if (!_controlsVisible && FileBadge != null)
+                    FileBadge.IsVisible = false;
+            });
         }
     }
 
@@ -438,17 +457,20 @@ public partial class PipWindow : Window
 
     private void OnVideoAreaPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        // Single click on video = play/pause toggle
-        _isPlaying = !_isPlaying;
-        SetPlayingState(_isPlaying);
+        // Single click on video = play/pause toggle — defer to ViewModel to confirm
         PlayPauseRequested?.Invoke(this, EventArgs.Empty);
+        ResetHoverTimer();
+    }
+
+    private void OnVideoAreaPointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (!_controlsVisible)
+            ShowAllControls();
         ResetHoverTimer();
     }
 
     private void OnPlayPauseClick(object? sender, RoutedEventArgs e)
     {
-        _isPlaying = !_isPlaying;
-        SetPlayingState(_isPlaying);
         PlayPauseRequested?.Invoke(this, EventArgs.Empty);
         ResetHoverTimer();
     }
@@ -509,7 +531,7 @@ public partial class PipWindow : Window
             {
                 PipSeekPreviewDot.IsVisible = true;
                 double aw = PipSeekArea.Bounds.Width;
-                Canvas.SetLeft(PipSeekPreviewDot, n * (aw - 10));
+                PipSeekPreviewDot.Margin = new Thickness(n * (aw - 10), 0, 0, 0);
             }
         }
     }
@@ -651,13 +673,21 @@ public partial class PipWindow : Window
                 var screens = Screens?.All;
                 if (screens != null && screens.Count > 0)
                 {
-                    var primary = screens[0];
-                    bool offScreen = state.X + state.W < 100 ||
-                                     state.X > primary.WorkingArea.Width - 100 ||
-                                     state.Y + state.H < 50 ||
-                                     state.Y > primary.WorkingArea.Height - 50;
-                    if (offScreen)
+                    // Check if saved position is visible on any connected screen
+                    bool onScreen = false;
+                    foreach (var screen in screens)
                     {
+                        var wa = screen.WorkingArea;
+                        if (state.X >= wa.X - 50 && state.X + state.W <= wa.X + wa.Width + 50 &&
+                            state.Y >= wa.Y - 50 && state.Y + state.H <= wa.Y + wa.Height + 50)
+                        {
+                            onScreen = true;
+                            break;
+                        }
+                    }
+                    if (!onScreen)
+                    {
+                        var primary = screens[0];
                         state = new PipState(
                             primary.WorkingArea.Width - state.W - 20,
                             20, state.W, state.H, state.Pinned);
@@ -747,6 +777,7 @@ public partial class PipWindow : Window
         this.PointerMoved -= OnResizePointerMoved;
         this.PointerReleased -= OnResizePointerReleased;
         e.Pointer.Capture(null);
+        SyncThumbnailRect();
         SnapToEdge();
     }
 

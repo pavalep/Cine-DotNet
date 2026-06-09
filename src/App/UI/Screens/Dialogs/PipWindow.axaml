@@ -108,10 +108,11 @@
             <Grid>
                 <!-- Layer 0: DWM video surface -->
                 <Border x:Name="VideoArea"
-                        Background="#FF0D0D0D"
+                        Background="Transparent"
                         ClipToBounds="True"
                         CornerRadius="12"
-                        PointerPressed="OnVideoAreaPointerPressed" />
+                        PointerPressed="OnVideoAreaPointerPressed"
+                        PointerMoved="OnVideoAreaPointerMoved" />
 
                 <!-- Layer 0.5: Loading overlay -->
                 <Border x:Name="LoadingOverlay"
