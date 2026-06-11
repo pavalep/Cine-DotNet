@@ -13,11 +13,11 @@ public partial class MainWindow
         {
             DebugLog("OnPipToggled: exiting PIP");
             _pipService.ExitPip();
-            // Restore video in main window + resync thumbnail rect
+            // Restore video in main window + resync video area
             if (_videoHost != null)
             {
                 _videoHost.IsVideoSurfaceVisible = true;
-                SyncThumbnailRect();
+                SyncVideoRect();
             }
             _headerBar.SetPipChecked(false);
         }
@@ -30,12 +30,6 @@ public partial class MainWindow
             }
 
             DebugLog("OnPipToggled: entering PIP");
-            if (_dwmManager is { SourceHwnd: var source } && source == IntPtr.Zero)
-            {
-                DebugLog("OnPipToggled: DWM source missing, retrying registration");
-                _videoHost?.EnsureHiddenWindowCreated();
-                TryRegisterDwmThumbnail();
-            }
             var pipWindow = _pipService?.EnterPip();
 
             if (pipWindow != null)
@@ -125,7 +119,7 @@ public partial class MainWindow
         if (_videoHost != null)
         {
             _videoHost.IsVideoSurfaceVisible = true;
-            SyncThumbnailRect();
+            SyncVideoRect();
         }
         _headerBar.SetPipChecked(false);
     }

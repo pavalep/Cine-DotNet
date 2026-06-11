@@ -4,12 +4,9 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Media;
 using Cine.Avalonia.Controls;
 using DragEventArgs = Avalonia.Input.DragEventArgs;
 using RoutedEventArgs = Avalonia.Interactivity.RoutedEventArgs;
-using Color = Avalonia.Media.Color;
-using Brushes = Avalonia.Media.Brushes;
 using DragDropEffects = Avalonia.Input.DragDropEffects;
 
 namespace Cine.Avalonia;

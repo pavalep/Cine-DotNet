@@ -32,6 +32,9 @@ public partial class MainWindow
             _isLoading = false;
             _spinnerOverlay.Stop();
 
+            // Show video surface now that media is loaded
+            _videoHost?.ShowVideoSurface();
+
             // Clear replay mode when new media opens
             _controlsBox.SetReplayMode(false);
             _replayOverlay.Hide();
@@ -73,7 +76,7 @@ public partial class MainWindow
 
                 _videoHost.IsVideoSurfaceVisible = true;
                 _videoHost.Opacity = 1;
-                SyncThumbnailRect();
+                SyncVideoRect();
 
                 DebugLog($"OnMediaOpened VideoHost: Opacity={_videoHost.Opacity} IsVisible={_videoHost.IsVisible} Bounds={_videoHost.Bounds}");
             }
@@ -143,6 +146,10 @@ public partial class MainWindow
             {
                 _replayOverlay.Show();
             }
+
+            // Hide video surface when fully stopped with no file (user closed video)
+            if (e.State == PlaybackState.Stopped && _viewModel?.FilePath == null)
+                _videoHost?.HideVideoSurface();
 
             _controlsBox.UpdatePlayPauseIcon();
 

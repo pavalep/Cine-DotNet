@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Globalization;
 using System.Runtime.InteropServices;
-using System.Runtime.InteropServices.Marshalling;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -43,6 +41,93 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
 
     // Aspect ratio override (maps to mpv's video-aspect-override)
     private double _aspectOverride = -1; // -1 = auto/default
+
+    // DXGI render API
+    private IntPtr _renderContext;
+    private MpvRenderNative.mpv_render_update_fn? _renderUpdateCallback;
+    private int _renderFrameCount;
+    private readonly ManualResetEventSlim _renderWakeup = new(false);
+
+    // ANGLE — loaded once, shared across instances
+    private static IntPtr _eglHandle;
+    private static IntPtr _glesHandle;
+    private static readonly object _angleLock = new();
+    // Keep delegate alive — prevent GC from collecting it
+    private static readonly MpvRenderNative.mpv_get_proc_address_fn _glGetProcCb = GlGetProcAddressCallback;
+    // eglGetProcAddress has a different signature: void*(const char*)
+    private static GetProcAddressDelegate? _eglGetProcAddrCb;
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate IntPtr GetProcAddressDelegate(IntPtr name);
+
+    /// <summary>
+    /// mpv calls this to resolve OpenGL ES functions from ANGLE DLLs.
+    /// Search order: libGLESv2.dll → libEGL.dll → eglGetProcAddress.
+    /// </summary>
+    private static IntPtr GlGetProcAddressCallback(IntPtr ctx, IntPtr namePtr)
+    {
+        try
+        {
+            if (namePtr == IntPtr.Zero)
+                return IntPtr.Zero;
+
+            var procName = Marshal.PtrToStringAnsi(namePtr);
+            if (string.IsNullOrEmpty(procName))
+                return IntPtr.Zero;
+
+            // Initialize ANGLE handles on first call
+            if (_eglHandle == IntPtr.Zero)
+            {
+                lock (_angleLock)
+                {
+                    if (_eglHandle == IntPtr.Zero)
+                    {
+                        _glesHandle = LoadLibrary("libGLESv2.dll");
+                        _eglHandle = LoadLibrary("libEGL.dll");
+                    }
+                }
+            }
+
+            // 1. Try libGLESv2.dll first (primary GL implementation)
+            if (_glesHandle != IntPtr.Zero)
+            {
+                var addr = GetProcAddress(_glesHandle, procName);
+                if (addr != IntPtr.Zero)
+                    return addr;
+            }
+
+            // 2. Try libEGL.dll
+            if (_eglHandle != IntPtr.Zero)
+            {
+                var addr = GetProcAddress(_eglHandle, procName);
+                if (addr != IntPtr.Zero)
+                    return addr;
+            }
+
+            // 3. Fallback to eglGetProcAddress (extension functions)
+            if (_eglGetProcAddrCb == null && _eglHandle != IntPtr.Zero)
+            {
+                var eglProcAddr = GetProcAddress(_eglHandle, "eglGetProcAddress");
+                if (eglProcAddr != IntPtr.Zero)
+                    _eglGetProcAddrCb = Marshal.GetDelegateForFunctionPointer<GetProcAddressDelegate>(eglProcAddr);
+            }
+
+            if (_eglGetProcAddrCb != null)
+                return _eglGetProcAddrCb(namePtr);
+        }
+        catch
+        {
+            // Silently return null — mpv handles null gracefully
+        }
+
+        return IntPtr.Zero;
+    }
+
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Ansi)]
+    private static extern IntPtr LoadLibrary(string lpFileName);
+
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Ansi)]
+    private static extern IntPtr GetProcAddress(IntPtr hModule, string lpProcName);
 
     private static readonly string DebugLogFile = CreateLogFilePath();
 
@@ -744,6 +829,20 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
         return err >= 0 ? (int)val : 0;
     }
 
+    /// <summary>
+    /// Gets or sets whether to use high-quality rendering options (default).
+    /// Set to <c>false</c> for PiP / low-quality secondary player instances.
+    /// Must be set before calling <see cref="InitializeRenderer"/>.
+    /// </summary>
+    public bool HighQualityRendering { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets whether to disable hardware acceleration and use software
+    /// rendering. Default is <c>false</c> (hardware acceleration enabled).
+    /// Must be set before calling <see cref="InitializeRenderer"/>.
+    /// </summary>
+    public bool UseSoftwareRendering { get; set; }
+
     public void InitializeRenderer(IntPtr hwnd)
     {
         DebugLog($"InitializeRenderer called with hwnd={hwnd}");
@@ -779,26 +878,15 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
                 return;
             }
 
-            SetOptionString("terminal", "no");
-            SetOptionString("msg-level", "all=warn");
-            SetOptionString("keep-open", "yes");
-            SetOptionString("keep-open-pause", "no");
-            SetOptionString("osc", "no");
-            SetOptionString("vo", "gpu");
-            SetOptionString("gpu-context", "d3d11");
-            SetOptionString("hwdec", "auto-safe");
-            SetOptionString("volume-max", "150");
-
-            // HQ scaler defaults (parity with Python reference)
-            SetOptionString("scale", "spline36");
-            SetOptionString("cscale", "spline36");
-            SetOptionString("dscale", "mitchell");
-            SetOptionString("correct-downscaling", "yes");
-            SetOptionString("deband", "yes");
-            SetOptionString("deband-iterations", "1");
-            SetOptionString("dither-depth", "auto");
-
-            SetOptionInt64("wid", hwnd.ToInt64());
+            var options = MpvConfig.GetFullOptions(HighQualityRendering, hwnd);
+            // Apply software rendering override (disables hwdec)
+            if (UseSoftwareRendering)
+            {
+                options["hwdec"] = "no";
+                options["gpu-context"] = "d3d11"; // Still use D3D11 for rendering, but CPU decoding
+            }
+            foreach (var kv in options)
+                SetOptionString(kv.Key, kv.Value);
 
             var initErr = MpvNative.mpv_initialize(_mpv);
             if (initErr < 0)
@@ -824,7 +912,9 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
         SetDouble("sub-delay", _subtitleDelay);
         ApplyLoopMode();
 
+        DebugLog("calling StartEventLoop");
         StartEventLoop();
+        DebugLog("StartEventLoop completed");
 
         var pending = _pendingOpenPath;
         _pendingOpenPath = null;
@@ -832,10 +922,172 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
             LoadFile(pending, replace: true);
     }
 
-    public bool UseNativeRendering { get; set; } = true;
+    /// <summary>
+    /// Initialize mpv using the OpenGL render API. mpv renders into an
+    /// internal OpenGL FBO (via ANGLE/EGL on Windows).
+    /// Controls and UI elements render on top of the video naturally.
+    /// Requires libmpv built with --enable-libmpv-render.
+    /// </summary>
+    public void InitializeRendererD3D11(IntPtr d3dDevice, IntPtr swapChain)
+    {
+        DebugLog($"InitializeRendererD3D11: device=0x{d3dDevice:X} swapChain=0x{swapChain:X}");
+        if (_disposed || _initialized)
+        {
+            DebugLog("InitializeRendererD3D11: disposed or already initialized");
+            return;
+        }
+
+        if (!MpvInterop.IsAvailable)
+        {
+            Error?.Invoke(this, "libmpv not available");
+            _state = PlaybackState.Stopped;
+            return;
+        }
+
+        lock (_gate)
+        {
+            _mpv = MpvNative.mpv_create();
+            DebugLog($"InitializeRendererD3D11: mpv_create returned {_mpv}");
+            if (_mpv == IntPtr.Zero)
+            {
+                Error?.Invoke(this, "mpv_create failed");
+                return;
+            }
+
+            // No vo — render API replaces the VO entirely.
+            // Options: vo=null so mpv doesn't create a standalone window.
+            // mpv_render_context_create handles the GL context + rendering.
+            var options = MpvConfig.GetRenderApiOptions();
+            foreach (var kv in options)
+                SetOptionString(kv.Key, kv.Value);
+
+            // Per render.h docs: Create render context BEFORE mpv_initialize.
+            // mpv_render_context_create replaces the default VO.
+            DebugLog("InitializeRendererD3D11: creating mpv_render_context BEFORE mpv_initialize...");
+
+            var glInitParams = new MpvRenderNative.mpv_opengl_init_params
+            {
+                get_proc_address = Marshal.GetFunctionPointerForDelegate(_glGetProcCb),
+                get_proc_address_ctx = IntPtr.Zero
+            };
+
+            var glInitPtr = Marshal.AllocHGlobal(Marshal.SizeOf<MpvRenderNative.mpv_opengl_init_params>());
+            Marshal.StructureToPtr(glInitParams, glInitPtr, false);
+
+            var apiTypeStr = MpvRenderNative.MPV_RENDER_API_TYPE_OPENGL;
+            var apiTypePtr = Marshal.StringToHGlobalAnsi(apiTypeStr);
+
+            var initParams = new MpvRenderNative.mpv_render_param[]
+            {
+                new() { type = MpvRenderNative.MPV_RENDER_PARAM_API_TYPE, data = apiTypePtr },
+                new() { type = MpvRenderNative.MPV_RENDER_PARAM_OPENGL_INIT_PARAMS, data = glInitPtr },
+                new() { type = MpvRenderNative.MPV_RENDER_PARAM_INVALID, data = IntPtr.Zero }
+            };
+
+            try
+            {
+                var renderErr = MpvRenderNative.mpv_render_context_create(out _renderContext, _mpv, initParams);
+                DebugLog($"InitializeRendererD3D11: render_context_create (pre-init)={renderErr} ctx=0x{_renderContext:X}");
+                if (renderErr < 0 || _renderContext == IntPtr.Zero)
+                {
+                    var errMsg = renderErr == -4
+                        ? "invalid param — ANGLE DLLs not found or get_proc_address failed"
+                        : MpvNative.GetError(renderErr);
+                    Error?.Invoke(this, $"mpv_render_context_create failed: {errMsg} (code={renderErr})");
+                    MpvNative.mpv_terminate_destroy(_mpv);
+                    _mpv = IntPtr.Zero;
+                    return;
+                }
+
+                // Set up update callback before init
+                _renderUpdateCallback = OnRenderUpdate;
+                MpvRenderNative.mpv_render_context_set_update_callback(
+                    _renderContext, _renderUpdateCallback, IntPtr.Zero);
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(apiTypePtr);
+                Marshal.FreeHGlobal(glInitPtr);
+            }
+
+            // Now initialize. With the render context already active,
+            // mpv won't create a separate VO.
+            var initErr = MpvNative.mpv_initialize(_mpv);
+            DebugLog($"InitializeRendererD3D11: mpv_initialize (post-render-ctx)={initErr}");
+            if (initErr < 0)
+            {
+                Error?.Invoke(this, $"mpv_initialize failed: {MpvNative.GetError(initErr)}");
+                MpvRenderNative.mpv_render_context_free(_renderContext);
+                _renderContext = IntPtr.Zero;
+                MpvNative.mpv_terminate_destroy(_mpv);
+                _mpv = IntPtr.Zero;
+                return;
+            }
+
+            _initialized = true;
+        }
+
+        // Observe properties
+        MpvNative.mpv_observe_property(_mpv, 0, "track-list", MpvNative.mpv_format.MPV_FORMAT_NODE);
+        MpvNative.mpv_observe_property(_mpv, 0, "chapter-list", MpvNative.mpv_format.MPV_FORMAT_NODE);
+
+        SetDouble("volume", _volume);
+        SetFlag("mute", _isMuted);
+        SetDouble("speed", _speed);
+        SetDouble("audio-delay", _audioDelay);
+        SetDouble("sub-delay", _subtitleDelay);
+        ApplyLoopMode();
+
+        DebugLog("InitializeRendererD3D11: calling StartEventLoop");
+        StartEventLoop();
+        DebugLog("InitializeRendererD3D11: done");
+
+        var pending = _pendingOpenPath;
+        _pendingOpenPath = null;
+        if (!string.IsNullOrWhiteSpace(pending))
+            LoadFile(pending, replace: true);
+    }
+
+    /// <summary>
+    /// Called by mpv's render thread when a new frame is available.
+    /// We signal via wakeup — TryRenderFrame is called on the event loop thread.
+    /// </summary>
+    private void OnRenderUpdate(IntPtr ctx)
+    {
+        // This runs on mpv's internal thread — just signal wakeup
+        _renderWakeup?.Set();
+    }
+
+    /// <summary>
+    /// Called from the event loop when a render update is pending.
+    /// Renders the current frame into the swap chain.
+    /// </summary>
+    private void TryRenderFrame()
+    {
+        if (_renderContext == IntPtr.Zero) return;
+
+        var flags = MpvRenderNative.mpv_render_context_update(_renderContext);
+        if ((flags & MpvRenderNative.MPV_RENDER_UPDATE_FRAME) != 0)
+        {
+            var err = MpvRenderNative.mpv_render_context_render(_renderContext, null);
+            if (err == 0)
+            {
+                MpvRenderNative.mpv_render_context_report_swap(_renderContext);
+                _renderFrameCount++;
+                if (_renderFrameCount <= 3)
+                    DebugLog($"render frame #{_renderFrameCount} OK");
+            }
+            else
+            {
+                if (_renderFrameCount < 5)
+                    DebugLog($"render failed: err={err}");
+            }
+        }
+    }
 
     public void NotifyResize(int width, int height)
     {
+        // For the render API path, swap chain resize is handled by D3D11VideoRenderer
     }
 
     public void Command(string command, params string[] args)
@@ -866,6 +1118,8 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
     public event EventHandler<PlaylistChangedEventArgs>? PlaylistChanged;
     public event EventHandler<string>? Error;
 
+    public bool UseNativeRendering { get; set; } = true;
+
     public void Dispose()
     {
         if (_disposed)
@@ -877,15 +1131,12 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
         _cts?.Dispose();
         _cts = null;
 
-        lock (_gate)
+        if (_mpv != IntPtr.Zero)
         {
-            if (_mpv != IntPtr.Zero)
-            {
-                try { MpvNative.mpv_terminate_destroy(_mpv); } catch { }
-                _mpv = IntPtr.Zero;
-            }
-            _initialized = false;
+            try { MpvNative.mpv_terminate_destroy(_mpv); } catch { }
+            _mpv = IntPtr.Zero;
         }
+        _initialized = false;
     }
 
     private void StartEventLoop()
@@ -958,8 +1209,7 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
             // any file is loaded or while the file is still buffering). No additional
             // _isFileLoaded guard is needed — FILE_LOADED fires before time-pos is valid
             // (playback hasn't actually started), and that would block our first updates.
-            double pos, dur;
-            lock (_gate)
+            double pos, dur;            lock (_gate)
             {
                 pos = GetDouble("time-pos");
                 dur = GetDouble("duration");
@@ -969,6 +1219,10 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
                 PositionChanged?.Invoke(this, new PositionChangedEventArgs(
                     TimeSpan.FromSeconds(pos), TimeSpan.FromSeconds(dur)));
             }
+
+                // DXGI render API: process frame
+                if (_renderContext != IntPtr.Zero)
+                    TryRenderFrame();
             }
             catch (Exception ex)
             {

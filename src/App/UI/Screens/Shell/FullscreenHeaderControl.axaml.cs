@@ -5,8 +5,8 @@ using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Cine.Avalonia.Helpers;
 using Cine.Avalonia.ViewModels;
-using RoutedEventArgs = Avalonia.Interactivity.RoutedEventArgs;
 using Cine.Avalonia.Views.Dialogs;
+using RoutedEventArgs = Avalonia.Interactivity.RoutedEventArgs;
 
 namespace Cine.Avalonia.Controls;
 

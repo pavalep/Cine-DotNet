@@ -1,17 +1,12 @@
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Media;
 using Avalonia.Threading;
-using Cine.Avalonia.Controls;
 using Cine.Avalonia.Helpers;
-using Cine.Core;
 using KeyEventArgs = Avalonia.Input.KeyEventArgs;
 
 namespace Cine.Avalonia.Views.Dialogs;
@@ -26,8 +21,6 @@ public partial class PipWindow : Window
     private bool _controlsVisible = true;
     private bool _isSeeking;
     private double _seekNormalized;
-    private DwmThumbnailManager? _dwmManager;
-    private int _thumbnailId;
     private double _aspectRatio = 16.0 / 9.0;
     private bool _isApplyingAspectRatio;
 
@@ -37,17 +30,18 @@ public partial class PipWindow : Window
     private bool _hoverCenter;
     private bool _hoverBottomBar;
 
-    // Mirror retry
-    private DispatcherTimer? _mirrorRetryTimer;
-    private Stopwatch? _mirrorRetryWatch;
-    private const int MirrorRetryMaxMs = 5000;
-
     internal bool IsClosed { get; private set; }
 
     // ────── Player control events ──────
     public event EventHandler? PlayPauseRequested;
     public event EventHandler<double>? SeekRequested;
     public event EventHandler? MuteToggled;
+
+    /// <summary>
+    /// Called when the video area needs resizing (window size changed).
+    /// Args: left, top, width, height in physical pixels (scaled).
+    /// </summary>
+    public Action<int, int, int, int>? OnResizeVideoArea;
 
     // ────── State persistence ──────
     private static readonly string PipStatePath = Path.Combine(
@@ -66,9 +60,23 @@ public partial class PipWindow : Window
 
         this.SizeChanged += (_, _) =>
         {
-            SyncThumbnailRect();
             if (!_isApplyingAspectRatio) ApplyAspectRatioConstraint();
+            UpdateVideoArea();
         };
+    }
+
+    /// <summary>Computes the video area rectangle (avoiding control zones).
+    /// The video child HWND is positioned in the non-control area.</summary>
+    private void UpdateVideoArea()
+    {
+        if (OnResizeVideoArea == null) return;
+        double s = RenderScaling;
+        int w = Math.Max(1, (int)(Width * s));
+        int h = Math.Max(1, (int)(Height * s));
+        // Controls occupy ~40px top bar and ~36px bottom bar
+        int topClip = (int)(40 * s);
+        int botClip = (int)(36 * s);
+        OnResizeVideoArea(0, topClip, w, h - topClip - botClip);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -109,7 +117,6 @@ public partial class PipWindow : Window
         }
         if (PipSeekThumb != null) PipSeekThumb.IsVisible = true;
 
-        SyncThumbnailRect();
         _hoverTimer?.Start();
     }
 
@@ -125,16 +132,13 @@ public partial class PipWindow : Window
             _ = Dispatcher.UIThread.OnUiThreadAsync(async () =>
             {
                 await Task.Delay(250);
-                SyncThumbnailRect();
                 if (!_controlsVisible && HoverOverlay != null)
                     HoverOverlay.IsVisible = false;
             });
         }
-        if (FileBadge != null)
-        {
-            FileBadge.IsVisible = true;
-            FileBadge.Opacity = 1;
-        }
+        if (FileBadge != null) FileBadge.IsVisible = false;
+
+        _hoverTimer = null;
     }
 
     public void StartHoverTimer() { _hoverTimer?.Stop(); _hoverTimer?.Start(); }
@@ -149,6 +153,11 @@ public partial class PipWindow : Window
 
     private void OnTopBarPointerEntered(object? sender, PointerEventArgs e) => _hoverTopBar = true;
     private void OnTopBarPointerExited(object? sender, PointerEventArgs e) => _hoverTopBar = false;
+    private void OnTopBarPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed && !_resizing)
+            BeginMoveDrag(e);
+    }
     private void OnCenterPointerEntered(object? sender, PointerEventArgs e) => _hoverCenter = true;
     private void OnCenterPointerExited(object? sender, PointerEventArgs e) => _hoverCenter = false;
     private void OnBottomBarPointerEntered(object? sender, PointerEventArgs e) => _hoverBottomBar = true;
@@ -171,7 +180,6 @@ public partial class PipWindow : Window
     private void OnPinToggle(object? sender, RoutedEventArgs e)
     {
         _isPinned = !_isPinned;
-        if (PinIcon != null) PinIcon.Opacity = _isPinned ? 1.0 : 0.4;
         Topmost = _isPinned;
         SaveState();
         ResetHoverTimer();
@@ -197,7 +205,6 @@ public partial class PipWindow : Window
         _isSeeking = true;
         _seekNormalized = GetNormalizedFromPointer(e);
         UpdateSeekVisuals(_seekNormalized);
-        if (PipSeekPreviewDot != null) PipSeekPreviewDot.IsVisible = false;
         e.Pointer.Capture(PipSeekArea);
     }
 
@@ -214,20 +221,10 @@ public partial class PipWindow : Window
     {
         var n = GetNormalizedFromPointer(e);
         if (_isSeeking) { _seekNormalized = n; UpdateSeekVisuals(n); }
-        else if (PipSeekPreviewDot != null && PipSeekArea != null)
-        {
-            PipSeekPreviewDot.IsVisible = true;
-            double aw = PipSeekArea.Bounds.Width > 0 ? PipSeekArea.Bounds.Width : PipSeekArea.DesiredSize.Width;
-            PipSeekPreviewDot.Margin = new Thickness(n * (aw - 10), 0, 0, 0);
-        }
         ResetHoverTimer();
     }
 
-    private void OnPipSeekPointerExited(object? sender, PointerEventArgs e)
-    {
-        if (!_isSeeking && PipSeekPreviewDot != null)
-            PipSeekPreviewDot.IsVisible = false;
-    }
+    private void OnPipSeekPointerExited(object? sender, PointerEventArgs e) { }
 
     private void UpdateSeekVisuals(double normalized)
     {
@@ -247,7 +244,6 @@ public partial class PipWindow : Window
     public void SetFileName(string fileName, string folderOrCodec)
     {
         if (PipFileName != null) PipFileName.Text = fileName;
-        if (PipFileSubtitle != null) PipFileSubtitle.Text = folderOrCodec;
         if (PipBadgeLabel != null) PipBadgeLabel.Text = fileName;
     }
 
@@ -280,99 +276,9 @@ public partial class PipWindow : Window
             _seekNormalized = Math.Clamp(positionSec / durationSec, 0, 1);
             UpdateSeekVisuals(_seekNormalized);
         }
-        if (PipTimeLabel != null)
-        {
-            var pos = TimeSpan.FromSeconds(positionSec);
-            var dur = TimeSpan.FromSeconds(durationSec);
-            PipTimeLabel.Text = $"{(int)pos.TotalMinutes:D2}:{pos.Seconds:D2} / {(int)dur.TotalMinutes:D2}:{dur.Seconds:D2}";
-        }
     }
 
     public void SetAspectRatio(double ar) { if (ar > 0) { _aspectRatio = ar; ApplyAspectRatioConstraint(); } }
-
-    // ═══════════════════════════════════════════════════════════════
-    // DWM THUMBNAIL MIRROR
-    // ═══════════════════════════════════════════════════════════════
-
-    public void EnableDwmMirror(DwmThumbnailManager manager)
-    {
-        if (_thumbnailId > 0) return;
-        _dwmManager = manager;
-        if (!TryRegisterMirror())
-            Log.ForContext<PipWindow>().Warning("EnableDwmMirror: deferred");
-    }
-
-    private bool TryRegisterMirror()
-    {
-        if (_dwmManager == null || _thumbnailId > 0 || _isClosing) return _thumbnailId > 0;
-        var handle = TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
-        if (handle == IntPtr.Zero || _dwmManager.SourceHwnd == IntPtr.Zero) return false;
-        DoEnableMirror(handle);
-        return _thumbnailId > 0;
-    }
-
-    private void StartMirrorRetry()
-    {
-        if (_mirrorRetryTimer != null) return;
-        if (LoadingOverlay != null) LoadingOverlay.IsVisible = true;
-        _mirrorRetryWatch = Stopwatch.StartNew();
-        _mirrorRetryTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
-        _mirrorRetryTimer.Tick += OnMirrorRetryTick;
-        _mirrorRetryTimer.Start();
-        this.Activated += OnActivatedRetryMirror;
-    }
-
-    private void StopMirrorRetry()
-    {
-        if (_mirrorRetryTimer == null) return;
-        if (LoadingOverlay != null) LoadingOverlay.IsVisible = false;
-        _mirrorRetryTimer.Stop();
-        _mirrorRetryTimer.Tick -= OnMirrorRetryTick;
-        _mirrorRetryTimer = null;
-        _mirrorRetryWatch = null;
-        this.Activated -= OnActivatedRetryMirror;
-    }
-
-    private void OnActivatedRetryMirror(object? s, EventArgs e) { this.Activated -= OnActivatedRetryMirror; if (TryRegisterMirror()) StopMirrorRetry(); }
-    private void OnMirrorRetryTick(object? s, EventArgs e)
-    {
-        if (TryRegisterMirror()) { StopMirrorRetry(); return; }
-        if (_mirrorRetryWatch?.ElapsedMilliseconds >= MirrorRetryMaxMs) StopMirrorRetry();
-    }
-
-    private void DoEnableMirror(IntPtr handle)
-    {
-        if (_dwmManager == null || _thumbnailId > 0 || handle == IntPtr.Zero || _dwmManager.SourceHwnd == IntPtr.Zero) return;
-        _thumbnailId = _dwmManager.RegisterTarget(handle);
-        if (_thumbnailId > 0) { StopMirrorRetry(); SyncThumbnailRect(); }
-    }
-
-    public void DisableDwmMirror()
-    {
-        StopMirrorRetry();
-        if (_dwmManager != null && _thumbnailId > 0) _dwmManager.UnregisterTarget(_thumbnailId);
-        _thumbnailId = 0;
-    }
-
-    /// <summary>Clips DWM to center area (avoids top/bottom control bars). Controls overlay on top via z-index.</summary>
-    private void SyncThumbnailRect()
-    {
-        if (_dwmManager == null || _thumbnailId <= 0 || _isClosing) return;
-        double s = RenderScaling;
-        int w = Math.Max(1, (int)(Width * s));
-        int h = Math.Max(1, (int)(Height * s));
-
-        int topClip = 0;
-        int botClip = 0;
-        if (_controlsVisible)
-        {
-            topClip = (int)(48 * s);
-            botClip = (int)(36 * s);
-        }
-
-        _dwmManager.UpdateTarget(_thumbnailId, 255, true,
-            destLeft: 0, destTop: topClip, destRight: w, destBottom: h - botClip);
-    }
 
     private void ApplyAspectRatioConstraint()
     {
@@ -389,7 +295,7 @@ public partial class PipWindow : Window
         base.OnOpened(e);
         RestoreState();
         ApplyAspectRatioConstraint();
-        if (!TryRegisterMirror()) StartMirrorRetry();
+        UpdateVideoArea();
     }
 
     protected override void OnClosing(WindowClosingEventArgs e)
@@ -397,8 +303,6 @@ public partial class PipWindow : Window
         if (_isClosing) return;
         _isClosing = true;
         _hoverTimer?.Stop(); _hoverTimer = null;
-        StopMirrorRetry();
-        DisableDwmMirror();
         SaveState();
         base.OnClosing(e);
     }
@@ -419,7 +323,7 @@ public partial class PipWindow : Window
 
     public new void Close()
     {
-        if (!_isClosing) { _isClosing = true; _hoverTimer?.Stop(); _hoverTimer = null; StopMirrorRetry(); DisableDwmMirror(); SaveState(); }
+        if (!_isClosing) { _isClosing = true; _hoverTimer?.Stop(); _hoverTimer = null; SaveState(); }
         base.Close();
     }
 
@@ -454,7 +358,6 @@ public partial class PipWindow : Window
             }
             Position = new PixelPoint(state.X, state.Y); Width = state.W; Height = state.H;
             _isPinned = state.Pinned; Topmost = _isPinned;
-            if (PinIcon != null) PinIcon.Opacity = _isPinned ? 1.0 : 0.4;
         }
         catch { }
     }
@@ -514,7 +417,6 @@ public partial class PipWindow : Window
         _resizing = false;
         this.PointerMoved -= OnResizePointerMoved; this.PointerReleased -= OnResizePointerReleased;
         e.Pointer.Capture(null);
-        SyncThumbnailRect();
     }
 
     private void OnTopEdgePointerPressed(object? s, PointerPressedEventArgs e) => BeginResize(e, 4);

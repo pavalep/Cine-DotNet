@@ -4,13 +4,11 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Threading;
-using Cine.Avalonia.Views.Dialogs;
+using Cine.Avalonia.Helpers;
 using Cine.Media.Events;
 using App = global::Avalonia.Application;
-using Cine.Avalonia.Helpers;
 using AvaloniaLayout = Avalonia.Layout;
 using RoutedEventArgs = Avalonia.Interactivity.RoutedEventArgs;
-using ToolTip = Avalonia.Controls.ToolTip;
 
 namespace Cine.Avalonia;
 

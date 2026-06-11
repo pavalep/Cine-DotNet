@@ -6,27 +6,17 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Input;
-using Avalonia.Interactivity;
-using Avalonia.Media;
 using Avalonia.Threading;
 using Material.Icons;
 using Cine.Avalonia.Controls;
 using Cine.Avalonia.Helpers;
 using Cine.Avalonia.ViewModels;
-using Cine.Avalonia.Views.Dialogs;
 using Cine.Core;
 using Cine.Media.Interfaces;
+using Cine.Media.Implementations;
 using App = global::Avalonia.Application;
-using Button = Avalonia.Controls.Button;
 using Control = Avalonia.Controls.Control;
-using DragEventArgs = Avalonia.Input.DragEventArgs;
-using KeyEventArgs = Avalonia.Input.KeyEventArgs;
-using PointerEventArgs = Avalonia.Input.PointerEventArgs;
-using PointerWheelEventArgs = Avalonia.Input.PointerWheelEventArgs;
-using RoutedEventArgs = Avalonia.Interactivity.RoutedEventArgs;
 using SizeChangedEventArgs = Avalonia.Controls.SizeChangedEventArgs;
-using TextBlock = Avalonia.Controls.TextBlock;
 
 namespace Cine.Avalonia;
 
@@ -64,7 +54,6 @@ public partial class MainWindow
 
     // PIP / compact mini-player mode
     private PipService? _pipService;
-    private DwmThumbnailManager? _dwmManager;
 
     // Session save
     private DispatcherTimer? _sessionSaveTimer;
@@ -181,9 +170,9 @@ public partial class MainWindow
         if (_videoHost == null)
             throw new InvalidOperationException("VideoHost control was not found in MainWindow.axaml.");
 
-        // Initialize DWM thumbnail (sets up hidden window + registers thumbnail)
-        _videoHost.EnsureHiddenWindowCreated();
-        DebugLog("VideoHost hidden window created");
+        // Initialize D3D11 video host (creates child video HWND + D3D11 swap chain)
+        _videoHost.EnsureChildWindowCreated();
+        DebugLog("VideoHost child window created");
 
         ReportWindowState("MainWindow.OnWindowInitialized.AfterResolve");
 
@@ -343,9 +332,10 @@ public partial class MainWindow
         InitializeSessionSave();
         InitializeResponsiveLayout();
 
-        // Initialize PIP service and DWM thumbnail manager
-        _dwmManager = new DwmThumbnailManager();
-        _pipService = new PipService(_dwmManager);
+        // Initialize D3D11 video area sync
+        Dispatcher.UIThread.Post(() => SyncVideoRect(), DispatcherPriority.Render);
+        // Initialize PIP service (creates secondary mpv instance for PiP)
+        _pipService = new PipService(_playerService!);
 
         // Wire PIP player controls
         _headerBar.PipToggled += OnPipToggled;
@@ -399,9 +389,8 @@ public partial class MainWindow
 
         if (StartPage != null) StartPage.IsVisible = true;
 
-        // Create hidden window for mpv + register DWM thumbnail
-        _videoHost?.EnsureHiddenWindowCreated();
-        TryRegisterDwmThumbnail();
+        // Create child video HWND + D3D11 renderer
+        _videoHost?.EnsureChildWindowCreated();
 
         _headerBar.HideOpenMenu();
         _headerBar.HidePrimaryMenu();
@@ -519,30 +508,11 @@ public partial class MainWindow
         _viewModel?.SaveSession();
         _playerService?.Dispose();
         _pipService?.Dispose();
-        _dwmManager?.Dispose();
         base.OnClosed(e);
     }
 
-    private IntPtr? PlatformImplHandle()
-    {
-        try
-        {
-            var platformHandle = TryGetPlatformHandle();
-            if (platformHandle is { Handle: not 0 })
-            {
-                DebugLog($"TryGetPlatformHandle descriptor={platformHandle.HandleDescriptor}");
-                return platformHandle.Handle;
-            }
-        }
-        catch (Exception ex)
-        {
-            DebugLog($"TryGetPlatformHandle failed: {ex.Message}");
-        }
-        return IntPtr.Zero;
-    }
-
-    /// <summary>Updates DWM thumbnail rcDestination to video area only (between header and controls).</summary>
-    private void SyncThumbnailRect()
+    /// <summary>Updates the video child HWND position to fill the area between header and controls.</summary>
+    private void SyncVideoRect()
     {
         if (_videoHost == null) return;
 
@@ -569,47 +539,34 @@ public partial class MainWindow
         int headerPx = (int)(headerH * scale);
         int controlsPx = (int)(controlsH * scale);
 
-        _videoHost.SetThumbnailDestRect(
-            x, y + headerPx,
-            x + w, y + h - controlsPx);
+        // Position child video window in the area between header and controls
+        _videoHost.SetVideoArea(x, y + headerPx, w, h - headerPx - controlsPx);
     }
 
     protected override void OnSizeChanged(SizeChangedEventArgs e)
     {
         base.OnSizeChanged(e);
-        SyncThumbnailRect();
-    }
-
-    private void TryRegisterDwmThumbnail()
-    {
-        if (_dwmManager == null || _videoHost == null) return;
-
-        var handle = PlatformImplHandle();
-        if (handle.HasValue && handle.Value != IntPtr.Zero)
-        {
-            _videoHost.RegisterMainWindow(handle.Value, _dwmManager);
-            return;
-        }
-
-        Dispatcher.UIThread.Post(() =>
-        {
-            var h = PlatformImplHandle();
-            if (h.HasValue && h.Value != IntPtr.Zero)
-                _videoHost!.RegisterMainWindow(h.Value, _dwmManager!);
-        }, DispatcherPriority.Render);
+        SyncVideoRect();
     }
 
     private void OnVideoHostVideoWindowCreated(object? sender, EventArgs e)
     {
-        var videoHwnd = _videoHost?.VideoHwnd ?? IntPtr.Zero;
-        DebugLog($"OnVideoHostVideoWindowCreated hwnd=0x{videoHwnd:X}");
-        if (videoHwnd == IntPtr.Zero) return;
-        var player = _playerService?.Player;
-        if (player != null)
+        var player = _playerService?.Player as MpvPlayer;
+        if (player != null && _viewModel != null)
         {
-            DebugLog("Calling InitializeRenderer");
-            player.InitializeRenderer(videoHwnd);
-            DebugLog("InitializeRenderer returned");
+            try
+            {
+                // Try OpenGL render API (controls overlay naturally)
+                player.UseSoftwareRendering = _viewModel.RendererMode == MainViewModel.RendererType.Software;
+                player.InitializeRendererD3D11(IntPtr.Zero, IntPtr.Zero); // OpenGL doesn't need D3D11 params
+                DebugLog("InitializeRendererD3D11 (opengl) returned");
+            }
+            catch (Exception ex)
+            {
+                DebugLog($"OpenGL render init failed: {ex.Message} — falling back to wid");
+                if (_videoHost != null)
+                    player.InitializeRenderer(_videoHost.VideoHwnd);
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(_queuedOpenPath) && File.Exists(_queuedOpenPath))

@@ -1,26 +1,30 @@
 using System;
 using System.IO;
+using Avalonia.Threading;
 using Cine.Avalonia.Controls;
 using Cine.Core;
 using Cine.Avalonia.Views.Dialogs;
+using Cine.Media.Interfaces;
 
 namespace Cine.Avalonia.ViewModels;
 
 /// <summary>
 /// Manages PIP (Picture-in-Picture) lifecycle.
-/// Creates PipWindow and wires DWM thumbnail mirroring.
-/// Exposes player control events from the PipWindow.
+/// Creates a second mpv player and syncs it with the primary player.
+/// No DWM thumbnails are used — the secondary player renders directly to the PiP HWND.
 /// </summary>
 public class PipService : IDisposable
 {
     private PipWindow? _pipWindow;
+    private PipPlayerService? _pipPlayerService;
+    private PipSyncCoordinator? _syncCoordinator;
+    private readonly PlayerService _playerService;
     private bool _isActive;
     private bool _disposed;
-    private readonly DwmThumbnailManager _dwmManager;
 
-    public PipService(DwmThumbnailManager dwmManager)
+    public PipService(PlayerService playerService)
     {
-        _dwmManager = dwmManager ?? throw new ArgumentNullException(nameof(dwmManager));
+        _playerService = playerService ?? throw new ArgumentNullException(nameof(playerService));
     }
 
     /// <summary>Whether PIP mode is currently active.</summary>
@@ -28,6 +32,9 @@ public class PipService : IDisposable
 
     /// <summary>The active PipWindow, if any.</summary>
     public PipWindow? PipWindow => _pipWindow;
+
+    /// <summary>The secondary PiP player service, if active.</summary>
+    public PipPlayerService? PipPlayer => _pipPlayerService;
 
     /// <summary>Fires when the user clicks play/pause in the PIP window.</summary>
     public event EventHandler? PlayPauseRequested;
@@ -60,6 +67,8 @@ public class PipService : IDisposable
                 Log.ForContext<PipService>().Warning("EnterPip: stale _isActive=true, resetting");
                 _isActive = false;
                 _pipWindow = null;
+                _pipPlayerService = null;
+                _syncCoordinator = null;
             }
             else
             {
@@ -85,11 +94,71 @@ public class PipService : IDisposable
             _pipWindow.Show();
             try { File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] Show() returned{Environment.NewLine}"); } catch { }
 
-            // Wire DWM thumbnail mirroring (source already set by MainWindow)
-            var srcHwnd = _dwmManager.SourceHwnd;
-            try { File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] SourceHwnd=0x{srcHwnd:X}{Environment.NewLine}"); } catch { }
-            Log.ForContext<PipService>().Info("EnterPip: calling EnableDwmMirror, sourceHwnd=0x{0:X}", srcHwnd);
-            _pipWindow.EnableDwmMirror(_dwmManager);
+            // Get PiP window HWND for secondary player
+            var pipHwnd = _pipWindow.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
+            try { File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] PipWindow Hwnd=0x{pipHwnd:X}{Environment.NewLine}"); } catch { }
+
+            if (pipHwnd == IntPtr.Zero)
+            {
+                Log.ForContext<PipService>().Warning("EnterPip: PiP window HWND is zero");
+                try { File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] EnterPip: HWND is zero{Environment.NewLine}"); } catch { }
+                CleanupPip();
+                return null;
+            }
+
+            // Create secondary player rendering into PiP window
+            _pipPlayerService = new PipPlayerService();
+            _pipPlayerService.Error += (_, msg) =>
+            {
+                Log.ForContext<PipService>().Warning("PipPlayer: {0}", msg);
+                try { File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] PipPlayer error: {msg}{Environment.NewLine}"); } catch { }
+            };
+
+            if (!_pipPlayerService.Initialize(pipHwnd))
+            {
+                Log.ForContext<PipService>().Warning("EnterPip: failed to initialize PipPlayer");
+                try { File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] EnterPip: PipPlayer init failed{Environment.NewLine}"); } catch { }
+                CleanupPip();
+                return null;
+            }
+
+            // Open same file in secondary player and sync position
+            var primary = _playerService.Player;
+            var secondary = _pipPlayerService.Player;
+            if (primary != null && secondary != null)
+            {
+                var path = primary.CurrentPath;
+                if (!string.IsNullOrWhiteSpace(path))
+                {
+                    // Open file — Seek must wait for file to load (async in mpv)
+                    EventHandler? onSecondaryOpened = null;
+                    onSecondaryOpened = (_, _) =>
+                    {
+                        secondary.Opened -= onSecondaryOpened;
+                        secondary.Seek(primary.Position);
+                    };
+                    secondary.Opened += onSecondaryOpened;
+                    _pipPlayerService.Open(path);
+                }
+            }
+
+            // Create sync coordinator (mirrors play/pause/position from primary to secondary)
+            if (primary != null && secondary != null)
+            {
+                _syncCoordinator = new PipSyncCoordinator(primary, secondary);
+            }
+
+            // Wire video area resize (child HWND follows PipWindow layout)
+            _pipWindow.OnResizeVideoArea = (l, t, w, h) =>
+                _pipPlayerService?.ResizeVideoArea(l, t, w, h);
+
+            // Initial video area sizing
+            double s = _pipWindow.RenderScaling;
+            int pw = Math.Max(1, (int)(_pipWindow.Width * s));
+            int ph = Math.Max(1, (int)(_pipWindow.Height * s));
+            int topClip = (int)(40 * s);
+            int botClip = (int)(36 * s);
+            _pipPlayerService?.ResizeVideoArea(0, topClip, pw, ph - topClip - botClip);
 
             // Show controls initially, then auto-hide after 5s
             _pipWindow.ShowAllControls();
@@ -97,7 +166,7 @@ public class PipService : IDisposable
 
             _isActive = true;
             try { File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] EnterPip success{Environment.NewLine}"); } catch { }
-            Log.ForContext<PipService>().Info("EnterPip: success, hwnd=0x{0:X}", _pipWindow.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero);
+            Log.ForContext<PipService>().Info("EnterPip: success, hwnd=0x{0:X}", pipHwnd);
             return _pipWindow;
         }
         catch (Exception ex)
@@ -111,15 +180,37 @@ public class PipService : IDisposable
 
     public void ExitPip()
     {
-        if (!_isActive || _pipWindow == null) return;
-        _pipWindow.Close();
+        if (!_isActive) return;
+
+        // Stop sync first, then stop player
+        _syncCoordinator?.Dispose();
+        _syncCoordinator = null;
+
+        _pipPlayerService?.Stop();
+        _pipPlayerService?.Dispose();
+        _pipPlayerService = null;
+
+        if (_pipWindow != null)
+        {
+            _pipWindow.Closed -= OnPipWindowClosed;
+            try { _pipWindow.Close(); } catch { }
+            _pipWindow = null;
+        }
         _isActive = false;
     }
 
     private void OnPipWindowClosed(object? sender, EventArgs e)
     {
-        _isActive = false;
+        // Cleanup player and sync when user closes PiP window directly
+        _syncCoordinator?.Dispose();
+        _syncCoordinator = null;
+
+        _pipPlayerService?.Stop();
+        _pipPlayerService?.Dispose();
+        _pipPlayerService = null;
+
         _pipWindow = null;
+        _isActive = false;
         PipClosed?.Invoke(this, EventArgs.Empty);
     }
 
@@ -131,6 +222,14 @@ public class PipService : IDisposable
             try { _pipWindow.Close(); } catch { /* Window may already be disposed */ }
             _pipWindow = null;
         }
+
+        _syncCoordinator?.Dispose();
+        _syncCoordinator = null;
+
+        _pipPlayerService?.Stop();
+        _pipPlayerService?.Dispose();
+        _pipPlayerService = null;
+
         _isActive = false;
     }
 

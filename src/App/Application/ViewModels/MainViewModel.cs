@@ -583,6 +583,34 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         set { _isAudioNormalizationEnabled = value; OnPropertyChanged(); }
     }
 
+    /// <summary>
+    /// Renderer mode: Auto (default, tries D3D11 hardware, falls back to software),
+    /// Software (forces software rendering / no hwdec).
+    /// </summary>
+    public enum RendererType { Auto, Software }
+
+    private RendererType _rendererMode;
+    public RendererType RendererMode
+    {
+        get => _rendererMode;
+        set
+        {
+            if (_rendererMode == value) return;
+            _rendererMode = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsHardwareAccelerationEnabled));
+        }
+    }
+
+    public bool IsHardwareAccelerationEnabled
+    {
+        get => _rendererMode == RendererType.Auto;
+        set
+        {
+            RendererMode = value ? RendererType.Auto : RendererType.Software;
+        }
+    }
+
     private static double[] GetPreset(string name) => name switch
     {
         "Classical" => new[] { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -4.0, -4.0, -4.0, -6.0 },
@@ -615,6 +643,7 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
                 AudioTrackId = _currentAudioTrackId,
                 SubtitleDelay = _player.SubtitleDelay,
                 AudioDelay = _player.AudioDelay,
+                RendererMode = _rendererMode.ToString()
                 // P5.2: Window bounds saved by MainWindow before close
             };
             File.WriteAllText(SessionPath, JsonSerializer.Serialize(session));
@@ -657,6 +686,9 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
                 _player.SubtitleDelay = (float)subDelayEl.GetDouble();
             if (root.TryGetProperty("AudioDelay", out var audDelayEl))
                 _player.AudioDelay = (float)audDelayEl.GetDouble();
+            // Load renderer mode
+            if (root.TryGetProperty("RendererMode", out var rmEl) && Enum.TryParse<RendererType>(rmEl.GetString(), out var rm))
+                RendererMode = rm;
         }
         catch { /* Session save is best-effort */ }
     }

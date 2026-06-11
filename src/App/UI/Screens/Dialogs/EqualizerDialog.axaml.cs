@@ -2,10 +2,8 @@ using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Media;
 using AvaloniaLayout = Avalonia.Layout;
 using Cine.Avalonia.ViewModels;
-using Color = Avalonia.Media.Color;
 
 namespace Cine.Avalonia.Views.Dialogs;
 

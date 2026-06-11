@@ -12,8 +12,6 @@ using Cine.Avalonia.Helpers;
 using Cine.Media.Models;
 using AvaloniaLayout = Avalonia.Layout;
 using Button = global::Avalonia.Controls.Button;
-using Color = Avalonia.Media.Color;
-using Brushes = Avalonia.Media.Brushes;
 using Cursor = Avalonia.Input.Cursor;
 using PointerPressedEventArgs = Avalonia.Input.PointerPressedEventArgs;
 using PointerWheelEventArgs = Avalonia.Input.PointerWheelEventArgs;

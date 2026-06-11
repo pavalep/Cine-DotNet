@@ -6,8 +6,6 @@ using Avalonia.Input;
 using Avalonia.Media;
 using AvaloniaLayout = Avalonia.Layout;
 using Button = Avalonia.Controls.Button;
-using Color = Avalonia.Media.Color;
-using Brushes = Avalonia.Media.Brushes;
 using Cursor = Avalonia.Input.Cursor;
 using KeyEventArgs = Avalonia.Input.KeyEventArgs;
 using PointerWheelEventArgs = Avalonia.Input.PointerWheelEventArgs;
@@ -330,7 +328,7 @@ public partial class MainWindow
             VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center
         };
         stack.Children.Add(aspectLabel);
-        var aspectRatios = new[] { ("Original", -1.0), ("16:9", 1.7778), ("4:3", 1.3333), ("2.35:1", 2.35) };
+        var aspectRatios = new[] { ("Original", -1.0), ("16:9", 1.7778), ("16:10", 1.6), ("4:3", 1.3333), ("2.35:1", 2.35) };
         foreach (var (label, ratio) in aspectRatios)
         {
             AddItem("", label, "", () => _viewModel?.SetAspectRatio(ratio));

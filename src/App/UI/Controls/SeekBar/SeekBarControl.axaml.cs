@@ -3,7 +3,6 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Markup.Xaml;
 using Cine.Avalonia.ViewModels;
 using PointerEventArgs = Avalonia.Input.PointerEventArgs;
 using PointerPressedEventArgs = Avalonia.Input.PointerPressedEventArgs;
