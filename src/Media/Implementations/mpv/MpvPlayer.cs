@@ -56,6 +56,8 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
     private static readonly MpvRenderNative.mpv_get_proc_address_fn _glGetProcCb = GlGetProcAddressCallback;
     // eglGetProcAddress has a different signature: void*(const char*)
     private static GetProcAddressDelegate? _eglGetProcAddrCb;
+    // Global EGL context created once, shared by all mpv instances
+    private static AngleGlContext? _sharedGlContext;
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate IntPtr GetProcAddressDelegate(IntPtr name);
@@ -956,10 +958,20 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
 
             // No vo — render API replaces the VO entirely.
             // Options: vo=null so mpv doesn't create a standalone window.
-            // mpv_render_context_create handles the GL context + rendering.
             var options = MpvConfig.GetRenderApiOptions();
             foreach (var kv in options)
                 SetOptionString(kv.Key, kv.Value);
+
+            // Create shared EGL context on first call (before render context creation)
+            lock (_angleLock)
+            {
+                if (_sharedGlContext == null)
+                {
+                    System.Diagnostics.Debug.WriteLine("Creating shared ANGLE EGL context...");
+                    _sharedGlContext = new AngleGlContext();
+                    _sharedGlContext.MakeCurrent();
+                }
+            }
 
             // Per render.h docs: Create render context BEFORE mpv_initialize.
             // mpv_render_context_create replaces the default VO.

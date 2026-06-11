@@ -1,0 +1,74 @@
+using System;
+using System.Runtime.InteropServices;
+
+namespace Cine.Media.Implementations;
+
+/// <summary>
+/// P/Invoke bindings for ANGLE EGL (libEGL.dll).
+/// Used to create an OpenGL ES context that mpv can bind to.
+/// </summary>
+public static class AngleInterop
+{
+    private const string LibEgl = "libEGL.dll";
+
+    // EGL constants
+    public const int EGL_SUCCESS = 0;
+    public const IntPtr EGL_NO_DISPLAY = 0;
+    public const IntPtr EGL_NO_SURFACE = 0;
+    public const IntPtr EGL_NO_CONTEXT = 0;
+    public const int EGL_CONTEXT_CLIENT_VERSION = 0x3098;
+    public const int EGL_OPENGL_ES2_BIT = 0x0004;
+    public const int EGL_SURFACE_TYPE = 0x3033;
+    public const int EGL_RENDERABLE_TYPE = 0x3040;
+    public const int EGL_NONE = 0x3000;
+
+    [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
+    public static extern IntPtr eglGetDisplay(IntPtr display_id);
+
+    [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
+    public static extern int eglInitialize(IntPtr dpy, out int major, out int minor);
+
+    [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Ansi)]
+    public static extern IntPtr eglGetProcAddress(string procname);
+
+    [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
+    public static extern int eglChooseConfig(
+        IntPtr dpy,
+        int[] attrib_list,
+        [Out] IntPtr[] configs,
+        int config_size,
+        out int num_config);
+
+    [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
+    public static extern int eglCreateWindowSurface(
+        IntPtr dpy,
+        IntPtr config,
+        IntPtr win,
+        int[] attrib_list);
+
+    [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
+    public static extern IntPtr eglCreateContext(
+        IntPtr dpy,
+        IntPtr config,
+        IntPtr share_context,
+        int[] attrib_list);
+
+    [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
+    public static extern int eglMakeCurrent(
+        IntPtr dpy,
+        IntPtr draw,
+        IntPtr read,
+        IntPtr ctx);
+
+    [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
+    public static extern int eglDestroyContext(IntPtr dpy, IntPtr ctx);
+
+    [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
+    public static extern int eglDestroySurface(IntPtr dpy, IntPtr surface);
+
+    [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
+    public static extern int eglTerminate(IntPtr dpy);
+
+    [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
+    public static extern int eglGetError();
+}
