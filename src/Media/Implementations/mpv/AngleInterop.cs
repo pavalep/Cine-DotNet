@@ -37,19 +37,19 @@ public static class AngleInterop
     public const int EGL_OPENGL_ES_API = 0x30A0;
     public const int EGL_OPENGL_ES3_BIT = 0x0040;
 
-    [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
+    [DllImport(LibEgl, CallingConvention = CallingConvention.Cdecl)]
     public static extern IntPtr eglGetDisplay(IntPtr display_id);
 
-    [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
+    [DllImport(LibEgl, CallingConvention = CallingConvention.Cdecl)]
     public static extern int eglInitialize(IntPtr dpy, out int major, out int minor);
 
-    [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
+    [DllImport(LibEgl, CallingConvention = CallingConvention.Cdecl)]
     public static extern int eglBindAPI(int api);
 
-    [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Ansi)]
+    [DllImport(LibEgl, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
     public static extern IntPtr eglGetProcAddress(string procname);
 
-    [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
+    [DllImport(LibEgl, CallingConvention = CallingConvention.Cdecl)]
     public static extern int eglChooseConfig(
         IntPtr dpy,
         [In] int[]? attrib_list,
@@ -57,55 +57,55 @@ public static class AngleInterop
         int config_size,
         out int num_config);
 
-    [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
+    [DllImport(LibEgl, CallingConvention = CallingConvention.Cdecl)]
     public static extern int eglGetConfigs(
         IntPtr dpy,
         [Out] IntPtr[]? configs,
         int config_size,
         out int num_config);
 
-    [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
+    [DllImport(LibEgl, CallingConvention = CallingConvention.Cdecl)]
     public static extern int eglCreateWindowSurface(
         IntPtr dpy,
         IntPtr config,
         IntPtr win,
         int[] attrib_list);
 
-    [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
+    [DllImport(LibEgl, CallingConvention = CallingConvention.Cdecl)]
     public static extern IntPtr eglCreatePbufferSurface(
         IntPtr dpy,
         IntPtr config,
         [In] int[]? attrib_list);
 
-    [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
+    [DllImport(LibEgl, CallingConvention = CallingConvention.Cdecl)]
     public static extern IntPtr eglCreateContext(
         IntPtr dpy,
         IntPtr config,
         IntPtr share_context,
         [In] int[]? attrib_list);
 
-    [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
+    [DllImport(LibEgl, CallingConvention = CallingConvention.Cdecl)]
     public static extern int eglMakeCurrent(
         IntPtr dpy,
         IntPtr draw,
         IntPtr read,
         IntPtr ctx);
 
-    [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
+    [DllImport(LibEgl, CallingConvention = CallingConvention.Cdecl)]
     public static extern int eglDestroyContext(IntPtr dpy, IntPtr ctx);
 
-    [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
+    [DllImport(LibEgl, CallingConvention = CallingConvention.Cdecl)]
     public static extern int eglDestroySurface(IntPtr dpy, IntPtr surface);
 
-    [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
+    [DllImport(LibEgl, CallingConvention = CallingConvention.Cdecl)]
     public static extern int eglTerminate(IntPtr dpy);
 
-    [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
+    [DllImport(LibEgl, CallingConvention = CallingConvention.Cdecl)]
     public static extern int eglGetError();
 
-    [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
+    [DllImport(LibEgl, CallingConvention = CallingConvention.Cdecl)]
     public static extern int eglSwapBuffers(IntPtr dpy, IntPtr surface);
 
-    [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
+    [DllImport(LibEgl, CallingConvention = CallingConvention.Cdecl)]
     public static extern int eglQuerySurface(IntPtr dpy, IntPtr surface, int attribute, out int value);
 }

@@ -9,6 +9,7 @@ Release/
 publish/
 resources/
 video/
+reference/
 
 # IDE files
 .vs/
