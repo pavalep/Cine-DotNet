@@ -5,6 +5,8 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Avalonia.Threading;
 using Cine.Avalonia.Helpers;
 using KeyEventArgs = Avalonia.Input.KeyEventArgs;
@@ -23,6 +25,7 @@ public partial class PipWindow : Window
     private double _seekNormalized;
     private double _aspectRatio = 16.0 / 9.0;
     private bool _isApplyingAspectRatio;
+    private WriteableBitmap? _pipFrameBitmap;
 
     // Auto-hide
     private DispatcherTimer? _hoverTimer;
@@ -36,12 +39,6 @@ public partial class PipWindow : Window
     public event EventHandler? PlayPauseRequested;
     public event EventHandler<double>? SeekRequested;
     public event EventHandler? MuteToggled;
-
-    /// <summary>
-    /// Called when the video area needs resizing (window size changed).
-    /// Args: left, top, width, height in physical pixels (scaled).
-    /// </summary>
-    public Action<int, int, int, int>? OnResizeVideoArea;
 
     // ────── State persistence ──────
     private static readonly string PipStatePath = Path.Combine(
@@ -61,22 +58,7 @@ public partial class PipWindow : Window
         this.SizeChanged += (_, _) =>
         {
             if (!_isApplyingAspectRatio) ApplyAspectRatioConstraint();
-            UpdateVideoArea();
         };
-    }
-
-    /// <summary>Computes the video area rectangle (avoiding control zones).
-    /// The video child HWND is positioned in the non-control area.</summary>
-    private void UpdateVideoArea()
-    {
-        if (OnResizeVideoArea == null) return;
-        double s = RenderScaling;
-        int w = Math.Max(1, (int)(Width * s));
-        int h = Math.Max(1, (int)(Height * s));
-        // Controls occupy ~40px top bar and ~36px bottom bar
-        int topClip = (int)(40 * s);
-        int botClip = (int)(36 * s);
-        OnResizeVideoArea(0, topClip, w, h - topClip - botClip);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -254,6 +236,51 @@ public partial class PipWindow : Window
             MuteIcon.Kind = muted ? Material.Icons.MaterialIconKind.VolumeOff : Material.Icons.MaterialIconKind.VolumeHigh;
     }
 
+    /// <summary>
+    /// Update the video frame displayed in the PiP window.
+    /// Called from the UI dispatcher thread. Data is BGRA byte array.
+    /// </summary>
+    public void UpdateFrame(byte[] pixels, int width, int height)
+    {
+        try
+        {
+            var image = PipVideoFrame;
+            if (image == null) return;
+
+            // Create or resize bitmap
+            if (_pipFrameBitmap == null || _pipFrameBitmap.PixelSize.Width != width || _pipFrameBitmap.PixelSize.Height != height)
+            {
+                _pipFrameBitmap?.Dispose();
+                _pipFrameBitmap = new WriteableBitmap(
+                    new PixelSize(width, height),
+                    new Vector(96, 96),
+                    PixelFormat.Bgra8888,
+                    AlphaFormat.Opaque);
+            }
+
+            // Copy frame data to bitmap
+            using (var fb = _pipFrameBitmap.Lock())
+            {
+                int stride = width * 4;
+                int srcStride = width * 4;
+                for (int y = 0; y < height; y++)
+                {
+                    System.Runtime.InteropServices.Marshal.Copy(
+                        pixels, y * srcStride,
+                        fb.Address + y * stride,
+                        srcStride);
+                }
+            }
+
+            image.Source = _pipFrameBitmap;
+            image.IsVisible = true;
+        }
+        catch
+        {
+            // Silently skip bad frames
+        }
+    }
+
     public void SetPlayingState(bool isPlaying)
     {
         _isPlaying = isPlaying;
@@ -295,7 +322,6 @@ public partial class PipWindow : Window
         base.OnOpened(e);
         RestoreState();
         ApplyAspectRatioConstraint();
-        UpdateVideoArea();
     }
 
     protected override void OnClosing(WindowClosingEventArgs e)

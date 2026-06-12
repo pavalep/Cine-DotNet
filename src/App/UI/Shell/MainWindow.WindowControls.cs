@@ -20,7 +20,6 @@ public partial class MainWindow
         {
             isFullscreen = e.IsFullscreen,
             beforeWindowState = WindowState.ToString(),
-            videoHostBounds = _videoHost?.Bounds.ToString(),
             renderScaling = RenderScaling
         }, runId: "pre-fix");
         Dispatcher.UIThread.OnUiThread(() =>

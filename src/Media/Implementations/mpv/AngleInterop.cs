@@ -20,7 +20,22 @@ public static class AngleInterop
     public const int EGL_OPENGL_ES2_BIT = 0x0004;
     public const int EGL_SURFACE_TYPE = 0x3033;
     public const int EGL_RENDERABLE_TYPE = 0x3040;
-    public const int EGL_NONE = 0x3000;
+    public const int EGL_NONE = 0x3038;
+    public const int EGL_PBUFFER_BIT = 0x0001;
+    public const int EGL_WIDTH = 0x3057;
+    public const int EGL_HEIGHT = 0x3058;
+    public const int EGL_RED_SIZE = 0x3024;
+    public const int EGL_GREEN_SIZE = 0x3023;
+    public const int EGL_BLUE_SIZE = 0x3022;
+    public const int EGL_ALPHA_SIZE = 0x3021;
+    public const int EGL_DEPTH_SIZE = 0x3025;
+    public const int EGL_STENCIL_SIZE = 0x3026;
+    public const int EGL_SAMPLES = 0x3041;
+    public const int EGL_CONFIG_ID = 0x3028;
+
+    // EGL API constants
+    public const int EGL_OPENGL_ES_API = 0x30A0;
+    public const int EGL_OPENGL_ES3_BIT = 0x0040;
 
     [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
     public static extern IntPtr eglGetDisplay(IntPtr display_id);
@@ -28,14 +43,24 @@ public static class AngleInterop
     [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
     public static extern int eglInitialize(IntPtr dpy, out int major, out int minor);
 
+    [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
+    public static extern int eglBindAPI(int api);
+
     [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Ansi)]
     public static extern IntPtr eglGetProcAddress(string procname);
 
     [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
     public static extern int eglChooseConfig(
         IntPtr dpy,
-        int[] attrib_list,
-        [Out] IntPtr[] configs,
+        [In] int[]? attrib_list,
+        [Out] IntPtr[]? configs,
+        int config_size,
+        out int num_config);
+
+    [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
+    public static extern int eglGetConfigs(
+        IntPtr dpy,
+        [Out] IntPtr[]? configs,
         int config_size,
         out int num_config);
 
@@ -47,11 +72,17 @@ public static class AngleInterop
         int[] attrib_list);
 
     [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
+    public static extern IntPtr eglCreatePbufferSurface(
+        IntPtr dpy,
+        IntPtr config,
+        [In] int[]? attrib_list);
+
+    [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
     public static extern IntPtr eglCreateContext(
         IntPtr dpy,
         IntPtr config,
         IntPtr share_context,
-        int[] attrib_list);
+        [In] int[]? attrib_list);
 
     [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
     public static extern int eglMakeCurrent(
@@ -71,4 +102,10 @@ public static class AngleInterop
 
     [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
     public static extern int eglGetError();
+
+    [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
+    public static extern int eglSwapBuffers(IntPtr dpy, IntPtr surface);
+
+    [DllImport(LibEgl, CallingConvention = CallingConvention.StdCall)]
+    public static extern int eglQuerySurface(IntPtr dpy, IntPtr surface, int attribute, out int value);
 }

@@ -18,22 +18,9 @@ public partial class MainWindow
     {
         await Dispatcher.UIThread.OnUiThreadAsync(() =>
         {
-            #region debug-point VT-A
-            App.DebugReport("VT", "MainWindow.OnMediaOpened", "Opened event received.", new
-            {
-                windowState = WindowState.ToString(),
-                startPageVisible = StartPage?.IsVisible,
-                videoSurfaceVisible = _videoHost?.IsVideoSurfaceVisible,
-                videoHostBounds = _videoHost?.Bounds.ToString(),
-                renderScaling = RenderScaling
-            }, runId: "pre-fix");
-            #endregion
             _viewModel?.RefreshState();
             _isLoading = false;
             _spinnerOverlay.Stop();
-
-            // Show video surface now that media is loaded
-            _videoHost?.ShowVideoSurface();
 
             // Clear replay mode when new media opens
             _controlsBox.SetReplayMode(false);
@@ -64,27 +51,8 @@ public partial class MainWindow
             if (_dropIndicator.IsShowing)
                 _ = _dropIndicator.Hide();
 
-            if (_videoHost != null)
-            {
-                // Resize hidden window to match actual video dimensions
-                var player = _playerService?.Player;
-                if (player != null)
-                {
-                    player.GetVideoSize(out int vw, out int vh);
-                    _videoHost.SetVideoSize(vw, vh);
-                }
-
-                _videoHost.IsVideoSurfaceVisible = true;
-                _videoHost.Opacity = 1;
-                SyncVideoRect();
-
-                DebugLog($"OnMediaOpened VideoHost: Opacity={_videoHost.Opacity} IsVisible={_videoHost.IsVisible} Bounds={_videoHost.Bounds}");
-            }
-
-            // Layer stack dump
-            DebugLog($"OnMediaOpened layers: StartPage.Visible={StartPage?.IsVisible} StartPage.Opacity={StartPage?.Opacity} " +
-                     $"dropIndicator.Showing={_dropIndicator.IsShowing} VideoHost.Opacity={_videoHost?.Opacity} " +
-                     $"VideoHost.Visible={_videoHost?.IsVisible}");
+            // Video is displayed via the OpenGL render API (ANGLE + pixel readback
+            // to VideoFrameImage). No child HWND or video host needed.
 
             // Delay controls appearance to avoid overlap with fading start page.
             // ShowUiControls calls InvalidateMeasure() to ensure correct height.
@@ -117,15 +85,6 @@ public partial class MainWindow
 
     private void OnPlaybackStateChanged(object? sender, PlaybackStateChangedEventArgs e)
     {
-        #region debug-point VT-B
-        App.DebugReport("VT", "MainWindow.OnPlaybackStateChanged", "PlaybackStateChangedEvent.", new
-        {
-            isPaused = e.IsPaused,
-            windowState = WindowState.ToString(),
-            videoSurfaceVisible = _videoHost?.IsVideoSurfaceVisible,
-            videoHostBounds = _videoHost?.Bounds.ToString()
-        }, runId: "pre-fix");
-        #endregion
         Dispatcher.UIThread.OnUiThread(() =>
         {
             // Clear replay mode when playback resumes (either by user click or auto)
@@ -146,10 +105,6 @@ public partial class MainWindow
             {
                 _replayOverlay.Show();
             }
-
-            // Hide video surface when fully stopped with no file (user closed video)
-            if (e.State == PlaybackState.Stopped && _viewModel?.FilePath == null)
-                _videoHost?.HideVideoSurface();
 
             _controlsBox.UpdatePlayPauseIcon();
 

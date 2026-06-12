@@ -77,7 +77,12 @@ public static class MpvConfig
 
     /// <summary>
     /// Options for the OpenGL render API path.
-    /// vo=null — no standalone VO, mpv_render_context_create handles output.
+    /// vo=libmpv is REQUIRED — this tells mpv to use the libmpv video output
+    /// that works with mpv_render_context_create/mpv_render_context_render.
+    /// Without it the render update callback will never fire.
+    /// gpu-context and gpu-api are NOT set because we create our OWN ANGLE/GL
+    /// context externally and pass it to mpv via get_proc_address.
+    /// No wid — we don't need a child HWND.
     /// </summary>
     public static Dictionary<string, string> GetRenderApiOptions()
     {
@@ -89,7 +94,7 @@ public static class MpvConfig
             ["keep-open-pause"] = "no",
             ["osc"] = "no",
             ["hwdec"] = "no",
-            ["vo"] = "null",  // Render API handles output
+            ["vo"] = "libmpv",         // REQUIRED: Enables libmpv VO for render API
             ["volume-max"] = "150"
         };
     }

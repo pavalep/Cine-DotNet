@@ -6,6 +6,8 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Avalonia.Threading;
 using Material.Icons;
 using Cine.Avalonia.Controls;
@@ -24,7 +26,7 @@ public partial class MainWindow
 {
     private PlayerService? _playerService;
     private MainViewModel? _viewModel;
-    private D3D11VideoHost? _videoHost;
+    private WriteableBitmap? _frameBitmap;
     private string? _queuedOpenPath;
     private TimeSpan _sessionResumePosition;
 
@@ -105,7 +107,6 @@ public partial class MainWindow
         {
             var startPage = this.FindControl<Control>("StartPage");
             var mainOverlay = this.FindControl<Control>("MainOverlay");
-            var videoHost = this.FindControl<Control>("VideoHost");
             App.DebugReport(hypothesisId, location, "Window startup state snapshot.", new
             {
                 title = Title,
@@ -117,9 +118,7 @@ public partial class MainWindow
                 height = Bounds.Height,
                 contentType = Content?.GetType().FullName,
                 startPageFound = startPage is not null,
-                startPageVisible = startPage?.IsVisible,
-                videoHostFound = videoHost is not null,
-                videoHostVisible = videoHost?.IsVisible
+                startPageVisible = startPage?.IsVisible
             });
         }
         catch (Exception ex) { Log.ForContext<MainWindow>().Error(ex, "DumpState failed"); }
@@ -156,7 +155,6 @@ public partial class MainWindow
         DebugLog("OnWindowInitialized start");
 
         // Resolve component references
-        _videoHost = VideoHost;
         _headerBar = HeaderBarControl;
         _controlsBox = ControlsBoxControl;
         _fullscreenHeader = FullscreenHeaderControl;
@@ -165,14 +163,6 @@ public partial class MainWindow
         _replayOverlay = ReplayOverlay;
         _dropIndicator = DropIndicatorOverlay;
         _osdNotification = OsdNotificationControl;
-
-        DebugLog($"VideoHost resolved null={_videoHost is null}");
-        if (_videoHost == null)
-            throw new InvalidOperationException("VideoHost control was not found in MainWindow.axaml.");
-
-        // Initialize D3D11 video host (creates child video HWND + D3D11 swap chain)
-        _videoHost.EnsureChildWindowCreated();
-        DebugLog("VideoHost child window created");
 
         ReportWindowState("MainWindow.OnWindowInitialized.AfterResolve");
 
@@ -270,11 +260,26 @@ public partial class MainWindow
             });
         };
 
-        _videoHost.VideoWindowCreated += OnVideoHostVideoWindowCreated;
-        // Hidden window may already be created (from AttachedToVisualTree during AXAML parsing).
-        // If so, fire the handler now so mpv gets its HWND.
-        if (_videoHost.VideoHwnd != IntPtr.Zero)
-            OnVideoHostVideoWindowCreated(this, EventArgs.Empty);
+        // Initialize OpenGL render API (no fallback — this MUST succeed)
+        try
+        {
+            InitVideoRenderer();
+        }
+        catch (Exception ex)
+        {
+            DebugLog($"InitVideoRenderer FAILED: {ex}");
+            _isDisposed = true;
+            _ = Dispatcher.UIThread.OnUiThreadAsync(async () =>
+            {
+                await ShowErrorDialog("Video renderer initialization failed.",
+                    "The OpenGL render API could not be initialized.\n" +
+                    "This usually means ANGLE (libEGL.dll/libGLESv2.dll) was not found.\n" +
+                    $"Details: {ex.Message}");
+                Close();
+            });
+            return;
+        }
+
         KeyDown += OnKeyDown;
 
         // Pointer events on transparent overlay (topmost, catches all mouse activity)
@@ -332,8 +337,6 @@ public partial class MainWindow
         InitializeSessionSave();
         InitializeResponsiveLayout();
 
-        // Initialize D3D11 video area sync
-        Dispatcher.UIThread.Post(() => SyncVideoRect(), DispatcherPriority.Render);
         // Initialize PIP service (creates secondary mpv instance for PiP)
         _pipService = new PipService(_playerService!);
 
@@ -389,13 +392,9 @@ public partial class MainWindow
 
         if (StartPage != null) StartPage.IsVisible = true;
 
-        // Create child video HWND + D3D11 renderer
-        _videoHost?.EnsureChildWindowCreated();
-
         _headerBar.HideOpenMenu();
         _headerBar.HidePrimaryMenu();
         _headerBar.SetPipVisibility(false);
-        if (VideoHost != null) VideoHost.IsVideoSurfaceVisible = false;
         if (_controlsBox != null) _controlsBox.SetControlsVisibility(false);
 
         // Show header bar only (window controls + title), not playback controls.
@@ -511,70 +510,83 @@ public partial class MainWindow
         base.OnClosed(e);
     }
 
-    /// <summary>Updates the video child HWND position to fill the area between header and controls.</summary>
-    private void SyncVideoRect()
-    {
-        if (_videoHost == null) return;
-
-        var pt = _videoHost.TranslatePoint(new global::Avalonia.Point(0, 0), this);
-        if (pt == null) return;
-
-        double scale = RenderScaling;
-        int x = (int)(pt.Value.X * scale);
-        int y = (int)(pt.Value.Y * scale);
-        int w = (int)(_videoHost.Bounds.Width * scale);
-        int h = (int)(_videoHost.Bounds.Height * scale);
-
-        // Measure actual header + controls heights at runtime
-        double headerH = _uiVisible
-            ? (_viewModel?.IsFullscreen == true
-                ? _fullscreenHeader.Bounds.Height
-                : _headerBar.Bounds.Height)
-            : 0;
-        double controlsH = _uiVisible ? _controlsBox.Bounds.Height : 0;
-
-        if (headerH <= 0) headerH = _viewModel?.IsFullscreen == true ? 44 : 56;
-        if (controlsH <= 0) controlsH = 84;
-
-        int headerPx = (int)(headerH * scale);
-        int controlsPx = (int)(controlsH * scale);
-
-        // Position child video window in the area between header and controls
-        _videoHost.SetVideoArea(x, y + headerPx, w, h - headerPx - controlsPx);
-    }
-
     protected override void OnSizeChanged(SizeChangedEventArgs e)
     {
         base.OnSizeChanged(e);
-        SyncVideoRect();
     }
 
-    private void OnVideoHostVideoWindowCreated(object? sender, EventArgs e)
+    private void InitVideoRenderer()
     {
         var player = _playerService?.Player as MpvPlayer;
-        if (player != null && _viewModel != null)
+        if (player == null || _viewModel == null)
+        {
+            DebugLog("InitVideoRenderer: player or viewModel is null");
+            return;
+        }
+
+        DebugLog("InitVideoRenderer: starting OpenGL render API init");
+        player.UseSoftwareRendering = _viewModel.RendererMode == MainViewModel.RendererType.Software;
+        player.InitializeRendererOpenGL();
+        DebugLog("InitVideoRenderer: OpenGL render API initialized");
+
+        // Wire frame rendering to the Image control
+        player.FrameRendered += OnPlayerFrameRendered;
+    }
+
+    private void OnPlayerFrameRendered(byte[] pixels, int width, int height)
+    {
+        if (pixels == null || width <= 0 || height <= 0)
+        {
+            System.Diagnostics.Debug.WriteLine($"FrameRendered: invalid frame ({width}x{height})");
+            return;
+        }
+        if (System.Diagnostics.Debugger.IsAttached)
+            System.Diagnostics.Debug.WriteLine($"FrameRendered: {width}x{height} pixels={pixels.Length}");
+        Dispatcher.UIThread.Post(() =>
         {
             try
             {
-                // Try OpenGL render API (controls overlay naturally)
-                player.UseSoftwareRendering = _viewModel.RendererMode == MainViewModel.RendererType.Software;
-                player.InitializeRendererD3D11(IntPtr.Zero, IntPtr.Zero); // OpenGL doesn't need D3D11 params
-                DebugLog("InitializeRendererD3D11 (opengl) returned");
+                var image = VideoFrameImage;
+                if (image == null)
+                {
+                    System.Diagnostics.Debug.WriteLine("FrameRendered: VideoFrameImage is null");
+                    return;
+                }
+
+                // Create or resize bitmap
+                if (_frameBitmap == null || _frameBitmap.PixelSize.Width != width || _frameBitmap.PixelSize.Height != height)
+                {
+                    System.Diagnostics.Debug.WriteLine($"FrameRendered: creating/replacing bitmap ({width}x{height})");
+                    _frameBitmap?.Dispose();
+                    _frameBitmap = new WriteableBitmap(
+                        new global::Avalonia.PixelSize(width, height),
+                        new global::Avalonia.Vector(96, 96),
+                        global::Avalonia.Platform.PixelFormat.Bgra8888,
+                        global::Avalonia.Platform.AlphaFormat.Opaque);
+                }
+
+                // Copy frame data to bitmap
+                using (var fb = _frameBitmap.Lock())
+                {
+                    int stride = width * 4;
+                    int srcStride = width * 4;
+                    for (int y = 0; y < height; y++)
+                    {
+                        System.Runtime.InteropServices.Marshal.Copy(
+                            pixels, y * srcStride,
+                            fb.Address + y * stride,
+                            srcStride);
+                    }
+                }
+
+                image.Source = _frameBitmap;
+                image.IsVisible = true;
             }
             catch (Exception ex)
             {
-                DebugLog($"OpenGL render init failed: {ex.Message} — falling back to wid");
-                if (_videoHost != null)
-                    player.InitializeRenderer(_videoHost.VideoHwnd);
+                System.Diagnostics.Debug.WriteLine($"FrameRendered error: {ex.Message}");
             }
-        }
-
-        if (!string.IsNullOrWhiteSpace(_queuedOpenPath) && File.Exists(_queuedOpenPath))
-        {
-            var path = _queuedOpenPath;
-            _queuedOpenPath = null;
-            Dispatcher.UIThread.OnUiThread(() => _viewModel?.OpenFile(path));
-        }
+        }, DispatcherPriority.Render);
     }
 
     private PropertyWatcher? _propertyWatcher;
@@ -662,7 +674,6 @@ public partial class MainWindow
                     _headerBar.HideOpenMenu();
                     _headerBar.HidePrimaryMenu();
                     _headerBar.SetPipVisibility(false);
-                    if (VideoHost != null) VideoHost.IsVideoSurfaceVisible = false;
                     _headerBar.SetTitle("Cine");
                     // ShowUiControls should NOT be called here — when file closes,
                     // controls should stay hidden since StartPage covers them.

@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using Avalonia.Threading;
-using Cine.Avalonia.Controls;
 using Cine.Core;
 using Cine.Avalonia.Views.Dialogs;
 using Cine.Media.Interfaces;
@@ -11,7 +10,7 @@ namespace Cine.Avalonia.ViewModels;
 /// <summary>
 /// Manages PIP (Picture-in-Picture) lifecycle.
 /// Creates a second mpv player and syncs it with the primary player.
-/// No DWM thumbnails are used — the secondary player renders directly to the PiP HWND.
+/// Both players use the OpenGL render API via ANGLE.
 /// </summary>
 public class PipService : IDisposable
 {
@@ -94,19 +93,7 @@ public class PipService : IDisposable
             _pipWindow.Show();
             try { File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] Show() returned{Environment.NewLine}"); } catch { }
 
-            // Get PiP window HWND for secondary player
-            var pipHwnd = _pipWindow.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
-            try { File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] PipWindow Hwnd=0x{pipHwnd:X}{Environment.NewLine}"); } catch { }
-
-            if (pipHwnd == IntPtr.Zero)
-            {
-                Log.ForContext<PipService>().Warning("EnterPip: PiP window HWND is zero");
-                try { File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] EnterPip: HWND is zero{Environment.NewLine}"); } catch { }
-                CleanupPip();
-                return null;
-            }
-
-            // Create secondary player rendering into PiP window
+            // Create secondary player using the OpenGL render API
             _pipPlayerService = new PipPlayerService();
             _pipPlayerService.Error += (_, msg) =>
             {
@@ -114,13 +101,19 @@ public class PipService : IDisposable
                 try { File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] PipPlayer error: {msg}{Environment.NewLine}"); } catch { }
             };
 
-            if (!_pipPlayerService.Initialize(pipHwnd))
+            if (!_pipPlayerService.Initialize())
             {
                 Log.ForContext<PipService>().Warning("EnterPip: failed to initialize PipPlayer");
                 try { File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] EnterPip: PipPlayer init failed{Environment.NewLine}"); } catch { }
                 CleanupPip();
                 return null;
             }
+
+            // Wire frame rendering from secondary player to PipWindow
+            _pipPlayerService.FrameRendered += (pixels, w, h) =>
+            {
+                Dispatcher.UIThread.Post(() => _pipWindow?.UpdateFrame(pixels, w, h), DispatcherPriority.Render);
+            };
 
             // Open same file in secondary player and sync position
             var primary = _playerService.Player;
@@ -148,25 +141,13 @@ public class PipService : IDisposable
                 _syncCoordinator = new PipSyncCoordinator(primary, secondary);
             }
 
-            // Wire video area resize (child HWND follows PipWindow layout)
-            _pipWindow.OnResizeVideoArea = (l, t, w, h) =>
-                _pipPlayerService?.ResizeVideoArea(l, t, w, h);
-
-            // Initial video area sizing
-            double s = _pipWindow.RenderScaling;
-            int pw = Math.Max(1, (int)(_pipWindow.Width * s));
-            int ph = Math.Max(1, (int)(_pipWindow.Height * s));
-            int topClip = (int)(40 * s);
-            int botClip = (int)(36 * s);
-            _pipPlayerService?.ResizeVideoArea(0, topClip, pw, ph - topClip - botClip);
-
             // Show controls initially, then auto-hide after 5s
             _pipWindow.ShowAllControls();
             _pipWindow.StartHoverTimer();
 
             _isActive = true;
             try { File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] EnterPip success{Environment.NewLine}"); } catch { }
-            Log.ForContext<PipService>().Info("EnterPip: success, hwnd=0x{0:X}", pipHwnd);
+            Log.ForContext<PipService>().Info("EnterPip: success");
             return _pipWindow;
         }
         catch (Exception ex)

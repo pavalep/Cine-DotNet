@@ -29,12 +29,12 @@
     <Content Include="..\..\resources\libmpv-2_x86-64\libmpv-2.dll" Link="libmpv-2.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <None Include="..\..\resources\libmpv-2_x86-64\libEGL.dll" Link="libEGL.dll">
+    <Content Include="..\..\resources\libmpv-2_x86-64\libEGL.dll" Link="libEGL.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\resources\libmpv-2_x86-64\libGLESv2.dll" Link="libGLESv2.dll">
+    </Content>
+    <Content Include="..\..\resources\libmpv-2_x86-64\libGLESv2.dll" Link="libGLESv2.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    </Content>
     <Content Include="UI\Resources\AppIcon.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

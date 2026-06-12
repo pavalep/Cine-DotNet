@@ -13,12 +13,6 @@ public partial class MainWindow
         {
             DebugLog("OnPipToggled: exiting PIP");
             _pipService.ExitPip();
-            // Restore video in main window + resync video area
-            if (_videoHost != null)
-            {
-                _videoHost.IsVideoSurfaceVisible = true;
-                SyncVideoRect();
-            }
             _headerBar.SetPipChecked(false);
         }
         else
@@ -35,9 +29,6 @@ public partial class MainWindow
             if (pipWindow != null)
             {
                 DebugLog("OnPipToggled: PIP started successfully");
-                // Hide video in main window — video only visible in PIP
-                if (_videoHost != null) _videoHost.IsVideoSurfaceVisible = false;
-
                 _headerBar.SetPipChecked(true);
 
                 // Sync initial play state
@@ -116,11 +107,6 @@ public partial class MainWindow
     /// <summary>Restores main window video when PIP window is closed by user (close button).</summary>
     private void OnPipClosed(object? sender, EventArgs e)
     {
-        if (_videoHost != null)
-        {
-            _videoHost.IsVideoSurfaceVisible = true;
-            SyncVideoRect();
-        }
         _headerBar.SetPipChecked(false);
     }
 }

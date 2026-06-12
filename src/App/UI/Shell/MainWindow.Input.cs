@@ -168,7 +168,7 @@ public partial class MainWindow
             fv.Hide();
     }
 
-    // Guard against duplicate PointerPressed from both VideoClickOverlay and _videoHost
+    // Guard against duplicate PointerPressed
     private DateTime _lastClickTime = DateTime.MinValue;
 
     private void OnVideoPointerPressed(object? sender, PointerPressedEventArgs e)

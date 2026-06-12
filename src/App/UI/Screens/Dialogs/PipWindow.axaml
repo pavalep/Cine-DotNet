@@ -93,11 +93,16 @@
     <Grid>
         <Border Classes="pip-container">
             <Grid>
-                <!-- DWM video surface: opaque so DWM composites into it -->
+                <!-- Video container for child HWND (render API path - frame delivered via UpdateFrame) -->
                 <Border x:Name="VideoArea"
                         Background="#FF0D0D0D"
                         ClipToBounds="True"
-                        CornerRadius="12" />
+                        CornerRadius="12">
+                    <Image x:Name="PipVideoFrame"
+                           HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                           Stretch="Uniform"
+                           IsHitTestVisible="False" />
+                </Border>
 
                 <!-- Loading overlay -->
                 <Border x:Name="LoadingOverlay"

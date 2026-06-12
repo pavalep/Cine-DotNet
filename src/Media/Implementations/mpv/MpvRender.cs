@@ -31,7 +31,7 @@ public static class MpvRenderNative
     [DllImport(MpvDll, CallingConvention = CallingConvention.Cdecl)]
     public static extern int mpv_render_context_render(
         IntPtr renderContext,
-        [In] mpv_render_param[]? parameters);
+        IntPtr parameters);
 
     [DllImport(MpvDll, CallingConvention = CallingConvention.Cdecl)]
     public static extern void mpv_render_context_report_swap(IntPtr renderContext);

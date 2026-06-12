@@ -21,21 +21,6 @@ public partial class MainWindow
         _controlsBox.UpdateResponsiveLayout(e.NewSize.Width, _viewModel?.HasMultipleVideoTracks ?? false);
         _headerBar.UpdateResponsiveLayout(e.NewSize.Width);
         UpdateSubtitleAudioOverlayVisibility(e.NewSize.Width);
-        App.DebugReport("VT", "MainWindow.OnWindowSizeChanged", "SizeChangedEvent.", new
-        {
-            newSize = e.NewSize.ToString(),
-            windowState = WindowState.ToString(),
-            videoHostBounds = _videoHost?.Bounds.ToString(),
-            renderScaling = RenderScaling,
-            videoSurfaceVisible = _videoHost?.IsVideoSurfaceVisible
-        }, runId: "pre-fix");
-        if (_videoHost != null && _videoHost.IsVideoSurfaceVisible && _playerService?.Player is { } player)
-        {
-            int w = (int)(_videoHost.Bounds.Width * RenderScaling);
-            int h = (int)(_videoHost.Bounds.Height * RenderScaling);
-            if (w > 0 && h > 0)
-                player.NotifyResize(w, h);
-        }
     }
 
     /// <summary>

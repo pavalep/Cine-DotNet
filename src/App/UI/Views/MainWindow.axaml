@@ -3,7 +3,7 @@
         xmlns:vm="using:Cine.Avalonia.ViewModels"
         xmlns:components="using:Cine.Avalonia.Components"
         xmlns:conv="using:Cine.Avalonia.Converters"
-        xmlns:ctrl="using:Cine.Avalonia.Controls"
+
         xmlns:controls="clr-namespace:Cine.Avalonia.Controls"
         xmlns:local="using:Cine.Avalonia.Controls"
         xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
@@ -54,10 +54,11 @@
                 IsHitTestVisible="False"
                 x:Name="PlaybackBackground" />
 
-        <!-- Video Host (DWM thumbnail composited above background, below controls) -->
-        <ctrl:D3D11VideoHost x:Name="VideoHost"
-                             IsVideoSurfaceVisible="False"
-                             HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+        <!-- Render API video frame -->
+        <Image x:Name="VideoFrameImage"
+               HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+               Stretch="Uniform"
+               IsHitTestVisible="False" />
 
         <!-- Video click overlay — fills window, captures hover for auto-hide -->
         <Border x:Name="VideoClickOverlay"

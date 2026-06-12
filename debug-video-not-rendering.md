@@ -39,6 +39,14 @@ Even after creating a valid swap chain, `mpv_render_context_create` returned **-
 3. **H3**: The swap chain size (1x1) at init time causes mpv to fail.
    - **Fix**: Resize the swap chain to the actual HWND size before calling `mpv_render_context_create`.
 
+### Layer 3: ANGLE OpenGL Rendering (Current)
+**Status: FIXED**
+
+Video is playing but rendering empty/black screens when using `mpv_render_context` with OpenGL and ANGLE (`libEGL.dll`).
+
+**Root Cause**: `AngleGlContext` was creating a 1x1 pbuffer surface by default. When `MpvPlayer.TryRenderFrame` called `mpv_render_context_render` with FBO 0, it rendered into this 1x1 surface. OpenGL clipped the rendering and `glReadPixels(w, h)` to 1x1, meaning the returned frame buffer was empty/black (only 1 pixel was written).
+**Fix**: Added `ResizeSurfaceIfNeeded` to `AngleGlContext` to dynamically recreate the EGL pbuffer surface whenever the video frame dimensions `w` and `h` exceed the current surface size. Called this in `TryRenderFrame` before `MakeCurrent()`.
+
 ## Build: clean (0 errors, 0 warnings)
 
 ## Remaining after video fix:

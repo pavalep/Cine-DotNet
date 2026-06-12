@@ -42,11 +42,17 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
     // Aspect ratio override (maps to mpv's video-aspect-override)
     private double _aspectOverride = -1; // -1 = auto/default
 
-    // DXGI render API
+    // OpenGL render API (ANGLE)
     private IntPtr _renderContext;
+    private AngleGlContext? _angleContext;
     private MpvRenderNative.mpv_render_update_fn? _renderUpdateCallback;
     private int _renderFrameCount;
     private readonly ManualResetEventSlim _renderWakeup = new(false);
+
+    /// <summary>
+    /// Fired when a new video frame is available. Data is BGRA byte array.
+    /// </summary>
+    public event Action<byte[], int, int>? FrameRendered;
 
     // ANGLE — loaded once, shared across instances
     private static IntPtr _eglHandle;
@@ -54,10 +60,8 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
     private static readonly object _angleLock = new();
     // Keep delegate alive — prevent GC from collecting it
     private static readonly MpvRenderNative.mpv_get_proc_address_fn _glGetProcCb = GlGetProcAddressCallback;
-    // eglGetProcAddress has a different signature: void*(const char*)
+    // eglGetProcAddress delegate (loaded lazily)
     private static GetProcAddressDelegate? _eglGetProcAddrCb;
-    // Global EGL context created once, shared by all mpv instances
-    private static AngleGlContext? _sharedGlContext;
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate IntPtr GetProcAddressDelegate(IntPtr name);
@@ -845,9 +849,13 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
     /// </summary>
     public bool UseSoftwareRendering { get; set; }
 
+    /// <summary>
+    /// Initialize mpv using native HWND-based rendering (used by PiP player).
+    /// mpv creates its own D3D11 swap chain targeting the given HWND.
+    /// </summary>
     public void InitializeRenderer(IntPtr hwnd)
     {
-        DebugLog($"InitializeRenderer called with hwnd={hwnd}");
+        DebugLog($"InitializeRenderer called with hwnd={hwnd} (PiP path)");
         if (_disposed)
         {
             DebugLog("InitializeRenderer: _disposed=true, returning");
@@ -881,11 +889,10 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
             }
 
             var options = MpvConfig.GetFullOptions(HighQualityRendering, hwnd);
-            // Apply software rendering override (disables hwdec)
             if (UseSoftwareRendering)
             {
                 options["hwdec"] = "no";
-                options["gpu-context"] = "d3d11"; // Still use D3D11 for rendering, but CPU decoding
+                options["gpu-context"] = "d3d11";
             }
             foreach (var kv in options)
                 SetOptionString(kv.Key, kv.Value);
@@ -902,8 +909,6 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
             _initialized = true;
         }
 
-        // Observe track-list and chapter-list via push-based events
-        // (time-pos uses polling instead — see event loop for details)
         MpvNative.mpv_observe_property(_mpv, 0, "track-list", MpvNative.mpv_format.MPV_FORMAT_NODE);
         MpvNative.mpv_observe_property(_mpv, 0, "chapter-list", MpvNative.mpv_format.MPV_FORMAT_NODE);
 
@@ -925,22 +930,26 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
     }
 
     /// <summary>
-    /// Initialize mpv using the OpenGL render API. mpv renders into an
-    /// internal OpenGL FBO (via ANGLE/EGL on Windows).
-    /// Controls and UI elements render on top of the video naturally.
+    /// Initialize mpv using the OpenGL render API via ANGLE (OpenGL ES over D3D11).
+    /// We create our own ANGLE/EGL context, mpv renders into it, and we read pixels
+    /// back for display in Avalonia. Controls and UI elements render on top naturally.
     /// Requires libmpv built with --enable-libmpv-render.
+    /// Requires libEGL.dll + libGLESv2.dll (ANGLE from Chrome) deployed with the app.
     /// </summary>
-    public void InitializeRendererD3D11(IntPtr d3dDevice, IntPtr swapChain)
+    public void InitializeRendererOpenGL()
     {
-        DebugLog($"InitializeRendererD3D11: device=0x{d3dDevice:X} swapChain=0x{swapChain:X}");
+        DebugLog($"InitializeRendererOpenGL called (render API via ANGLE)");
+        DebugLog($"  → Thread ID: {System.Threading.Thread.CurrentThread.ManagedThreadId}");
+
         if (_disposed || _initialized)
         {
-            DebugLog("InitializeRendererD3D11: disposed or already initialized");
+            DebugLog("InitializeRendererOpenGL: disposed or already initialized");
             return;
         }
 
         if (!MpvInterop.IsAvailable)
         {
+            DebugLog("InitializeRendererOpenGL: MpvInterop.IsAvailable=false");
             Error?.Invoke(this, "libmpv not available");
             _state = PlaybackState.Stopped;
             return;
@@ -948,34 +957,73 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
 
         lock (_gate)
         {
-            _mpv = MpvNative.mpv_create();
-            DebugLog($"InitializeRendererD3D11: mpv_create returned {_mpv}");
-            if (_mpv == IntPtr.Zero)
+            // Step 1: Create our own ANGLE/EGL context
+            DebugLog("InitializeRendererOpenGL: [Step 1] Creating ANGLE context...");
+            try
             {
-                Error?.Invoke(this, "mpv_create failed");
+                _angleContext = new AngleGlContext(1920, 1080);
+            }
+            catch (Exception ex)
+            {
+                DebugLog($"InitializeRendererOpenGL:   → FAILED: {ex}");
+                Error?.Invoke(this, $"Failed to create ANGLE GL context: {ex.Message}");
+                _state = PlaybackState.Stopped;
                 return;
             }
 
-            // No vo — render API replaces the VO entirely.
-            // Options: vo=null so mpv doesn't create a standalone window.
-            var options = MpvConfig.GetRenderApiOptions();
-            foreach (var kv in options)
-                SetOptionString(kv.Key, kv.Value);
-
-            // Create shared EGL context on first call (before render context creation)
-            lock (_angleLock)
+            // Make the ANGLE context current on this thread for mpv_render_context_create
+            DebugLog("InitializeRendererOpenGL: [Step 2] Making ANGLE context current...");
+            try
             {
-                if (_sharedGlContext == null)
-                {
-                    System.Diagnostics.Debug.WriteLine("Creating shared ANGLE EGL context...");
-                    _sharedGlContext = new AngleGlContext();
-                    _sharedGlContext.MakeCurrent();
-                }
+                _angleContext.MakeCurrent();
+            }
+            catch (Exception ex)
+            {
+                DebugLog($"InitializeRendererOpenGL:   → FAILED: {ex.Message}");
+                Error?.Invoke(this, $"eglMakeCurrent failed: {ex.Message}");
+                _angleContext?.Dispose();
+                _angleContext = null;
+                _state = PlaybackState.Stopped;
+                return;
             }
 
-            // Per render.h docs: Create render context BEFORE mpv_initialize.
-            // mpv_render_context_create replaces the default VO.
-            DebugLog("InitializeRendererD3D11: creating mpv_render_context BEFORE mpv_initialize...");
+            // Step 2: Create mpv instance
+            DebugLog("InitializeRendererOpenGL: [Step 3] Creating mpv instance...");
+            _mpv = MpvNative.mpv_create();
+            DebugLog($"InitializeRendererOpenGL:   → mpv_create={_mpv}");
+            if (_mpv == IntPtr.Zero)
+            {
+                Error?.Invoke(this, "mpv_create failed");
+                _angleContext?.Dispose();
+                _angleContext = null;
+                return;
+            }
+
+            // Step 3: Set options (vo=null — no internal video output, we use render API)
+            DebugLog("InitializeRendererOpenGL: [Step 4] Setting options...");
+            var options = MpvConfig.GetRenderApiOptions();
+            foreach (var kv in options)
+            {
+                SetOptionString(kv.Key, kv.Value);
+                DebugLog($"  → {kv.Key}={kv.Value}");
+            }
+
+            // Step 4: Initialize mpv
+            DebugLog("InitializeRendererOpenGL: [Step 5] mpv_initialize...");
+            var initErr = MpvNative.mpv_initialize(_mpv);
+            DebugLog($"  → mpv_initialize={initErr}");
+            if (initErr < 0)
+            {
+                Error?.Invoke(this, $"mpv_initialize failed: {MpvNative.GetError(initErr)}");
+                MpvNative.mpv_terminate_destroy(_mpv);
+                _mpv = IntPtr.Zero;
+                _angleContext?.Dispose();
+                _angleContext = null;
+                return;
+            }
+
+            // Step 5: Create mpv render context
+            DebugLog("InitializeRendererOpenGL: [Step 6] mpv_render_context_create...");
 
             var glInitParams = new MpvRenderNative.mpv_opengl_init_params
             {
@@ -999,22 +1047,27 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
             try
             {
                 var renderErr = MpvRenderNative.mpv_render_context_create(out _renderContext, _mpv, initParams);
-                DebugLog($"InitializeRendererD3D11: render_context_create (pre-init)={renderErr} ctx=0x{_renderContext:X}");
+                DebugLog($"InitializeRendererOpenGL:   → render_context_create={renderErr} ctx=0x{_renderContext:X}");
                 if (renderErr < 0 || _renderContext == IntPtr.Zero)
                 {
-                    var errMsg = renderErr == -4
-                        ? "invalid param — ANGLE DLLs not found or get_proc_address failed"
-                        : MpvNative.GetError(renderErr);
+                    var errMsg = MpvNative.GetError(renderErr);
+                    DebugLog($"InitializeRendererOpenGL:   → FAILED: {errMsg} (code={renderErr})");
                     Error?.Invoke(this, $"mpv_render_context_create failed: {errMsg} (code={renderErr})");
                     MpvNative.mpv_terminate_destroy(_mpv);
                     _mpv = IntPtr.Zero;
+                    _angleContext?.Dispose();
+                    _angleContext = null;
                     return;
                 }
 
-                // Set up update callback before init
+                DebugLog("InitializeRendererOpenGL:   → SUCCESS, setting update callback");
                 _renderUpdateCallback = OnRenderUpdate;
                 MpvRenderNative.mpv_render_context_set_update_callback(
                     _renderContext, _renderUpdateCallback, IntPtr.Zero);
+
+                // Release EGL context from this thread so the event loop thread can use it
+                DebugLog("InitializeRendererOpenGL:   → Releasing EGL context from init thread");
+                _angleContext.ReleaseCurrent();
             }
             finally
             {
@@ -1022,24 +1075,11 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
                 Marshal.FreeHGlobal(glInitPtr);
             }
 
-            // Now initialize. With the render context already active,
-            // mpv won't create a separate VO.
-            var initErr = MpvNative.mpv_initialize(_mpv);
-            DebugLog($"InitializeRendererD3D11: mpv_initialize (post-render-ctx)={initErr}");
-            if (initErr < 0)
-            {
-                Error?.Invoke(this, $"mpv_initialize failed: {MpvNative.GetError(initErr)}");
-                MpvRenderNative.mpv_render_context_free(_renderContext);
-                _renderContext = IntPtr.Zero;
-                MpvNative.mpv_terminate_destroy(_mpv);
-                _mpv = IntPtr.Zero;
-                return;
-            }
-
             _initialized = true;
         }
 
         // Observe properties
+        DebugLog("InitializeRendererOpenGL: [Step 7] Observing properties...");
         MpvNative.mpv_observe_property(_mpv, 0, "track-list", MpvNative.mpv_format.MPV_FORMAT_NODE);
         MpvNative.mpv_observe_property(_mpv, 0, "chapter-list", MpvNative.mpv_format.MPV_FORMAT_NODE);
 
@@ -1050,9 +1090,9 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
         SetDouble("sub-delay", _subtitleDelay);
         ApplyLoopMode();
 
-        DebugLog("InitializeRendererD3D11: calling StartEventLoop");
+        DebugLog("InitializeRendererOpenGL: [Step 8] Starting event loop...");
         StartEventLoop();
-        DebugLog("InitializeRendererD3D11: done");
+        DebugLog("InitializeRendererOpenGL: === Complete ===");
 
         var pending = _pendingOpenPath;
         _pendingOpenPath = null;
@@ -1072,22 +1112,104 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
 
     /// <summary>
     /// Called from the event loop when a render update is pending.
-    /// Renders the current frame into the swap chain.
+    /// Makes the ANGLE context current, renders into FBO 0 (our pbuffer surface),
+    /// reads pixels back, and fires FrameRendered for Avalonia to display.
     /// </summary>
     private void TryRenderFrame()
     {
-        if (_renderContext == IntPtr.Zero) return;
+        if (_renderContext == IntPtr.Zero || _angleContext == null)
+        {
+            if (_renderFrameCount < 5)
+                DebugLog($"TryRenderFrame: ctx=0x{_renderContext:X} angle={_angleContext != null} (skipping)");
+            return;
+        }
 
         var flags = MpvRenderNative.mpv_render_context_update(_renderContext);
-        if ((flags & MpvRenderNative.MPV_RENDER_UPDATE_FRAME) != 0)
+        if ((flags & MpvRenderNative.MPV_RENDER_UPDATE_FRAME) == 0)
+            return;
+
+        // Get actual video dimensions from mpv properties
+        int w = (int)GetDouble("dwidth");
+        int h = (int)GetDouble("dheight");
+        if (w <= 0 || h <= 0)
         {
-            var err = MpvRenderNative.mpv_render_context_render(_renderContext, null);
+            w = 1920;
+            h = 1080;
+        }
+
+        // Ensure FBO is sized correctly for the video
+        try
+        {
+            _angleContext.MakeCurrent();
+            _angleContext.EnsureFboSize(w, h);
+            // MUST bind our FBO before mpv_render_context_render — mpv renders
+            // into whatever FBO is currently bound in the GL context.
+            _angleContext.BindFbo();
+        }
+        catch (Exception ex)
+        {
+            DebugLog($"TryRenderFrame: MakeCurrent failed: {ex.Message}");
+            return;
+        }
+
+        // Set up render params: render into our FBO (not FBO 0, which doesn't work on pbuffer)
+        int fboHandle = _angleContext.FboHandle;
+        var fbo = new MpvRenderNative.mpv_opengl_fbo
+        {
+            fbo = fboHandle,
+            w = w,
+            h = h,
+            internal_format = 0x8058 // GL_RGBA8 — match the FBO texture format
+        };
+        var fboPtr = Marshal.AllocHGlobal(Marshal.SizeOf<MpvRenderNative.mpv_opengl_fbo>());
+        Marshal.StructureToPtr(fbo, fboPtr, false);
+
+        var flipY = 1;
+        var flipPtr = Marshal.AllocHGlobal(4);
+        Marshal.WriteInt32(flipPtr, flipY);
+
+        // Build render params array manually in unmanaged memory (avoids struct layout issues)
+        int paramSize = Marshal.SizeOf<MpvRenderNative.mpv_render_param>();
+        IntPtr paramsPtr = Marshal.AllocHGlobal(paramSize * 3);
+        try
+        {
+            // Param 0: FBO
+            Marshal.StructureToPtr(new MpvRenderNative.mpv_render_param
+            {
+                type = MpvRenderNative.MPV_RENDER_PARAM_OPENGL_FBO,
+                data = fboPtr
+            }, paramsPtr, false);
+
+            // Param 1: Flip Y
+            Marshal.StructureToPtr(new MpvRenderNative.mpv_render_param
+            {
+                type = MpvRenderNative.MPV_RENDER_PARAM_FLIP_Y,
+                data = flipPtr
+            }, paramsPtr + paramSize, false);
+
+            // Param 2: Terminator (MPV_RENDER_PARAM_INVALID = 0)
+            Marshal.StructureToPtr(new MpvRenderNative.mpv_render_param
+            {
+                type = MpvRenderNative.MPV_RENDER_PARAM_INVALID,
+                data = IntPtr.Zero
+            }, paramsPtr + paramSize * 2, false);
+
+            var err = MpvRenderNative.mpv_render_context_render(_renderContext, paramsPtr);
             if (err == 0)
             {
+                // Report swap to mpv
                 MpvRenderNative.mpv_render_context_report_swap(_renderContext);
+
+                // Read pixels back from the GL framebuffer
+                var pixels = _angleContext.ReadPixels(w, h);
+                _angleContext.UnbindFbo();
+
                 _renderFrameCount++;
                 if (_renderFrameCount <= 3)
-                    DebugLog($"render frame #{_renderFrameCount} OK");
+                    DebugLog($"render frame #{_renderFrameCount} OK ({w}x{h})");
+
+                // Fire event for Avalonia to display
+                FrameRendered?.Invoke(pixels, w, h);
             }
             else
             {
@@ -1095,11 +1217,23 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
                     DebugLog($"render failed: err={err}");
             }
         }
+        catch (Exception ex)
+        {
+            if (_renderFrameCount < 5)
+                DebugLog($"render exception: {ex.Message}");
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(fboPtr);
+            Marshal.FreeHGlobal(flipPtr);
+            Marshal.FreeHGlobal(paramsPtr);
+        }
     }
 
     public void NotifyResize(int width, int height)
     {
-        // For the render API path, swap chain resize is handled by D3D11VideoRenderer
+        // For the render API path, resize is handled by adjusting the FBO dimensions
+        // in TryRenderFrame.
     }
 
     public void Command(string command, params string[] args)
@@ -1143,6 +1277,22 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
         _cts?.Dispose();
         _cts = null;
 
+        // Free mpv render context (must happen before mpv_terminate_destroy)
+        if (_renderContext != IntPtr.Zero)
+        {
+            try { MpvRenderNative.mpv_render_context_free(_renderContext); } catch { }
+            _renderContext = IntPtr.Zero;
+        }
+
+        // Dispose ANGLE GL context
+        if (_angleContext != null)
+        {
+            try { _angleContext.Dispose(); } catch { }
+            _angleContext = null;
+        }
+
+        _renderWakeup?.Dispose();
+
         if (_mpv != IntPtr.Zero)
         {
             try { MpvNative.mpv_terminate_destroy(_mpv); } catch { }
@@ -1170,6 +1320,7 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
 
     private void EventLoop(CancellationToken token)
     {
+        int loopCount = 0;
         while (!token.IsCancellationRequested && !_disposed)
         {
             try
@@ -1179,6 +1330,10 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
                     Thread.Sleep(25);
                     continue;
                 }
+
+                loopCount++;
+                if (loopCount % 100 == 0)
+                    DebugLog($"EventLoop heartbeat: iter={loopCount} ctx=0x{_renderContext:X} angle={_angleContext != null}");
 
                 var evPtr = MpvNative.mpv_wait_event(_mpv, 0.03);
                 if (evPtr != IntPtr.Zero)
