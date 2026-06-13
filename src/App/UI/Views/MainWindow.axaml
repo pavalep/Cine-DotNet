@@ -54,11 +54,10 @@
                 IsHitTestVisible="False"
                 x:Name="PlaybackBackground" />
 
-        <!-- Render API video frame -->
-        <Image x:Name="VideoFrameImage"
-               HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-               Stretch="Uniform"
-               IsHitTestVisible="False" />
+        <!-- Render API video frame (OpenGlControlBase) -->
+        <controls:MpvVideoView x:Name="MpvVideoView"
+                               HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                               IsHitTestVisible="False" />
 
         <!-- Video click overlay — fills window, captures hover for auto-hide -->
         <Border x:Name="VideoClickOverlay"

@@ -8,9 +8,9 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
-using Avalonia.Threading;
-using Material.Icons;
 using Cine.Avalonia.Controls;
+using Material.Icons;
+using Avalonia.Threading;
 using Cine.Avalonia.Helpers;
 using Cine.Avalonia.ViewModels;
 using Cine.Core;
@@ -26,7 +26,6 @@ public partial class MainWindow
 {
     private PlayerService? _playerService;
     private MainViewModel? _viewModel;
-    private WriteableBitmap? _frameBitmap;
     private string? _queuedOpenPath;
     private TimeSpan _sessionResumePosition;
 
@@ -524,69 +523,8 @@ public partial class MainWindow
             return;
         }
 
-        DebugLog("InitVideoRenderer: starting OpenGL render API init");
-        player.UseSoftwareRendering = _viewModel.RendererMode == MainViewModel.RendererType.Software;
-        player.InitializeRendererOpenGL();
-        DebugLog("InitVideoRenderer: OpenGL render API initialized");
-
-        // Wire frame rendering to the Image control
-        player.FrameRendered += OnPlayerFrameRendered;
-    }
-
-    private void OnPlayerFrameRendered(byte[] pixels, int width, int height)
-    {
-        if (pixels == null || width <= 0 || height <= 0)
-        {
-            System.Diagnostics.Debug.WriteLine($"FrameRendered: invalid frame ({width}x{height})");
-            return;
-        }
-        if (System.Diagnostics.Debugger.IsAttached)
-            System.Diagnostics.Debug.WriteLine($"FrameRendered: {width}x{height} pixels={pixels.Length}");
-        Dispatcher.UIThread.Post(() =>
-        {
-            try
-            {
-                var image = VideoFrameImage;
-                if (image == null)
-                {
-                    System.Diagnostics.Debug.WriteLine("FrameRendered: VideoFrameImage is null");
-                    return;
-                }
-
-                // Create or resize bitmap
-                if (_frameBitmap == null || _frameBitmap.PixelSize.Width != width || _frameBitmap.PixelSize.Height != height)
-                {
-                    System.Diagnostics.Debug.WriteLine($"FrameRendered: creating/replacing bitmap ({width}x{height})");
-                    _frameBitmap?.Dispose();
-                    _frameBitmap = new WriteableBitmap(
-                        new global::Avalonia.PixelSize(width, height),
-                        new global::Avalonia.Vector(96, 96),
-                        global::Avalonia.Platform.PixelFormat.Bgra8888,
-                        global::Avalonia.Platform.AlphaFormat.Opaque);
-                }
-
-                // Copy frame data to bitmap
-                using (var fb = _frameBitmap.Lock())
-                {
-                    int stride = width * 4;
-                    int srcStride = width * 4;
-                    for (int y = 0; y < height; y++)
-                    {
-                        System.Runtime.InteropServices.Marshal.Copy(
-                            pixels, y * srcStride,
-                            fb.Address + y * stride,
-                            srcStride);
-                    }
-                }
-
-                image.Source = _frameBitmap;
-                image.IsVisible = true;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"FrameRendered error: {ex.Message}");
-            }
-        }, DispatcherPriority.Render);
+        DebugLog("InitVideoRenderer: attaching MpvVideoView to player");
+        MpvVideoView.AttachPlayer(player);
     }
 
     private PropertyWatcher? _propertyWatcher;

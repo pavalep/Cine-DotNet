@@ -42,67 +42,15 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
     // Aspect ratio override (maps to mpv's video-aspect-override)
     private double _aspectOverride = -1; // -1 = auto/default
 
-    // OpenGL render API (ANGLE)
+    // ── Render API (matches reference LibMpv-OpenGL exactly) ──
     private IntPtr _renderContext;
-    private AngleGlContext? _angleContext;
-    private MpvRenderNative.MpvRenderUpdateFn? _renderUpdateCallback;
-    private int _renderFrameCount;
-    private readonly ManualResetEventSlim _renderWakeup = new(false);
+    private Func<string, IntPtr>? _getProcAddress;
+    private bool _renderApiReady;
+    private Action? _onFrameReady;
 
-    /// <summary>
-    /// Fired when a new video frame is available. Data is BGRA byte array.
-    /// </summary>
-    public event Action<byte[], int, int>? FrameRendered;
-
-    // ANGLE — loaded once, shared across instances
-    private static IntPtr _eglHandle;
-    private static IntPtr _glesHandle;
-    private static readonly object _angleLock = new();
-
-    // Static get_proc_address callback — must be static so GC never collects it.
-    // mpv holds the function pointer for the entire lifetime of the render context.
-    // Uses MpvRenderNative.MpvGetProcAddressDelegate (Cdecl, void* ctx, string name)
-    // which exactly matches the C callback signature.
-    private static readonly MpvRenderNative.MpvGetProcAddressDelegate _glGetProcCbStatic = GlGetProcAddressStatic;
-
-    private static unsafe void* GlGetProcAddressStatic(void* ctx, [MarshalAs(UnmanagedType.LPStr)] string name)
-    {
-        if (string.IsNullOrEmpty(name)) return null;
-
-        // Ensure ANGLE DLL handles are loaded
-        if (_glesHandle == IntPtr.Zero)
-        {
-            lock (_angleLock)
-            {
-                if (_glesHandle == IntPtr.Zero) _glesHandle = LoadLibrary("libGLESv2.dll");
-                if (_eglHandle == IntPtr.Zero)  _eglHandle  = LoadLibrary("libEGL.dll");
-            }
-        }
-
-        // 1. libGLESv2.dll
-        if (_glesHandle != IntPtr.Zero)
-        {
-            var addr = GetProcAddress(_glesHandle, name);
-            if (addr != IntPtr.Zero) return (void*)addr;
-        }
-        // 2. libEGL.dll
-        if (_eglHandle != IntPtr.Zero)
-        {
-            var addr = GetProcAddress(_eglHandle, name);
-            if (addr != IntPtr.Zero) return (void*)addr;
-        }
-        // 3. eglGetProcAddress (extension functions not exported directly)
-        var egl = AngleInterop.eglGetProcAddress(name);
-        return (void*)egl;
-    }
-
-    // Old GlGetProcAddressCallback removed — replaced by GlGetProcAddressStatic above.
-
-    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Ansi)]
-    private static extern IntPtr LoadLibrary(string lpFileName);
-
-    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Ansi)]
-    private static extern IntPtr GetProcAddress(IntPtr hModule, string lpProcName);
+    // Managed delegates (stored as fields — mpv keeps function pointers to them)
+    private MpvRenderNative.MpvGetProcAddressDelegate? _getProcCb;
+    private MpvRenderNative.MpvRenderUpdateFnDelegate? _updateCb;
 
     private static readonly string DebugLogFile = CreateLogFilePath();
 
@@ -898,275 +846,191 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
             LoadFile(pending, replace: true);
     }
 
-    /// <summary>
-    /// Initialize mpv using the OpenGL render API via ANGLE (OpenGL ES over D3D11).
-    /// We create our own ANGLE/EGL context, mpv renders into it, and we read pixels
-    /// back for display in Avalonia. Controls and UI elements render on top naturally.
-    /// Requires libmpv built with --enable-libmpv-render.
-    /// Requires libEGL.dll + libGLESv2.dll (ANGLE from Chrome) deployed with the app.
-    /// </summary>
-    public void InitializeRendererOpenGL()
+    // ── Render API delegate methods (matching reference's delegate pattern) ──
+
+    private unsafe void* GetProcAddressCallback(void* ctx, string name)
     {
-        DebugLog($"InitializeRendererOpenGL called (render API via ANGLE)");
-        DebugLog($"  → Thread ID: {System.Threading.Thread.CurrentThread.ManagedThreadId}");
+        if (string.IsNullOrEmpty(name)) return null;
+        var ptr = _getProcAddress?.Invoke(name) ?? IntPtr.Zero;
+        DebugLog($"GetProcAddress: {name} => 0x{ptr:X}");
+        return (void*)ptr;
+    }
 
-        if (_disposed || _initialized)
-        {
-            DebugLog("InitializeRendererOpenGL: disposed or already initialized");
-            return;
-        }
+    private unsafe void UpdateCallback(void* ctx)
+    {
+        _onFrameReady?.Invoke();
+    }
 
-        if (!MpvInterop.IsAvailable)
-        {
-            DebugLog("InitializeRendererOpenGL: MpvInterop.IsAvailable=false");
-            Error?.Invoke(this, "libmpv not available");
-            _state = PlaybackState.Stopped;
-            return;
-        }
+    // ── Render API — matches reference LibMpv-OpenGL exactly ──
 
-        // Step 1-5: Create mpv instance and initialize it on the calling thread.
-        // GL context creation and mpv_render_context_create MUST happen on the
-        // event loop thread (the same thread that calls mpv_render_context_render),
-        // because EGL/ANGLE contexts are thread-affine. We'll do that in EventLoop.
+    public bool IsRenderApiReady => _renderApiReady && _renderContext != IntPtr.Zero;
+
+    public unsafe void InitializeRenderApi(Func<string, IntPtr> getProcAddress, Action onFrameReady)
+    {
+        DebugLog($"InitializeRenderApi: thread={System.Threading.Thread.CurrentThread.ManagedThreadId}");
+        if (_disposed || _initialized) return;
+        if (!MpvInterop.IsAvailable) { Error?.Invoke(this, "libmpv not available"); return; }
+
         lock (_gate)
         {
-            DebugLog("InitializeRendererOpenGL: [Step 1] Creating mpv instance...");
+            _getProcAddress = getProcAddress;
+            _onFrameReady = onFrameReady;
+
             _mpv = MpvNative.mpv_create();
-            DebugLog($"InitializeRendererOpenGL:   → mpv_create={_mpv}");
-            if (_mpv == IntPtr.Zero)
-            {
-                Error?.Invoke(this, "mpv_create failed");
-                return;
-            }
+            DebugLog($"  mpv_create returned 0x{_mpv:X}");
+            if (_mpv == IntPtr.Zero) { Error?.Invoke(this, "mpv_create failed"); return; }
 
-            DebugLog("InitializeRendererOpenGL: [Step 2] Setting options...");
-            var options = MpvConfig.GetRenderApiOptions();
-            foreach (var kv in options)
+            DebugLog("  Setting options...");
+            foreach (var kv in MpvConfig.GetRenderApiOptions())
             {
+                DebugLog($"  SetOption: {kv.Key}={kv.Value}");
                 SetOptionString(kv.Key, kv.Value);
-                DebugLog($"  → {kv.Key}={kv.Value}");
             }
 
-            DebugLog("InitializeRendererOpenGL: [Step 3] mpv_initialize...");
+            DebugLog("  calling mpv_initialize...");
             var initErr = MpvNative.mpv_initialize(_mpv);
-            DebugLog($"  → mpv_initialize={initErr}");
+            DebugLog($"  mpv_initialize returned {initErr}");
             if (initErr < 0)
             {
-                Error?.Invoke(this, $"mpv_initialize failed: {MpvNative.GetError(initErr)}");
-                MpvNative.mpv_terminate_destroy(_mpv);
-                _mpv = IntPtr.Zero;
-                return;
+                MpvNative.mpv_terminate_destroy(_mpv); _mpv = IntPtr.Zero;
+                Error?.Invoke(this, $"mpv_initialize failed: {MpvNative.GetError(initErr)}"); return;
             }
 
-            // Mark _initialized = true so the event loop starts; ANGLE+render context
-            // init completes on the event loop thread (see EventLoop → InitGlOnEventThread).
-            _initialized = true;
-        }
+            // Store delegates in fields — keeps them alive for native code.
+            // Matches reference: void* ctx, string name delegate signature.
+            _getProcCb = GetProcAddressCallback;
+            _updateCb = UpdateCallback;
+            
+            DebugLog($"  Created delegate _getProcCb");
+            DebugLog($"  Created delegate _updateCb");
 
-        DebugLog("InitializeRendererOpenGL: [Step 4] Observing properties...");
-        MpvNative.mpv_observe_property(_mpv, 0, "track-list", MpvNative.mpv_format.MPV_FORMAT_NODE);
-        MpvNative.mpv_observe_property(_mpv, 0, "chapter-list", MpvNative.mpv_format.MPV_FORMAT_NODE);
+            // Match reference's StartOpenGlRendering exactly: List<MpvRenderParam> + MarshalHelper
+            using var mh = new MarshalHelper();
 
-        SetDouble("volume", _volume);
-        SetFlag("mute", _isMuted);
-        SetDouble("speed", _speed);
-        SetDouble("audio-delay", _audioDelay);
-        SetDouble("sub-delay", _subtitleDelay);
-        ApplyLoopMode();
+            // Create the wrapper struct with the function pointer
+            var getProcFunc = (MpvRenderNative.MpvGetProcAddressFunc)_getProcCb;
+            DebugLog($"  GetProcAddress function pointer: 0x{getProcFunc.Pointer:X}");
 
-        DebugLog("InitializeRendererOpenGL: [Step 5] Starting event loop (GL init happens there)...");
-        StartEventLoop();
-        DebugLog("InitializeRendererOpenGL: === Complete (GL init pending on event loop thread) ===");
-
-        var pending = _pendingOpenPath;
-        _pendingOpenPath = null;
-        if (!string.IsNullOrWhiteSpace(pending))
-            LoadFile(pending, replace: true);
-    }
-
-    /// <summary>
-    /// Called once at the start of EventLoop to create the ANGLE GL context and
-    /// mpv_render_context on the event loop thread. This is required because
-    /// EGL/ANGLE contexts are thread-affine — the context must be current on the
-    /// same thread that calls mpv_render_context_render.
-    /// Uses unsafe fixed pointers (like the reference LibMpv-OpenGL implementation)
-    /// to guarantee correct C ABI struct layout with no padding ambiguity.
-    /// </summary>
-    private unsafe bool InitGlOnEventThread()
-    {
-        DebugLog($"InitGlOnEventThread: → Thread ID: {System.Threading.Thread.CurrentThread.ManagedThreadId}");
-
-        try
-        {
-            _angleContext = new AngleGlContext(1920, 1080);
-        }
-        catch (Exception ex)
-        {
-            DebugLog($"InitGlOnEventThread: ANGLE context creation FAILED: {ex.Message}");
-            Error?.Invoke(this, $"Failed to create ANGLE GL context: {ex.Message}");
-            return false;
-        }
-        DebugLog("InitGlOnEventThread: ANGLE context created and current on event loop thread");
-
-        // Pre-load ANGLE DLL handles for the proc address callback
-        lock (_angleLock)
-        {
-            if (_glesHandle == IntPtr.Zero) _glesHandle = LoadLibrary("libGLESv2.dll");
-            if (_eglHandle == IntPtr.Zero)  _eglHandle  = LoadLibrary("libEGL.dll");
-        }
-        DebugLog($"InitGlOnEventThread: GLES handle=0x{_glesHandle:X} EGL handle=0x{_eglHandle:X}");
-
-        // Use the static get_proc_address callback — static field keeps it alive permanently.
-        // Implicit conversion from delegate → MpvGetProcAddressFunc stores the function pointer.
-        var glInitParams = new MpvRenderNative.MpvOpenglInitParams
-        {
-            GetProcAddress = _glGetProcCbStatic,   // implicit delegate → MpvGetProcAddressFunc
-            GetProcAddressCtx = null
-        };
-
-        var apiTypePtr = Marshal.StringToHGlobalAnsi(MpvRenderNative.MPV_RENDER_API_TYPE_OPENGL);
-        var advancedControl = 1; // enable advanced control
-
-        try
-        {
-            var initParams = new MpvRenderNative.MpvRenderParam[]
+            var initParams = new MpvRenderNative.MpvOpenglInitParams
             {
-                new() { Type = MpvRenderNative.MPV_RENDER_PARAM_API_TYPE, Data = (void*)apiTypePtr },
-                new() { Type = MpvRenderNative.MPV_RENDER_PARAM_OPENGL_INIT_PARAMS, Data = &glInitParams },
-                new() { Type = MpvRenderNative.MPV_RENDER_PARAM_ADVANCED_CONTROL, Data = &advancedControl },
-                new() { Type = MpvRenderNative.MPV_RENDER_PARAM_INVALID, Data = null }
+                GetProcAddress = getProcFunc,
+                GetProcAddressCtx = null
+            };
+            DebugLog($"  InitParams created with GetProcAddressCtx=null");
+
+            var parameters = new List<MpvRenderNative.MpvRenderParam>
+            {
+                new()
+                {
+                    Type = MpvRenderNative.MPV_RENDER_PARAM_API_TYPE,
+                    Data = (void*)mh.StringToHGlobalAnsi(MpvRenderNative.MPV_RENDER_API_TYPE_OPENGL)
+                },
+                new()
+                {
+                    Type = MpvRenderNative.MPV_RENDER_PARAM_OPENGL_INIT_PARAMS,
+                    Data = (void*)mh.AllocHGlobal(initParams)
+                },
+                new()
+                {
+                    Type = MpvRenderNative.MPV_RENDER_PARAM_ADVANCED_CONTROL,
+                    Data = (void*)mh.AllocHGlobalValue(0)
+                },
+                new()
+                {
+                    Type = MpvRenderNative.MPV_RENDER_PARAM_INVALID,
+                    Data = null
+                }
             };
 
-            fixed (MpvRenderNative.MpvRenderParam* paramsPtr = initParams)
+            var paramArray = parameters.ToArray();
+            DebugLog($"  Parameter array created with {paramArray.Length} items");
+            fixed (MpvRenderNative.MpvRenderParam* p = paramArray)
             {
-                var renderErr = MpvRenderNative.mpv_render_context_create(out _renderContext, _mpv, paramsPtr);
-                DebugLog($"InitGlOnEventThread: render_context_create={renderErr} ctx=0x{_renderContext:X}");
-                if (renderErr < 0 || _renderContext == IntPtr.Zero)
+                DebugLog($"  Calling mpv_render_context_create with params at 0x{(IntPtr)p:X}...");
+                var err = MpvRenderNative.mpv_render_context_create(out _renderContext, _mpv, (IntPtr)p);
+                DebugLog($"  mpv_render_context_create returned {err} ctx=0x{_renderContext:X}");
+                if (err < 0 || _renderContext == IntPtr.Zero)
                 {
-                    DebugLog($"InitGlOnEventThread: FAILED: {MpvNative.GetError(renderErr)} (code={renderErr})");
-                    Error?.Invoke(this, $"mpv_render_context_create failed: {MpvNative.GetError(renderErr)} (code={renderErr})");
-                    _angleContext.Dispose();
-                    _angleContext = null;
-                    return false;
+                    Error?.Invoke(this, $"render_context_create: {MpvNative.GetError(err)}");
+                    MpvNative.mpv_terminate_destroy(_mpv); _mpv = IntPtr.Zero;
+                    return;
                 }
             }
 
-            _renderUpdateCallback = OnRenderUpdate;
+            DebugLog("  Setting update callback...");
             MpvRenderNative.mpv_render_context_set_update_callback(
-                _renderContext, _renderUpdateCallback, IntPtr.Zero);
+                _renderContext, _updateCb, (void*)IntPtr.Zero);
 
-            DebugLog("InitGlOnEventThread: SUCCESS — render context ready");
-            return true;
+            _initialized = true;
+            _renderApiReady = true;
+            DebugLog("  InitializeRenderApi completed successfully");
         }
-        finally
-        {
-            Marshal.FreeHGlobal(apiTypePtr);
-        }
+
+        MpvNative.mpv_observe_property(_mpv, 0, "track-list", MpvNative.mpv_format.MPV_FORMAT_NODE);
+        MpvNative.mpv_observe_property(_mpv, 0, "chapter-list", MpvNative.mpv_format.MPV_FORMAT_NODE);
+        SetDouble("volume", _volume); SetFlag("mute", _isMuted);
+        SetDouble("speed", _speed); SetDouble("audio-delay", _audioDelay);
+        SetDouble("sub-delay", _subtitleDelay); ApplyLoopMode();
+        StartEventLoop();
+
+        var pending = _pendingOpenPath; _pendingOpenPath = null;
+        if (!string.IsNullOrWhiteSpace(pending)) LoadFile(pending, replace: true);
     }
 
-    // Keep delegate alive — prevent GC from collecting it after InitGlOnEventThread returns
-    // (now using _glGetProcCbStatic above — nothing needed here)
-
-    /// <summary>
-    /// Called by mpv's render thread when a new frame is available.
-    /// We signal via wakeup — TryRenderFrame is called on the event loop thread.
-    /// </summary>
-    private void OnRenderUpdate(IntPtr ctx)
+    public unsafe void RenderFrame(int fbo, int width, int height)
     {
-        // This runs on mpv's internal thread — just signal wakeup
-        _renderWakeup?.Set();
-    }
-
-    /// <summary>
-    /// Called from the event loop when a render update is pending.
-    /// Renders mpv's current frame into our ANGLE FBO, reads pixels back,
-    /// and fires FrameRendered for Avalonia to display.
-    /// Uses unsafe fixed pointers (same pattern as LibMpv-OpenGL reference)
-    /// to guarantee correct C ABI struct layout.
-    /// </summary>
-    private unsafe void TryRenderFrame()
-    {
-        if (_renderContext == IntPtr.Zero || _angleContext == null)
-        {
-            if (_renderFrameCount < 5)
-                DebugLog($"TryRenderFrame: ctx=0x{_renderContext:X} angle={_angleContext != null} (skipping)");
-            return;
-        }
-
-        var flags = MpvRenderNative.mpv_render_context_update(_renderContext);
-        if ((flags & MpvRenderNative.MPV_RENDER_UPDATE_FRAME) == 0)
+        if (_renderContext == IntPtr.Zero || !_renderApiReady) return;
+        if ((MpvRenderNative.mpv_render_context_update(_renderContext) & MpvRenderNative.MPV_RENDER_UPDATE_FRAME) == 0)
             return;
 
-        // Get actual video dimensions from mpv properties
-        int w = (int)GetDouble("dwidth");
-        int h = (int)GetDouble("dheight");
-        if (w <= 0 || h <= 0) { w = 1920; h = 1080; }
+        // Match reference's OpenGlRender exactly: GCHandle pinned FBO + AllocHGlobalValue for FlipY
+        using var mh = new MarshalHelper();
+        var fboStruct = new MpvRenderNative.MpvOpenglFbo { Fbo = fbo, W = width, H = height, InternalFormat = 0 };
+        var handle = GCHandle.Alloc(fboStruct, GCHandleType.Pinned);
 
-        // Ensure FBO is sized correctly and bind it before render
-        try
+        var parameters = new MpvRenderNative.MpvRenderParam[]
         {
-            _angleContext.EnsureFboSize(w, h);
-            _angleContext.BindFbo();
-        }
-        catch (Exception ex)
-        {
-            DebugLog($"TryRenderFrame: EnsureFboSize/BindFbo failed: {ex.Message}");
-            return;
-        }
-
-        int fboHandle = _angleContext.FboHandle;
-        if (_renderFrameCount < 3)
-            DebugLog($"TryRenderFrame: fboHandle={fboHandle} w={w} h={h}");
-
-        // Use unsafe fixed pointers — same pattern as LibMpv-OpenGL reference library.
-        // This guarantees correct C ABI layout (no padding ambiguity) for MpvRenderParam.
-        var fbo = new MpvRenderNative.MpvOpenglFbo { Fbo = fboHandle, W = w, H = h, InternalFormat = 0 };
-        var flipY = 1;
-
-        var renderParams = new MpvRenderNative.MpvRenderParam[]
-        {
-            new() { Type = MpvRenderNative.MPV_RENDER_PARAM_OPENGL_FBO, Data = &fbo },
-            new() { Type = MpvRenderNative.MPV_RENDER_PARAM_FLIP_Y,     Data = &flipY },
-            new() { Type = MpvRenderNative.MPV_RENDER_PARAM_INVALID,    Data = null },
+            new()
+            {
+                Type = MpvRenderNative.MPV_RENDER_PARAM_OPENGL_FBO,
+                Data = &fboStruct
+            },
+            new()
+            {
+                Type = MpvRenderNative.MPV_RENDER_PARAM_FLIP_Y,
+                Data = (void*)mh.AllocHGlobalValue(1)
+            },
+            new()
+            {
+                Type = MpvRenderNative.MPV_RENDER_PARAM_INVALID,
+                Data = null
+            }
         };
 
-        fixed (MpvRenderNative.MpvRenderParam* paramsPtr = renderParams)
+        fixed (MpvRenderNative.MpvRenderParam* p = parameters)
         {
-            try
-            {
-                var err = MpvRenderNative.mpv_render_context_render(_renderContext, paramsPtr);
-                if (err == 0)
-                {
-                    MpvRenderNative.mpv_render_context_report_swap(_renderContext);
-
-                    var pixels = _angleContext.ReadPixels(w, h);
-                    _angleContext.UnbindFbo();
-
-                    _renderFrameCount++;
-                    if (_renderFrameCount <= 3)
-                        DebugLog($"render frame #{_renderFrameCount} OK ({w}x{h})");
-
-                    FrameRendered?.Invoke(pixels, w, h);
-                }
-                else
-                {
-                    if (_renderFrameCount < 20)
-                        DebugLog($"render failed: err={err} (fbo={fboHandle} w={w} h={h})");
-                }
-            }
-            catch (Exception ex)
-            {
-                if (_renderFrameCount < 5)
-                    DebugLog($"render exception: {ex.Message}");
-            }
+            var err = MpvRenderNative.mpv_render_context_render(_renderContext, (IntPtr)p);
+            // Note: reference does NOT call report_swap — let Avalonia handle swap timing
+            if (err != 0)
+                DebugLog($"RenderFrame: err={err} fbo={fbo} size={width}x{height}");
         }
+        handle.Free();
     }
 
-    public void NotifyResize(int width, int height)
+    public void DeinitializeRenderApi()
     {
-        // For the render API path, resize is handled by adjusting the FBO dimensions
-        // in TryRenderFrame.
+        _renderApiReady = false;
+        if (_mpv != IntPtr.Zero) { try { CommandInternal("stop"); } catch { } }
+        if (_renderContext != IntPtr.Zero)
+        {
+            MpvRenderNative.mpv_render_context_free(_renderContext);
+            _renderContext = IntPtr.Zero;
+        }
+        _getProcCb = null;
+        _updateCb = null;
     }
+
+    public void NotifyResize(int width, int height) { }
 
     public void Command(string command, params string[] args)
     {
@@ -1216,15 +1080,6 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
             _renderContext = IntPtr.Zero;
         }
 
-        // Dispose ANGLE GL context
-        if (_angleContext != null)
-        {
-            try { _angleContext.Dispose(); } catch { }
-            _angleContext = null;
-        }
-
-        _renderWakeup?.Dispose();
-
         if (_mpv != IntPtr.Zero)
         {
             try { MpvNative.mpv_terminate_destroy(_mpv); } catch { }
@@ -1254,21 +1109,6 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
     {
         int loopCount = 0;
 
-        // If this is the OpenGL render API path, initialize ANGLE + mpv render context
-        // HERE on the event loop thread. EGL/ANGLE contexts are thread-affine: the context
-        // that calls mpv_render_context_create MUST be on the same thread that calls
-        // mpv_render_context_render. Doing it on the UI thread and then transferring
-        // causes mpv to return -4 (MPV_ERROR_INVALID_PARAMETER) on every render call.
-        bool isGlPath = (_renderContext == IntPtr.Zero && _angleContext == null && _mpv != IntPtr.Zero);
-        if (isGlPath)
-        {
-            if (!InitGlOnEventThread())
-            {
-                DebugLog("EventLoop: GL init failed — exiting event loop");
-                return;
-            }
-        }
-
         while (!token.IsCancellationRequested && !_disposed)
         {
             try
@@ -1281,7 +1121,7 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
 
                 loopCount++;
                 if (loopCount % 100 == 0)
-                    DebugLog($"EventLoop heartbeat: iter={loopCount} ctx=0x{_renderContext:X} angle={_angleContext != null}");
+                    DebugLog($"EventLoop heartbeat: iter={loopCount}");
 
                 var evPtr = MpvNative.mpv_wait_event(_mpv, 0.03);
                 if (evPtr != IntPtr.Zero)
@@ -1334,10 +1174,6 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
                 PositionChanged?.Invoke(this, new PositionChangedEventArgs(
                     TimeSpan.FromSeconds(pos), TimeSpan.FromSeconds(dur)));
             }
-
-                // DXGI render API: process frame
-                if (_renderContext != IntPtr.Zero)
-                    TryRenderFrame();
             }
             catch (Exception ex)
             {

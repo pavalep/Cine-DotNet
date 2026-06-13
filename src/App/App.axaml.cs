@@ -10,6 +10,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
+using Avalonia.Win32;
 using Cine.Avalonia.Helpers;
 using Cine.Avalonia.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
@@ -130,6 +131,7 @@ public class App : global::Avalonia.Application
             .UsePlatformDetect()
             .With(new Win32PlatformOptions
             {
+                RenderingMode = new[] { Win32RenderingMode.AngleEgl, Win32RenderingMode.Software },
                 CompositionMode = new[] { Win32CompositionMode.RedirectionSurface }
             });
     }

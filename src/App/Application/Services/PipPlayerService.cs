@@ -44,12 +44,10 @@ namespace Cine.Avalonia.ViewModels
             {
                 var player = new MpvPlayer();
                 player.Error += OnSecondaryError;
-                player.FrameRendered += OnFrameRendered;
-                player.InitializeRendererOpenGL();
                 player.Mute(true);
                 _player = player;
 
-                PipLog("Initialize success (render API via ANGLE)");
+                PipLog("Initialize success (FBO render path)");
                 return true;
             }
             catch (Exception ex)
@@ -109,7 +107,6 @@ namespace Cine.Avalonia.ViewModels
             if (_player != null)
             {
                 _player.Error -= OnSecondaryError;
-                _player.FrameRendered -= OnFrameRendered;
                 _player.Dispose();
                 _player = null;
             }

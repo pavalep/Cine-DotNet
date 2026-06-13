@@ -93,8 +93,8 @@ public static class MpvConfig
             ["keep-open"] = "yes",
             ["keep-open-pause"] = "no",
             ["osc"] = "no",
-            ["hwdec"] = "no",
             ["vo"] = "libmpv",         // REQUIRED: Enables libmpv VO for render API
+            ["hwdec"] = "no",          // No GPU decoding — avoids nvcuda.dll hang
             ["volume-max"] = "150"
         };
     }
