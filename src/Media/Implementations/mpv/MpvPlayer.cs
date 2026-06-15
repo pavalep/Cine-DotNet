@@ -592,6 +592,49 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
     public void IncreaseHue() => Hue += 1;
     public void DecreaseHue() => Hue -= 1;
 
+    // ─────────────────────────────────────────────────────
+    //  Crop (removes black bars by cropping video edges)
+    // ─────────────────────────────────────────────────────
+
+    /// <summary>Cropping filter label used with vf.</summary>
+    private const string CropFilterLabel = "@crop";
+
+    /// <summary>
+    /// Crop the video to the given aspect ratio (removes black bars).
+    /// Uses mpv's vf filter with a labeled crop entry so it can be removed.
+    /// </summary>
+    public void SetCrop(double aspectRatio)
+    {
+        GetVideoSize(out int vw, out int vh);
+        if (vw <= 0 || vh <= 0) return;
+
+        int cw, ch;
+        if (vw / (double)vh > aspectRatio)
+        {
+            // Video is wider than target — crop width (remove side bars)
+            ch = vh;
+            cw = (int)(vh * aspectRatio);
+        }
+        else
+        {
+            // Video is taller than target — crop height (remove top/bottom bars)
+            cw = vw;
+            ch = (int)(vw / aspectRatio);
+        }
+
+        // Center the crop
+        int x = (vw - cw) / 2;
+        int y = (vh - ch) / 2;
+
+        CommandInternal("vf", "add", $"{CropFilterLabel}:crop={cw}:{ch}:{x}:{y}");
+    }
+
+    /// <summary>Remove the crop filter and show full video.</summary>
+    public void ResetCrop()
+    {
+        CommandInternal("vf", "remove", CropFilterLabel);
+    }
+
     public int CurrentChapter => (int)GetInt64("chapter");
 
     public ChapterInfo[] ChapterList

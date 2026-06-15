@@ -43,7 +43,8 @@
          Panels intercept all mouse events in Avalonia (Panel is always
          hit-testable regardless of background).
          ===================================================================== -->
-    <Grid x:Name="MainOverlay" Background="Transparent">
+    <Grid x:Name="MainOverlay" Background="Transparent"
+      HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
 
         <!-- ══════════════════════════════════════════════════════════════ -->
         <!--  LAYER 0: VIDEO + BACKDROP (renders first, behind overlays)   -->

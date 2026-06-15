@@ -334,6 +334,28 @@ public partial class MainWindow
             AddItem("", label, "", () => _viewModel?.SetAspectRatio(ratio));
         }
 
+        // Crop sub-menu
+        var cropLabel = new TextBlock
+        {
+            Text = "CROP",
+            FontSize = 10,
+            FontWeight = FontWeight.Bold,
+            Foreground = AppColors.TextPrimary,
+            Opacity = 0.4,
+            LetterSpacing = 0.8,
+            Margin = new Thickness(10, 6, 8, 4),
+            VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center
+        };
+        stack.Children.Add(cropLabel);
+        var cropRatios = new[] { ("Off", -1.0), ("16:9", 1.7778), ("16:10", 1.6), ("4:3", 1.3333), ("2.35:1", 2.35) };
+        foreach (var (label, ratio) in cropRatios)
+        {
+            var isOff = ratio < 0;
+            AddItem("", label, "", isOff
+                ? () => _viewModel?.ResetCrop()
+                : () => _viewModel?.SetCrop(ratio));
+        }
+
         // Speed sub-menu
         var speedLabel = new TextBlock
         {

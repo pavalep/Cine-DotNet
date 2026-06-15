@@ -326,6 +326,41 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
     // --- Rotation & Flip ---
     public void ResetAspectRatio() => AspectRatioValue = -1;
     public void SetAspectRatio(double ratio) => AspectRatioValue = ratio;
+
+    // ── Crop (removes black bars, VLC-style) ──
+    private const string CropFilterLabel = "@crop";
+
+    public void SetCrop(double aspectRatio)
+    {
+        _player.GetVideoSize(out int vw, out int vh);
+        if (vw <= 0 || vh <= 0) return;
+
+        int cw, ch;
+        if (vw / (double)vh > aspectRatio)
+        {
+            ch = vh;
+            cw = (int)(vh * aspectRatio);
+        }
+        else
+        {
+            cw = vw;
+            ch = (int)(vw / aspectRatio);
+        }
+
+        int x = (vw - cw) / 2;
+        int y = (vh - ch) / 2;
+
+        _player.Command("vf", "add", $"{CropFilterLabel}:crop={cw}:{ch}:{x}:{y}");
+        // Also set aspect ratio so keepaspect doesn't re-add black bars
+        AspectRatioValue = aspectRatio;
+    }
+
+    public void ResetCrop()
+    {
+        _player.Command("vf", "remove", CropFilterLabel);
+        AspectRatioValue = -1;
+    }
+
     public void RotateLeft() => _player.Command("set", "video-rotate", "90");
     public void RotateRight() => _player.Command("set", "video-rotate", "270");
     public void ResetRotation() => _player.Command("set", "video-rotate", "0");
