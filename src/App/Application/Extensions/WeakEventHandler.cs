@@ -1,6 +1,6 @@
 using System;
 
-namespace Cine.Avalonia.Helpers;
+namespace Cine.Avalonia.Extensions;
 
 /// <summary>
 /// Weak event handler — prevents memory leaks from strong event subscriptions.

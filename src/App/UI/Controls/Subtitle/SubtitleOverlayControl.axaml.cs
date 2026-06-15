@@ -4,7 +4,7 @@ using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Cine.Avalonia.Helpers;
+using Cine.Avalonia.Builders;
 using Cine.Avalonia.ViewModels;
 using DragEventArgs = Avalonia.Input.DragEventArgs;
 using DragDropEffects = Avalonia.Input.DragDropEffects;

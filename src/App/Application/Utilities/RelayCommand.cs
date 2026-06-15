@@ -1,7 +1,7 @@
 using System;
 using System.Windows.Input;
 
-namespace Cine.Avalonia.ViewModels;
+namespace Cine.Avalonia.Utilities;
 
 /// <summary>
 /// Minimal RelayCommand implementation for ICommand binding.

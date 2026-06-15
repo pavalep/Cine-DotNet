@@ -1,7 +1,7 @@
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Threading;
-using Cine.Avalonia.Helpers;
+using Cine.Avalonia.Extensions;
 
 namespace Cine.Avalonia.Controls;
 

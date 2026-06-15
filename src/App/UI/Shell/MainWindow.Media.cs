@@ -2,7 +2,8 @@ using System;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using Cine.Avalonia.Controls;
-using Cine.Avalonia.Helpers;
+using Cine.Avalonia.Managers;
+using Cine.Avalonia.Extensions;
 using Cine.Media.Events;
 using Cine.Media.Models;
 using App = global::Avalonia.Application;
@@ -74,24 +75,54 @@ public partial class MainWindow
                     seekBar.SetPositionText(SeekBarControl.FormatTimeSpan(_viewModel.Position));
                 }
             }
-            // Force icon from player state directly to avoid PropertyChanged races
-            var playerState = _playerService?.Player?.State ?? PlaybackState.Stopped;
-            _controlsBox.SetPlayPauseIconFromPlayerState(playerState);
-            _controlsBox.UpdatePlayPauseIcon();
+            // Always sync icon from the manager after media opens — this is the
+            // authoritative source that's guaranteed to reflect the player's real state.
+            _stateManager?.Refresh();
+            if (_stateManager != null)
+                _controlsBox.SyncPlayPauseIcon(_stateManager.IsPlaying);
             _autoHideTimer?.Stop();
             _autoHideTimer?.Start();
         });
+    }
+
+    /// <summary>
+    /// Called from PlaybackStateManager.StateChanged — the SINGLE authoritative
+    /// handler for play/pause/stop transitions. All icon updates and PIP sync
+    /// flow through here, eliminating desync from competing state sources.
+    /// </summary>
+    private void OnManagerStateChanged(object? sender, PlaybackStateChangedEventArgs e)
+    {
+        // No Dispatcher marshaling needed — manager events may fire from any thread,
+        // but the caller (OnPlaybackStateChanged in MainWindow) already marshals to UI.
+        // This handler is also invoked directly from the manager's background events,
+        // so we marshal here as well.
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.OnUiThread(() => OnManagerStateChanged(sender, e));
+            return;
+        }
+
+        DebugLog($"OnManagerStateChanged: e.State={e.State}");
+
+        // 1. Update play/pause icon — single path, no competing sources
+        _controlsBox.SyncPlayPauseIcon(e.State == PlaybackState.Playing);
+
+        // 2. Sync PIP window state
+        SyncPipPlayState(e.State);
+        bool isEnded = e.State == PlaybackState.Stopped && _viewModel?.FilePath != null;
+        SyncPipReplayMode(isEnded);
     }
 
     private void OnPlaybackStateChanged(object? sender, PlaybackStateChangedEventArgs e)
     {
         Dispatcher.UIThread.OnUiThread(() =>
         {
+            DebugLog($"OnPlaybackStateChanged: e.State={e.State} e.IsPaused={e.IsPaused}");
+
             // Clear replay mode when playback resumes (either by user click or auto)
             if (!e.IsPaused && e.State == PlaybackState.Playing)
             {
                 _controlsBox.SetReplayMode(false);
-                SyncPipReplayMode(false);
             }
 
             if (e.IsPaused)
@@ -106,11 +137,7 @@ public partial class MainWindow
                 _replayOverlay.Show();
             }
 
-            _controlsBox.UpdatePlayPauseIcon();
-
-            // Sync PIP play state BEFORE replay mode so the final icon state wins
-            SyncPipPlayState();
-            SyncPipReplayMode(isEnded);
+            // Icon and PIP sync are handled by OnManagerStateChanged — don't set them here.
         });
     }
 
@@ -120,7 +147,6 @@ public partial class MainWindow
         {
             _replayOverlay.Show();
             _controlsBox.SetReplayMode(true);
-            _controlsBox.UpdatePlayPauseIcon();
             SyncPipReplayMode(true);
         });
     }

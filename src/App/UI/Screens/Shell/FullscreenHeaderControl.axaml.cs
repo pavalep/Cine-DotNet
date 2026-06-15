@@ -3,7 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
-using Cine.Avalonia.Helpers;
+using Cine.Avalonia.Builders;
 using Cine.Avalonia.ViewModels;
 using Cine.Avalonia.Views.Dialogs;
 using RoutedEventArgs = Avalonia.Interactivity.RoutedEventArgs;

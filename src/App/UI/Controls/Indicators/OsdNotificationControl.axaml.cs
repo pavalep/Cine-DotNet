@@ -10,7 +10,7 @@ using Avalonia.Threading;
 using Material.Icons;
 using Material.Icons.Avalonia;
 using AvaloniaLayout = Avalonia.Layout;
-using Cine.Avalonia.Helpers;
+using Cine.Avalonia.Extensions;
 
 namespace Cine.Avalonia.Controls;
 

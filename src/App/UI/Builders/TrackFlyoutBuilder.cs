@@ -5,13 +5,13 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
-using Cine.Avalonia.ViewModels;
+using Cine.Avalonia.Models;
 using AvaloniaLayout = Avalonia.Layout;
 using Button = global::Avalonia.Controls.Button;
 using Cursor = Avalonia.Input.Cursor;
 using TextBox = global::Avalonia.Controls.TextBox;
 
-namespace Cine.Avalonia.Helpers;
+namespace Cine.Avalonia.Builders;
 
 /// <summary>
 /// Builds a track-selection flyout with a scrollable track list, an optional

@@ -4,7 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Threading;
-using Cine.Avalonia.Helpers;
+using Cine.Avalonia.Extensions;
 using Cine.Media.Events;
 using App = global::Avalonia.Application;
 using AvaloniaLayout = Avalonia.Layout;

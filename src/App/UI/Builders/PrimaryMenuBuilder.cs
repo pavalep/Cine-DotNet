@@ -7,7 +7,7 @@ using Avalonia.Media;
 using Material.Icons.Avalonia;
 using AvaloniaLayout = Avalonia.Layout;
 
-namespace Cine.Avalonia.Helpers;
+namespace Cine.Avalonia.Builders;
 
 /// <summary>
 /// Builds the shared primary menu structure used by both HeaderBarControl and FullscreenHeaderControl.

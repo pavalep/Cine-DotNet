@@ -1,7 +1,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Cine.Avalonia.Helpers;
+namespace Cine.Avalonia.Models;
 
 /// <summary>
 /// Discriminated union for operation results — success or failure with error context.

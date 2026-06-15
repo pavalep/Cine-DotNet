@@ -1,5 +1,6 @@
 using Cine.Avalonia.ViewModels;
 using Cine.Media.Events;
+using Cine.Media.Models;
 
 namespace Cine.Avalonia;
 
@@ -92,10 +93,10 @@ public partial class MainWindow
         _pipService.PipWindow?.UpdatePosition(e.Position.TotalSeconds, e.Duration.TotalSeconds);
     }
 
-    private void SyncPipPlayState()
+    private void SyncPipPlayState(PlaybackState state)
     {
         if (_pipService is not { IsActive: true }) return;
-        _pipService.PipWindow?.SetPlayingState(_viewModel?.IsPlaying == true);
+        _pipService.PipWindow?.SetPlayingState(state == PlaybackState.Playing);
     }
 
     private void SyncPipReplayMode(bool isEnded)

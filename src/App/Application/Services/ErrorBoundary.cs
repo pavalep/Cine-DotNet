@@ -1,8 +1,9 @@
 using System;
 using System.Threading.Tasks;
 using Cine.Core;
+using Cine.Avalonia.Models;
 
-namespace Cine.Avalonia.Helpers;
+namespace Cine.Avalonia.Services;
 
 /// <summary>
 /// Consistent error boundary for async event handlers.

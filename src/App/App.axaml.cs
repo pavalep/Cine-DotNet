@@ -11,7 +11,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using Avalonia.Win32;
-using Cine.Avalonia.Helpers;
+using Cine.Avalonia.Services;
 using Cine.Avalonia.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 

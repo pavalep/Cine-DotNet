@@ -8,7 +8,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
-using Cine.Avalonia.Helpers;
+using Cine.Avalonia.Extensions;
 using KeyEventArgs = Avalonia.Input.KeyEventArgs;
 
 namespace Cine.Avalonia.Views.Dialogs;

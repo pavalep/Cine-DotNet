@@ -9,7 +9,10 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Avalonia.Threading;
-using Cine.Avalonia.Helpers;
+using Cine.Avalonia.Managers;
+using Cine.Avalonia.Models;
+using Cine.Avalonia.Extensions;
+using Cine.Avalonia.Utilities;
 using Cine.Core;
 using Cine.Media.Interfaces;
 using Cine.Media.Models;
@@ -21,7 +24,7 @@ namespace Cine.Avalonia.ViewModels;
 /// <summary>
 /// ViewModel for the main player window. Wraps IMediaPlayer for MVVM binding.
 /// </summary>
-public class MainViewModel : INotifyPropertyChanged, IDisposable
+public partial class MainViewModel : INotifyPropertyChanged, IDisposable
 {
     private static string GetLogPath()
     {
@@ -73,17 +76,15 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
     private bool _hasMultiplePlaylistItems;
     private bool _hasMultipleVideoTracks;
 
-    // Track persistence: stores the currently selected track IDs for
-    // save/restore across sessions. Updated on every user selection.
+    // Track persistence
     private int _currentSubtitleTrackId = -1;
     private int _currentAudioTrackId = -1;
 
-    // Pending track restore values loaded from session data. Applied
-    // once the track list is populated after a file open.
+    // Pending track restore values loaded from session data
     private int? _pendingSubtitleTrackId;
     private int? _pendingAudioTrackId;
 
-    // --- Typed track collections (replaces plain string lists) ---
+    // --- Typed track collections ---
     public ObservableCollection<TrackMenuItem> SubtitleTracks { get; } = new();
     public ObservableCollection<TrackMenuItem> AudioTracks { get; } = new();
     public ObservableCollection<TrackMenuItem> VideoTracks { get; } = new();
@@ -113,6 +114,11 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
     /// <summary>Fired when an error occurs during async operations.</summary>
     public event EventHandler<string>? OnError;
 
+    // ── Domain Managers ──
+    public AudioManager Audio { get; }
+    public VideoManager Video { get; }
+    public SubtitleManager Subtitles { get; }
+
     public string Title => !string.IsNullOrEmpty(_filePath)
         ? TruncateFilename(Path.GetFileName(_filePath))
         : "Cine";
@@ -127,9 +133,19 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         return nameOnly[..Math.Max(0, avail)] + "..." + ext;
     }
 
-    public MainViewModel(IMediaPlayer player)
+    public MainViewModel(IMediaPlayer player,
+        AudioManager? audioManager = null,
+        VideoManager? videoManager = null,
+        SubtitleManager? subtitleManager = null)
     {
         _player = player ?? throw new ArgumentNullException(nameof(player));
+        Audio = audioManager ?? new AudioManager(player);
+        Video = videoManager ?? new VideoManager(player);
+        Subtitles = subtitleManager ?? new SubtitleManager(player);
+
+        Audio.RequestAudioFileAsync = () => RequestAudioFileAsync?.Invoke();
+        Subtitles.RequestSubtitleFileAsync = () => RequestSubtitleFileAsync?.Invoke();
+
         _player.Volume = _volumeValue;
 
         // Wire player events
@@ -152,554 +168,14 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
             if (path is string p) OpenRecentFile(p);
         });
 
-        // Build initial empty track menus with placeholder entries
         BuildEmptyTrackMenus();
-
-        // Load recent files
         LoadRecentFiles();
     }
 
-    /// <summary>Initializes track menus with "Add..." and "None" pseudo-entries.</summary>
-    private void BuildEmptyTrackMenus()
-    {
-        SubtitleTracks.Add(new TrackMenuItem("Add Subtitle Track…", TrackType.Subtitle, -1, OnSelectSubtitle));
-        SubtitleTracks.Add(new TrackMenuItem("None", TrackType.Subtitle, -2, OnSelectSubtitle));
+    // ─────────────────────────────────────────────────────
+    //  Observable Properties
+    // ─────────────────────────────────────────────────────
 
-        AudioTracks.Add(new TrackMenuItem("Add Audio Track…", TrackType.Audio, -1, OnSelectAudio));
-        AudioTracks.Add(new TrackMenuItem("None", TrackType.Audio, -2, OnSelectAudio));
-
-        VideoTracks.Add(new TrackMenuItem("No video tracks", TrackType.Video, -1, OnSelectVideo));
-    }
-
-    // ---- Player events ----
-
-    /// <summary>
-    /// Fired when a new file is loaded. Forces a track list refresh from the
-    /// current player state to ensure subtitle/audio/video menus are populated
-    /// even if the async track-list property observer hasn't fired yet.
-    /// </summary>
-    private void OnPlayerOpened(object? sender, EventArgs e)
-    {
-        // Read mpv track data on the background thread (mpv's event loop thread),
-        // then dispatch only the UI update to the UI thread.
-        // This prevents blocking the UI thread on native mpv property reads.
-        SubtitleSource[] subtitleSources;
-        SubtitleSource[] audioSources;
-        SubtitleSource[] videoSources;
-        try
-        {
-            subtitleSources = _player.SubtitleSources ?? Array.Empty<SubtitleSource>();
-            audioSources = (_player.AudioSources ?? Array.Empty<AudioTrackInfo>())
-                .Select(a => new SubtitleSource
-                {
-                    PathOrId = a.Id.ToString(),
-                    Language = a.Language,
-                    Type = "audio",
-                    IsEnabled = a.IsSelected
-                }).ToArray();
-            videoSources = (_player.VideoSources ?? Array.Empty<VideoTrackInfo>())
-                .Select(v => new SubtitleSource
-                {
-                    PathOrId = v.Id.ToString(),
-                    Language = v.Title,
-                    Type = "video",
-                    IsEnabled = v.IsSelected
-                }).ToArray();
-        }
-        catch (Exception ex)
-        {
-            global::Cine.Core.Log.ForContext<MainViewModel>().Error(ex, "OnPlayerOpened track read failed");
-            return;
-        }
-
-        // Now dispatch only the menu-rebuild to UI thread
-        Dispatcher.UIThread.OnUiThread(() =>
-        {
-            try
-            {
-                OnTrackListChanged(null, new TrackListChangedEventArgs(
-                    audioSources, videoSources, subtitleSources));
-            }
-            catch (Exception ex)
-            {
-                global::Cine.Core.Log.ForContext<MainViewModel>().Warning("OnPlayerOpened UI update failed: {Error}", ex.Message);
-            }
-        });
-    }
-
-    // ---- Track selection handlers ----
-
-    private void OnSelectSubtitle(TrackMenuItem item)
-    {
-        if (item.DisplayName == "Add Subtitle Track…")
-        {
-            _ = OnAddSubtitle();
-            return;
-        }
-
-        if (item.DisplayName == "None")
-        {
-            // Just select a negative track index to turn off subtitles in mpv
-            _player.SelectSubtitleTrack(-1);
-            _currentSubtitleTrackId = -1;
-            foreach (var t in SubtitleTracks) t.RefreshSelection(false);
-            item.RefreshSelection(true);
-            return;
-        }
-
-        if (item.TrackIndex >= 0)
-        {
-            _player.SelectSubtitleTrack(item.TrackIndex);
-            _currentSubtitleTrackId = item.TrackIndex;
-            foreach (var t in SubtitleTracks) t.RefreshSelection(false);
-            item.RefreshSelection(true);
-        }
-    }
-
-    private void OnSelectAudio(TrackMenuItem item)
-    {
-        if (item.DisplayName == "Add Audio Track…")
-        {
-            _ = OnAddAudio();
-            return;
-        }
-
-        if (item.DisplayName == "None")
-        {
-            // Disable audio
-            _player.SelectAudioTrack(-1);
-            _currentAudioTrackId = -1;
-            foreach (var t in AudioTracks) t.RefreshSelection(false);
-            item.RefreshSelection(true);
-            return;
-        }
-
-        if (item.TrackIndex >= 0)
-        {
-            _player.SelectAudioTrack(item.TrackIndex);
-            _currentAudioTrackId = item.TrackIndex;
-            foreach (var t in AudioTracks) t.RefreshSelection(false);
-            item.RefreshSelection(true);
-        }
-    }
-
-    private void OnSelectVideo(TrackMenuItem item)
-    {
-        if (item.DisplayName == "Add Video Track…")
-        {
-            // Video external loading not directly supported via mpv — OSD notification
-            return;
-        }
-
-        if (item.DisplayName == "None")
-        {
-            _player.SelectVideoTrack(-1);
-            foreach (var t in VideoTracks) t.RefreshSelection(false);
-            item.RefreshSelection(true);
-            return;
-        }
-
-        if (item.TrackIndex >= 0)
-        {
-            _player.SelectVideoTrack(item.TrackIndex);
-            foreach (var t in VideoTracks) t.RefreshSelection(false);
-            item.RefreshSelection(true);
-        }
-    }
-
-    private async Task OnOpenFiles()
-    {
-        if (RequestOpenFilesAsync == null) return;
-        var paths = await RequestOpenFilesAsync();
-        if (paths != null && paths.Length > 0)
-            OpenFiles(paths);
-    }
-
-    private async Task OnOpenFolder()
-    {
-        if (RequestOpenFolderAsync == null) return;
-        var path = await RequestOpenFolderAsync();
-        if (!string.IsNullOrEmpty(path))
-            OpenFile(path);
-    }
-
-    private async Task OnAddFiles()
-    {
-        if (RequestAddFilesAsync == null) return;
-        var paths = await RequestAddFilesAsync();
-        if (paths != null)
-            foreach (var p in paths)
-                Playlist.Add(p);
-    }
-
-    private async Task OnAddSubtitle()
-    {
-        if (RequestSubtitleFileAsync == null) return;
-        try
-        {
-            var path = await RequestSubtitleFileAsync();
-            if (!string.IsNullOrWhiteSpace(path))
-            {
-                _player?.AddSubtitle(path);
-                global::Cine.Core.Log.ForContext<MainViewModel>().Info("Subtitle added: {Path}", Path.GetFileName(path));
-            }
-        }
-        catch (Exception ex)
-        {
-            global::Cine.Core.Log.ForContext<MainViewModel>().Error(ex, "AddSubtitle failed");
-        }
-    }
-
-    private async Task OnAddAudio()
-    {
-        if (RequestAudioFileAsync == null) return;
-        try
-        {
-            var path = await RequestAudioFileAsync();
-            if (!string.IsNullOrWhiteSpace(path))
-            {
-                _player?.AddAudio(path);
-                global::Cine.Core.Log.ForContext<MainViewModel>().Info("Audio track added: {Path}", Path.GetFileName(path));
-            }
-        }
-        catch (Exception ex)
-        {
-            global::Cine.Core.Log.ForContext<MainViewModel>().Error(ex, "AddAudio failed");
-        }
-    }
-
-    /// <summary>
-    /// Load an external subtitle file directly (bypasses file dialog).
-    /// Used by drag-drop and future automation features.
-    /// </summary>
-    public void LoadExternalSubtitle(string filePath)
-    {
-        if (string.IsNullOrWhiteSpace(filePath) || _player == null) return;
-        try
-        {
-            _player.AddSubtitle(filePath);
-            global::Cine.Core.Log.ForContext<MainViewModel>().Info("External subtitle loaded: {Path}", Path.GetFileName(filePath));
-        }
-        catch (Exception ex)
-        {
-            global::Cine.Core.Log.ForContext<MainViewModel>().Error(ex, "LoadExternalSubtitle failed");
-            OnError?.Invoke(this, $"Failed to load subtitle: {ex.Message}");
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Load an external audio file directly (bypasses file dialog).
-    /// Used by drag-drop and future automation features.
-    /// </summary>
-    public void LoadExternalAudio(string filePath)
-    {
-        if (string.IsNullOrWhiteSpace(filePath) || _player == null) return;
-        try
-        {
-            _player.AddAudio(filePath);
-            global::Cine.Core.Log.ForContext<MainViewModel>().Info("External audio loaded: {Path}", Path.GetFileName(filePath));
-        }
-        catch (Exception ex)
-        {
-            global::Cine.Core.Log.ForContext<MainViewModel>().Error(ex, "LoadExternalAudio failed");
-            OnError?.Invoke(this, $"Failed to load audio track: {ex.Message}");
-            throw; // Re-throw to allow caller to show user error
-        }
-    }
-
-    // --- Playback commands ---
-    public void PlayPause()
-    {
-        // Toggle based on actual player state (not cached state) to avoid
-        // race conditions where EOF or external events change state between read and call.
-        if (_player.IsPlaying)
-            _player.Pause();
-        else
-            _player.Play();
-    }
-
-    public void Stop() => _player.Stop();
-    public int PlaylistPosition
-    {
-        get => _player.PlaylistPosition;
-        set
-        {
-            _player.PlaylistPosition = value;
-            OnPropertyChanged();
-            foreach (var item in PlaylistItems) item.NotifyPlayingChanged();
-        }
-    }
-
-    public void PlayPlaylistItem(int index)
-    {
-        PlaylistPosition = index;
-    }
-    public void RemovePlaylistItem(int index)
-    {
-        if (index < 0 || index >= PlaylistItems.Count) return;
-        PlaylistItems.RemoveAt(index);
-        Playlist.RemoveAt(index);
-        for (int i = index; i < PlaylistItems.Count; i++)
-            PlaylistItems[i].NotifyPlayingChanged();
-        HasMultiplePlaylistItems = PlaylistItems.Count > 1;
-    }
-    public void SeekForward()
-    {
-        _player.Seek(Position + TimeSpan.FromSeconds(5));
-    }
-
-    public void SeekBackward()
-    {
-        _player.Seek(Position - TimeSpan.FromSeconds(5));
-    }
-
-    public void SeekLargeForward()
-    {
-        _player.Seek(Position + TimeSpan.FromSeconds(60));
-    }
-
-    public void SeekLargeBackward()
-    {
-        _player.Seek(Position - TimeSpan.FromSeconds(60));
-    }
-    public void IncreaseVolume() => VolumeValue = Math.Min(VolumeMax, VolumeValue + 5);
-    public void DecreaseVolume() => VolumeValue = Math.Max(0, VolumeValue - 5);
-    public void ToggleMute() => IsMuted = !IsMuted;
-    public void ToggleFullscreen()
-    {
-        _player.SetFullscreen(!_player.IsFullscreen);
-        IsFullscreen = _player.IsFullscreen;
-    }
-    public void NextChapter() => _player.NextChapter();
-    public void PreviousChapter() => _player.PreviousChapter();
-    public void NextItem() => _player.NextPlaylistItem();
-    public void PreviousItem() => _player.PreviousPlaylistItem();
-    public void ToggleLoopFile()
-    {
-        _player.ToggleLoopFile();
-        SyncLoopFlags();
-    }
-    public void ToggleLoopPlaylist()
-    {
-        _player.ToggleLoopPlaylist();
-        SyncLoopFlags();
-    }
-    public void ToggleShuffle()
-    {
-        _player.IsShuffled = !_player.IsShuffled;
-        IsShuffleEnabled = _player.IsShuffled;
-        RefreshPlaylistState();
-    }
-    public void ResetSpeed() => SpeedValue = 1.0;
-    public void SetSpeed(double speed) => SpeedValue = speed;
-    public void Screenshot() => _player.TakeScreenshot(GetScreenshotPath());
-
-    // === PIP Decode Resolution (P10.2) ===
-
-    private string _pipResolution = "Auto";
-    public string PipResolution
-    {
-        get => _pipResolution;
-        set { _pipResolution = value; OnPropertyChanged(); }
-    }
-
-    public static readonly string[] PipResolutionOptions = { "Auto", "480p", "720p", "1080p", "Source" };
-
-    public void SetPipResolution(string resolution)
-    {
-        PipResolution = resolution;
-        OnPropertyChanged(nameof(PipResolution));
-    }
-
-    // === Audio Equalizer (P9.1) ===
-
-    public static readonly double[] EqualizerFrequencies = { 31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000 };
-
-    private double[] _equalizerBands = new double[10];
-    public double[] EqualizerBands
-    {
-        get => _equalizerBands;
-        set { _equalizerBands = value; OnPropertyChanged(); }
-    }
-
-    private string _equalizerPresetName = "Flat";
-    public string EqualizerPresetName
-    {
-        get => _equalizerPresetName;
-        set { _equalizerPresetName = value; OnPropertyChanged(); }
-    }
-
-    public void SetEqualizerBand(int bandIndex, double gain)
-    {
-        if (bandIndex < 0 || bandIndex >= 10) return;
-        _equalizerBands[bandIndex] = Math.Clamp(gain, -20, 20);
-        ApplyEqualizer();
-    }
-
-    public void ApplyEqualizerPreset(string presetName)
-    {
-        var preset = GetPreset(presetName);
-        for (int i = 0; i < 10 && i < preset.Length; i++)
-            _equalizerBands[i] = preset[i];
-        EqualizerPresetName = presetName;
-        OnPropertyChanged(nameof(EqualizerBands));
-        ApplyEqualizer();
-    }
-
-    private void ApplyEqualizer()
-    {
-        try
-        {
-            var filters = new List<string>();
-
-            // Add equalizer bands
-            for (int i = 0; i < 10; i++)
-            {
-                if (Math.Abs(_equalizerBands[i]) > 0.5)
-                    filters.Add($"equalizer=f={EqualizerFrequencies[i]}:t=q:width=1:g={_equalizerBands[i]:F1}");
-            }
-
-            // Add normalization if enabled
-            if (_isAudioNormalizationEnabled)
-                filters.Add("drc");
-
-            var afValue = filters.Count > 0 ? string.Join(",", filters) : "";
-            _player.Command("set_property", "af", afValue);
-        }
-        catch { /* player not ready */ }
-    }
-
-    public void ToggleAudioNormalization()
-    {
-        IsAudioNormalizationEnabled = !IsAudioNormalizationEnabled;
-        ApplyEqualizer(); // Re-apply to combine both
-    }
-
-    private bool _isAudioNormalizationEnabled;
-    public bool IsAudioNormalizationEnabled
-    {
-        get => _isAudioNormalizationEnabled;
-        set { _isAudioNormalizationEnabled = value; OnPropertyChanged(); }
-    }
-
-    /// <summary>
-    /// Renderer mode: Auto (default, tries D3D11 hardware, falls back to software),
-    /// Software (forces software rendering / no hwdec).
-    /// </summary>
-    public enum RendererType { Auto, Software }
-
-    private RendererType _rendererMode;
-    public RendererType RendererMode
-    {
-        get => _rendererMode;
-        set
-        {
-            if (_rendererMode == value) return;
-            _rendererMode = value;
-            OnPropertyChanged();
-            OnPropertyChanged(nameof(IsHardwareAccelerationEnabled));
-        }
-    }
-
-    public bool IsHardwareAccelerationEnabled
-    {
-        get => _rendererMode == RendererType.Auto;
-        set
-        {
-            RendererMode = value ? RendererType.Auto : RendererType.Software;
-        }
-    }
-
-    private static double[] GetPreset(string name) => name switch
-    {
-        "Classical" => new[] { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -4.0, -4.0, -4.0, -6.0 },
-        "Rock" => new[] { 4.0, 3.0, 2.0, 1.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0 },
-        "Pop" => new[] { -1.0, 0.0, 2.0, 3.0, 4.0, 3.0, 2.0, 0.0, -1.0, -1.0 },
-        "Jazz" => new[] { 3.0, 2.0, 1.0, 2.0, 3.0, 3.0, 2.0, 1.0, 1.0, 2.0 },
-        "Bass Boost" => new[] { 6.0, 5.0, 4.0, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 },
-        _ => new double[10] // Flat
-    };
-
-    // === Session resume ===
-    public Action<string, TimeSpan>? SessionResumeRequested { get; set; }
-
-    private static string SessionPath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "Cine", "session.json");
-
-    public void SaveSession()
-    {
-        try
-        {
-            var dir = Path.GetDirectoryName(SessionPath);
-            if (dir != null) Directory.CreateDirectory(dir);
-            var session = new
-            {
-                FilePath = _filePath,
-                Position = _player.Position.Ticks,
-                Playlist = Playlist.ToList(),
-                SubtitleTrackId = _currentSubtitleTrackId,
-                AudioTrackId = _currentAudioTrackId,
-                SubtitleDelay = _player.SubtitleDelay,
-                AudioDelay = _player.AudioDelay,
-                RendererMode = _rendererMode.ToString()
-                // P5.2: Window bounds saved by MainWindow before close
-            };
-            File.WriteAllText(SessionPath, JsonSerializer.Serialize(session));
-        }
-        catch (Exception ex) { global::Cine.Core.Log.ForContext<MainViewModel>().Error(ex, "SaveSession failed"); }
-    }
-
-    public void LoadSession()
-    {
-        try
-        {
-            var json = File.ReadAllText(SessionPath);
-            using var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement;
-            if (root.TryGetProperty("FilePath", out var pathEl) && pathEl.GetString() is string path
-                && File.Exists(path)
-                && root.TryGetProperty("Position", out var posEl))
-            {
-                var pos = TimeSpan.FromTicks(posEl.GetInt64());
-                SessionResumeRequested?.Invoke(path, pos);
-            }
-            if (root.TryGetProperty("Playlist", out var plEl))
-            {
-                foreach (var item in plEl.EnumerateArray())
-                {
-                    var p = item.GetString();
-                    if (!string.IsNullOrEmpty(p) && File.Exists(p))
-                        Playlist.Add(p);
-                }
-                if (Playlist.Count > 0)
-                    OnPropertyChanged(nameof(HasMultiplePlaylistItems));
-            }
-            // Load pending track restore values
-            if (root.TryGetProperty("SubtitleTrackId", out var subIdEl))
-                _pendingSubtitleTrackId = subIdEl.GetInt32();
-            if (root.TryGetProperty("AudioTrackId", out var audIdEl))
-                _pendingAudioTrackId = audIdEl.GetInt32();
-            // Load delay values and apply immediately (they are player-wide, not per-file)
-            if (root.TryGetProperty("SubtitleDelay", out var subDelayEl))
-                _player.SubtitleDelay = (float)subDelayEl.GetDouble();
-            if (root.TryGetProperty("AudioDelay", out var audDelayEl))
-                _player.AudioDelay = (float)audDelayEl.GetDouble();
-            // Load renderer mode
-            if (root.TryGetProperty("RendererMode", out var rmEl) && Enum.TryParse<RendererType>(rmEl.GetString(), out var rm))
-                RendererMode = rm;
-        }
-        catch { /* Session save is best-effort */ }
-    }
-
-    public void ClearSession()
-    {
-        try { if (File.Exists(SessionPath)) File.Delete(SessionPath); }
-        catch { /* Best-effort cleanup */ }
-    }
-
-    // --- Properties for binding ---
     public PlaybackState State
     {
         get => _state;
@@ -750,9 +226,7 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         set
         {
             var clamped = Math.Clamp(value, 0, VolumeMax);
-            if (Math.Abs(_volumeValue - clamped) < 0.001)
-                return;
-
+            if (Math.Abs(_volumeValue - clamped) < 0.001) return;
             _volumeValue = clamped;
             _player.Volume = clamped;
             OnPropertyChanged();
@@ -768,7 +242,6 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
     }
 
     private bool _isDialogueBoostEnabled;
-
     public bool IsDialogueBoostEnabled
     {
         get => _isDialogueBoostEnabled;
@@ -838,14 +311,12 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         set { _player.AudioDelay = value; OnPropertyChanged(); }
     }
 
-    // --- Zoom ---
     public double ZoomValue
     {
         get => _player.Zoom;
         set { _player.Zoom = value; OnPropertyChanged(); }
     }
 
-    // --- Aspect Ratio ---
     public double AspectRatioValue
     {
         get => _player.AspectRatio;
@@ -916,35 +387,12 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public void SeekTo(double normalizedValue)
-    {
-        if (Duration.TotalSeconds <= 0) return;
-        
-        var target = TimeSpan.FromSeconds(normalizedValue * Duration.TotalSeconds);
-        
-        _isUpdatingPositionFromPlayer = true;
-        try
-        {
-            _seekValue = Math.Clamp(normalizedValue, 0.0, 1.0);
-            OnPropertyChanged(nameof(SeekValue));
-            PositionText = FormatTime(target);
-        }
-        finally
-        {
-            _isUpdatingPositionFromPlayer = false;
-        }
-        
-        _player.Seek(target);
-    }
-
     public bool IsMuted
     {
         get => _isMuted;
         set
         {
-            if (_isMuted == value)
-                return;
-
+            if (_isMuted == value) return;
             _isMuted = value;
             _player.Mute(value);
             OnPropertyChanged();
@@ -1006,7 +454,6 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
     }
 
     public bool HasPlaylistItems => PlaylistItems.Count > 0;
-
     public bool HasChapters => Chapters.Count > 0;
 
     public bool HasMultipleVideoTracks
@@ -1015,379 +462,23 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         set { _hasMultipleVideoTracks = value; OnPropertyChanged(); }
     }
 
-    // --- Recent files ---
-    private static string RecentFilesPath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "Cine", "recent.json");
+    // ─────────────────────────────────────────────────────
+    //  INotifyPropertyChanged
+    // ─────────────────────────────────────────────────────
 
-    public bool HasRecentFiles => RecentFiles.Count > 0;
-
-    public void AddRecentFile(string path)
-    {
-        RecentFiles.Remove(path);
-        RecentFiles.Insert(0, path);
-        while (RecentFiles.Count > 10)
-            RecentFiles.RemoveAt(RecentFiles.Count - 1);
-        SaveRecentFiles();
-        OnPropertyChanged(nameof(HasRecentFiles));
-    }
-
-    private void SaveRecentFiles()
-    {
-        try
-        {
-            var dir = Path.GetDirectoryName(RecentFilesPath);
-            if (dir != null) Directory.CreateDirectory(dir);
-            File.WriteAllText(RecentFilesPath, JsonSerializer.Serialize(RecentFiles.ToList()));
-        }
-        catch { /* Best-effort recent files save */ }
-    }
-
-    public void LoadRecentFiles()
-    {
-        try
-        {
-            if (!File.Exists(RecentFilesPath)) return;
-            var json = File.ReadAllText(RecentFilesPath);
-            var list = JsonSerializer.Deserialize<List<string>>(json);
-            if (list != null)
-            {
-                RecentFiles.Clear();
-                foreach (var f in list.Where(File.Exists))
-                    RecentFiles.Add(f);
-                OnPropertyChanged(nameof(HasRecentFiles));
-            }
-        }
-        catch { }
-    }
-
-    public void OpenRecentFile(string path)
-    {
-        if (!string.IsNullOrWhiteSpace(path) && File.Exists(path))
-            OpenFile(path);
-    }
-
-    // --- Drag & drop support ---
-    public async void OpenFile(string path)
-    {
-        if (string.IsNullOrWhiteSpace(path)) return;
-        AddRecentFile(path);
-        FilePath = path;
-        // Reset track state for the new file; session restore values
-        // will be applied by OnTrackListChanged if LoadSession() populated them.
-        _currentSubtitleTrackId = -1;
-        _currentAudioTrackId = -1;
-        // Ensure UI binding propagation before loading media
-        await Dispatcher.UIThread.OnUiThreadAsync(() => { }, DispatcherPriority.Render);
-        try
-        {
-            _player.Open(path);
-        }
-        catch
-        {
-            Log($"Open failed for '{path}'.");
-            FilePath = string.Empty;
-        }
-        finally
-        {
-            RefreshState();
-        }
-    }
-
-    public void OpenFiles(string[] paths)
-    {
-        if (paths == null || paths.Length == 0) return;
-        foreach (var path in paths)
-            Playlist.Add(path);
-        OpenFile(paths[0]);
-    }
-
-    // --- Internal helpers ---
-    private TimeSpan _lastPosTextTime = TimeSpan.Zero;
-
-    private double _lastSeekValue;
-
-    private void OnPositionChanged(object? sender, PositionChangedEventArgs e)
-    {
-        Dispatcher.UIThread.OnUiThread(() =>
-        {
-            if (IsSeeking) return;
-
-            _isUpdatingPositionFromPlayer = true;
-            try
-            {
-                State = _player.State;
-
-                // Throttle text allocation: only update PositionText/DurationText
-                // when the second changes (~10fps max for text)
-                if (Math.Abs((e.Position - _lastPosTextTime).TotalSeconds) >= 0.1)
-                {
-                    _lastPosTextTime = e.Position;
-                    PositionText = FormatTime(e.Position);
-                    DurationText = FormatTime(e.Duration);
-                }
-
-                // Throttle SeekValue: only fire when normalized position changes
-                // by more than 0.001 (~1 pixel). This reduces slider refresh from
-                // 60fps to roughly 2fps during normal playback.
-                if (Math.Abs(e.NormalizedPosition - _lastSeekValue) >= 0.001)
-                {
-                    _lastSeekValue = e.NormalizedPosition;
-                    SeekValue = e.NormalizedPosition;
-                }
-            }
-            finally
-            {
-                _isUpdatingPositionFromPlayer = false;
-            }
-        });
-    }
-
-    private void OnPlaybackStateChanged(object? sender, PlaybackStateChangedEventArgs e)
-    {
-        Dispatcher.UIThread.OnUiThread(() =>
-        {
-            State = e.State;
-        });
-    }
-
-    private void OnVolumeChanged(object? sender, VolumeChangedEventArgs e)
-    {
-        Dispatcher.UIThread.OnUiThread(() =>
-        {
-            var playerVolume = Math.Clamp(_player.Volume, 0, VolumeMax);
-            if (Math.Abs(_volumeValue - playerVolume) >= 0.001)
-            {
-                _volumeValue = playerVolume;
-                OnPropertyChanged(nameof(VolumeValue));
-                OnPropertyChanged(nameof(Volume));
-                OnPropertyChanged(nameof(VolumeText));
-            }
-
-            var playerMuted = _player.IsMuted;
-            if (_isMuted != playerMuted)
-            {
-                _isMuted = playerMuted;
-                OnPropertyChanged(nameof(IsMuted));
-            }
-        });
-    }
-
-    /// <summary>
-    /// Rebuilds typed track menu items from player track list events.
-    /// Matches Python's _update_track_menus() behavior: preserves "Add..." and "None"
-    /// pseudo-entries at the top, followed by actual tracks with language/state info.
-    /// </summary>
-    private void OnTrackListChanged(object? sender, TrackListChangedEventArgs e)
-    {
-        Dispatcher.UIThread.OnUiThread(() =>
-        {
-            // --- Subtitle tracks ---
-            SubtitleTracks.Clear();
-            SubtitleTracks.Add(new TrackMenuItem("Add Subtitle Track…", TrackType.Subtitle, -1, OnSelectSubtitle));
-            SubtitleTracks.Add(new TrackMenuItem("None", TrackType.Subtitle, -2, OnSelectSubtitle));
-            if (e.SubtitleTracks != null)
-            {
-                int idx = 0;
-                foreach (var track in e.SubtitleTracks)
-                {
-                    var trackId = int.TryParse(track.PathOrId, out var parsedId) ? parsedId : idx;
-                    var item = new TrackMenuItem(
-                        FormatTrack("Sub", track),
-                        TrackType.Subtitle,
-                        trackId,
-                        OnSelectSubtitle,
-                        track
-                    );
-                    item.IsSelected = track.IsEnabled;
-                    SubtitleTracks.Add(item);
-                    idx++;
-                }
-            }
-            IsSubtitleEnabled = e.SubtitleTracks?.Any(t => t.IsEnabled) ?? false;
-
-            // --- Audio tracks ---
-            AudioTracks.Clear();
-            AudioTracks.Add(new TrackMenuItem("Add Audio Track…", TrackType.Audio, -1, OnSelectAudio));
-            AudioTracks.Add(new TrackMenuItem("None", TrackType.Audio, -2, OnSelectAudio));
-            if (e.AudioTracks != null)
-            {
-                int idx = 0;
-                foreach (var track in e.AudioTracks)
-                {
-                    var trackId = int.TryParse(track.PathOrId, out var parsedId) ? parsedId : idx;
-                    var item = new TrackMenuItem(
-                        FormatTrack("Audio", track),
-                        TrackType.Audio,
-                        trackId,
-                        OnSelectAudio,
-                        track
-                    );
-                    item.IsSelected = track.IsEnabled;
-                    AudioTracks.Add(item);
-                    idx++;
-                }
-            }
-            IsAudioEnabled = e.AudioTracks?.Any(t => t.IsEnabled) ?? false;
-
-            // --- Video tracks ---
-            VideoTracks.Clear();
-            VideoTracks.Add(new TrackMenuItem("Add Video Track…", TrackType.Video, -1, OnSelectVideo));
-            VideoTracks.Add(new TrackMenuItem("None", TrackType.Video, -2, OnSelectVideo));
-            if (e.VideoTracks != null && e.VideoTracks.Any())
-            {
-                int idx = 0;
-                foreach (var track in e.VideoTracks)
-                {
-                    var trackId = int.TryParse(track.PathOrId, out var parsedId) ? parsedId : idx;
-                    var item = new TrackMenuItem(
-                        FormatTrack("Video", track),
-                        TrackType.Video,
-                        trackId,
-                        OnSelectVideo,
-                        track
-                    );
-                    item.IsSelected = track.IsEnabled;
-                    VideoTracks.Add(item);
-                    idx++;
-                }
-            }
-            else
-            {
-                VideoTracks.Add(new TrackMenuItem("No video tracks", TrackType.Video, -1, OnSelectVideo));
-            }
-            HasMultipleVideoTracks = e.VideoTracks?.Count() > 1;
-
-            // ── Auto-restore saved track selections ─────────────────
-            if (_pendingSubtitleTrackId.HasValue)
-            {
-                var subTrack = SubtitleTracks.FirstOrDefault(t =>
-                    t.TrackIndex == _pendingSubtitleTrackId.Value && !t.IsPseudoEntry);
-                if (subTrack != null && subTrack.SelectCommand?.CanExecute(subTrack) == true)
-                {
-                    subTrack.SelectCommand.Execute(subTrack);
-                }
-                _pendingSubtitleTrackId = null;
-            }
-            if (_pendingAudioTrackId.HasValue)
-            {
-                var audTrack = AudioTracks.FirstOrDefault(t =>
-                    t.TrackIndex == _pendingAudioTrackId.Value && !t.IsPseudoEntry);
-                if (audTrack != null && audTrack.SelectCommand?.CanExecute(audTrack) == true)
-                {
-                    audTrack.SelectCommand.Execute(audTrack);
-                }
-                _pendingAudioTrackId = null;
-            }
-        });
-    }
-
-    private void OnPlaylistChanged(object? sender, PlaylistChangedEventArgs e)
-    {
-        Dispatcher.UIThread.OnUiThread(() =>
-        {
-            Playlist.Clear();
-            PlaylistItems.Clear();
-            int idx = 0;
-            foreach (var item in e.PlaylistItems)
-            {
-                Playlist.Add(item);
-                PlaylistItems.Add(new PlaylistItemViewModel(this, idx, item));
-                idx++;
-            }
-            RefreshPlaylistState();
-            HasMultiplePlaylistItems = Playlist.Count > 1;
-            foreach (var item in PlaylistItems) item.NotifyPlayingChanged();
-        });
-    }
-
-    private void OnLoopChanged(object? sender, LoopChangedEventArgs e)
-    {
-        Dispatcher.UIThread.OnUiThread(SyncLoopFlags);
-    }
-
-    internal void RefreshState()
-    {
-        _state = _player.State;
-        _volumeValue = Math.Clamp(_player.Volume, 0, VolumeMax);
-        _isMuted = _player.IsMuted;
-        OnPropertyChanged(nameof(State));
-        OnPropertyChanged(nameof(IsPlaying));
-        OnPropertyChanged(nameof(IsPaused));
-        OnPropertyChanged(nameof(Position));
-        OnPropertyChanged(nameof(Duration));
-        OnPropertyChanged(nameof(VolumeMax));
-        OnPropertyChanged(nameof(VolumeValue));
-        OnPropertyChanged(nameof(Volume));
-        OnPropertyChanged(nameof(VolumeText));
-        OnPropertyChanged(nameof(IsMuted));
-
-        // Ensure time labels show immediately on media open
-        PositionText = FormatTime(_player.Position);
-        DurationText = FormatTime(_player.Duration);
-
-        Chapters.Clear();
-        ChapterMarkers.Clear();
-        foreach (var ch in _player.ChapterList)
-        {
-            Chapters.Add(ch);
-            if (Duration.TotalSeconds > 0)
-                ChapterMarkers.Add(ch.Time / Duration.TotalSeconds);
-        }
-        OnPropertyChanged(nameof(HasChapters));
-
-        RefreshPlaylistState();
-        SyncLoopFlags();
-        IsShuffleEnabled = _player.IsShuffled;
-    }
-
-    private void RefreshPlaylistState()
-    {
-        Playlist.Clear();
-        foreach (var item in _player.Playlist)
-            Playlist.Add(item);
-        HasMultiplePlaylistItems = Playlist.Count > 1;
-    }
-
-    private void SyncLoopFlags()
-    {
-        IsLoopFileEnabled = _player.LoopMode == LoopMode.File;
-        IsLoopPlaylistEnabled = _player.LoopMode == LoopMode.Playlist;
-    }
-
-    /// <summary>Formats a subtitle/audio/video track for display in a menu flyout.</summary>
-    private static string FormatTrack(string prefix, SubtitleSource track)
-    {
-        var lang = string.IsNullOrWhiteSpace(track.Language) ? "und" : track.Language;
-        var state = track.IsEnabled ? "on" : "off";
-        return $"{prefix}: {lang} ({state})";
-    }
-
-    private static string FormatTime(TimeSpan ts)
-    {
-        if (ts < TimeSpan.Zero)
-            return "-" + TimeSpan.FromTicks(-ts.Ticks).ToString("hh\\:mm\\:ss");
-        return ts.ToString("hh\\:mm\\:ss");
-    }
-
-    private string GetScreenshotPath()
-    {
-        var dir = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
-        return Path.Combine(dir, $"cine_screenshot_{DateTime.Now:yyyyMMdd_HHmmss}.png");
-    }
-
-    // --- INotifyPropertyChanged ---
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged([CallerMemberName] string? name = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
-    // --- IDisposable ---
+    // ─────────────────────────────────────────────────────
+    //  IDisposable
+    // ─────────────────────────────────────────────────────
+
     public void Dispose()
     {
         if (_disposed) return;
         _disposed = true;
 
-        // Unsubscribe from all player events to prevent memory leaks
         _player.Opened -= OnPlayerOpened;
         _player.TrackListChanged -= OnTrackListChanged;
         _player.PlaylistChanged -= OnPlaylistChanged;

@@ -11,7 +11,9 @@ using Avalonia.Platform;
 using Cine.Avalonia.Controls;
 using Material.Icons;
 using Avalonia.Threading;
-using Cine.Avalonia.Helpers;
+using Cine.Avalonia.Managers;
+using Cine.Avalonia.Models;
+using Cine.Avalonia.Extensions;
 using Cine.Avalonia.ViewModels;
 using Cine.Core;
 using Cine.Media.Interfaces;
@@ -26,6 +28,10 @@ public partial class MainWindow
 {
     private PlayerService? _playerService;
     private MainViewModel? _viewModel;
+    private PlaybackStateManager? _stateManager;
+    private AudioManager? _audioManager;
+    private VideoManager? _videoManager;
+    private SubtitleManager? _subtitleManager;
     private string? _queuedOpenPath;
     private TimeSpan _sessionResumePosition;
 
@@ -196,7 +202,12 @@ public partial class MainWindow
 
         if (_isDisposed) return;
 
-        _viewModel = new MainViewModel(player);
+        // Create domain managers — single source of truth for their domains
+        _audioManager = new AudioManager(player);
+        _videoManager = new VideoManager(player);
+        _subtitleManager = new SubtitleManager(player);
+
+        _viewModel = new MainViewModel(player, _audioManager, _videoManager, _subtitleManager);
         DataContext = _viewModel;
 
         _viewModel.SessionResumeRequested = (path, pos) =>
@@ -248,6 +259,11 @@ public partial class MainWindow
         player.PositionChanged += OnPositionChanged;
         player.ChapterListChanged += OnChapterListChanged;
         player.FullscreenChangedEvent += OnPlayerFullscreenChanged;
+
+        // Create PlaybackStateManager — the single authoritative source for
+        // playback state. All UI consumers read from this, not from player directly.
+        _stateManager = new PlaybackStateManager(player);
+        _stateManager.StateChanged += OnManagerStateChanged;
 
         _playerService.Error += (_, error) =>
         {
@@ -503,6 +519,14 @@ public partial class MainWindow
         _sessionSaveTimer = null;
         _propertyWatcher?.Dispose();
         _propertyWatcher = null;
+        _stateManager?.Dispose();
+        _stateManager = null;
+        _audioManager?.Dispose();
+        _audioManager = null;
+        _videoManager?.Dispose();
+        _videoManager = null;
+        _subtitleManager?.Dispose();
+        _subtitleManager = null;
         _viewModel?.SaveSession();
         MpvVideoView.Shutdown();
         _playerService?.Dispose();
@@ -543,12 +567,6 @@ public partial class MainWindow
         };
         _sessionSaveTimer.Tick += (_, _) => _viewModel?.SaveSession();
         _sessionSaveTimer.Start();
-    }
-
-    // --- MediaEvents helper for OnPlaybackStateChanged ---
-    private void UpdatePlayPauseFromState(bool isPaused)
-    {
-        _controlsBox?.UpdatePlayPauseIcon();
     }
 
     // =========================================================================
@@ -623,12 +641,6 @@ public partial class MainWindow
                     // controls should stay hidden since StartPage covers them.
                 }
             })
-            .Watch(nameof(MainViewModel.IsPlaying), () =>
-            {
-                _controlsBox.UpdatePlayPauseIcon();
-                SyncPipPlayState();
-            })
-            .Watch(nameof(MainViewModel.IsPaused), () => _controlsBox.UpdatePlayPauseIcon())
             .Watch(nameof(MainViewModel.IsSubtitleEnabled), () => _controlsBox?.SubtitleOverlayCtrl?.RefreshIcon())
             .Watch(nameof(MainViewModel.IsAudioEnabled), () => _controlsBox?.AudioTrackSelectorCtrl?.RefreshIcon())
             .Watch(nameof(MainViewModel.IsMuted), () =>

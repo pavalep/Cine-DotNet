@@ -6,7 +6,7 @@ using Avalonia.Input;
 using Avalonia.Media;
 using AvaloniaLayout = Avalonia.Layout;
 
-namespace Cine.Avalonia.Helpers;
+namespace Cine.Avalonia.Builders;
 
 /// <summary>
 /// Fluent builder for constructing popover/flyout menus.

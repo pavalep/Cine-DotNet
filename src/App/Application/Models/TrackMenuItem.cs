@@ -3,8 +3,9 @@ using System.ComponentModel;
 using System.Windows.Input;
 using Cine.Media.Interfaces;
 using Cine.Media.Models;
+using Cine.Avalonia.Utilities;
 
-namespace Cine.Avalonia.ViewModels
+namespace Cine.Avalonia.Models
 {
     /// <summary>
     /// Represents a single track item in a track selection menu (subtitle, audio, or video).

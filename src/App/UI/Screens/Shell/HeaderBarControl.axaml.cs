@@ -5,7 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
-using Cine.Avalonia.Helpers;
+using Cine.Avalonia.Builders;
 using Cine.Avalonia.ViewModels;
 using Cine.Avalonia.Views.Dialogs;
 using Layout = Avalonia.Layout;

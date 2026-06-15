@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.ExceptionServices;
 
-namespace Cine.Avalonia.Helpers;
+namespace Cine.Avalonia.Services;
 
 /// <summary>
 /// Robust crash reporting — writes crash dumps to %LOCALAPPDATA%\Cine\crash\.

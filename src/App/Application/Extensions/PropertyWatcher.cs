@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.Linq.Expressions;
 using Avalonia.Threading;
 
-namespace Cine.Avalonia.Helpers;
+namespace Cine.Avalonia.Extensions;
 
 /// <summary>
 /// Typed property watcher that replaces PropertyChanged switch-case with lambdas.

@@ -3,7 +3,8 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Input;
 using Avalonia.Threading;
-using Cine.Avalonia.Helpers;
+using Cine.Avalonia.Services;
+using Cine.Avalonia.Extensions;
 namespace Cine.Avalonia;
 
 public partial class MainWindow

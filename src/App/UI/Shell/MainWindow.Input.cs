@@ -215,7 +215,7 @@ public partial class MainWindow
 
             _lastTapTime = now;
             _viewModel?.PlayPause();
-            _controlsBox?.UpdatePlayPauseIcon();
+            // Icon updates via PlaybackStateManager.StateChanged — no optimistic toggle
             e.Handled = true;
         }
     }

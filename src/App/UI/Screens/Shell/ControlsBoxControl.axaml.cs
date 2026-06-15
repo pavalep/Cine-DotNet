@@ -8,7 +8,9 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Cine.Avalonia.ViewModels;
 using Cine.Avalonia.Views.Dialogs;
-using Cine.Avalonia.Helpers;
+using Cine.Avalonia.Managers;
+using Cine.Avalonia.Builders;
+using Cine.Avalonia.Models;
 using Cine.Media.Models;
 using AvaloniaLayout = Avalonia.Layout;
 using Button = global::Avalonia.Controls.Button;
@@ -26,6 +28,17 @@ public partial class ControlsBoxControl : AvaloniaUserControl
     private bool _replayMode;
     private int _activeFlyouts;
     private PlaylistDialog? _playlistDialog;
+
+    private static void PauseLog(string msg)
+    {
+        try
+        {
+            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Cine");
+            Directory.CreateDirectory(dir);
+            File.AppendAllText(Path.Combine(dir, "cine_playpause.log"), $"[{DateTime.Now:HH:mm:ss.fff}] {msg}{Environment.NewLine}");
+        }
+        catch { }
+    }
 
     public SeekBarControl SeekBarControl => SeekBar;
     public SubtitleOverlayControl? SubtitleOverlayCtrl => SubOverlayCtrl;
@@ -66,40 +79,36 @@ public partial class ControlsBoxControl : AvaloniaUserControl
 
     public bool HasActiveFlyouts => _activeFlyouts > 0;
 
-    public void UpdatePlayPauseIcon()
-    {
-        if (_viewModel == null) return;
-        if (_replayMode)
-        {
-            PlayPauseIconPath.Kind = Material.Icons.MaterialIconKind.Replay;
-            return;
-        }
-        PlayPauseIconPath.Kind = _viewModel.IsPlaying
-            ? Material.Icons.MaterialIconKind.Pause
-            : Material.Icons.MaterialIconKind.Play;
-    }
-
-    public void SetReplayMode(bool showReplay)
-    {
-        _replayMode = showReplay;
-        if (PlayPauseIconPath != null)
-            PlayPauseIconPath.Kind = showReplay
-                ? Material.Icons.MaterialIconKind.Replay
-                : _viewModel?.IsPlaying == true
-                    ? Material.Icons.MaterialIconKind.Pause
-                    : Material.Icons.MaterialIconKind.Play;
-    }
-
-    public void SetPlayPauseIconFromPlayerState(PlaybackState state)
+    /// <summary>
+    /// SINGLE authoritative method for updating the play/pause icon.
+    /// All callers (MainWindow, event handlers) must go through this method.
+    /// Never read from ViewModel here — always receive the isPlaying value as a parameter.
+    /// </summary>
+    public void SyncPlayPauseIcon(bool isPlaying)
     {
         if (_replayMode)
         {
             PlayPauseIconPath.Kind = Material.Icons.MaterialIconKind.Replay;
-            return;
+            PauseLog($"SyncPlayPauseIcon: replay mode -> Replay");
         }
-        PlayPauseIconPath.Kind = state == PlaybackState.Playing
-            ? Material.Icons.MaterialIconKind.Pause
-            : Material.Icons.MaterialIconKind.Play;
+        else
+        {
+            var newKind = isPlaying
+                ? Material.Icons.MaterialIconKind.Pause
+                : Material.Icons.MaterialIconKind.Play;
+            PauseLog($"SyncPlayPauseIcon: isPlaying={isPlaying} _replayMode={_replayMode} -> {newKind}");
+            PlayPauseIconPath.Kind = newKind;
+        }
+    }
+
+    /// <summary>
+    /// Set replay mode flag without calling SyncPlayPauseIcon.
+    /// Call SyncPlayPauseIcon separately to update the icon.
+    /// </summary>
+    public void SetReplayMode(bool replayMode)
+    {
+        _replayMode = replayMode;
+        PauseLog($"SetReplayMode({replayMode})");
     }
 
     public void RefreshVolumeIcon()
@@ -179,18 +188,19 @@ public partial class ControlsBoxControl : AvaloniaUserControl
     private void OnPlayPause(object? sender, RoutedEventArgs e)
     {
         if (_viewModel == null) return;
+        PauseLog($"OnPlayPause CLICKED. _replayMode={_replayMode}");
         // If in replay mode, clicking play restarts the video from beginning
         if (_replayMode)
         {
             _replayMode = false;
-            PlayPauseIconPath.Kind = Material.Icons.MaterialIconKind.Pause;
             _viewModel.PlayPause(); // ViewModel handles stop+seek+play internally
+            PauseLog($"OnPlayPause replay mode: _viewModel.PlayPause() called");
             return;
         }
-        // Optimistically toggle icon immediately — don't wait for PlaybackStateChanged event
-        PlayPauseIconPath.Kind = PlayPauseIconPath.Kind == Material.Icons.MaterialIconKind.Pause
-            ? Material.Icons.MaterialIconKind.Play
-            : Material.Icons.MaterialIconKind.Pause;
+        // Do NOT optimistically toggle the icon — let PlaybackStateManager's StateChanged
+        // event update the icon through SyncPlayPauseIcon. This avoids the double-press
+        // bug where the icon shows Pause before mpv has actually started playing.
+        PauseLog($"OnPlayPause: _viewModel.PlayPause() called");
         _viewModel.PlayPause();
     }
 
