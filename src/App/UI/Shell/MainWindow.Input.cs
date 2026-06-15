@@ -222,33 +222,43 @@ public partial class MainWindow
 
     private void BuildVideoContextMenu(Flyout flyout)
     {
-        var stack = new global::Avalonia.Controls.StackPanel();
+        // ── Shared helpers ──
+        Border MakeBorder(StackPanel child) => new()
+        {
+            Background = AppColors.DialogSurface,
+            BorderBrush = AppColors.DividerStrong,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(4),
+            MinWidth = 200,
+            Child = child
+        };
 
-        void AddItem(string iconKey, string text, string? shortcut, Action action)
+        // ── Flat menu item ──
+        void AddFlat(StackPanel s, string text, string? shortcut, Action action, bool selected = false)
         {
             var grid = new Grid
             {
                 ColumnDefinitions = new ColumnDefinitions
                 {
-                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(new GridLength(16)),
                     new ColumnDefinition(GridLength.Star),
                     new ColumnDefinition(GridLength.Auto)
                 }
             };
 
-            var iconData = AvaloniaApp.Current?.FindResource(iconKey) as Geometry;
-            if (iconData != null)
+            // Checkmark column
+            if (selected)
             {
-                var iconPath = new global::Avalonia.Controls.Shapes.Path
+                var check = new TextBlock
                 {
-                    Data = iconData,
-                    Fill = AppColors.TextPrimary,
-                    Width = 14, Height = 14,
-                    Stretch = Stretch.Uniform,
-                    VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center
+                    Text = "✓",
+                    FontSize = 12,
+                    Foreground = AppColors.Accent,
+                    VerticalAlignment = AvaloniaLayout.VerticalAlignment.Center,
+                    HorizontalAlignment = AvaloniaLayout.HorizontalAlignment.Center
                 };
-                Grid.SetColumn(iconPath, 0);
-                grid.Children.Add(iconPath);
+                grid.Children.Add(check);
             }
 
             var textBlock = new TextBlock
@@ -256,7 +266,7 @@ public partial class MainWindow
                 Text = text,
                 FontSize = 13,
                 Foreground = AppColors.TextPrimary,
-                VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center
+                VerticalAlignment = AvaloniaLayout.VerticalAlignment.Center
             };
             Grid.SetColumn(textBlock, 1);
             grid.Children.Add(textBlock);
@@ -268,7 +278,7 @@ public partial class MainWindow
                     Text = shortcut,
                     FontSize = 11,
                     Foreground = AppColors.TextOnDarkDisabled,
-                    VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center
+                    VerticalAlignment = AvaloniaLayout.VerticalAlignment.Center
                 };
                 Grid.SetColumn(shortcutBlock, 2);
                 grid.Children.Add(shortcutBlock);
@@ -280,116 +290,165 @@ public partial class MainWindow
                 Background = AppColors.Transparent,
                 BorderThickness = new Thickness(0),
                 Padding = new Thickness(10, 7),
-                HorizontalContentAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch,
+                HorizontalContentAlignment = AvaloniaLayout.HorizontalAlignment.Stretch,
                 Cursor = new Cursor(StandardCursorType.Arrow)
             };
-
-            btn.PointerEntered += (_, _) =>
-                btn.Background = AppColors.HoverSubtle;
-            btn.PointerExited += (_, _) =>
-                btn.Background = AppColors.Transparent;
+            btn.PointerEntered += (_, _) => btn.Background = AppColors.HoverSubtle;
+            btn.PointerExited += (_, _) => btn.Background = AppColors.Transparent;
             btn.Click += (_, _) => { action(); flyout.Hide(); };
-
-            stack.Children.Add(btn);
+            s.Children.Add(btn);
         }
 
-        AddItem("PlayIcon", "Play / Pause", "Space", () => _viewModel?.PlayPause());
-        AddItem("StopIcon", "Stop", "Ctrl+S", () => _viewModel?.Stop());
-
-        stack.Children.Add(new Separator
+        // ── Section header label ──
+        void AddHeader(StackPanel s, string text) => s.Children.Add(new TextBlock
         {
-            Background = AppColors.DividerStrong,
-            Margin = new Thickness(4, 2)
-        });
-
-        AddItem("SkipBackwardIcon", "Seek Backward", "←", () => _viewModel?.SeekBackward());
-        AddItem("SkipForwardIcon", "Seek Forward", "→", () => _viewModel?.SeekForward());
-        AddItem("FullscreenEnterIcon", "Fullscreen", "F", () => _viewModel?.ToggleFullscreen());
-        AddItem("AlwaysOnTopIcon", "Always on Top", "", () => Topmost = !Topmost);
-
-        stack.Children.Add(new Separator
-        {
-            Background = AppColors.DividerStrong,
-            Margin = new Thickness(4, 2)
-        });
-
-        AddItem("SubtitlesIcon", "Cycle Subtitles", "C", () => _playerService?.Player?.CycleSubtitleTrack());
-
-        // Aspect Ratio sub-menu
-        var aspectLabel = new TextBlock
-        {
-            Text = "ASPECT RATIO",
+            Text = text,
             FontSize = 10,
             FontWeight = FontWeight.Bold,
             Foreground = AppColors.TextPrimary,
             Opacity = 0.4,
             LetterSpacing = 0.8,
             Margin = new Thickness(10, 6, 8, 4),
-            VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center
-        };
-        stack.Children.Add(aspectLabel);
-        var aspectRatios = new[] { ("Original", -1.0), ("16:9", 1.7778), ("16:10", 1.6), ("4:3", 1.3333), ("2.35:1", 2.35) };
-        foreach (var (label, ratio) in aspectRatios)
+            VerticalAlignment = AvaloniaLayout.VerticalAlignment.Center
+        });
+
+        // ── Submenu item with arrow and nested flyout ──
+        void AddSubMenu(StackPanel s, string text, Action<StackPanel> buildSub)
         {
-            AddItem("", label, "", () => _viewModel?.SetAspectRatio(ratio));
+            var subStack = new StackPanel();
+            buildSub(subStack);
+
+            var subFlyout = new Flyout
+            {
+                Placement = PlacementMode.Right,
+                ShowMode = FlyoutShowMode.Standard,
+                Content = MakeBorder(subStack)
+            };
+
+            var grid = new Grid
+            {
+                ColumnDefinitions = new ColumnDefinitions
+                {
+                    new ColumnDefinition(GridLength.Star),
+                    new ColumnDefinition(new GridLength(16))
+                }
+            };
+
+            grid.Children.Add(new TextBlock
+            {
+                Text = text,
+                FontSize = 13,
+                Foreground = AppColors.TextPrimary,
+                VerticalAlignment = AvaloniaLayout.VerticalAlignment.Center
+            });
+            Grid.SetColumn(grid.Children[^1], 0);
+
+            // Arrow indicator
+            grid.Children.Add(new TextBlock
+            {
+                Text = "▶",
+                FontSize = 9,
+                Foreground = AppColors.TextOnDarkDisabled,
+                VerticalAlignment = AvaloniaLayout.VerticalAlignment.Center,
+                HorizontalAlignment = AvaloniaLayout.HorizontalAlignment.Right
+            });
+            Grid.SetColumn(grid.Children[^1], 1);
+
+            var btn = new Button
+            {
+                Content = grid,
+                Background = AppColors.Transparent,
+                BorderThickness = new Thickness(0),
+                Padding = new Thickness(10, 7),
+                HorizontalContentAlignment = AvaloniaLayout.HorizontalAlignment.Stretch,
+                Cursor = new Cursor(StandardCursorType.Arrow)
+            };
+            btn.PointerEntered += (_, _) => btn.Background = AppColors.HoverSubtle;
+            btn.PointerExited += (_, _) => btn.Background = AppColors.Transparent;
+            btn.Click += (_, _) =>
+            {
+                if (subFlyout.IsOpen)
+                    subFlyout.Hide();
+                else
+                    subFlyout.ShowAt(btn);
+            };
+            s.Children.Add(btn);
         }
 
-        // Crop sub-menu
-        var cropLabel = new TextBlock
-        {
-            Text = "CROP",
-            FontSize = 10,
-            FontWeight = FontWeight.Bold,
-            Foreground = AppColors.TextPrimary,
-            Opacity = 0.4,
-            LetterSpacing = 0.8,
-            Margin = new Thickness(10, 6, 8, 4),
-            VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center
-        };
-        stack.Children.Add(cropLabel);
-        var cropRatios = new[] { ("Off", -1.0), ("16:9", 1.7778), ("16:10", 1.6), ("4:3", 1.3333), ("2.35:1", 2.35) };
-        foreach (var (label, ratio) in cropRatios)
-        {
-            var isOff = ratio < 0;
-            AddItem("", label, "", isOff
-                ? () => _viewModel?.ResetCrop()
-                : () => _viewModel?.SetCrop(ratio));
-        }
-
-        // Speed sub-menu
-        var speedLabel = new TextBlock
-        {
-            Text = "Speed",
-            FontSize = 13,
-            Foreground = AppColors.TextPrimary,
-            Margin = new Thickness(10, 7, 0, 7),
-            VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center
-        };
-        stack.Children.Add(speedLabel);
-        var speeds = new[] { ("0.5×", 0.5), ("1.0×", 1.0), ("1.5×", 1.5), ("2.0×", 2.0) };
-        foreach (var (label, speed) in speeds)
-        {
-            AddItem("", label, "", () => _viewModel?.SetSpeed(speed));
-        }
-
-        stack.Children.Add(new Separator
+        // ── Separator ──
+        void AddSep(StackPanel s) => s.Children.Add(new Separator
         {
             Background = AppColors.DividerStrong,
             Margin = new Thickness(4, 2)
         });
 
-        AddItem("OptionsIcon", "Preferences", "", () => new PreferencesDialog { DataContext = _viewModel }.Show(this));
-        AddItem("InfoIcon", "About Cine", "", () => new AboutDialog { DataContext = _viewModel }.Show(this));
+        // ═══════════════════════════════════════════════════
+        //  Build Menu
+        // ═══════════════════════════════════════════════════
 
-        flyout.Content = new Border
+        var root = new StackPanel();
+
+        AddFlat(root, "Play / Pause", "Space", () => _viewModel?.PlayPause());
+        AddFlat(root, "Stop", "Ctrl+S", () => _viewModel?.Stop());
+        AddSep(root);
+
+        // ── Navigate ──
+        AddSubMenu(root, "Navigate", s =>
         {
-            Background = AppColors.DialogSurface,
-            BorderBrush = AppColors.DividerStrong,
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(4),
-            MinWidth = 200,
-            Child = stack
-        };
+            AddFlat(s, "Seek Backward", "←", () => _viewModel?.SeekBackward());
+            AddFlat(s, "Seek Forward", "→", () => _viewModel?.SeekForward());
+        });
+
+        // ── Video ──
+        AddSubMenu(root, "Video", s =>
+        {
+            AddFlat(s, "Fullscreen", "F", () => _viewModel?.ToggleFullscreen());
+            AddFlat(s, "Always on Top", "", () => Topmost = !Topmost);
+            AddSep(s);
+
+            // Aspect Ratio
+            AddHeader(s, "ASPECT RATIO");
+            AddFlat(s, "Original", null, () => _viewModel?.SetAspectRatio(-1),
+                _viewModel?.AspectRatioValue < 0);
+            AddFlat(s, "16:9", null, () => _viewModel?.SetAspectRatio(1.7778),
+                Math.Abs((_viewModel?.AspectRatioValue ?? 0) - 1.7778) < 0.01);
+            AddFlat(s, "16:10", null, () => _viewModel?.SetAspectRatio(1.6),
+                Math.Abs((_viewModel?.AspectRatioValue ?? 0) - 1.6) < 0.01);
+            AddFlat(s, "4:3", null, () => _viewModel?.SetAspectRatio(1.3333),
+                Math.Abs((_viewModel?.AspectRatioValue ?? 0) - 1.3333) < 0.01);
+            AddFlat(s, "2.35:1", null, () => _viewModel?.SetAspectRatio(2.35),
+                Math.Abs((_viewModel?.AspectRatioValue ?? 0) - 2.35) < 0.01);
+            AddSep(s);
+
+            // Crop
+            AddHeader(s, "CROP");
+            AddFlat(s, "Off", null, () => _viewModel?.ResetCrop());
+            AddFlat(s, "16:9", null, () => _viewModel?.SetCrop(1.7778));
+            AddFlat(s, "16:10", null, () => _viewModel?.SetCrop(1.6));
+            AddFlat(s, "4:3", null, () => _viewModel?.SetCrop(1.3333));
+            AddFlat(s, "2.35:1", null, () => _viewModel?.SetCrop(2.35));
+        });
+
+        // ── Subtitle ──
+        AddSubMenu(root, "Subtitle", s =>
+        {
+            AddFlat(s, "Cycle Subtitles", "C", () => _playerService?.Player?.CycleSubtitleTrack());
+        });
+
+        // ── Speed ──
+        AddSubMenu(root, "Speed", s =>
+        {
+            var currentSpeed = _viewModel?.SpeedValue ?? 1.0;
+            AddFlat(s, "0.5×", null, () => _viewModel?.SetSpeed(0.5), Math.Abs(currentSpeed - 0.5) < 0.01);
+            AddFlat(s, "1.0×", null, () => _viewModel?.SetSpeed(1.0), Math.Abs(currentSpeed - 1.0) < 0.01);
+            AddFlat(s, "1.5×", null, () => _viewModel?.SetSpeed(1.5), Math.Abs(currentSpeed - 1.5) < 0.01);
+            AddFlat(s, "2.0×", null, () => _viewModel?.SetSpeed(2.0), Math.Abs(currentSpeed - 2.0) < 0.01);
+        });
+
+        AddSep(root);
+        AddFlat(root, "Preferences", null, () => new PreferencesDialog { DataContext = _viewModel }.Show(this));
+        AddFlat(root, "About Cine", null, () => new AboutDialog { DataContext = _viewModel }.Show(this));
+
+        flyout.Content = MakeBorder(root);
     }
 }

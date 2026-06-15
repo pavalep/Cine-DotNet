@@ -351,14 +351,11 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
         int y = (vh - ch) / 2;
 
         _player.Command("vf", "add", $"{CropFilterLabel}:crop={cw}:{ch}:{x}:{y}");
-        // Also set aspect ratio so keepaspect doesn't re-add black bars
-        AspectRatioValue = aspectRatio;
     }
 
     public void ResetCrop()
     {
         _player.Command("vf", "remove", CropFilterLabel);
-        AspectRatioValue = -1;
     }
 
     public void RotateLeft() => _player.Command("set", "video-rotate", "90");
