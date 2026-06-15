@@ -236,18 +236,28 @@ public partial class PipWindow : Window
             MuteIcon.Kind = muted ? Material.Icons.MaterialIconKind.VolumeOff : Material.Icons.MaterialIconKind.VolumeHigh;
     }
 
+    private DateTime _lastFrameTime = DateTime.MinValue;
+    private static readonly TimeSpan MinFrameInterval = TimeSpan.FromMilliseconds(33); // ~30fps for PiP
+
     /// <summary>
     /// Update the video frame displayed in the PiP window.
     /// Called from the UI dispatcher thread. Data is BGRA byte array.
+    /// Frames are throttled to ~30fps — PiP doesn't need 60fps.
+    /// Uses unsafe bulk copy (Buffer.MemoryCopy) instead of row-by-row Marshal.Copy.
     /// </summary>
     public void UpdateFrame(byte[] pixels, int width, int height)
     {
+        // Throttle to ~30fps to reduce UI thread pressure
+        var now = DateTime.UtcNow;
+        if ((now - _lastFrameTime) < MinFrameInterval)
+            return;
+        _lastFrameTime = now;
+
         try
         {
             var image = PipVideoFrame;
             if (image == null) return;
 
-            // Create or resize bitmap
             if (_pipFrameBitmap == null || _pipFrameBitmap.PixelSize.Width != width || _pipFrameBitmap.PixelSize.Height != height)
             {
                 _pipFrameBitmap?.Dispose();
@@ -258,17 +268,15 @@ public partial class PipWindow : Window
                     AlphaFormat.Opaque);
             }
 
-            // Copy frame data to bitmap
             using (var fb = _pipFrameBitmap.Lock())
             {
-                int stride = width * 4;
-                int srcStride = width * 4;
-                for (int y = 0; y < height; y++)
+                unsafe
                 {
-                    System.Runtime.InteropServices.Marshal.Copy(
-                        pixels, y * srcStride,
-                        fb.Address + y * stride,
-                        srcStride);
+                    var byteCount = (uint)(width * height * 4);
+                    fixed (byte* src = pixels)
+                    {
+                        Buffer.MemoryCopy(src, (void*)fb.Address, byteCount, byteCount);
+                    }
                 }
             }
 

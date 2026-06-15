@@ -54,28 +54,31 @@
                 IsHitTestVisible="False"
                 x:Name="PlaybackBackground" />
 
-        <!-- Render API video frame (OpenGlControlBase) -->
+        <!-- Video frame (WriteableBitmap-backed Image). Background=Transparent
+             so it passes clicks through and doesn't overlay a dark tint.
+             Renders behind StartPage. Becomes visible when a frame loads. -->
         <controls:MpvVideoView x:Name="MpvVideoView"
                                HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                               IsHitTestVisible="False" />
+                               IsHitTestVisible="False"
+                               IsVisible="False" />
 
-        <!-- Video click overlay — fills window, captures hover for auto-hide -->
+        <!-- Video click overlay — fills window, captures hover/click for auto-hide
+             and play/pause toggle. Declared BEFORE StartPage so StartPage receives
+             clicks when visible. -->
         <Border x:Name="VideoClickOverlay"
                 Background="Transparent"
                 HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                 IsTabStop="False"
                 PointerPressed="OnVideoPointerPressed" />
 
-        <!-- Vignette overlay -->
-        <Border Background="{StaticResource VignetteOverlay}"
-                IsHitTestVisible="False" />
+        <!-- Start Page — full viewport, opaque background.
+             TOPMOST layer in this section. Always clickable. Fades out when media
+             opens, revealing VideoClickOverlay + video beneath. -->
+        <local:StartPage x:Name="StartPage" />
 
         <!-- ══════════════════════════════════════════════════════════════ -->
         <!--  LAYER 1: UI OVERLAYS (floats on top of video)               -->
         <!-- ══════════════════════════════════════════════════════════════ -->
-
-        <!-- Start Page — full viewport, opaque background -->
-        <local:StartPage x:Name="StartPage" />
 
         <!-- Loading Spinner — ZIndex=30 so it renders above all other overlays -->
         <controls:SpinnerOverlayControl x:Name="LoadingSpinnerOverlay" ZIndex="30" />

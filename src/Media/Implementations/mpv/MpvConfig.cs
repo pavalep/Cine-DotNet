@@ -88,14 +88,31 @@ public static class MpvConfig
     {
         return new Dictionary<string, string>
         {
+            // ── Core ──
             ["terminal"] = "no",
-            ["msg-level"] = "all=info",
+            ["msg-level"] = "all=warn",
             ["keep-open"] = "yes",
             ["keep-open-pause"] = "no",
             ["osc"] = "no",
             ["vo"] = "libmpv",         // REQUIRED: Enables libmpv VO for render API
-            ["hwdec"] = "no",          // No GPU decoding — avoids nvcuda.dll hang
-            ["volume-max"] = "150"
+
+            // ── Audio ──
+            ["ao"] = "wasapi",
+            ["volume-max"] = "150",
+
+            // ── Color / levels ──
+            // video-output-levels = full prevents mpv from treating the FBO as
+            // limited-range (16-235 TV levels) which would crush blacks and dim
+            // whites on a PC monitor expecting full-range (0-255).
+            ["video-output-levels"] = "full",
+
+            // gamma slightly above neutral — standard sRGB curve is 2.2, which
+            // some find slightly dark on uncalibrated displays. Adding a touch
+            // of gamma (10) lifts midtones without clipping highlights.
+            ["gamma"] = "10",
+
+            // ── Hardware decoding (disabled until ANGLE interop verified) ──
+            ["hwdec"] = "no"
         };
     }
 

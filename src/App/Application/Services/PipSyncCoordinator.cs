@@ -1,5 +1,4 @@
 using System;
-using Avalonia.Threading;
 using Cine.Media.Events;
 using Cine.Media.Interfaces;
 using Cine.Media.Models;
@@ -8,34 +7,28 @@ namespace Cine.Avalonia.ViewModels
 {
     /// <summary>
     /// Synchronizes a secondary (PiP) IMediaPlayer with the primary player.
-    /// Mirrors play/pause, file opens, and corrects position drift.
+    /// Mirrors play/pause, file opens. Uses PositionChanged event for drift correction
+    /// instead of polling timer — eliminates unnecessary timer ticks and stutter.
     /// </summary>
     public class PipSyncCoordinator : IDisposable
     {
         private readonly IMediaPlayer _primary;
         private readonly IMediaPlayer _secondary;
-        private readonly DispatcherTimer _driftTimer;
         private bool _disposed;
         private bool _isSyncing;  // guard against recursive sync
 
         private const double DriftThresholdSeconds = 0.5;
-        private static readonly TimeSpan DriftCheckInterval = TimeSpan.FromSeconds(1);
+        private DateTime _lastDriftCheck = DateTime.MinValue;
+        private static readonly TimeSpan MinDriftCheckInterval = TimeSpan.FromMilliseconds(500); // throttle
 
         public PipSyncCoordinator(IMediaPlayer primary, IMediaPlayer secondary)
         {
             _primary = primary ?? throw new ArgumentNullException(nameof(primary));
             _secondary = secondary ?? throw new ArgumentNullException(nameof(secondary));
 
-            // Mirror playback state (play/pause)
             _primary.PlaybackStateChangedEvent += OnPrimaryPlaybackStateChanged;
-
-            // Mirror file opens
             _primary.Opened += OnPrimaryOpened;
-
-            // Periodic drift check
-            _driftTimer = new DispatcherTimer { Interval = DriftCheckInterval };
-            _driftTimer.Tick += OnDriftCheck;
-            _driftTimer.Start();
+            _primary.PositionChanged += OnPrimaryPositionChanged;
         }
 
         private void OnPrimaryPlaybackStateChanged(object? sender, PlaybackStateChangedEventArgs e)
@@ -85,36 +78,25 @@ namespace Cine.Avalonia.ViewModels
             }
         }
 
-        private void OnDriftCheck(object? sender, EventArgs? e)
+        private void OnPrimaryPositionChanged(object? sender, PositionChangedEventArgs e)
         {
             if (_disposed || _isSyncing) return;
 
-            try
-            {
-                var primaryPos = _primary.Position.TotalSeconds;
-                var secondaryPos = _secondary.Position.TotalSeconds;
+            // Throttle drift checks — PositionChanged fires frequently (~60/sec)
+            var now = DateTime.UtcNow;
+            if ((now - _lastDriftCheck) < MinDriftCheckInterval)
+                return;
+            _lastDriftCheck = now;
 
-                // Skip drift check if either position is invalid
-                if (primaryPos < 0 || secondaryPos < 0)
-                    return;
+            var secondaryPos = _secondary.Position.TotalSeconds;
+            if (secondaryPos < 0) return;
 
-                var drift = Math.Abs(primaryPos - secondaryPos);
-                if (drift > DriftThresholdSeconds)
-                {
-                    _isSyncing = true;
-                    try
-                    {
-                        _secondary.Seek(_primary.Position);
-                    }
-                    finally
-                    {
-                        _isSyncing = false;
-                    }
-                }
-            }
-            catch
+            var drift = Math.Abs(e.Position.TotalSeconds - secondaryPos);
+            if (drift > DriftThresholdSeconds)
             {
-                // Ignore sync errors during disposal
+                _isSyncing = true;
+                try { _secondary.Seek(e.Position); }
+                finally { _isSyncing = false; }
             }
         }
 
@@ -145,12 +127,9 @@ namespace Cine.Avalonia.ViewModels
             if (_disposed) return;
             _disposed = true;
 
-            _driftTimer.Tick -= OnDriftCheck;
-            _driftTimer.Stop();
-            (_driftTimer as IDisposable)?.Dispose();
-
             _primary.PlaybackStateChangedEvent -= OnPrimaryPlaybackStateChanged;
             _primary.Opened -= OnPrimaryOpened;
+            _primary.PositionChanged -= OnPrimaryPositionChanged;
         }
     }
 }

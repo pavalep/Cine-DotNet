@@ -504,6 +504,7 @@ public partial class MainWindow
         _propertyWatcher?.Dispose();
         _propertyWatcher = null;
         _viewModel?.SaveSession();
+        MpvVideoView.Shutdown();
         _playerService?.Dispose();
         _pipService?.Dispose();
         base.OnClosed(e);
@@ -523,8 +524,13 @@ public partial class MainWindow
             return;
         }
 
-        DebugLog("InitVideoRenderer: attaching MpvVideoView to player");
-        MpvVideoView.AttachPlayer(player);
+        DebugLog("InitVideoRenderer: initializing MpvVideoView (ANGLE + render API)");
+        
+        // Main window uses ANGLE/OpenGL render API — same approach as PipPlayerService.
+        // MpvVideoView creates its own ANGLE context, initializes mpv render API,
+        // and runs a dedicated render thread that updates a WriteableBitmap Image.
+        // This bypasses Avalonia's OpenGlControlBase which can fail silently in v12.
+        MpvVideoView.Initialize(player);
     }
 
     private PropertyWatcher? _propertyWatcher;

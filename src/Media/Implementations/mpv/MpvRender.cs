@@ -67,12 +67,7 @@ public static unsafe partial class MpvRenderNative
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     public unsafe delegate void* MpvGetProcAddressDelegate(void* ctx,
-#if NET5_0_OR_GREATER
-        [MarshalAs(UnmanagedType.LPUTF8Str)]
-#else
-        [MarshalAs(UnmanagedType.LPStr)]
-#endif
-        string name);
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string name);
 
     // Wrapper struct for GetProcAddress delegate (matches reference LibMpv-OpenGL pattern)
     public struct MpvGetProcAddressFunc
@@ -84,14 +79,6 @@ public static unsafe partial class MpvRenderNative
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     public unsafe delegate void MpvRenderUpdateFnDelegate(void* ctx);
-
-    // Wrapper struct for update callback delegate (matches reference LibMpv-OpenGL pattern)
-    public struct MpvRenderUpdateFnFunc
-    {
-        public IntPtr Pointer;
-        public static implicit operator MpvRenderUpdateFnFunc(MpvRenderUpdateFnDelegate? func) =>
-            new MpvRenderUpdateFnFunc { Pointer = func == null ? IntPtr.Zero : Marshal.GetFunctionPointerForDelegate(func) };
-    }
 
     // ── P/Invoke (typed pointer params) ──
 

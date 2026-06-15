@@ -37,6 +37,35 @@ public static class AngleInterop
     public const int EGL_OPENGL_ES_API = 0x30A0;
     public const int EGL_OPENGL_ES3_BIT = 0x0040;
 
+    private static readonly Lazy<bool> _isAvailable = new(TryProbe);
+    /// <summary>Whether ANGLE EGL libraries (libEGL.dll) are loadable on this system.</summary>
+    public static bool IsAvailable => _isAvailable.Value;
+
+    private static bool TryProbe()
+    {
+        try
+        {
+            // Probe by getting the default display — if this fails, ANGLE isn't usable
+            var display = eglGetDisplay(IntPtr.Zero);
+            if (display == EGL_NO_DISPLAY)
+                return false;
+
+            if (eglInitialize(display, out _, out _) == 0)
+                return false;
+
+            eglTerminate(display);
+            return true;
+        }
+        catch (DllNotFoundException)
+        {
+            return false;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     [DllImport(LibEgl, CallingConvention = CallingConvention.Cdecl)]
     public static extern IntPtr eglGetDisplay(IntPtr display_id);
 

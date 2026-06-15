@@ -1,70 +1,347 @@
+using System;
+using System.IO;
+using System.Threading;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.OpenGL;
-using Avalonia.OpenGL.Controls;
+using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.Threading;
+using Avalonia.Platform;
 using Cine.Media.Implementations;
 using Cine.Media.Models;
+using Image = Avalonia.Controls.Image;
 
 namespace Cine.Avalonia.Controls;
 
 /// <summary>
-/// OpenGL-based video view using Avalonia's OpenGlControlBase.
-/// mpv renders directly into the FBO provided by Avalonia (zero-copy).
-/// Matches the reference LibMpv-OpenGL.OpenGlView implementation.
+/// Self-contained video renderer for the main window.
+/// Creates its own ANGLE/OpenGL context, initializes mpv render API, runs a dedicated
+/// render thread, and displays frames via a WriteableBitmap-backed Image.
+/// 
+/// This does NOT depend on Avalonia's OpenGlControlBase (which can fail silently in
+/// Avalonia 12 when the control is occluded or compositor conditions aren't met).
+/// The ANGLE context is completely under our control — same as PipPlayerService.
 /// </summary>
-public class MpvVideoView : OpenGlControlBase
+public class MpvVideoView : Decorator
 {
     private MpvPlayer? _player;
-    private bool _initialized;
-    private volatile bool _isIdle = true;
+    private AngleGlContext? _angleContext;
+    private Thread? _renderThread;
+    private CancellationTokenSource? _renderCts;
+    private volatile bool _frameReady;
+    private bool _disposed;
+    private readonly object _initLock = new();
 
-    public void AttachPlayer(MpvPlayer player)
+    // Video dimensions — set from event-loop thread, read from render thread
+    private volatile int _videoWidth;
+    private volatile int _videoHeight;
+
+    // Display
+    private readonly Image _videoImage;
+    private WriteableBitmap? _writeableBitmap;
+    private DateTime _lastFrameTime = DateTime.MinValue;
+    private static readonly TimeSpan MinFrameInterval = TimeSpan.FromMilliseconds(8); // ~120fps cap
+
+    // Debug counters
+    private long _frameCount;
+    private long _renderCount;
+    private long _displayCount;
+    private DateTime _lastDebugLog = DateTime.MinValue;
+    private static readonly TimeSpan DebugLogInterval = TimeSpan.FromSeconds(2);
+
+    private static readonly string LogPath = CreateLogPath();
+    private static string CreateLogPath()
     {
-        _player = player;
-        player.PlaybackStateChangedEvent += (_, e) =>
+        try
         {
-            var wasIdle = _isIdle;
-            _isIdle = e.State is not (PlaybackState.Playing or PlaybackState.Paused);
-            if (wasIdle && !_isIdle)
-                Dispatcher.UIThread.Post(RequestNextFrameRendering, DispatcherPriority.Background);
+            var dir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Cine");
+            Directory.CreateDirectory(dir);
+            return Path.Combine(dir, "cine_mainwin_gl.log");
+        }
+        catch { return Path.Combine(Path.GetTempPath(), "cine_mainwin_gl.log"); }
+    }
+    private static void Log(string msg)
+    {
+        try { File.AppendAllText(LogPath, $"[{DateTime.Now:HH:mm:ss.fff}] {msg}{Environment.NewLine}"); }
+        catch { }
+    }
+
+    public MpvVideoView()
+    {
+        _videoImage = new Image
+        {
+            Stretch = Stretch.Uniform,
+            IsHitTestVisible = false,
+            IsVisible = false              // Hide until first frame renders
         };
-        if (_initialized)
-            RequestNextFrameRendering();
+        Child = _videoImage;
     }
 
-    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    /// <summary>
+    /// Initialize the render API and start rendering.
+    /// Must be called once after the player is created and BEFORE opening any file.
+    /// </summary>
+    public void Initialize(MpvPlayer player)
     {
-        base.OnAttachedToVisualTree(e);
-        RequestNextFrameRendering();
+        if (_player != null || _disposed) return;
+
+        lock (_initLock)
+        {
+            if (_player != null || _disposed) return;
+
+            _player = player;
+            Log("=== MainWin GL Init Start ===");
+
+            // Wire player events for video-size detection
+            _player.Opened += OnPlayerOpened;
+
+            // 1. Create ANGLE context on this (UI) thread
+            _angleContext = new AngleGlContext(1920, 1080);
+            Log("ANGLE context created");
+
+            // 2. Init render API — GL context must be current
+            _angleContext.MakeCurrent();
+            try
+            {
+                player.InitializeRenderApi(
+                    name => AngleInterop.eglGetProcAddress(name),
+                    () =>
+                    {
+                        // Called from mpv's internal thread when new frame ready
+                        _frameReady = true;
+                    });
+                Log("Render API initialized");
+            }
+            finally
+            {
+                _angleContext.ReleaseCurrent();
+            }
+
+            // 3. Start dedicated render thread
+            _renderCts = new CancellationTokenSource();
+            _renderThread = new Thread(() => RenderLoop(_renderCts.Token))
+            {
+                Name = "MainWin-RenderGL",
+                IsBackground = true
+            };
+            _renderThread.Start();
+            Log("Render thread started");
+
+            Log("=== MainWin GL Init Complete ===");
+        }
     }
 
-    protected override void OnOpenGlInit(GlInterface gl)
+    /// <summary>
+    /// Detach the player without disposing it.
+    /// </summary>
+    public void DetachPlayer()
     {
-        if (_initialized) return;
-        _initialized = true;
+        _player = null;
+    }
 
+    private void OnPlayerOpened(object? sender, EventArgs e)
+    {
         if (_player == null) return;
-
-        _player.InitializeRenderApi(
-            name => gl.GetProcAddress(name),
-            () => Dispatcher.UIThread.Post(RequestNextFrameRendering, DispatcherPriority.Background));
+        // Cache video dimensions from event-loop thread (safe — not render thread)
+        _player.GetVideoSize(out int w, out int h);
+        _videoWidth = w;
+        _videoHeight = h;
+        Log($"Video opened: {w}x{h}");
     }
 
-    protected override unsafe void OnOpenGlRender(GlInterface gl, int fbo)
+    /// <summary>
+    /// Render loop running on dedicated thread.
+    /// Renders mpv frames into our ANGLE FBO, reads pixels back, delivers to UI.
+    /// </summary>
+    private void RenderLoop(CancellationToken token)
     {
-        if (_player == null || _isIdle) return;
+        // ANGLE contexts are per-thread — must make current on THIS thread
+        try
+        {
+            _angleContext?.MakeCurrent();
+        }
+        catch (Exception ex)
+        {
+            Log($"MakeCurrent failed on render thread: {ex}");
+            return;
+        }
 
-        var scaling = TopLevel.GetTopLevel(this)?.RenderScaling ?? 1.0;
-        var w = Math.Max(1, (int)(Bounds.Width * scaling));
-        var h = Math.Max(1, (int)(Bounds.Height * scaling));
+        try
+        {
+            Log("RenderLoop started — waiting for frames...");
+            while (!token.IsCancellationRequested && !_disposed)
+            {
+                if (_frameReady && _angleContext != null && _player != null)
+                {
+                    // Frame throttle check BEFORE consuming _frameReady
+                    var now = DateTime.UtcNow;
+                    if ((now - _lastFrameTime) < MinFrameInterval)
+                    {
+                        Thread.Sleep(1);
+                        continue;
+                    }
 
-        _player.RenderFrame(fbo, w, h);
+                    // Consume
+                    _frameReady = false;
+                    _lastFrameTime = now;
+                    _frameCount++;
+
+                    // Periodic debug: log stats every ~2 seconds
+                    if ((now - _lastDebugLog) > DebugLogInterval)
+                    {
+                        _lastDebugLog = now;
+                        Log($"STATS: frames={_frameCount} renders={_renderCount} displays={_displayCount} vidSize={_videoWidth}x{_videoHeight} fbo={_angleContext?.Width}x{_angleContext?.Height}");
+                    }
+
+                    try
+                    {
+                        // 1. Ensure FBO is sized correctly (creates on first call).
+                        //    Always call when we have video dimensions — EnsureFboSize
+                        //    has its own fast-path early return.
+                        int vw = _videoWidth;
+                        int vh = _videoHeight;
+                        if (vw > 0 && vh > 0)
+                        {
+                            _angleContext!.EnsureFboSize(vw, vh);
+                        }
+
+                        // 2. Bind our FBO so mpv renders into it
+                        _angleContext!.BindFbo();
+
+                        // 3. Tell mpv to render into our FBO
+                        _player.RenderFrame(
+                            _angleContext.FboHandle,
+                            _angleContext.Width,
+                            _angleContext.Height);
+                        _renderCount++;
+
+                        // 4. Re-bind FBO before readback (mpv may have unbound it)
+                        _angleContext!.BindFbo();
+
+                        // 5. Read rendered pixels
+                        var pixels = _angleContext.ReadPixels(
+                            _angleContext.Width,
+                            _angleContext.Height);
+                        int w = _angleContext.Width;
+                        int h = _angleContext.Height;
+
+                        Dispatcher.UIThread.Post(() =>
+                        {
+                            UpdateDisplay(pixels, w, h);
+                            _displayCount++;
+                        }, DispatcherPriority.Background);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log($"Render error: {ex}");
+                        _frameReady = false;
+                    }
+                }
+                else
+                {
+                    Thread.Sleep(4);
+                    if (token.IsCancellationRequested) break;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Log($"Render thread crashed: {ex}");
+        }
+        finally
+        {
+            _angleContext?.ReleaseCurrent();
+            Log("Render thread exiting");
+        }
     }
 
-    protected override void OnOpenGlDeinit(GlInterface gl)
+    /// <summary>
+    /// Update the WriteableBitmap from UI thread. Called via Dispatcher.
+    /// </summary>
+    private void UpdateDisplay(byte[] pixels, int width, int height)
     {
-        _player?.DeinitializeRenderApi();
-        _initialized = false;
+        try
+        {
+            bool isNew = _writeableBitmap == null || 
+                         _writeableBitmap.PixelSize.Width != width || 
+                         _writeableBitmap.PixelSize.Height != height;
+
+            if (isNew)
+            {
+                _writeableBitmap?.Dispose();
+                _writeableBitmap = new WriteableBitmap(
+                    new PixelSize(width, height),
+                    new Vector(96, 96),
+                    PixelFormat.Bgra8888,
+                    AlphaFormat.Opaque);
+                Log($"Bitmap created {width}x{height}");
+            }
+
+            using (var fb = _writeableBitmap!.Lock())
+            {
+                unsafe
+                {
+                    var byteCount = (uint)(width * height * 4);
+                    fixed (byte* src = pixels)
+                    {
+                        Buffer.MemoryCopy(src, (void*)fb.Address, byteCount, byteCount);
+                    }
+                }
+            }
+            // Set Source only once, then invalidate the Image to refresh.
+            if (isNew)
+            {
+                _videoImage.Source = _writeableBitmap;
+                _videoImage.IsVisible = true;
+                IsVisible = true;                       // Unhide the control itself
+                Log($"Source set on Image {width}x{height}");
+            }
+            _videoImage.InvalidateVisual();
+        }
+        catch (Exception ex)
+        {
+            Log($"UpdateDisplay error: {ex}");
+        }
+    }
+
+    /// <summary>
+    /// Stop rendering and dispose GL resources.
+    /// </summary>
+    public void Shutdown()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        Log("Shutdown...");
+
+        try
+        {
+            _renderCts?.Cancel();
+            _renderCts?.Dispose();
+            _renderCts = null;
+        }
+        catch { }
+
+        if (_renderThread != null && _renderThread.IsAlive)
+        {
+            if (!_renderThread.Join(2000))
+                Log("Render thread join timeout");
+            _renderThread = null;
+        }
+
+        if (_player != null)
+        {
+            _player.Opened -= OnPlayerOpened;
+            try { _player.DeinitializeRenderApi(); } catch { }
+            _player = null;
+        }
+
+        try { _angleContext?.Dispose(); } catch { }
+        _angleContext = null;
+
+        try { _writeableBitmap?.Dispose(); } catch { }
+        _writeableBitmap = null;
+
+        Log("Shutdown complete");
     }
 }

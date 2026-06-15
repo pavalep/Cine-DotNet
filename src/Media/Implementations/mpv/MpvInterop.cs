@@ -25,7 +25,10 @@ public static class MpvInterop
 
     private static IntPtr ResolveMpvLibrary(string libraryName, Assembly assembly, DllImportSearchPath? searchPath)
     {
-        if (!string.Equals(libraryName, "libmpv-2.dll", StringComparison.OrdinalIgnoreCase))
+        // Resolve both "mpv-2" (MpvRender.cs) and "libmpv-2.dll" (MpvNative.cs)
+        // P/Invoke passes the exact string from [DllImport()] attribute.
+        if (!string.Equals(libraryName, "libmpv-2.dll", StringComparison.OrdinalIgnoreCase) && 
+            !string.Equals(libraryName, "mpv-2", StringComparison.OrdinalIgnoreCase))
             return IntPtr.Zero;
 
         foreach (var name in CandidateNames)

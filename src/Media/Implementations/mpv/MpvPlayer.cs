@@ -874,7 +874,17 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
         lock (_gate)
         {
             _getProcAddress = getProcAddress;
-            _onFrameReady = onFrameReady;
+            // Wrap onFrameReady to log first frame signal
+            var frameReadyLogged = false;
+            _onFrameReady = () =>
+            {
+                if (!frameReadyLogged)
+                {
+                    DebugLog("FIRST mpv frame ready callback fired!");
+                    frameReadyLogged = true;
+                }
+                onFrameReady();
+            };
 
             _mpv = MpvNative.mpv_create();
             DebugLog($"  mpv_create returned 0x{_mpv:X}");
@@ -932,8 +942,13 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
                 },
                 new()
                 {
+                    // ADVANCED_CONTROL=1: we promise never to call libmpv API from
+                    // the render thread. This avoids mpv's internal timeout/quality
+                    // degradation. The render thread (Avalonia GL) is separate from
+                    // the event-loop thread where all mpv_command/mpv_get_property
+                    // calls happen.
                     Type = MpvRenderNative.MPV_RENDER_PARAM_ADVANCED_CONTROL,
-                    Data = (void*)mh.AllocHGlobalValue(0)
+                    Data = (void*)mh.AllocHGlobalValue(1)
                 },
                 new()
                 {
@@ -980,12 +995,15 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
     public unsafe void RenderFrame(int fbo, int width, int height)
     {
         if (_renderContext == IntPtr.Zero || !_renderApiReady) return;
-        if ((MpvRenderNative.mpv_render_context_update(_renderContext) & MpvRenderNative.MPV_RENDER_UPDATE_FRAME) == 0)
-            return;
+        var flags = MpvRenderNative.mpv_render_context_update(_renderContext);
+        if ((flags & MpvRenderNative.MPV_RENDER_UPDATE_FRAME) == 0) return;
 
-        // Match reference's OpenGlRender exactly: GCHandle pinned FBO + AllocHGlobalValue for FlipY
+        // FLIP_Y = 0 because GL FBOs have origin at bottom-left.
+        // glReadPixels reads bottom-row-first, so mpv's output must NOT be flipped.
+        // With FLIP_Y=1 the image appears upside down.
+        // InternalFormat = 0x8058 (GL_RGBA8) matches our FBO texture internal format.
         using var mh = new MarshalHelper();
-        var fboStruct = new MpvRenderNative.MpvOpenglFbo { Fbo = fbo, W = width, H = height, InternalFormat = 0 };
+        var fboStruct = new MpvRenderNative.MpvOpenglFbo { Fbo = fbo, W = width, H = height, InternalFormat = 0x8058 };
         var handle = GCHandle.Alloc(fboStruct, GCHandleType.Pinned);
 
         var parameters = new MpvRenderNative.MpvRenderParam[]
@@ -998,7 +1016,7 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
             new()
             {
                 Type = MpvRenderNative.MPV_RENDER_PARAM_FLIP_Y,
-                Data = (void*)mh.AllocHGlobalValue(1)
+                Data = (void*)mh.AllocHGlobalValue(0) // FBO: don't flip (bottom-left origin matches GL)
             },
             new()
             {
@@ -1010,7 +1028,9 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
         fixed (MpvRenderNative.MpvRenderParam* p = parameters)
         {
             var err = MpvRenderNative.mpv_render_context_render(_renderContext, (IntPtr)p);
-            // Note: reference does NOT call report_swap — let Avalonia handle swap timing
+            // Tell mpv the frame was presented. This is ESSENTIAL for proper A/V sync
+            // and frame timing. Without it, mpv cannot schedule the next frame correctly.
+            MpvRenderNative.mpv_render_context_report_swap(_renderContext);
             if (err != 0)
                 DebugLog($"RenderFrame: err={err} fbo={fbo} size={width}x{height}");
         }

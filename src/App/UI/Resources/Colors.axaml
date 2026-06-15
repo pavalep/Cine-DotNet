@@ -70,11 +70,11 @@
         <GradientStop Offset="1" Color="#FF000000" />
     </RadialGradientBrush>
 
-    <!-- Vignette: radial-gradient(center, transparent 40%, rgba(0,0,0,.45)) -->
+    <!-- Vignette: radial-gradient(center, transparent 30%, rgba(0,0,0,.25)) -->
     <RadialGradientBrush x:Key="VignetteOverlay" Center="0.5,0.5" GradientOrigin="0.5,0.5">
         <GradientStop Offset="0" Color="#00000000" />
-        <GradientStop Offset="0.4" Color="#00000000" />
-        <GradientStop Offset="1" Color="#73000000" />
+        <GradientStop Offset="0.3" Color="#00000000" />
+        <GradientStop Offset="1" Color="#40000000" />
     </RadialGradientBrush>
 
     <!-- Start page background: linear-gradient(180deg, transparent 0%, #0c0c0e 100%) -->
