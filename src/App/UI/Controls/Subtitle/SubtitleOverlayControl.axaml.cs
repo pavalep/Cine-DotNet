@@ -4,8 +4,8 @@ using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Cine.Avalonia.Builders;
 using Cine.Avalonia.ViewModels;
+using Cine.Avalonia.Controls.Subtitle;
 using DragEventArgs = Avalonia.Input.DragEventArgs;
 using DragDropEffects = Avalonia.Input.DragDropEffects;
 
@@ -13,14 +13,14 @@ namespace Cine.Avalonia.Controls;
 
 /// <summary>
 /// Standalone subtitle overlay layer with its own button + flyout containing
-/// subtitle track selection and subtitle delay controls. Supports drag-drop
-/// of external subtitle files (.srt, .ass, .vtt, .sub, .idx) directly onto
-/// the button for immediate loading.
+/// subtitle style controls (track selection, font size, position, delay, visibility).
+/// Supports drag-drop of external subtitle files (.srt, .ass, .vtt, .sub, .idx).
 /// </summary>
 public partial class SubtitleOverlayControl : AvaloniaUserControl
 {
     private MainViewModel? _viewModel;
     private Flyout? _currentFlyout;
+    private SubtitleStyleFlyout? _styleFlyout;
 
     private static readonly string[] SubtitleExtensions = { ".srt", ".ass", ".ssa", ".vtt", ".sub", ".idx" };
 
@@ -44,6 +44,13 @@ public partial class SubtitleOverlayControl : AvaloniaUserControl
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
         _viewModel = DataContext as MainViewModel;
+
+        // Clean up old flyout binding
+        if (_currentFlyout != null && _styleFlyout != null)
+        {
+            _styleFlyout.Unbind();
+            _styleFlyout = null;
+        }
     }
 
     /// <summary>Refreshes the subtitle icon to reflect enabled/disabled state.</summary>
@@ -67,23 +74,21 @@ public partial class SubtitleOverlayControl : AvaloniaUserControl
 
     private void OnSubtitlesClick(object? sender, RoutedEventArgs e)
     {
-        if (_viewModel == null) return;
-        _currentFlyout = BuildSubtitleFlyout();
-        _currentFlyout.ShowAt(BtnSubtitles);
-    }
+        if (_viewModel?.Subtitles == null) return;
 
-    private Flyout BuildSubtitleFlyout()
-    {
-        if (_viewModel == null) return new Flyout();
-        var vm = _viewModel;
-        return TrackFlyoutBuilder.Build(
-            vm.SubtitleTracks,
-            "No subtitles available",
-            "Subtitle Delay",
-            () => vm.SubtitleDelayValue,
-            v => vm.SubtitleDelayValue = (float)Math.Clamp(v, -10, 10),
-            () => vm.ResetSubtitleDelay()
-        );
+        _styleFlyout = new SubtitleStyleFlyout();
+        _styleFlyout.Bind(_viewModel.Subtitles);
+        _styleFlyout.CloseAction = () => _currentFlyout?.Hide();
+
+        _currentFlyout = new Flyout
+        {
+            Content = _styleFlyout,
+            Placement = PlacementMode.TopEdgeAlignedLeft,
+            ShowMode = FlyoutShowMode.Standard,
+            OverlayDismissEventPassThrough = true
+        };
+        _currentFlyout.Closed += (_, _) => _styleFlyout?.Unbind();
+        _currentFlyout.ShowAt(BtnSubtitles);
     }
 
     // ── Drag-drop handlers ──────────────────────────────────────────
@@ -123,7 +128,7 @@ public partial class SubtitleOverlayControl : AvaloniaUserControl
             var ext = Path.GetExtension(path)?.ToLowerInvariant();
             if (ext != null && SubtitleExtensions.Contains(ext))
             {
-                _viewModel?.LoadExternalSubtitle(path);
+                _viewModel?.Subtitles?.LoadExternalSubtitle(path);
                 ExternalFileDropped?.Invoke(this, path);
                 e.Handled = true;
             }

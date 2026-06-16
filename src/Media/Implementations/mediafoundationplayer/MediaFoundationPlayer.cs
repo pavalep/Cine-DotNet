@@ -359,6 +359,7 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
     public event EventHandler<LoopChangedEventArgs>? LoopChangedEvent;
     public event EventHandler<FullscreenChangedEventArgs>? FullscreenChangedEvent;
     public event EventHandler<PlaylistChangedEventArgs>? PlaylistChanged;
+    public event EventHandler<SubtitlePropertyChangedEventArgs>? SubtitlePropertyChanged;
 #pragma warning restore CS0067
 
     public event EventHandler? Opened;
@@ -892,6 +893,9 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
     public void SetSubtitleColor(System.Drawing.Color color) => SubtitleColor = color;
     public void SetSubtitleFont(string fontName) => SubtitleFont = fontName;
     public void SetSubtitleVisibility(bool visible) => SubtitleVisibility = visible;
+    public void SetSubtitleBorderSize(double size) { }
+    public void SetSubtitleShadowOffset(double offset) { }
+    void IMediaPlayer.SetSubtitleColor(string colorHex) { }
 
     public void SelectAudioTrack(int trackIndex)
     {

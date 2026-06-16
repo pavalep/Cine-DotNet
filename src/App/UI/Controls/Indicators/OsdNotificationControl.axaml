@@ -30,6 +30,17 @@
                        FontWeight="SemiBold"
                        Foreground="{StaticResource OsdForeground}"
                        VerticalAlignment="Center" />
+            <ProgressBar x:Name="OsdProgressBar"
+                         IsVisible="False"
+                         Minimum="0" Maximum="100"
+                         Value="0"
+                         Width="80"
+                         Height="6"
+                         CornerRadius="3"
+                         Foreground="{StaticResource OsdForeground}"
+                         Background="{StaticResource PopoverBorder}"
+                         VerticalAlignment="Center"
+                         Margin="4,0,0,0" />
         </StackPanel>
     </Border>
 </UserControl>

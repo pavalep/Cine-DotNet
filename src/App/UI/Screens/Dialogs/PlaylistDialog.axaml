@@ -17,7 +17,7 @@
 
     <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="0">
         <!-- Header -->
-        <Grid Grid.Row="0" Height="40" ColumnDefinitions="Auto,Auto,*,Auto,Auto"
+        <Grid Grid.Row="0" Height="40" ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto,Auto,Auto"
               Background="{StaticResource PopoverBackground}">
             <Button Grid.Column="0" 
                     Classes="flat" 
@@ -30,13 +30,39 @@
             <TextBlock Grid.Column="1" Text="Playlist" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" HorizontalAlignment="Center" />
             <Button Grid.Column="3"
                     Classes="flat"
-                    Margin="0,0,4,0"
+                    Margin="0,0,2,0"
+                    x:Name="SortBtn"
+                    Click="OnSortClick"
+                    ToolTip.Tip="Sort by Title">
+                <materialIcons:MaterialIcon Kind="SortAlphabeticalAscending" Width="14" Height="14"
+                    Foreground="{StaticResource OsdForeground}" />
+            </Button>
+            <Button Grid.Column="4"
+                    Classes="flat"
+                    Margin="0,0,2,0"
+                    x:Name="QueueBtn"
+                    Click="OnQueueModeClick"
+                    ToolTip.Tip="Queue Mode: Add files after current">
+                <materialIcons:MaterialIcon Kind="PlaylistPlay" Width="14" Height="14"
+                    Foreground="{StaticResource OsdForeground}" />
+            </Button>
+            <Button Grid.Column="5"
+                    Classes="flat"
+                    Margin="0,0,2,0"
+                    Click="OnClearPlaylistClick"
+                    ToolTip.Tip="Clear All">
+                <materialIcons:MaterialIcon Kind="PlaylistRemove" Width="14" Height="14"
+                    Foreground="{StaticResource OsdForeground}" />
+            </Button>
+            <Button Grid.Column="6"
+                    Classes="flat"
+                    Margin="0,0,2,0"
                     Click="OnSavePlaylistClick"
                     ToolTip.Tip="Save Playlist (.m3u8)">
                 <materialIcons:MaterialIcon Kind="ContentSave" Width="14" Height="14"
                     Foreground="{StaticResource OsdForeground}" />
             </Button>
-            <Button Grid.Column="4" 
+            <Button Grid.Column="7" 
                     Classes="flat" 
                     Margin="0,0,8,0"
                     Click="OnCloseClick"
@@ -91,6 +117,24 @@
                 <DataTemplate>
                     <Grid ColumnDefinitions="Auto,*,Auto,Auto" Margin="8,4"
                           IsVisible="{Binding IsVisible}">
+                        <Grid.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Play" Command="{Binding Play}" />
+                                <MenuItem Header="Play Next (Queue)">
+                                    <MenuItem.Icon>
+                                        <materialIcons:MaterialIcon Kind="PlaylistPlay" Width="14" Height="14"
+                                            Foreground="{StaticResource OsdForeground}" />
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <Separator />
+                                <MenuItem Header="Remove from Playlist" Command="{Binding Remove}" />
+                                <MenuItem Header="Reveal in File Explorer"
+                                          Click="OnItemRevealClick" />
+                                <Separator />
+                                <MenuItem Header="File Properties..."
+                                          Click="OnItemPropertiesClick" />
+                            </ContextMenu>
+                        </Grid.ContextMenu>
                         <TextBlock Grid.Column="0" Text="▶" FontSize="10"
                                    Foreground="{StaticResource OsdForeground}"
                                    VerticalAlignment="Center" Margin="0,0,8,0" />

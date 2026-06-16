@@ -46,24 +46,6 @@ public partial class MainViewModel
                 Playlist.Add(p);
     }
 
-    private async Task OnAddSubtitle()
-    {
-        if (RequestSubtitleFileAsync == null) return;
-        try
-        {
-            var path = await RequestSubtitleFileAsync();
-            if (!string.IsNullOrWhiteSpace(path))
-            {
-                _player?.AddSubtitle(path);
-                global::Cine.Core.Log.ForContext<MainViewModel>().Info("Subtitle added: {Path}", Path.GetFileName(path));
-            }
-        }
-        catch (Exception ex)
-        {
-            global::Cine.Core.Log.ForContext<MainViewModel>().Error(ex, "AddSubtitle failed");
-        }
-    }
-
     private async Task OnAddAudio()
     {
         if (RequestAudioFileAsync == null) return;
@@ -123,9 +105,10 @@ public partial class MainViewModel
     public async void OpenFile(string path)
     {
         if (string.IsNullOrWhiteSpace(path)) return;
+        // Save subtitle settings for previous file before switching
+        Subtitles?.OnFileClosing();
         AddRecentFile(path);
         FilePath = path;
-        _currentSubtitleTrackId = -1;
         _currentAudioTrackId = -1;
         await Dispatcher.UIThread.OnUiThreadAsync(() => { }, DispatcherPriority.Render);
         try
@@ -151,6 +134,7 @@ public partial class MainViewModel
         foreach (var path in paths)
             Playlist.Add(path);
         OpenFile(paths[0]);
+        SavePlaylist();
     }
 
     // ─────────────────────────────────────────────────────
@@ -187,11 +171,140 @@ public partial class MainViewModel
     public void RemovePlaylistItem(int index)
     {
         if (index < 0 || index >= PlaylistItems.Count) return;
+        var removedIsCurrent = PlaylistPosition == index;
         PlaylistItems.RemoveAt(index);
         Playlist.RemoveAt(index);
         for (int i = index; i < PlaylistItems.Count; i++)
             PlaylistItems[i].NotifyPlayingChanged();
         HasMultiplePlaylistItems = PlaylistItems.Count > 1;
+        if (removedIsCurrent && PlaylistItems.Count > 0)
+        {
+            var newIdx = Math.Min(index, PlaylistItems.Count - 1);
+            PlayPlaylistItem(newIdx);
+        }
+        else if (removedIsCurrent)
+        {
+            PlaylistPosition = -1;
+        }
+        SavePlaylist();
+    }
+
+    /// <summary>Persist current playlist to disk.</summary>
+    private void SavePlaylist()
+    {
+        _playlistStore.SavePlaylist(Playlist, PlaylistPosition);
+    }
+
+    /// <summary>Restore playlist from disk, and open the last-played item.</summary>
+    private void LoadPlaylist()
+    {
+        var savedItems = _playlistStore.LoadPlaylist(out int savedPosition);
+        if (savedItems == null || savedItems.Count == 0) return;
+
+        Playlist.Clear();
+        PlaylistItems.Clear();
+        foreach (var path in savedItems)
+        {
+            Playlist.Add(path);
+            PlaylistItems.Add(new PlaylistItemViewModel(this, PlaylistItems.Count, path));
+        }
+        HasMultiplePlaylistItems = Playlist.Count > 1;
+
+        // Open last-played item (or first if position is invalid)
+        if (savedPosition >= 0 && savedPosition < Playlist.Count)
+            OpenFile(Playlist[savedPosition]);
+        else
+            OpenFile(Playlist[0]);
+    }
+
+    /// <summary>Remove all playlist items, stop playback, clear saved playlist.</summary>
+    public void ClearPlaylist()
+    {
+        if (PlaylistItems.Count == 0) return;
+        _player.Stop();
+        Playlist.Clear();
+        PlaylistItems.Clear();
+        PlaylistPosition = -1;
+        HasMultiplePlaylistItems = false;
+        _playlistStore.ClearPlaylist();
+    }
+
+    public void PlayNext()
+    {
+        if (PlaylistItems.Count == 0) return;
+        var nextIdx = PlaylistPosition + 1;
+        if (nextIdx >= PlaylistItems.Count)
+        {
+            if (IsLoopPlaylistEnabled)
+                nextIdx = 0;
+            else
+                return;
+        }
+        PlayPlaylistItem(nextIdx);
+    }
+
+    public void PlayPrevious()
+    {
+        if (PlaylistItems.Count == 0) return;
+        var prevIdx = PlaylistPosition - 1;
+        if (prevIdx < 0)
+        {
+            if (IsLoopPlaylistEnabled)
+                prevIdx = PlaylistItems.Count - 1;
+            else
+                return;
+        }
+        PlayPlaylistItem(prevIdx);
+    }
+
+    /// <summary>Insert files after the currently playing item (queue mode).</summary>
+    public void InsertAfterCurrent(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return;
+        int insertIdx = PlaylistPosition >= 0 ? PlaylistPosition + 1 : PlaylistItems.Count;
+        Playlist.Insert(insertIdx, path);
+        PlaylistItems.Insert(insertIdx, new PlaylistItemViewModel(this, insertIdx, path));
+        // Bump indices of subsequent items
+        for (int i = insertIdx + 1; i < PlaylistItems.Count; i++)
+            PlaylistItems[i].NotifyPlayingChanged();
+        HasMultiplePlaylistItems = PlaylistItems.Count > 1;
+        SavePlaylist();
+    }
+
+    /// <summary>Insert multiple files after the current item.</summary>
+    public void InsertAfterCurrent(string[] paths)
+    {
+        if (paths == null || paths.Length == 0) return;
+        int insertIdx = PlaylistPosition >= 0 ? PlaylistPosition + 1 : PlaylistItems.Count;
+        for (int i = 0; i < paths.Length; i++)
+        {
+            if (string.IsNullOrWhiteSpace(paths[i])) continue;
+            Playlist.Insert(insertIdx + i, paths[i]);
+            PlaylistItems.Insert(insertIdx + i, new PlaylistItemViewModel(this, insertIdx + i, paths[i]));
+        }
+        // Bump indices of items after the inserted block
+        for (int i = insertIdx + paths.Length; i < PlaylistItems.Count; i++)
+            PlaylistItems[i].NotifyPlayingChanged();
+        HasMultiplePlaylistItems = PlaylistItems.Count > 1;
+        SavePlaylist();
+    }
+
+    /// <summary>Sort playlist items alphabetically by title.</summary>
+    public void SortPlaylistByTitle()
+    {
+        var sorted = PlaylistItems
+            .Select((item, i) => new { item, path = Playlist[i] })
+            .OrderBy(x => x.item.Title, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        Playlist.Clear();
+        PlaylistItems.Clear();
+        foreach (var entry in sorted)
+        {
+            Playlist.Add(entry.path);
+            PlaylistItems.Add(new PlaylistItemViewModel(this, PlaylistItems.Count, entry.path));
+        }
+        SavePlaylist();
     }
 
     public void SeekForward() => _player.Seek(Position + TimeSpan.FromSeconds(5));
@@ -382,7 +495,7 @@ public partial class MainViewModel
                 FilePath = _filePath,
                 Position = _player.Position.Ticks,
                 Playlist = Playlist.ToList(),
-                SubtitleTrackId = _currentSubtitleTrackId,
+                SubtitleTrackId = Subtitles?.CurrentSubtitleTrackId ?? -1,
                 AudioTrackId = _currentAudioTrackId,
                 SubtitleDelay = _player.SubtitleDelay,
                 AudioDelay = _player.AudioDelay,
@@ -419,7 +532,7 @@ public partial class MainViewModel
                     OnPropertyChanged(nameof(HasMultiplePlaylistItems));
             }
             if (root.TryGetProperty("SubtitleTrackId", out var subIdEl))
-                _pendingSubtitleTrackId = subIdEl.GetInt32();
+                Subtitles?.SelectTrackById(subIdEl.GetInt32());
             if (root.TryGetProperty("AudioTrackId", out var audIdEl))
                 _pendingAudioTrackId = audIdEl.GetInt32();
             if (root.TryGetProperty("SubtitleDelay", out var subDelayEl))

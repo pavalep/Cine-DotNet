@@ -126,6 +126,30 @@ public partial class MainWindow
             Handle(() => { if (_viewModel != null) { var dlg = new EqualizerDialog(_viewModel); dlg.Show(this); } });
         else if (key == Key.L && shift) 
             Handle(() => _viewModel?.ToggleLoopFile());
+        // ── Subtitle shortcuts (via SubtitleManager) ──
+        else if (key == Key.V && !ctrl && !shift)
+            Handle(() => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.IsSubtitleEnabled = !_viewModel.Subtitles.IsSubtitleEnabled; });
+        else if (key == Key.G && !ctrl && !shift)
+            Handle(() => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.SubtitleFontScale = Math.Round(Math.Max(0.1, _viewModel.Subtitles.SubtitleFontScale - 0.1), 1); });
+        else if (key == Key.G && shift && !ctrl)
+            Handle(() => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.SubtitleFontScale = Math.Round(Math.Min(3.0, _viewModel.Subtitles.SubtitleFontScale + 0.1), 1); });
+        else if (key == Key.R && !ctrl && !shift)
+            Handle(() => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.SubtitlePosition = Math.Min(100, _viewModel.Subtitles.SubtitlePosition + 1); });
+        else if (key == Key.R && shift && !ctrl)
+            Handle(() => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.SubtitlePosition = Math.Max(0, _viewModel.Subtitles.SubtitlePosition - 1); });
+        // ── Extended subtitle shortcuts ──
+        else if (key == Key.J && !ctrl && !shift)
+            Handle(() => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.CycleSubtitleTrackForward(); });
+        else if (key == Key.J && shift && !ctrl)
+            Handle(() => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.CycleSubtitleTrackBackward(); });
+        else if (key == Key.Z && !ctrl && !shift)
+            Handle(() => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.SubtitleDelay = (float)Math.Clamp(_viewModel.Subtitles.SubtitleDelay - 0.5, -10, 10); });
+        else if (key == Key.Z && shift && !ctrl)
+            Handle(() => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.SubtitleDelay = (float)Math.Clamp(_viewModel.Subtitles.SubtitleDelay + 0.5, -10, 10); });
+        else if (key == Key.F && !ctrl && !shift)
+            Handle(() => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.SubtitleFontScale = 1.0; });
+        else if (ctrl && key == Key.D0 && !shift)
+            Handle(() => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.ResetAllSubtitles(); });
         // ── Phase 4: Global Keyboard Shortcuts ──
         else if (ctrl && key == Key.O && !shift)
             Handle(async () => { var files = await OpenFileDialogAsync(); if (files != null) _viewModel?.OpenFiles(files); });

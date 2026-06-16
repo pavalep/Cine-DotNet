@@ -80,6 +80,57 @@
                     </StackPanel>
                 </Border>
 
+                <!-- Subtitles -->
+                <TextBlock Text="Subtitles" FontSize="15" FontWeight="SemiBold"
+                           Foreground="{StaticResource OsdForeground}" Opacity="0.7" />
+
+                <Border Background="{StaticResource PopoverBackground}"
+                        CornerRadius="6" Padding="14,12">
+                    <StackPanel Spacing="12">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel>
+                                <TextBlock Text="Auto-load External Subtitles" FontSize="13" FontWeight="Medium"
+                                           Foreground="{StaticResource OsdForeground}" />
+                                <TextBlock Text="Automatically scan for .srt / .ass files in media directory"
+                                           FontSize="11" Opacity="0.5"
+                                           Foreground="{StaticResource OsdForeground}" />
+                            </StackPanel>
+                            <ToggleSwitch x:Name="AutoLoadSubsToggle"
+                                          VerticalAlignment="Center" OnContent="" OffContent="" />
+                        </Grid>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Preferred Languages" FontSize="11" FontWeight="SemiBold"
+                                       Foreground="{StaticResource OsdForeground}" Opacity="0.5" />
+                            <TextBox x:Name="PreferredLangInput"
+                                     Text="eng, jpn, und"
+                                     FontSize="12"
+                                     Padding="8,4"
+                                     Background="{StaticResource AppBackground}"
+                                     BorderBrush="{StaticResource PopoverBorder}"
+                                     BorderThickness="1" CornerRadius="4"
+                                     Foreground="{StaticResource OsdForeground}" />
+                            <TextBlock Text="Comma-separated language codes. First match is auto-selected."
+                                       FontSize="10" Opacity="0.4"
+                                       Foreground="{StaticResource OsdForeground}" />
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="External Subtitle Directories" FontSize="11" FontWeight="SemiBold"
+                                       Foreground="{StaticResource OsdForeground}" Opacity="0.5" />
+                            <TextBox x:Name="SubDirsInput"
+                                     Text="./subs, ./subtitles"
+                                     FontSize="12"
+                                     Padding="8,4"
+                                     Background="{StaticResource AppBackground}"
+                                     BorderBrush="{StaticResource PopoverBorder}"
+                                     BorderThickness="1" CornerRadius="4"
+                                     Foreground="{StaticResource OsdForeground}" />
+                            <TextBlock Text="Relative to media file directory. Comma-separated."
+                                       FontSize="10" Opacity="0.4"
+                                       Foreground="{StaticResource OsdForeground}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
                 <!-- Keyboard Shortcuts -->
                 <TextBlock Text="Keyboard Shortcuts" FontSize="15" FontWeight="SemiBold"
                            Foreground="{StaticResource OsdForeground}" Opacity="0.7" />

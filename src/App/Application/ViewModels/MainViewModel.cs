@@ -70,22 +70,24 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
     private bool _isShuffleEnabled;
     private bool _isLoopFileEnabled;
     private bool _isLoopPlaylistEnabled;
-    private bool _isSubtitleEnabled = true;
     private bool _isAudioEnabled = true;
     private bool _isFullscreen;
     private bool _hasMultiplePlaylistItems;
     private bool _hasMultipleVideoTracks;
 
     // Track persistence
-    private int _currentSubtitleTrackId = -1;
     private int _currentAudioTrackId = -1;
 
     // Pending track restore values loaded from session data
-    private int? _pendingSubtitleTrackId;
     private int? _pendingAudioTrackId;
 
-    // --- Typed track collections ---
-    public ObservableCollection<TrackMenuItem> SubtitleTracks { get; } = new();
+    // Playlist persistence
+    private readonly Managers.PlaylistSettingsStore _playlistStore = new();
+
+    // ── Typed track collections ──
+    // Subtitle tracks are owned by SubtitleManager; we delegate for UI bindings.
+    public ObservableCollection<TrackMenuItem> SubtitleTracks => Subtitles?.SubtitleTracks ?? _emptySubtitleTracks;
+    private static readonly ObservableCollection<TrackMenuItem> _emptySubtitleTracks = new();
     public ObservableCollection<TrackMenuItem> AudioTracks { get; } = new();
     public ObservableCollection<TrackMenuItem> VideoTracks { get; } = new();
 
@@ -100,7 +102,6 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
     public ICommand OpenFilesCommand { get; }
     public ICommand OpenFolderCommand { get; }
     public ICommand AddFilesCommand { get; }
-    public ICommand AddSubtitleCommand { get; }
     public ICommand AddAudioCommand { get; }
     public ICommand OpenRecentCommand { get; }
 
@@ -117,7 +118,7 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
     // ── Domain Managers ──
     public AudioManager Audio { get; }
     public VideoManager Video { get; }
-    public SubtitleManager Subtitles { get; }
+    public SubtitleManager Subtitles { get; } = null!;
 
     public string Title => !string.IsNullOrEmpty(_filePath)
         ? TruncateFilename(Path.GetFileName(_filePath))
@@ -143,8 +144,10 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
         Video = videoManager ?? new VideoManager(player);
         Subtitles = subtitleManager ?? new SubtitleManager(player);
 
+#pragma warning disable CS8603 // Nullable flow analysis — Audio/Subtitles are assigned in ctor
         Audio.RequestAudioFileAsync = () => RequestAudioFileAsync?.Invoke();
-        Subtitles.RequestSubtitleFileAsync = () => RequestSubtitleFileAsync?.Invoke();
+        Subtitles!.RequestSubtitleFileAsync = () => RequestSubtitleFileAsync?.Invoke();
+#pragma warning restore CS8603
 
         _player.Volume = _volumeValue;
 
@@ -161,7 +164,6 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
         OpenFilesCommand = new RelayCommand(async _ => await OnOpenFiles());
         OpenFolderCommand = new RelayCommand(async _ => await OnOpenFolder());
         AddFilesCommand = new RelayCommand(async _ => await OnAddFiles());
-        AddSubtitleCommand = new RelayCommand(async _ => await OnAddSubtitle());
         AddAudioCommand = new RelayCommand(async _ => await OnAddAudio());
         OpenRecentCommand = new RelayCommand(path =>
         {
@@ -170,6 +172,7 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
 
         BuildEmptyTrackMenus();
         LoadRecentFiles();
+        LoadPlaylist(); // Restore playlist from previous session
     }
 
     // ─────────────────────────────────────────────────────
@@ -289,8 +292,13 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public float SubtitleDelayValue
     {
-        get => _player.SubtitleDelay;
-        set { _player.SubtitleDelay = value; OnPropertyChanged(); }
+        get => Subtitles?.SubtitleDelay ?? _player.SubtitleDelay;
+        set
+        {
+            if (Subtitles != null) Subtitles.SubtitleDelay = value;
+            else _player.SubtitleDelay = value;
+            OnPropertyChanged();
+        }
     }
 
     private double _subtitleFontSize = 24;
@@ -506,11 +514,7 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
         set { _isFullscreen = value; OnPropertyChanged(); }
     }
 
-    public bool IsSubtitleEnabled
-    {
-        get => _isSubtitleEnabled;
-        set { _isSubtitleEnabled = value; OnPropertyChanged(); }
-    }
+    public bool IsSubtitleEnabled => Subtitles?.IsSubtitleEnabled ?? false;
 
     public bool IsAudioEnabled
     {
@@ -549,6 +553,13 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         if (_disposed) return;
         _disposed = true;
+
+        // Force-save subtitle settings before disposing
+        Subtitles?.OnFileClosing();
+        Subtitles?.Dispose();
+
+        // Force-save playlist before disposing
+        SavePlaylist();
 
         _player.Opened -= OnPlayerOpened;
         _player.TrackListChanged -= OnTrackListChanged;

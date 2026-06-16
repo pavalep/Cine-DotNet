@@ -342,6 +342,32 @@ public partial class MainWindow
             _controlsBox.SubtitleOverlayCtrl.ExternalFileDropped += (_, path) =>
                 ShowOsdNotification(MaterialIconKind.ClosedCaption,
                     $"Subtitle loaded: {Path.GetFileName(path)}");
+
+        // SubtitleManager OSD feedback (font size, position, delay changes)
+        if (_viewModel?.Subtitles != null)
+        {
+            _viewModel.Subtitles.PropertyChanged += (_, e) =>
+            {
+                switch (e.PropertyName)
+                {
+                    case nameof(Managers.SubtitleManager.SubtitleFontScale):
+                        var fs = _viewModel.Subtitles.SubtitleFontScale;
+                        ShowOsdNotificationWithProgress(MaterialIconKind.Subtitles,
+                            $"Subtitle Size: {fs:F1}×", fs / 3.0 * 100, 1500);
+                        break;
+                    case nameof(Managers.SubtitleManager.SubtitlePosition):
+                        var pos = _viewModel.Subtitles.SubtitlePosition;
+                        ShowOsdNotificationWithProgress(MaterialIconKind.Subtitles,
+                            $"Subtitle Position: {pos}%", pos, 1500);
+                        break;
+                    case nameof(Managers.SubtitleManager.SubtitleDelay):
+                        var delay = _viewModel.Subtitles.SubtitleDelay;
+                        ShowOsdNotificationWithProgress(MaterialIconKind.Subtitles,
+                            $"Subtitle Delay: {delay:F1}s", (delay + 10) / 20.0 * 100, 1500);
+                        break;
+                }
+            };
+        }
         if (_controlsBox.AudioTrackSelectorCtrl != null)
             _controlsBox.AudioTrackSelectorCtrl.ExternalFileDropped += (_, path) =>
                 ShowOsdNotification(MaterialIconKind.Music,
@@ -600,6 +626,8 @@ public partial class MainWindow
         => OsdNotificationControl.Show(text, durationMs);
     private void ShowOsdNotification(MaterialIconKind icon, string text, double durationMs = 2000)
         => OsdNotificationControl.ShowWithIcon(icon, text, durationMs);
+    private void ShowOsdNotificationWithProgress(MaterialIconKind icon, string text, double value, double durationMs = 1500)
+        => OsdNotificationControl.ShowWithProgress(icon, text, value, durationMs);
 
     // =========================================================================
     // P8.3: Typed property watchers — replaces string-based PropertyChanged switch
@@ -666,6 +694,14 @@ public partial class MainWindow
             })
             .Watch(() => _viewModel.SpeedValue, speed =>
                 ShowOsdNotification(MaterialIconKind.Speedometer, $"Speed: {speed:F1}x", 3000))
+            // ── Subtitle OSD feedback ──
+            .Watch(nameof(MainViewModel.IsSubtitleEnabled), () =>
+            {
+                var subs = _viewModel?.Subtitles;
+                if (subs == null) return;
+                ShowOsdNotification(MaterialIconKind.ClosedCaption,
+                    subs.IsSubtitleEnabled ? "Subtitles: On" : "Subtitles: Off");
+            })
             .Watch(() => _viewModel.SeekValue, _ =>
             {
                 if (_viewModel is { IsSeeking: false })

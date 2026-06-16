@@ -68,6 +68,11 @@ public interface IMediaPlayer
     int SubtitlePosition { get; set; }
     void SetSubtitlePosition(int position);
     void SetSubtitleFontSize(double size);
+    void SetSubtitleVisibility(bool visible);
+    void SetSubtitleFont(string fontFamily);
+    void SetSubtitleBorderSize(double size);
+    void SetSubtitleShadowOffset(double offset);
+    void SetSubtitleColor(string colorHex);
 
     // === Audio / Video Track Enumeration ===
     AudioTrackInfo[] AudioSources { get; }
@@ -136,5 +141,7 @@ public interface IMediaPlayer
     event EventHandler<FullscreenChangedEventArgs>? FullscreenChangedEvent;
     event EventHandler<LoopChangedEventArgs>? LoopChangedEvent;
     event EventHandler<PlaylistChangedEventArgs>? PlaylistChanged;
+    /// <summary>Fires when any subtitle property changes (sid, sub-visibility, sub-pos, sub-scale, sub-delay).</summary>
+    event EventHandler<SubtitlePropertyChangedEventArgs>? SubtitlePropertyChanged;
     event EventHandler<string>? Error;
 }

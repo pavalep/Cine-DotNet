@@ -1,5 +1,7 @@
 using System;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -27,6 +29,12 @@ public partial class PlaylistDialog : Window
     private bool _isDragging;
     private global::Avalonia.Point _dragStartPoint;
 
+    // P3.19: Auto-scroll — prevent scroll loop
+    private bool _isScrolling;
+
+    // Queue mode toggle
+    private bool _queueMode;
+
     public PlaylistDialog()
     {
         InitializeComponent();
@@ -45,7 +53,16 @@ public partial class PlaylistDialog : Window
                 UpdateEmptyState();
                 ApplySearchFilter();
             };
+            vm.PropertyChanged += OnVmPropertyChanged;
             UpdateEmptyState();
+        }
+    }
+
+    private void OnVmPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainViewModel.PlaylistPosition))
+        {
+            AutoScrollToCurrentItem();
         }
     }
 
@@ -103,6 +120,28 @@ public partial class PlaylistDialog : Window
     }
 
     // =========================================================================
+    // AUTO-SCROLL (P3.19)
+    // =========================================================================
+
+    private void AutoScrollToCurrentItem()
+    {
+        if (_isScrolling || DataContext is not MainViewModel vm) return;
+        _isScrolling = true;
+        try
+        {
+            var idx = vm.PlaylistPosition;
+            if (idx >= 0 && idx < PlaylistListBox.ItemCount)
+            {
+                PlaylistListBox.ScrollIntoView(idx);
+            }
+        }
+        finally
+        {
+            _isScrolling = false;
+        }
+    }
+
+    // =========================================================================
     // EMPTY STATE + NO RESULTS (P3.6)
     // =========================================================================
 
@@ -151,32 +190,104 @@ public partial class PlaylistDialog : Window
         }
         catch (Exception ex)
         {
-            var notification = new TextBlock
-            {
-                Text = $"Failed to save: {ex.Message}",
-                FontSize = 13,
-                Foreground = global::Avalonia.Media.Brush.Parse("#FFE5E5E5"),
-                Padding = new Thickness(16, 8)
-            };
-            var border = new Border
-            {
-                Background = global::Avalonia.Media.Brush.Parse("#CC1E1E2E"),
-                CornerRadius = new CornerRadius(8),
-                Child = notification
-            };
-            var popup = new Popup
-            {
-                Placement = PlacementMode.Center,
-                Child = border
-            };
-            popup.Open();
-            await Task.Delay(3000);
-            popup.Close();
+            ShowToast($"Failed to save: {ex.Message}");
         }
     }
 
     // =========================================================================
-    // DRAG-REORDER (P3.5) — pointer-based
+    // SORT (P3.21)
+    // =========================================================================
+
+    private void OnSortClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel vm)
+            vm.SortPlaylistByTitle();
+    }
+
+    // =========================================================================
+    // QUEUE MODE (P3.17)
+    // =========================================================================
+
+    private void OnQueueModeClick(object? sender, RoutedEventArgs e)
+    {
+        _queueMode = !_queueMode;
+        if (QueueBtn != null)
+        {
+            QueueBtn.Opacity = _queueMode ? 1.0 : 0.5;
+        }
+    }
+
+    // =========================================================================
+    // CONTEXT MENU (P3.18)
+    // =========================================================================
+
+    private void OnItemRevealClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is global::Avalonia.Controls.MenuItem mi && mi.DataContext is PlaylistItemViewModel item)
+        {
+            try
+            {
+                var dir = Path.GetDirectoryName(item.FilePath);
+                if (!string.IsNullOrWhiteSpace(dir) && Directory.Exists(dir))
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = "explorer.exe",
+                        Arguments = $"/select,\"{item.FilePath}\"",
+                        UseShellExecute = true
+                    });
+                }
+            }
+            catch { /* silently fail */ }
+        }
+    }
+
+    private void OnItemPropertiesClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is global::Avalonia.Controls.MenuItem mi && mi.DataContext is PlaylistItemViewModel item)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"\"{item.FilePath}\"",
+                    UseShellExecute = true
+                });
+            }
+            catch { /* silently fail */ }
+        }
+    }
+
+    // =========================================================================
+    // MULTI-SELECT (P3.20) — Delete removes all selected
+    // =========================================================================
+
+    private void OnListBoxKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            if (PlaylistListBox?.SelectedItem is PlaylistItemViewModel item)
+                item.Play();
+        }
+        else if (e.Key == Key.Delete && PlaylistListBox != null)
+        {
+            var toRemove = PlaylistListBox.SelectedItems!
+                .OfType<PlaylistItemViewModel>()
+                .OrderByDescending(x => x.Index)
+                .ToList();
+            if (DataContext is MainViewModel vm)
+            {
+                foreach (var item in toRemove)
+                    vm.RemovePlaylistItem(item.Index);
+            }
+        }
+        else if (e.Key == Key.Escape)
+            Close();
+    }
+
+    // =========================================================================
+    // DRAG-REORDER (P3.5) — pointer-based, disabled during multi-select
     // =========================================================================
 
     private void OnPlaylistListBoxPointerPressed(object? sender, PointerPressedEventArgs e)
@@ -185,6 +296,14 @@ public partial class PlaylistDialog : Window
 
         // Don't start drag if the user pressed a button inside the item
         if (e.Source is Button) return;
+
+        // Check if Ctrl/Shift is held — that's multi-select, not drag
+        var modifiers = e.KeyModifiers;
+        if (modifiers.HasFlag(KeyModifiers.Control) || modifiers.HasFlag(KeyModifiers.Shift))
+        {
+            _dragSourceIndex = -1;
+            return;
+        }
 
         var pos = e.GetPosition(PlaylistListBox);
         _dragSourceIndex = PlaylistListBox.SelectedIndex;
@@ -235,7 +354,51 @@ public partial class PlaylistDialog : Window
     private void OnAddFilesClick(object? sender, RoutedEventArgs e)
     {
         var vm = DataContext as MainViewModel;
-        vm?.AddFilesCommand.Execute(null);
+        if (vm == null) return;
+
+        // In queue mode, use InsertAfterCurrent instead
+        if (_queueMode && vm.PlaylistPosition >= 0)
+        {
+            AddFilesToQueue(vm);
+            return;
+        }
+
+        vm.AddFilesCommand.Execute(null);
+    }
+
+    private async void AddFilesToQueue(MainViewModel vm)
+    {
+        var files = await GetOpenFilePathsAsync();
+        if (files != null && files.Length > 0)
+            vm.InsertAfterCurrent(files);
+    }
+
+    private async Task<string[]?> GetOpenFilePathsAsync()
+    {
+        var result = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Select files to add to queue",
+            AllowMultiple = true,
+            FileTypeFilter = new[]
+            {
+                new FilePickerFileType("Media Files")
+                {
+                    Patterns = new[] { "*.mkv", "*.mp4", "*.avi", "*.mov", "*.wmv", "*.flv", "*.webm", "*.m4v" }
+                },
+                new FilePickerFileType("All Files")
+                {
+                    Patterns = new[] { "*" }
+                }
+            }
+        });
+
+        return result?.Select(f => f.Path.LocalPath).ToArray();
+    }
+
+    private async void OnClearPlaylistClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm || vm.PlaylistItems.Count == 0) return;
+        vm.ClearPlaylist();
     }
 
     private void OnCloseClick(object? sender, RoutedEventArgs e) => Close();
@@ -258,16 +421,6 @@ public partial class PlaylistDialog : Window
             item.Play();
     }
 
-    private void OnListBoxKeyDown(object? sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Enter && PlaylistListBox?.SelectedItem is PlaylistItemViewModel item)
-            item.Play();
-        else if (e.Key == Key.Delete && PlaylistListBox?.SelectedItem is PlaylistItemViewModel deleteItem)
-            deleteItem.Remove();
-        else if (e.Key == Key.Escape)
-            Close();
-    }
-
     private void OnWindowDragEnter(object? sender, DragEventArgs e)
     {
         if (e.DataTransfer != null && e.DataTransfer.Contains(DataFormat.File))
@@ -280,14 +433,41 @@ public partial class PlaylistDialog : Window
 
     private void OnWindowFileDrop(object? sender, DragEventArgs e)
     {
-        if (e.DataTransfer != null && e.DataTransfer.Contains(DataFormat.File))
+        if (e.DataTransfer == null || !e.DataTransfer.Contains(DataFormat.File)) return;
+        var files = e.DataTransfer.TryGetFiles();
+        if (files == null) return;
+        var vm = DataContext as MainViewModel;
+        if (vm == null) return;
+
+        var paths = files.Select(f => f.Path.LocalPath).ToArray();
+
+        if (_queueMode && vm.PlaylistPosition >= 0)
+            vm.InsertAfterCurrent(paths);
+        else
+            vm.OpenFiles(paths);
+    }
+
+    private void ShowToast(string message)
+    {
+        var notification = new TextBlock
         {
-            var files = e.DataTransfer.TryGetFiles();
-            if (files == null) return;
-            var vm = DataContext as MainViewModel;
-            if (vm == null) return;
-            foreach (var file in files)
-                vm.Playlist.Add(file.Path.LocalPath);
-        }
+            Text = message,
+            FontSize = 13,
+            Foreground = global::Avalonia.Media.Brush.Parse("#FFE5E5E5"),
+            Padding = new Thickness(16, 8)
+        };
+        var border = new Border
+        {
+            Background = global::Avalonia.Media.Brush.Parse("#CC1E1E2E"),
+            CornerRadius = new CornerRadius(8),
+            Child = notification
+        };
+        var popup = new Popup
+        {
+            Placement = PlacementMode.Center,
+            Child = border
+        };
+        popup.Open();
+        Task.Delay(3000).ContinueWith(_ => Dispatcher.UIThread.Post(() => popup.Close()));
     }
 }

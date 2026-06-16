@@ -56,46 +56,41 @@ public partial class MainWindow
         return result?.Select(f => f.Path.LocalPath).ToArray();
     }
 
-    /// <summary>
-    /// Gets the directory of the currently playing video to use as the suggested
-    /// starting folder for external track file dialogs.
-    /// </summary>
-    private IStorageFolder? GetVideoFolder()
-    {
-        var videoPath = _viewModel?.FilePath;
-        if (string.IsNullOrWhiteSpace(videoPath))
-            return null;
-        try
-        {
-            var dir = System.IO.Path.GetDirectoryName(videoPath);
-            if (!string.IsNullOrWhiteSpace(dir) && System.IO.Directory.Exists(dir))
-                return StorageProvider.TryGetFolderFromPathAsync(dir).GetAwaiter().GetResult();
-        }
-        catch { /* best-effort */ }
-        return null;
-    }
-
     private async Task<string?> OpenSubtitleDialogAsync()
     {
-        var result = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        try
         {
-            Title = "Add Subtitle Track",
-            AllowMultiple = false,
-            FileTypeFilter = new[] { SubtitleFilesFilter },
-            SuggestedStartLocation = GetVideoFolder()
-        });
-        return result?.FirstOrDefault()?.Path.LocalPath;
+            var result = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "Add Subtitle Track",
+                AllowMultiple = false,
+                FileTypeFilter = new[] { SubtitleFilesFilter }
+            });
+            return result?.FirstOrDefault()?.Path.LocalPath;
+        }
+        catch (Exception ex)
+        {
+            global::Cine.Core.Log.ForContext<MainWindow>().Warning("Open subtitle dialog failed: {Error}", ex.Message);
+            return null;
+        }
     }
 
     private async Task<string?> OpenAudioDialogAsync()
     {
-        var result = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        try
         {
-            Title = "Add Audio Track",
-            AllowMultiple = false,
-            FileTypeFilter = new[] { AudioFilesFilter },
-            SuggestedStartLocation = GetVideoFolder()
-        });
-        return result?.FirstOrDefault()?.Path.LocalPath;
+            var result = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "Add Audio Track",
+                AllowMultiple = false,
+                FileTypeFilter = new[] { AudioFilesFilter }
+            });
+            return result?.FirstOrDefault()?.Path.LocalPath;
+        }
+        catch (Exception ex)
+        {
+            global::Cine.Core.Log.ForContext<MainWindow>().Warning("Open audio dialog failed: {Error}", ex.Message);
+            return null;
+        }
     }
 }

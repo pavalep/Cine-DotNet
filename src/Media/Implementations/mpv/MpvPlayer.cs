@@ -537,6 +537,36 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
             SetDouble("sub-font-size", size);
     }
 
+    public void SetSubtitleVisibility(bool visible)
+    {
+        if (_initialized)
+            SetFlag("sub-visibility", visible);
+    }
+
+    public void SetSubtitleFont(string fontFamily)
+    {
+        if (_initialized && !string.IsNullOrWhiteSpace(fontFamily))
+            SetString("sub-font", fontFamily);
+    }
+
+    public void SetSubtitleBorderSize(double size)
+    {
+        if (_initialized)
+            SetDouble("sub-border-size", Math.Clamp(size, 0, 10));
+    }
+
+    public void SetSubtitleShadowOffset(double offset)
+    {
+        if (_initialized)
+            SetDouble("sub-shadow-offset", Math.Clamp(offset, 0, 10));
+    }
+
+    public void SetSubtitleColor(string colorHex)
+    {
+        if (_initialized && !string.IsNullOrWhiteSpace(colorHex))
+            SetString("sub-color", colorHex);
+    }
+
     public double Zoom
     {
         get => GetDouble("video-zoom");
@@ -875,6 +905,11 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
         MpvNative.mpv_observe_property(_mpv, 0, "track-list", MpvNative.mpv_format.MPV_FORMAT_NODE);
         MpvNative.mpv_observe_property(_mpv, 0, "chapter-list", MpvNative.mpv_format.MPV_FORMAT_NODE);
         MpvNative.mpv_observe_property(_mpv, 0, "pause", MpvNative.mpv_format.MPV_FORMAT_FLAG);
+        MpvNative.mpv_observe_property(_mpv, 0, "sid", MpvNative.mpv_format.MPV_FORMAT_INT64);
+        MpvNative.mpv_observe_property(_mpv, 0, "sub-visibility", MpvNative.mpv_format.MPV_FORMAT_FLAG);
+        MpvNative.mpv_observe_property(_mpv, 0, "sub-pos", MpvNative.mpv_format.MPV_FORMAT_INT64);
+        MpvNative.mpv_observe_property(_mpv, 0, "sub-scale", MpvNative.mpv_format.MPV_FORMAT_DOUBLE);
+        MpvNative.mpv_observe_property(_mpv, 0, "sub-delay", MpvNative.mpv_format.MPV_FORMAT_DOUBLE);
 
         SetDouble("volume", _volume);
         SetFlag("mute", _isMuted);
@@ -1125,6 +1160,7 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
     public event EventHandler<FullscreenChangedEventArgs>? FullscreenChangedEvent;
     public event EventHandler<LoopChangedEventArgs>? LoopChangedEvent;
     public event EventHandler<PlaylistChangedEventArgs>? PlaylistChanged;
+    public event EventHandler<SubtitlePropertyChangedEventArgs>? SubtitlePropertyChanged;
     public event EventHandler<string>? Error;
 
     public bool UseNativeRendering { get; set; } = true;
@@ -1318,6 +1354,10 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
                                 IsEnabled = selected
                             };
 
+                            // Read codec for bitmap detection
+                            if (t.TryGetProperty("codec", out var codecProp))
+                                src.Codec = codecProp.GetString() ?? "";
+
                             switch (kind)
                             {
                                 case "audio": audioTracks.Add(src); break;
@@ -1346,6 +1386,26 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
                     break;
                 var isPaused = GetFlag("pause");
                 SetPlaybackState(isPaused ? PlaybackState.Paused : PlaybackState.Playing);
+                break;
+            case "sid":
+                var sid = (int)GetInt64("sid");
+                SubtitlePropertyChanged?.Invoke(this, new SubtitlePropertyChangedEventArgs("sid", sid));
+                break;
+            case "sub-visibility":
+                var visible = GetFlag("sub-visibility");
+                SubtitlePropertyChanged?.Invoke(this, new SubtitlePropertyChangedEventArgs("sub-visibility", visible));
+                break;
+            case "sub-pos":
+                var pos = (int)GetInt64("sub-pos");
+                SubtitlePropertyChanged?.Invoke(this, new SubtitlePropertyChangedEventArgs("sub-pos", pos));
+                break;
+            case "sub-scale":
+                var scale = GetDouble("sub-scale");
+                SubtitlePropertyChanged?.Invoke(this, new SubtitlePropertyChangedEventArgs("sub-scale", scale));
+                break;
+            case "sub-delay":
+                var delay = GetDouble("sub-delay");
+                SubtitlePropertyChanged?.Invoke(this, new SubtitlePropertyChangedEventArgs("sub-delay", delay));
                 break;
             case "core-idle":
                 // Bypass core-idle pause changes to prevent play/pause state mismatch
@@ -1581,6 +1641,10 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
             // Store title in Language if no language, so it's displayed
             if (string.IsNullOrWhiteSpace(lang) && !string.IsNullOrWhiteSpace(title))
                 src.Language = title;
+
+            // Read codec for bitmap detection
+            if (t.TryGetProperty("codec", out var codecProp))
+                src.Codec = codecProp.GetString() ?? "";
 
             result.Add(src);
         }

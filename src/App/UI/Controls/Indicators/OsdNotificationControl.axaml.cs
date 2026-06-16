@@ -47,6 +47,14 @@ public partial class OsdNotificationControl : AvaloniaUserControl
         Enqueue(new OsdMessage(text, iconKind, durationMs));
     }
 
+    /// <summary>Show OSD with a progress bar for a value (0-100).</summary>
+    public void ShowWithProgress(MaterialIconKind iconKind, string text, double value, double durationMs = 1500)
+    {
+        OsdProgressBar.Value = Math.Clamp(value, 0, 100);
+        OsdProgressBar.IsVisible = true;
+        ShowWithIcon(iconKind, text, durationMs);
+    }
+
     private void Enqueue(OsdMessage msg)
     {
         _queue.Enqueue(msg);
@@ -113,7 +121,10 @@ public partial class OsdNotificationControl : AvaloniaUserControl
             // Fade out + slide down
             await FadeTo(0, 200, ct, slideUp: false);
             if (!ct.IsCancellationRequested)
+            {
+                OsdProgressBar.IsVisible = false;
                 OsdNotificationBorder.IsVisible = false;
+            }
         }
         catch (TaskCanceledException) { }
     }
@@ -122,6 +133,7 @@ public partial class OsdNotificationControl : AvaloniaUserControl
     {
         _osdCts?.Cancel();
         _queue.Clear();
+        OsdProgressBar.IsVisible = false;
         OsdNotificationBorder.IsVisible = false;
     }
 

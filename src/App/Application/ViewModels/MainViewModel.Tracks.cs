@@ -9,16 +9,14 @@ using Cine.Media.Models;
 namespace Cine.Avalonia.ViewModels;
 
 /// <summary>
-/// Track menu building, track selection, and player opened event handler.
+/// Track menu building for audio/video tracks.
+/// Subtitle tracks are owned by SubtitleManager (single source of truth).
 /// </summary>
 public partial class MainViewModel
 {
     /// <summary>Initializes track menus with "Add..." and "None" pseudo-entries.</summary>
     private void BuildEmptyTrackMenus()
     {
-        SubtitleTracks.Add(new TrackMenuItem("Add Subtitle Track…", TrackType.Subtitle, -1, OnSelectSubtitle));
-        SubtitleTracks.Add(new TrackMenuItem("None", TrackType.Subtitle, -2, OnSelectSubtitle));
-
         AudioTracks.Add(new TrackMenuItem("Add Audio Track…", TrackType.Audio, -1, OnSelectAudio));
         AudioTracks.Add(new TrackMenuItem("None", TrackType.Audio, -2, OnSelectAudio));
 
@@ -26,18 +24,19 @@ public partial class MainViewModel
     }
 
     /// <summary>
-    /// Fired when a new file is loaded. Forces a track list refresh.
+    /// Fired when a new file is loaded. Rebuilds audio/video track menus.
+    /// Subtitle tracks are handled by SubtitleManager via its own TrackListChanged subscription.
     /// </summary>
     private void OnPlayerOpened(object? sender, EventArgs e)
     {
-        UpdateCropFilter();
+        // Notify SubtitleManager so it can load per-file settings
+        Subtitles?.NotifyMediaOpened(_filePath);
 
-        SubtitleSource[] subtitleSources;
+        UpdateCropFilter();
         SubtitleSource[] audioSources;
         SubtitleSource[] videoSources;
         try
         {
-            subtitleSources = _player.SubtitleSources ?? Array.Empty<SubtitleSource>();
             audioSources = (_player.AudioSources ?? Array.Empty<AudioTrackInfo>())
                 .Select(a => new SubtitleSource
                 {
@@ -65,8 +64,9 @@ public partial class MainViewModel
         {
             try
             {
-                OnTrackListChanged(null, new TrackListChangedEventArgs(
-                    audioSources, videoSources, subtitleSources));
+                // Only handle audio/video here — subtitle tracks are handled by SubtitleManager
+                OnTrackListChanged(new TrackListChangedEventArgs(
+                    audioSources, videoSources, Array.Empty<SubtitleSource>()));
             }
             catch (Exception ex)
             {
@@ -75,33 +75,7 @@ public partial class MainViewModel
         });
     }
 
-    // ── Track selection handlers ──
-
-    private void OnSelectSubtitle(TrackMenuItem item)
-    {
-        if (item.DisplayName == "Add Subtitle Track…")
-        {
-            _ = OnAddSubtitle();
-            return;
-        }
-
-        if (item.DisplayName == "None")
-        {
-            _player.SelectSubtitleTrack(-1);
-            _currentSubtitleTrackId = -1;
-            foreach (var t in SubtitleTracks) t.RefreshSelection(false);
-            item.RefreshSelection(true);
-            return;
-        }
-
-        if (item.TrackIndex >= 0)
-        {
-            _player.SelectSubtitleTrack(item.TrackIndex);
-            _currentSubtitleTrackId = item.TrackIndex;
-            foreach (var t in SubtitleTracks) t.RefreshSelection(false);
-            item.RefreshSelection(true);
-        }
-    }
+    // ── Track selection handlers (audio/video only) ──
 
     private void OnSelectAudio(TrackMenuItem item)
     {
@@ -153,36 +127,23 @@ public partial class MainViewModel
     }
 
     /// <summary>
-    /// Rebuilds typed track menu items from player track list events.
+    /// Bridge handler for player TrackListChanged event.
+    /// Subtitle tracks are handled by SubtitleManager (own subscription).
+    /// Audio/video tracks are handled here.
     /// </summary>
     private void OnTrackListChanged(object? sender, TrackListChangedEventArgs e)
     {
+        OnTrackListChanged(e);
+    }
+
+    /// <summary>
+    /// Rebuilds audio/video track menu items from player track list events.
+    /// Subtitle tracks are excluded — handled by SubtitleManager.
+    /// </summary>
+    private void OnTrackListChanged(TrackListChangedEventArgs e)
+    {
         Dispatcher.UIThread.OnUiThread(() =>
         {
-            // Subtitle tracks
-            SubtitleTracks.Clear();
-            SubtitleTracks.Add(new TrackMenuItem("Add Subtitle Track…", TrackType.Subtitle, -1, OnSelectSubtitle));
-            SubtitleTracks.Add(new TrackMenuItem("None", TrackType.Subtitle, -2, OnSelectSubtitle));
-            if (e.SubtitleTracks != null)
-            {
-                int idx = 0;
-                foreach (var track in e.SubtitleTracks)
-                {
-                    var trackId = int.TryParse(track.PathOrId, out var parsedId) ? parsedId : idx;
-                    var item = new TrackMenuItem(
-                        FormatTrack("Sub", track),
-                        TrackType.Subtitle,
-                        trackId,
-                        OnSelectSubtitle,
-                        track
-                    );
-                    item.IsSelected = track.IsEnabled;
-                    SubtitleTracks.Add(item);
-                    idx++;
-                }
-            }
-            IsSubtitleEnabled = e.SubtitleTracks?.Any(t => t.IsEnabled) ?? false;
-
             // Audio tracks
             AudioTracks.Clear();
             AudioTracks.Add(new TrackMenuItem("Add Audio Track…", TrackType.Audio, -1, OnSelectAudio));
@@ -235,15 +196,7 @@ public partial class MainViewModel
             }
             HasMultipleVideoTracks = e.VideoTracks?.Count() > 1;
 
-            // Auto-restore saved track selections
-            if (_pendingSubtitleTrackId.HasValue)
-            {
-                var subTrack = SubtitleTracks.FirstOrDefault(t =>
-                    t.TrackIndex == _pendingSubtitleTrackId.Value && !t.IsPseudoEntry);
-                if (subTrack != null && subTrack.SelectCommand?.CanExecute(subTrack) == true)
-                    subTrack.SelectCommand.Execute(subTrack);
-                _pendingSubtitleTrackId = null;
-            }
+            // Restore pending track selections (audio only — subtitle is handled by SubtitleManager)
             if (_pendingAudioTrackId.HasValue)
             {
                 var audTrack = AudioTracks.FirstOrDefault(t =>
