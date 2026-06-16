@@ -24,7 +24,10 @@ public partial class MainWindow
         var shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
         var ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
 
-        if (_pipService is { IsActive: true })
+        // When PIP is active, only block keys that would conflict with PIP controls.
+        // Allow Escape and Ctrl+Shift+P so user can close or toggle PIP via keyboard.
+        if (_pipService is { IsActive: true } &&
+            key != Key.Escape && !(ctrl && shift && key == Key.P))
         {
             e.Handled = true;
             return;

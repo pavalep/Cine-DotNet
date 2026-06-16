@@ -293,9 +293,7 @@ public sealed class PlaybackStateManager : INotifyPropertyChanged, IDisposable
 
     private void OnPlayerOpened(object? sender, EventArgs e)
     {
-        // Query the player state immediately after file loads
-        // State is set to Playing by MpvPlayer.LoadFile
-        Refresh();
+        State = PlaybackState.Playing;
         IsMediaLoaded = true;
         IsReplayMode = false;
         MediaOpened?.Invoke(this, EventArgs.Empty);

@@ -282,19 +282,25 @@ public partial class PipWindow : Window
 
             image.Source = _pipFrameBitmap;
             image.IsVisible = true;
+            image.InvalidateVisual();
         }
-        catch
+        catch (Exception ex)
         {
-            // Silently skip bad frames
+            System.Diagnostics.Debug.WriteLine($"[PiP] UpdateFrame error: {ex.Message}");
         }
     }
 
     public void SetPlayingState(bool isPlaying)
     {
         _isPlaying = isPlaying;
-        if (PlayPauseIcon == null) return;
-        if (_isEnded) PlayPauseIcon.Kind = Material.Icons.MaterialIconKind.Replay;
-        else PlayPauseIcon.Kind = isPlaying ? Material.Icons.MaterialIconKind.Pause : Material.Icons.MaterialIconKind.Play;
+        // Defer to next tick — the control tree may not be ready yet
+        // if this is called right after window creation.
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (PlayPauseIcon == null) return;
+            if (_isEnded) PlayPauseIcon.Kind = Material.Icons.MaterialIconKind.Replay;
+            else PlayPauseIcon.Kind = isPlaying ? Material.Icons.MaterialIconKind.Pause : Material.Icons.MaterialIconKind.Play;
+        }, DispatcherPriority.Input);
     }
 
     public void SetReplayMode(bool showReplay)

@@ -1,4 +1,3 @@
-using Cine.Avalonia.ViewModels;
 using Cine.Media.Events;
 using Cine.Media.Models;
 
@@ -15,6 +14,11 @@ public partial class MainWindow
             DebugLog("OnPipToggled: exiting PIP");
             _pipService.ExitPip();
             _headerBar.SetPipChecked(false);
+            // Resume showing video in main window
+            MpvVideoView.DisplayEnabled = true;
+            // Re-sync icon from the authoritative source
+            if (_stateManager != null)
+                _controlsBox.SyncPlayPauseIcon(_stateManager.IsPlaying);
         }
         else
         {
@@ -25,6 +29,9 @@ public partial class MainWindow
             }
 
             DebugLog("OnPipToggled: entering PIP");
+            // Stop showing video in main window — it will go dark naturally
+            MpvVideoView.DisplayEnabled = false;
+
             var pipWindow = _pipService?.EnterPip();
 
             if (pipWindow != null)
@@ -32,16 +39,15 @@ public partial class MainWindow
                 DebugLog("OnPipToggled: PIP started successfully");
                 _headerBar.SetPipChecked(true);
 
-                // Sync initial play state
+                // Sync initial state
                 pipWindow.SetPlayingState(_viewModel.IsPlaying);
                 pipWindow.SetMuted(_viewModel.IsMuted);
 
-                // Pass file info
+                // File info for display
                 string fileName = Path.GetFileName(_viewModel.FilePath);
-                string folder = Path.GetFileName(Path.GetDirectoryName(_viewModel.FilePath)) ?? "";
-                pipWindow.SetFileName(fileName, folder);
+                pipWindow.SetFileName(fileName, fileName);
 
-                // Set aspect ratio from video dimensions
+                // Aspect ratio and position
                 var player = _playerService?.Player;
                 if (player != null)
                 {
@@ -49,7 +55,6 @@ public partial class MainWindow
                     if (vw > 0 && vh > 0)
                         pipWindow.SetAspectRatio((double)vw / vh);
 
-                    // Push current position immediately
                     pipWindow.UpdatePosition(
                         _viewModel.Position.TotalSeconds,
                         _viewModel.Duration.TotalSeconds);
@@ -57,8 +62,10 @@ public partial class MainWindow
             }
             else
             {
+                // PiP failed — restore main window display
+                MpvVideoView.DisplayEnabled = true;
                 DebugLog("OnPipToggled: PIP returned null");
-                ShowOsdNotification("PiP failed — check cine_pip.log");
+                ShowOsdNotification("PiP failed");
             }
         }
     }
@@ -105,9 +112,10 @@ public partial class MainWindow
         _pipService.PipWindow?.SetReplayMode(isEnded);
     }
 
-    /// <summary>Restores main window video when PIP window is closed by user (close button).</summary>
     private void OnPipClosed(object? sender, EventArgs e)
     {
         _headerBar.SetPipChecked(false);
+        // Resume showing video in main window
+        MpvVideoView.DisplayEnabled = true;
     }
 }

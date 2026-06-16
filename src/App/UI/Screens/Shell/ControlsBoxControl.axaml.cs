@@ -86,9 +86,27 @@ public partial class ControlsBoxControl : AvaloniaUserControl
     /// </summary>
     public void SyncPlayPauseIcon(bool isPlaying)
     {
+        if (PlayPauseIconPath == null)
+        {
+            // Control tree not ready yet — use Loaded event to apply once ready.
+            // The icon default is "Play" from XAML, so no visible flicker.
+            if (!this.IsLoaded)
+            {
+                Loaded += (_, _) => SyncPlayPauseIcon(isPlaying);
+                return;
+            }
+            // If loaded but still null (e.g. template not applied), defer once
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                if (PlayPauseIconPath != null) SyncPlayPauseIcon(isPlaying);
+            }, global::Avalonia.Threading.DispatcherPriority.Render);
+            return;
+        }
+
         if (_replayMode)
         {
             PlayPauseIconPath.Kind = Material.Icons.MaterialIconKind.Replay;
+            PlayPauseIconPath.InvalidateVisual();
             PauseLog($"SyncPlayPauseIcon: replay mode -> Replay");
         }
         else
@@ -98,6 +116,7 @@ public partial class ControlsBoxControl : AvaloniaUserControl
                 : Material.Icons.MaterialIconKind.Play;
             PauseLog($"SyncPlayPauseIcon: isPlaying={isPlaying} _replayMode={_replayMode} -> {newKind}");
             PlayPauseIconPath.Kind = newKind;
+            PlayPauseIconPath.InvalidateVisual();
         }
     }
 

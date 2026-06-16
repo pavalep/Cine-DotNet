@@ -261,9 +261,15 @@ public partial class MainWindow
         player.FullscreenChangedEvent += OnPlayerFullscreenChanged;
 
         // Create PlaybackStateManager — the single authoritative source for
-        // playback state. All UI consumers read from this, not from player directly.
+        // playback state. All UI consumers read from, this, not from player directly.
         _stateManager = new PlaybackStateManager(player);
         _stateManager.StateChanged += OnManagerStateChanged;
+
+        // Sync initial icon state. StateChanged won't fire for the current state
+        // since it was already set in the PlaybackStateManager constructor before
+        // our handler was subscribed.
+        _controlsBox.SyncPlayPauseIcon(_stateManager.IsPlaying);
+        SyncPipPlayState(_stateManager.State);
 
         _playerService.Error += (_, error) =>
         {
@@ -352,8 +358,8 @@ public partial class MainWindow
         InitializeSessionSave();
         InitializeResponsiveLayout();
 
-        // Initialize PIP service (creates secondary mpv instance for PiP)
-        _pipService = new PipService(_playerService!);
+        // Initialize PIP service — shares frames from the main MpvVideoView
+        _pipService = new PipService(MpvVideoView);
 
         // Wire PIP player controls
         _headerBar.PipToggled += OnPipToggled;
@@ -550,7 +556,7 @@ public partial class MainWindow
 
         DebugLog("InitVideoRenderer: initializing MpvVideoView (ANGLE + render API)");
         
-        // Main window uses ANGLE/OpenGL render API — same approach as PipPlayerService.
+        // Main window uses ANGLE/OpenGL render API.
         // MpvVideoView creates its own ANGLE context, initializes mpv render API,
         // and runs a dedicated render thread that updates a WriteableBitmap Image.
         // This bypasses Avalonia's OpenGlControlBase which can fail silently in v12.

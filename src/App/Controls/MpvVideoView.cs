@@ -20,7 +20,7 @@ namespace Cine.Avalonia.Controls;
 /// 
 /// This does NOT depend on Avalonia's OpenGlControlBase (which can fail silently in
 /// Avalonia 12 when the control is occluded or compositor conditions aren't met).
-/// The ANGLE context is completely under our control — same as PipPlayerService.
+/// The ANGLE context is completely under our control.
 /// </summary>
 public class MpvVideoView : Decorator
 {
@@ -36,11 +36,24 @@ public class MpvVideoView : Decorator
     private volatile int _videoWidth;
     private volatile int _videoHeight;
 
+    /// <summary>
+    /// Fired on the UI thread when a new video frame is displayed.
+    /// Allows PiP window and other subscribers to share the same frame data
+    /// without needing a second mpv instance or ANGLE context.
+    /// </summary>
+    public event Action<byte[], int, int>? FrameRendered;
+
     // Display
     private readonly Image _videoImage;
     private WriteableBitmap? _writeableBitmap;
     private DateTime _lastFrameTime = DateTime.MinValue;
     private static readonly TimeSpan MinFrameInterval = TimeSpan.FromMilliseconds(8); // ~120fps cap
+
+    /// <summary>
+    /// When false, the main window doesn't display video frames.
+    /// Frames still fire <see cref="FrameRendered"/> so PiP continues to work.
+    /// </summary>
+    public bool DisplayEnabled { get; set; } = true;
 
     // Debug counters
     private long _frameCount;
@@ -261,8 +274,18 @@ public class MpvVideoView : Decorator
     /// </summary>
     private void UpdateDisplay(byte[] pixels, int width, int height)
     {
+        // When DisplayEnabled is false (PiP active), skip display rendering
+        // but still fire FrameRendered so the PiP window gets frames.
+        if (!DisplayEnabled)
+        {
+            _videoImage.IsVisible = false;
+            FrameRendered?.Invoke(pixels, width, height);
+            return;
+        }
+
         try
         {
+            _videoImage.IsVisible = true;
             bool isNew = _writeableBitmap == null || 
                          _writeableBitmap.PixelSize.Width != width || 
                          _writeableBitmap.PixelSize.Height != height;
@@ -298,6 +321,9 @@ public class MpvVideoView : Decorator
                 Log($"Source set on Image {width}x{height}");
             }
             _videoImage.InvalidateVisual();
+
+            // Share frame data with PiP and other subscribers
+            FrameRendered?.Invoke(pixels, width, height);
         }
         catch (Exception ex)
         {

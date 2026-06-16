@@ -39,6 +39,9 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
     private string? _pendingOpenPath;
     private bool _isRecoveringFromEof;
 
+    // Timestamp of last FILE_LOADED — used to suppress transient pause changes
+    private DateTime _loadedAt = DateTime.MinValue;
+
     // Aspect ratio override (maps to mpv's video-aspect-override)
     private double _aspectOverride = -1; // -1 = auto/default
 
@@ -871,6 +874,7 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
 
         MpvNative.mpv_observe_property(_mpv, 0, "track-list", MpvNative.mpv_format.MPV_FORMAT_NODE);
         MpvNative.mpv_observe_property(_mpv, 0, "chapter-list", MpvNative.mpv_format.MPV_FORMAT_NODE);
+        MpvNative.mpv_observe_property(_mpv, 0, "pause", MpvNative.mpv_format.MPV_FORMAT_FLAG);
 
         SetDouble("volume", _volume);
         SetFlag("mute", _isMuted);
@@ -1195,6 +1199,7 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
                         case MpvNative.mpv_event_id.MPV_EVENT_FILE_LOADED:
                             // mpv may briefly report pause=true after loading.
                             // Force unpause so playback starts immediately.
+                            _loadedAt = DateTime.UtcNow;
                             SetPlaybackState(PlaybackState.Playing);
                             if (GetFlag("pause"))
                             {
@@ -1208,10 +1213,10 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
                             SetPlaybackState(PlaybackState.Stopped);
                             break;
                         case MpvNative.mpv_event_id.MPV_EVENT_PAUSE:
-                            SetPlaybackState(PlaybackState.Paused);
+                            // Pause/unpause handled via property change observation
                             break;
                         case MpvNative.mpv_event_id.MPV_EVENT_UNPAUSE:
-                            SetPlaybackState(PlaybackState.Playing);
+                            // Pause/unpause handled via property change observation
                             break;
                         case MpvNative.mpv_event_id.MPV_EVENT_SHUTDOWN:
                             SetPlaybackState(PlaybackState.Stopped);
@@ -1334,6 +1339,11 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
                 ChapterListChanged?.Invoke(this, new ChapterListChangedEventArgs(ch));
                 break;
             case "pause":
+                // Use property change as the single source for pause/unpause
+                // (not MPV_EVENT_PAUSE/UNPAUSE, which are redundant).
+                // Suppress transient changes right after file load (< 300ms).
+                if ((DateTime.UtcNow - _loadedAt).TotalMilliseconds < 300)
+                    break;
                 var isPaused = GetFlag("pause");
                 SetPlaybackState(isPaused ? PlaybackState.Paused : PlaybackState.Playing);
                 break;

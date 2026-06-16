@@ -406,7 +406,10 @@ public class AngleGlContext : IDisposable
                 AngleInterop.eglDestroyContext(dpy, _eglContext);
                 _eglContext = AngleInterop.EGL_NO_CONTEXT;
             }
-            AngleInterop.eglTerminate(dpy);
+            // Don't call eglTerminate — the EGL display is shared across all
+            // ANGLE contexts in the process (eglGetDisplay returns the same handle).
+            // Terminating it would destroy the main window's renderer when PiP exits.
+            // The display is cleaned up by the OS on process termination.
             _eglDisplay = AngleInterop.EGL_NO_DISPLAY;
         }
         Log("Disposed");
