@@ -320,7 +320,12 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
     public double AspectRatioValue
     {
         get => _player.AspectRatio;
-        set { _player.AspectRatio = value; OnPropertyChanged(); }
+        set
+        {
+            _player.AspectRatio = value;
+            OnPropertyChanged();
+            UpdateCropFilter();
+        }
     }
 
     // --- Rotation & Flip ---
@@ -329,33 +334,66 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
 
     // ── Crop (removes black bars, VLC-style) ──
     private const string CropFilterLabel = "@crop";
+    private double _cropValue = -1;
+
+    public double CropValue
+    {
+        get => _cropValue;
+        set { _cropValue = value; OnPropertyChanged(); }
+    }
 
     public void SetCrop(double aspectRatio)
     {
-        _player.GetVideoSize(out int vw, out int vh);
-        if (vw <= 0 || vh <= 0) return;
-
-        int cw, ch;
-        if (vw / (double)vh > aspectRatio)
-        {
-            ch = vh;
-            cw = (int)(vh * aspectRatio);
-        }
-        else
-        {
-            cw = vw;
-            ch = (int)(vw / aspectRatio);
-        }
-
-        int x = (vw - cw) / 2;
-        int y = (vh - ch) / 2;
-
-        _player.Command("vf", "add", $"{CropFilterLabel}:crop={cw}:{ch}:{x}:{y}");
+        CropValue = aspectRatio;
+        UpdateCropFilter();
     }
 
     public void ResetCrop()
     {
-        _player.Command("vf", "remove", CropFilterLabel);
+        CropValue = -1;
+        UpdateCropFilter();
+    }
+
+    public void UpdateCropFilter()
+    {
+        if (_cropValue <= 0)
+        {
+            _player.Command("vf", "remove", CropFilterLabel);
+        }
+        else
+        {
+            // First remove to prevent duplicates/errors
+            _player.Command("vf", "remove", CropFilterLabel);
+
+            double R = _cropValue;
+            double A = AspectRatioValue; // -1 or positive override
+
+            if (A > 0)
+            {
+                // Aspect ratio is overridden
+                string filter;
+                if (A > R)
+                {
+                    double ratio = R / A;
+                    string ratioStr = ratio.ToString("F4", System.Globalization.CultureInfo.InvariantCulture);
+                    filter = $"{CropFilterLabel}:crop=w=iw*{ratioStr}:h=ih";
+                }
+                else
+                {
+                    double ratio = A / R;
+                    string ratioStr = ratio.ToString("F4", System.Globalization.CultureInfo.InvariantCulture);
+                    filter = $"{CropFilterLabel}:crop=w=iw:h=ih*{ratioStr}";
+                }
+                _player.Command("vf", "add", filter);
+            }
+            else
+            {
+                // Aspect ratio is original
+                string rStr = R.ToString("F4", System.Globalization.CultureInfo.InvariantCulture);
+                string filter = $"{CropFilterLabel}:crop=w=if(gt(iw/ih\\,{rStr})\\,ih*{rStr}\\,iw):h=if(gt(iw/ih\\,{rStr})\\,ih\\,iw/{rStr})";
+                _player.Command("vf", "add", filter);
+            }
+        }
     }
 
     public void RotateLeft() => _player.Command("set", "video-rotate", "90");
@@ -386,6 +424,7 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
         ResetSpeed();
         ResetZoom();
         ResetAspectRatio();
+        ResetCrop();
         ResetRotation();
         ResetFlip();
     }

@@ -51,17 +51,17 @@ public partial class HeaderBarControl : AvaloniaUserControl
         var builder = new PrimaryMenuBuilder();
         builder
             .AddSection("PLAYBACK")
-            .AddItem("Play", "Play/Pause", "Space", () => _viewModel?.PlayPause())
+            .AddItem("Play", "Play / Pause", "Space", () => _viewModel?.PlayPause())
             .AddItem("Stop", "Stop", "Ctrl+S", () => _viewModel?.Stop())
-            .AddItem("Rewind", "Seek -10s", "←", () => _viewModel?.SeekBackward())
-            .AddItem("FastForward", "Seek +10s", "→", () => _viewModel?.SeekForward())
+            .AddItem("SkipPrevious", "Seek -10s", "Left", () => _viewModel?.SeekBackward())
+            .AddItem("SkipNext", "Seek +10s", "Right", () => _viewModel?.SeekForward())
             .AddSeparator()
             .AddSection("VIEW")
             .AddToggleItem("Fullscreen", "Fullscreen", "F",
                 () => _viewModel?.ToggleFullscreen(),
                 () => _viewModel?.IsFullscreen ?? false)
             .AddItem("PictureInPictureBottomRight", "Picture in Picture", "Ctrl+Shift+P", () => PipToggled?.Invoke(this, EventArgs.Empty))
-            .AddItem("Pin", "Always on Top", null, () =>
+            .AddItem("PinOutline", "Always on Top", null, () =>
             {
                 var w = GetParentWindow();
                 if (w != null) w.Topmost = !w.Topmost;
@@ -71,7 +71,7 @@ public partial class HeaderBarControl : AvaloniaUserControl
             .AddToggleItem("RepeatOnce", "Loop File", "L",
                 () => _viewModel?.ToggleLoopFile(),
                 () => _viewModel?.IsLoopFileEnabled ?? false)
-            .AddToggleItem("Repeat", "Loop Playlist", "Ctrl+R",
+            .AddToggleItem("Repeat", "Loop Playlist", "Ctrl+I",
                 () => _viewModel?.ToggleLoopPlaylist(),
                 () => _viewModel?.IsLoopPlaylistEnabled ?? false)
             .AddToggleItem("ShuffleVariant", "Shuffle", "H",

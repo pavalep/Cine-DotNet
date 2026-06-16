@@ -40,10 +40,10 @@ public partial class FullscreenHeaderControl : UserControl
         var builder = new PrimaryMenuBuilder();
         builder
             .AddSection("PLAYBACK")
-            .AddItem("Play", "Play/Pause", "Space", () => _viewModel?.PlayPause())
+            .AddItem("Play", "Play / Pause", "Space", () => _viewModel?.PlayPause())
             .AddItem("Stop", "Stop", "Ctrl+S", () => _viewModel?.Stop())
-            .AddItem("Rewind", "Seek -10s", "←", () => _viewModel?.SeekBackward())
-            .AddItem("FastForward", "Seek +10s", "→", () => _viewModel?.SeekForward())
+            .AddItem("SkipPrevious", "Seek -10s", "Left", () => _viewModel?.SeekBackward())
+            .AddItem("SkipNext", "Seek +10s", "Right", () => _viewModel?.SeekForward())
             .AddSeparator()
             .AddSection("TOOLS")
             .AddItem("ClockOutline", "Go to Time…", "Ctrl+G", () =>
@@ -74,7 +74,7 @@ public partial class FullscreenHeaderControl : UserControl
             })
             .AddItem("PictureInPictureBottomRight", "Picture in Picture", "Ctrl+Shift+P", () => PipToggled?.Invoke(this, EventArgs.Empty))
             .AddSeparator()
-            .AddItem("Pin", "Always on Top", null, () =>
+            .AddItem("PinOutline", "Always on Top", null, () =>
             {
                 var w = TopLevel.GetTopLevel(this) as Window;
                 if (w != null) w.Topmost = !w.Topmost;

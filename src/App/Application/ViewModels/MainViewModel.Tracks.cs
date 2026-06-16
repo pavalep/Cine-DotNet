@@ -30,6 +30,8 @@ public partial class MainViewModel
     /// </summary>
     private void OnPlayerOpened(object? sender, EventArgs e)
     {
+        UpdateCropFilter();
+
         SubtitleSource[] subtitleSources;
         SubtitleSource[] audioSources;
         SubtitleSource[] videoSources;

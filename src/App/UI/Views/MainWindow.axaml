@@ -75,7 +75,7 @@
         <!-- Start Page — full viewport, opaque background.
              TOPMOST layer in this section. Always clickable. Fades out when media
              opens, revealing VideoClickOverlay + video beneath. -->
-        <local:StartPage x:Name="StartPage" />
+        <local:StartPage x:Name="StartPage" PointerPressed="OnStartPagePointerPressed" />
 
         <!-- ══════════════════════════════════════════════════════════════ -->
         <!--  LAYER 1: UI OVERLAYS (floats on top of video)               -->

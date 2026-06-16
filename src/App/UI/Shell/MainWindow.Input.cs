@@ -12,6 +12,7 @@ using PointerWheelEventArgs = Avalonia.Input.PointerWheelEventArgs;
 using PointerPressedEventArgs = Avalonia.Input.PointerPressedEventArgs;
 using RoutedEventArgs = Avalonia.Interactivity.RoutedEventArgs;
 using Cine.Avalonia.Views.Dialogs;
+using MaterialIcon = global::Material.Icons.Avalonia.MaterialIcon;
 
 namespace Cine.Avalonia;
 
@@ -185,12 +186,7 @@ public partial class MainWindow
 
         if (props.IsRightButtonPressed)
         {
-            var flyout = new Flyout
-            {
-                Placement = PlacementMode.Pointer
-            };
-            BuildVideoContextMenu(flyout);
-            flyout.ShowAt(this);
+            ShowVideoContextMenu();
             e.Handled = true;
             return;
         }
@@ -220,235 +216,30 @@ public partial class MainWindow
         }
     }
 
-    private void BuildVideoContextMenu(Flyout flyout)
+    // ─── Right-click context menu — extracted to VideoContextMenuBuilder ──
+
+    /// <summary>Show the right-click context menu at pointer position.</summary>
+    private void ShowVideoContextMenu()
     {
-        // ── Shared helpers ──
-        Border MakeBorder(StackPanel child) => new()
+        try
         {
-            Background = AppColors.DialogSurface,
-            BorderBrush = AppColors.DividerStrong,
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(4),
-            MinWidth = 200,
-            Child = child
-        };
-
-        // ── Flat menu item ──
-        void AddFlat(StackPanel s, string text, string? shortcut, Action action, bool selected = false)
-        {
-            var grid = new Grid
-            {
-                ColumnDefinitions = new ColumnDefinitions
-                {
-                    new ColumnDefinition(new GridLength(16)),
-                    new ColumnDefinition(GridLength.Star),
-                    new ColumnDefinition(GridLength.Auto)
-                }
-            };
-
-            // Checkmark column
-            if (selected)
-            {
-                var check = new TextBlock
-                {
-                    Text = "✓",
-                    FontSize = 12,
-                    Foreground = AppColors.Accent,
-                    VerticalAlignment = AvaloniaLayout.VerticalAlignment.Center,
-                    HorizontalAlignment = AvaloniaLayout.HorizontalAlignment.Center
-                };
-                grid.Children.Add(check);
-            }
-
-            var textBlock = new TextBlock
-            {
-                Text = text,
-                FontSize = 13,
-                Foreground = AppColors.TextPrimary,
-                VerticalAlignment = AvaloniaLayout.VerticalAlignment.Center
-            };
-            Grid.SetColumn(textBlock, 1);
-            grid.Children.Add(textBlock);
-
-            if (shortcut != null)
-            {
-                var shortcutBlock = new TextBlock
-                {
-                    Text = shortcut,
-                    FontSize = 11,
-                    Foreground = AppColors.TextOnDarkDisabled,
-                    VerticalAlignment = AvaloniaLayout.VerticalAlignment.Center
-                };
-                Grid.SetColumn(shortcutBlock, 2);
-                grid.Children.Add(shortcutBlock);
-            }
-
-            var btn = new Button
-            {
-                Content = grid,
-                Background = AppColors.Transparent,
-                BorderThickness = new Thickness(0),
-                Padding = new Thickness(10, 7),
-                HorizontalContentAlignment = AvaloniaLayout.HorizontalAlignment.Stretch,
-                Cursor = new Cursor(StandardCursorType.Arrow)
-            };
-            btn.PointerEntered += (_, _) => btn.Background = AppColors.HoverSubtle;
-            btn.PointerExited += (_, _) => btn.Background = AppColors.Transparent;
-            btn.Click += (_, _) => { action(); flyout.Hide(); };
-            s.Children.Add(btn);
+            var builder = new Builders.VideoContextMenuBuilder(
+                this, _viewModel, _playerService?.Player);
+            builder.Build().ShowAt(this);
         }
-
-        // ── Section header label ──
-        void AddHeader(StackPanel s, string text) => s.Children.Add(new TextBlock
+        catch (Exception ex)
         {
-            Text = text,
-            FontSize = 10,
-            FontWeight = FontWeight.Bold,
-            Foreground = AppColors.TextPrimary,
-            Opacity = 0.4,
-            LetterSpacing = 0.8,
-            Margin = new Thickness(10, 6, 8, 4),
-            VerticalAlignment = AvaloniaLayout.VerticalAlignment.Center
-        });
-
-        // ── Submenu item with arrow and nested flyout ──
-        void AddSubMenu(StackPanel s, string text, Action<StackPanel> buildSub)
-        {
-            var subStack = new StackPanel();
-            buildSub(subStack);
-
-            var subFlyout = new Flyout
-            {
-                Placement = PlacementMode.Right,
-                ShowMode = FlyoutShowMode.Standard,
-                Content = MakeBorder(subStack)
-            };
-
-            var grid = new Grid
-            {
-                ColumnDefinitions = new ColumnDefinitions
-                {
-                    new ColumnDefinition(GridLength.Star),
-                    new ColumnDefinition(new GridLength(16))
-                }
-            };
-
-            grid.Children.Add(new TextBlock
-            {
-                Text = text,
-                FontSize = 13,
-                Foreground = AppColors.TextPrimary,
-                VerticalAlignment = AvaloniaLayout.VerticalAlignment.Center
-            });
-            Grid.SetColumn(grid.Children[^1], 0);
-
-            // Arrow indicator
-            grid.Children.Add(new TextBlock
-            {
-                Text = "▶",
-                FontSize = 9,
-                Foreground = AppColors.TextOnDarkDisabled,
-                VerticalAlignment = AvaloniaLayout.VerticalAlignment.Center,
-                HorizontalAlignment = AvaloniaLayout.HorizontalAlignment.Right
-            });
-            Grid.SetColumn(grid.Children[^1], 1);
-
-            var btn = new Button
-            {
-                Content = grid,
-                Background = AppColors.Transparent,
-                BorderThickness = new Thickness(0),
-                Padding = new Thickness(10, 7),
-                HorizontalContentAlignment = AvaloniaLayout.HorizontalAlignment.Stretch,
-                Cursor = new Cursor(StandardCursorType.Arrow)
-            };
-            btn.PointerEntered += (_, _) => btn.Background = AppColors.HoverSubtle;
-            btn.PointerExited += (_, _) => btn.Background = AppColors.Transparent;
-            btn.Click += (_, _) =>
-            {
-                if (subFlyout.IsOpen)
-                    subFlyout.Hide();
-                else
-                    subFlyout.ShowAt(btn);
-            };
-            s.Children.Add(btn);
+            Console.WriteLine($"Right-click menu error: {ex.Message}");
         }
+    }
 
-        // ── Separator ──
-        void AddSep(StackPanel s) => s.Children.Add(new Separator
+    /// <summary>Handles right-click on StartPage (which is on top of VideoClickOverlay when visible).</summary>
+    private void OnStartPagePointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(this).Properties.IsRightButtonPressed)
         {
-            Background = AppColors.DividerStrong,
-            Margin = new Thickness(4, 2)
-        });
-
-        // ═══════════════════════════════════════════════════
-        //  Build Menu
-        // ═══════════════════════════════════════════════════
-
-        var root = new StackPanel();
-
-        AddFlat(root, "Play / Pause", "Space", () => _viewModel?.PlayPause());
-        AddFlat(root, "Stop", "Ctrl+S", () => _viewModel?.Stop());
-        AddSep(root);
-
-        // ── Navigate ──
-        AddSubMenu(root, "Navigate", s =>
-        {
-            AddFlat(s, "Seek Backward", "←", () => _viewModel?.SeekBackward());
-            AddFlat(s, "Seek Forward", "→", () => _viewModel?.SeekForward());
-        });
-
-        // ── Video ──
-        AddSubMenu(root, "Video", s =>
-        {
-            AddFlat(s, "Fullscreen", "F", () => _viewModel?.ToggleFullscreen());
-            AddFlat(s, "Always on Top", "", () => Topmost = !Topmost);
-            AddSep(s);
-
-            // Aspect Ratio
-            AddHeader(s, "ASPECT RATIO");
-            AddFlat(s, "Original", null, () => _viewModel?.SetAspectRatio(-1),
-                _viewModel?.AspectRatioValue < 0);
-            AddFlat(s, "16:9", null, () => _viewModel?.SetAspectRatio(1.7778),
-                Math.Abs((_viewModel?.AspectRatioValue ?? 0) - 1.7778) < 0.01);
-            AddFlat(s, "16:10", null, () => _viewModel?.SetAspectRatio(1.6),
-                Math.Abs((_viewModel?.AspectRatioValue ?? 0) - 1.6) < 0.01);
-            AddFlat(s, "4:3", null, () => _viewModel?.SetAspectRatio(1.3333),
-                Math.Abs((_viewModel?.AspectRatioValue ?? 0) - 1.3333) < 0.01);
-            AddFlat(s, "2.35:1", null, () => _viewModel?.SetAspectRatio(2.35),
-                Math.Abs((_viewModel?.AspectRatioValue ?? 0) - 2.35) < 0.01);
-            AddSep(s);
-
-            // Crop
-            AddHeader(s, "CROP");
-            AddFlat(s, "Off", null, () => _viewModel?.ResetCrop());
-            AddFlat(s, "16:9", null, () => _viewModel?.SetCrop(1.7778));
-            AddFlat(s, "16:10", null, () => _viewModel?.SetCrop(1.6));
-            AddFlat(s, "4:3", null, () => _viewModel?.SetCrop(1.3333));
-            AddFlat(s, "2.35:1", null, () => _viewModel?.SetCrop(2.35));
-        });
-
-        // ── Subtitle ──
-        AddSubMenu(root, "Subtitle", s =>
-        {
-            AddFlat(s, "Cycle Subtitles", "C", () => _playerService?.Player?.CycleSubtitleTrack());
-        });
-
-        // ── Speed ──
-        AddSubMenu(root, "Speed", s =>
-        {
-            var currentSpeed = _viewModel?.SpeedValue ?? 1.0;
-            AddFlat(s, "0.5×", null, () => _viewModel?.SetSpeed(0.5), Math.Abs(currentSpeed - 0.5) < 0.01);
-            AddFlat(s, "1.0×", null, () => _viewModel?.SetSpeed(1.0), Math.Abs(currentSpeed - 1.0) < 0.01);
-            AddFlat(s, "1.5×", null, () => _viewModel?.SetSpeed(1.5), Math.Abs(currentSpeed - 1.5) < 0.01);
-            AddFlat(s, "2.0×", null, () => _viewModel?.SetSpeed(2.0), Math.Abs(currentSpeed - 2.0) < 0.01);
-        });
-
-        AddSep(root);
-        AddFlat(root, "Preferences", null, () => new PreferencesDialog { DataContext = _viewModel }.Show(this));
-        AddFlat(root, "About Cine", null, () => new AboutDialog { DataContext = _viewModel }.Show(this));
-
-        flyout.Content = MakeBorder(root);
+            ShowVideoContextMenu();
+            e.Handled = true;
+        }
     }
 }
