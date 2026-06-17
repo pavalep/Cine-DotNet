@@ -227,13 +227,6 @@
                         <materialIcons:MaterialIcon Kind="BookmarkOutline" Width="18" Height="18"
                             Foreground="{StaticResource OsdForeground}" />
                     </Button>
-                    <Button x:Name="BtnVideoEqualizer"
-                            Classes="circular-menu"
-                            ToolTip.Tip="Video Equalizer"
-                            Click="OnVideoEqualizerClick">
-                        <materialIcons:MaterialIcon Kind="Palette" Width="18" Height="18"
-                            Foreground="{StaticResource OsdForeground}" />
-                    </Button>
                     <controls:SubtitleOverlayControl x:Name="SubOverlayCtrl"
                                                      Width="40" Height="40"
                                                      Padding="0"

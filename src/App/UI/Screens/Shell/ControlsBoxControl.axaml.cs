@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
@@ -245,16 +246,7 @@ public partial class ControlsBoxControl : AvaloniaUserControl
     }
     private void OnToggleShuffle(object? sender, RoutedEventArgs e) => _viewModel?.ToggleShuffle();
     private void OnToggleLoopFile(object? sender, RoutedEventArgs e) => _viewModel?.ToggleLoopFile();
-    private void OnToggleLoopPlaylist(object? sender, RoutedEventArgs e) => _viewModel?.ToggleLoopPlaylist();
     private void OnToggleFullscreen(object? sender, RoutedEventArgs e) => _viewModel?.ToggleFullscreen();
-
-    private void OnVideoEqualizerClick(object? sender, RoutedEventArgs e)
-    {
-        var parent = this.VisualRoot as Window;
-        if (parent == null) return;
-        var dlg = new EqualizerDialog(_viewModel!);
-        dlg.Show(parent);
-    }
 
     // --- Volume handlers ---
 
@@ -290,12 +282,30 @@ public partial class ControlsBoxControl : AvaloniaUserControl
 
     // --- Track menu handlers ---
 
-    private void OnEqualizerClick(object? sender, RoutedEventArgs e)
+    private Flyout? _equalizerFlyout;
+
+    public void OpenEqualizerFlyout()
     {
         if (_viewModel == null) return;
-        var dialog = new EqualizerDialog(_viewModel);
-        var parent = this.VisualRoot as Window;
-        if (parent != null) dialog.Show(parent);
+        _equalizerFlyout?.Hide();
+        var flyoutContent = new AudioEqualizerFlyout(_viewModel.Audio);
+        flyoutContent.CloseAction = () => _equalizerFlyout?.Hide();
+        _equalizerFlyout = new Flyout
+        {
+            Content = flyoutContent,
+            Placement = PlacementMode.TopEdgeAlignedLeft,
+            ShowMode = FlyoutShowMode.Standard,
+            OverlayDismissEventPassThrough = true
+        };
+        if (BtnEqualizer != null)
+            _equalizerFlyout.ShowAt(BtnEqualizer);
+        else if (BtnFullscreen != null)
+            _equalizerFlyout.ShowAt(BtnFullscreen);
+    }
+
+    private void OnEqualizerClick(object? sender, RoutedEventArgs e)
+    {
+        OpenEqualizerFlyout();
     }
 
     private void OnVideoMenuClick(object? sender, RoutedEventArgs e)

@@ -31,6 +31,8 @@ public partial class MainViewModel
     {
         // Notify SubtitleManager so it can load per-file settings
         Subtitles?.NotifyMediaOpened(_filePath);
+        // Notify AudioManager so it can load per-file settings
+        Audio?.NotifyMediaOpened(_filePath);
 
         UpdateCropFilter();
         SubtitleSource[] audioSources;

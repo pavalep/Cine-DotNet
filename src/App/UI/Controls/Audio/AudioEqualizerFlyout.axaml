@@ -1,0 +1,124 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Cine.Avalonia.Controls.AudioEqualizerFlyout"
+             x:CompileBindings="False">
+    <UserControl.Styles>
+        <Style Selector="Button.eq-preset">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="Margin" Value="2" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="{DynamicResource PopoverBorder}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource OsdForeground}" />
+            <Setter Property="CornerRadius" Value="4" />
+        </Style>
+        <Style Selector="Button.eq-preset:pointerover">
+            <Setter Property="Background" Value="{DynamicResource PopoverBorder}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentColor}" />
+        </Style>
+        <Style Selector="Button.eq-preset:pressed">
+            <Setter Property="Background" Value="{DynamicResource AccentColor}" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <Style Selector="Button.eq-close">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Width" Value="28" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+        <Style Selector="Button.eq-close:pointerover">
+            <Setter Property="Background" Value="#33FFFFFF" />
+            <Setter Property="CornerRadius" Value="4" />
+        </Style>
+    </UserControl.Styles>
+    <Border Background="{DynamicResource PopoverBackground}"
+            BorderBrush="{DynamicResource PopoverBorder}"
+            BorderThickness="1"
+            CornerRadius="8"
+            Padding="14,12"
+            Width="480">
+        <StackPanel Spacing="10">
+            <!-- Header with close -->
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                <TextBlock Grid.Column="0" Text="Equalizer" FontSize="15" FontWeight="SemiBold"
+                           Foreground="{DynamicResource OsdForeground}" VerticalAlignment="Center" />
+                <Button Grid.Column="2" x:Name="ResetBtn"
+                        Classes="flat" FontSize="11"
+                        Click="OnResetClick"
+                        Foreground="{DynamicResource AccentColor}"
+                        Content="Reset All"
+                        VerticalAlignment="Center" />
+                <Button Grid.Column="3" x:Name="CloseBtn"
+                        Classes="eq-close"
+                        ToolTip.Tip="Close"
+                        VerticalAlignment="Center"
+                        Margin="8,0,0,0">
+                    <materialIcons:MaterialIcon Kind="Close" Width="14" Height="14"
+                        Foreground="{DynamicResource OsdForeground}" />
+                </Button>
+            </Grid>
+
+            <!-- Preset Buttons -->
+            <WrapPanel>
+                <Button Content="Flat" Classes="eq-preset" Click="OnPresetClick" Tag="Flat" />
+                <Button Content="Classic" Classes="eq-preset" Click="OnPresetClick" Tag="Classical" />
+                <Button Content="Rock" Classes="eq-preset" Click="OnPresetClick" Tag="Rock" />
+                <Button Content="Pop" Classes="eq-preset" Click="OnPresetClick" Tag="Pop" />
+                <Button Content="Jazz" Classes="eq-preset" Click="OnPresetClick" Tag="Jazz" />
+                <Button Content="Bass+" Classes="eq-preset" Click="OnPresetClick" Tag="Bass Boost" />
+                <Button Content="Vocal" Classes="eq-preset" Click="OnPresetClick" Tag="Vocal" />
+                <Button Content="Movie" Classes="eq-preset" Click="OnPresetClick" Tag="Movie" />
+                <Button Content="HD 800" Classes="eq-preset" Click="OnPresetClick" Tag="Headphones" />
+                <Button Content="Podcast" Classes="eq-preset" Click="OnPresetClick" Tag="Podcast" />
+            </WrapPanel>
+
+            <!-- EQ Sliders -->
+            <ScrollViewer Height="200" HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Disabled">
+                <WrapPanel x:Name="SlidersPanel" Height="190"
+                           HorizontalAlignment="Left" />
+            </ScrollViewer>
+
+            <Separator Background="{DynamicResource PopoverBorder}" Height="1" Opacity="0.3" />
+
+            <!-- Toggles -->
+            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto">
+                <StackPanel Grid.Column="0" Spacing="4">
+                    <TextBlock Text="Normalization (DRC)" FontSize="11" FontWeight="SemiBold"
+                               Foreground="{DynamicResource OsdForeground}" Opacity="0.6" />
+                    <ToggleSwitch x:Name="NormToggle"
+                                  IsChecked="{Binding IsAudioNormalizationEnabled}"
+                                  OnContent="" OffContent=""
+                                  FontSize="11" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Spacing="4">
+                    <TextBlock Text="Dialogue Boost" FontSize="11" FontWeight="SemiBold"
+                               Foreground="{DynamicResource OsdForeground}" Opacity="0.6" />
+                    <ToggleSwitch x:Name="DialogueToggle"
+                                  IsChecked="{Binding IsDialogueBoostEnabled}"
+                                  OnContent="" OffContent=""
+                                  FontSize="11" />
+                </StackPanel>
+            </Grid>
+
+            <!-- Audio Delay -->
+            <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto">
+                <TextBlock Grid.Column="0" Text="Audio Delay" FontSize="11" FontWeight="SemiBold"
+                           Foreground="{DynamicResource OsdForeground}" Opacity="0.6"
+                           VerticalAlignment="Center" Margin="0,0,8,0" />
+                <Slider Grid.Column="1" x:Name="DelaySlider"
+                        Minimum="-10" Maximum="10" TickFrequency="0.5"
+                        Value="{Binding AudioDelay}"
+                        Foreground="{DynamicResource AccentColor}" />
+                <TextBlock Grid.Column="2" x:Name="DelayLabel"
+                           Text="0.00s" FontSize="11" MinWidth="40"
+                           Foreground="{DynamicResource OsdForeground}"
+                           HorizontalAlignment="Right"
+                           VerticalAlignment="Center" Margin="8,0,0,0" />
+            </Grid>
+        </StackPanel>
+    </Border>
+</UserControl>

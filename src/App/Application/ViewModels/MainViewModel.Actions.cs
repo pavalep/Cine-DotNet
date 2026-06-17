@@ -105,7 +105,8 @@ public partial class MainViewModel
     public async void OpenFile(string path)
     {
         if (string.IsNullOrWhiteSpace(path)) return;
-        // Save subtitle settings for previous file before switching
+        // Save audio + subtitle settings for previous file before switching
+        Audio?.OnFileClosing();
         Subtitles?.OnFileClosing();
         AddRecentFile(path);
         FilePath = path;
@@ -370,75 +371,26 @@ public partial class MainViewModel
     }
 
     // ─────────────────────────────────────────────────────
-    //  Audio Equalizer
+    //  Audio Settings (proxied to AudioManager)
     // ─────────────────────────────────────────────────────
-
-    public static readonly double[] EqualizerFrequencies = { 31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000 };
-
-    private double[] _equalizerBands = new double[10];
-
-    public double[] EqualizerBands
-    {
-        get => _equalizerBands;
-        set { _equalizerBands = value; OnPropertyChanged(); }
-    }
-
-    private string _equalizerPresetName = "Flat";
-
-    public string EqualizerPresetName
-    {
-        get => _equalizerPresetName;
-        set { _equalizerPresetName = value; OnPropertyChanged(); }
-    }
-
-    public void SetEqualizerBand(int bandIndex, double gain)
-    {
-        if (bandIndex < 0 || bandIndex >= 10) return;
-        _equalizerBands[bandIndex] = Math.Clamp(gain, -20, 20);
-        ApplyEqualizer();
-    }
-
-    public void ApplyEqualizerPreset(string presetName)
-    {
-        var preset = GetPreset(presetName);
-        for (int i = 0; i < 10 && i < preset.Length; i++)
-            _equalizerBands[i] = preset[i];
-        EqualizerPresetName = presetName;
-        OnPropertyChanged(nameof(EqualizerBands));
-        ApplyEqualizer();
-    }
-
-    private void ApplyEqualizer()
-    {
-        try
-        {
-            var filters = new List<string>();
-            for (int i = 0; i < 10; i++)
-            {
-                if (Math.Abs(_equalizerBands[i]) > 0.5)
-                    filters.Add($"equalizer=f={EqualizerFrequencies[i]}:t=q:width=1:g={_equalizerBands[i]:F1}");
-            }
-            if (_isAudioNormalizationEnabled)
-                filters.Add("drc");
-
-            var afValue = filters.Count > 0 ? string.Join(",", filters) : "";
-            _player.Command("set_property", "af", afValue);
-        }
-        catch { /* player not ready */ }
-    }
 
     public void ToggleAudioNormalization()
     {
         IsAudioNormalizationEnabled = !IsAudioNormalizationEnabled;
-        ApplyEqualizer();
     }
 
     private bool _isAudioNormalizationEnabled;
 
+    /// <summary>Proxies to AudioManager. Keeps local field for PropertyChanged notification.</summary>
     public bool IsAudioNormalizationEnabled
     {
-        get => _isAudioNormalizationEnabled;
-        set { _isAudioNormalizationEnabled = value; OnPropertyChanged(); }
+        get => Audio?.IsAudioNormalizationEnabled ?? _isAudioNormalizationEnabled;
+        set
+        {
+            _isAudioNormalizationEnabled = value;
+            if (Audio != null) Audio.IsAudioNormalizationEnabled = value;
+            OnPropertyChanged();
+        }
     }
 
     /// <summary>Renderer mode: Auto (D3D11 hardware), Software (software only).</summary>

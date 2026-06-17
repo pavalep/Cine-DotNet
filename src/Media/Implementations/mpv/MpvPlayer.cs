@@ -451,6 +451,56 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
         }
     }
     public void SelectAudioTrack(int trackIndex) => SetInt64("aid", trackIndex);
+
+    // ── Audio device ──
+
+    private bool _isAudioExclusive;
+
+    public bool IsAudioExclusive
+    {
+        get => _isAudioExclusive;
+        set
+        {
+            if (_isAudioExclusive == value) return;
+            _isAudioExclusive = value;
+            if (_initialized)
+            {
+                SetString("audio-exclusive", value ? "yes" : "no");
+                AudioDeviceChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+    }
+
+    private string[] _audioDeviceList = new[] { "auto", "wasapi" };
+
+    public string[] AudioDeviceList
+    {
+        get => _audioDeviceList;
+    }
+
+    private string _currentAudioDevice = "auto";
+
+    public string CurrentAudioDevice
+    {
+        get
+        {
+            if (_initialized && string.IsNullOrEmpty(_currentAudioDevice))
+                _currentAudioDevice = GetString("audio-device") ?? "auto";
+            return _currentAudioDevice;
+        }
+        set
+        {
+            if (_initialized)
+            {
+                SetString("audio-device", value);
+                _currentAudioDevice = value;
+                AudioDeviceChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+    }
+
+    public event EventHandler? AudioDeviceChanged;
+
     public void SelectVideoTrack(int trackIndex) => SetInt64("vid", trackIndex);
     public void CycleSubtitleTrack()
     {

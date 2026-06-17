@@ -8,7 +8,8 @@ namespace Cine.Avalonia.Views.Dialogs;
 
 public partial class PreferencesDialog : Window
 {
-    private readonly SubtitleSettingsStore _store = new();
+    private readonly SubtitleSettingsStore _subStore = new();
+    private readonly AudioSettingsStore _audioStore = new();
 
     public PreferencesDialog()
     {
@@ -21,10 +22,13 @@ public partial class PreferencesDialog : Window
     private void OnLoaded(object? sender, EventArgs e)
     {
         // Load subtitle settings
-        var defaults = _store.LoadDefaults();
+        var defaults = _subStore.LoadDefaults();
         AutoLoadSubsToggle.IsChecked = defaults.AutoEnabled;
         PreferredLangInput.Text = string.Join(", ", defaults.PreferredLanguages);
         SubDirsInput.Text = string.Join(", ", defaults.ExternalSubDirectories);
+
+        // Load audio settings (global defaults already applied via AudioManager on start)
+        // No manual load needed — bindings pull from MainViewModel → AudioManager
     }
 
     private void OnClosing(object? sender, WindowClosingEventArgs e)
@@ -40,8 +44,8 @@ public partial class PreferencesDialog : Window
             .Where(d => !string.IsNullOrWhiteSpace(d))
             .ToArray() ?? new[] { "./subs", "./subtitles" };
 
-        var defaults = _store.LoadDefaults();
-        _store.SaveDefaults(new SubtitleSettingsStore.SubtitleDefaults
+        var defaults = _subStore.LoadDefaults();
+        _subStore.SaveDefaults(new SubtitleSettingsStore.SubtitleDefaults
         {
             AutoEnabled = AutoLoadSubsToggle.IsChecked ?? true,
             PreferredLanguages = langs,

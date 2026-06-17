@@ -99,6 +99,7 @@ public static class MpvConfig
             // ── Audio ──
             ["ao"] = "wasapi",
             ["volume-max"] = "150",
+            ["gapless-audio"] = "yes",
 
             // ── Color / levels ──
             // video-output-levels = full prevents mpv from treating the FBO as

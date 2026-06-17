@@ -338,6 +338,11 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
         }
     }
 
+    public bool IsAudioExclusive { get; set; }
+    public string[] AudioDeviceList => new[] { "auto" };
+    public string CurrentAudioDevice { get => "auto"; set { } }
+    public event EventHandler? AudioDeviceChanged;
+
     #endregion
 
     #region Events

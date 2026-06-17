@@ -86,17 +86,6 @@ public partial class PipWindow : Window
             HoverOverlay.IsHitTestVisible = true;
             HoverOverlay.Opacity = 1;
         }
-        if (FileBadge != null)
-        {
-            FileBadge.IsVisible = true;
-            FileBadge.Opacity = 1;
-            _ = Dispatcher.UIThread.OnUiThreadAsync(async () =>
-            {
-                await Task.Delay(250);
-                if (_controlsVisible && FileBadge != null)
-                    FileBadge.IsVisible = false;
-            });
-        }
         if (PipSeekThumb != null) PipSeekThumb.IsVisible = true;
 
         _hoverTimer?.Start();
@@ -105,6 +94,7 @@ public partial class PipWindow : Window
     public void HideAllControls()
     {
         _controlsVisible = false;
+        // Keep timer stopped — it will be restarted by ShowAllControls on mouse move
         _hoverTimer?.Stop();
 
         if (HoverOverlay != null)
@@ -118,9 +108,6 @@ public partial class PipWindow : Window
                     HoverOverlay.IsVisible = false;
             });
         }
-        if (FileBadge != null) FileBadge.IsVisible = false;
-
-        _hoverTimer = null;
     }
 
     public void StartHoverTimer() { _hoverTimer?.Stop(); _hoverTimer?.Start(); }
@@ -168,7 +155,6 @@ public partial class PipWindow : Window
     }
 
     private void OnExpandClick(object? sender, RoutedEventArgs e) => Close();
-    private void OnCloseClick(object? sender, RoutedEventArgs e) => Close();
 
     // ═══════════════════════════════════════════════════════════════
     // SEEK BAR
@@ -226,7 +212,6 @@ public partial class PipWindow : Window
     public void SetFileName(string fileName, string folderOrCodec)
     {
         if (PipFileName != null) PipFileName.Text = fileName;
-        if (PipBadgeLabel != null) PipBadgeLabel.Text = fileName;
     }
 
     public void SetMuted(bool muted)
@@ -440,16 +425,58 @@ public partial class PipWindow : Window
     private void OnResizePointerMoved(object? sender, PointerEventArgs e)
     {
         if (!_resizing) return;
+
         double dx = e.GetCurrentPoint(this).Position.X - _resizeStartX;
         double dy = e.GetCurrentPoint(this).Position.Y - _resizeStartY;
-        double nw = _resizeStartW, nh = _resizeStartH, nx = Position.X, ny = Position.Y;
-        if ((_resizeEdge & 2) != 0) nw = Math.Max(MinWidth, _resizeStartW + dx);
-        if ((_resizeEdge & 1) != 0) { nw = Math.Max(MinWidth, _resizeStartW - dx); nx = Position.X + (_resizeStartW - nw); }
-        if ((_resizeEdge & 8) != 0) nh = Math.Max(MinHeight, _resizeStartH + dy);
-        if ((_resizeEdge & 4) != 0) { nh = Math.Max(MinHeight, _resizeStartH - dy); ny = Position.Y + (_resizeStartH - nh); }
-        if (_aspectRatio > 0) { if ((_resizeEdge & 3) != 0) nh = nw / _aspectRatio; else nw = nh * _aspectRatio; }
-        Width = Math.Min(MaxWidth, nw); Height = Math.Min(MaxHeight, nh);
-        Position = new PixelPoint((int)nx, (int)ny);
+        double nw = _resizeStartW, nh = _resizeStartH;
+        double nx = Position.X, ny = Position.Y;
+
+        bool left   = (_resizeEdge & 1) != 0;
+        bool right  = (_resizeEdge & 2) != 0;
+        bool top    = (_resizeEdge & 4) != 0;
+        bool bottom = (_resizeEdge & 8) != 0;
+
+        bool hasHorizontal = left || right;
+        bool hasVertical = top || bottom;
+
+        if (_aspectRatio > 0)
+        {
+            // Aspect ratio locked — use the dominant axis to drive resize
+            if (!hasHorizontal && hasVertical)
+            {
+                // Top/bottom only — height drives width
+                if (top)    nh = Math.Max(MinHeight, _resizeStartH - dy);
+                if (bottom) nh = Math.Max(MinHeight, _resizeStartH + dy);
+                nh = Math.Min(MaxHeight, nh);
+                nw = nh * _aspectRatio;
+            }
+            else
+            {
+                // Left/right or corner — width drives height (primary axis)
+                if (left)   nw = Math.Max(MinWidth, _resizeStartW - dx);
+                if (right)  nw = Math.Max(MinWidth, _resizeStartW + dx);
+                nw = Math.Min(MaxWidth, nw);
+                nh = nw / _aspectRatio;
+                if (left)  nx = Position.X + (_resizeStartW - nw);
+                if (top)   ny = Position.Y + (_resizeStartH - nh);
+            }
+        }
+        else
+        {
+            // No aspect ratio constraint
+            if (left)   nw = Math.Max(MinWidth, _resizeStartW - dx);
+            if (right)  nw = Math.Max(MinWidth, _resizeStartW + dx);
+            if (top)    nh = Math.Max(MinHeight, _resizeStartH - dy);
+            if (bottom) nh = Math.Max(MinHeight, _resizeStartH + dy);
+            nw = Math.Min(MaxWidth, nw);
+            nh = Math.Min(MaxHeight, nh);
+            if (left)  nx = Position.X + (_resizeStartW - nw);
+            if (top)   ny = Position.Y + (_resizeStartH - nh);
+        }
+
+        Width = nw;
+        Height = nh;
+        Position = new PixelPoint((int)Math.Round(nx), (int)Math.Round(ny));
     }
 
     private void OnResizePointerReleased(object? sender, PointerReleasedEventArgs e)

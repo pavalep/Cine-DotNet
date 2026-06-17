@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Media;
 using AvaloniaLayout = Avalonia.Layout;
@@ -123,7 +124,7 @@ public partial class MainWindow
         else if (key == Key.S) 
             Handle(() => { if (shift) _playerService?.Player?.ScreenshotWithoutSubtitles(); else _playerService?.Player?.ScreenshotWithSubtitles(); });
         else if (ctrl && shift && key == Key.E)
-            Handle(() => { if (_viewModel != null) { var dlg = new EqualizerDialog(_viewModel); dlg.Show(this); } });
+            Handle(() => _controlsBox?.OpenEqualizerFlyout());
         else if (key == Key.L && shift) 
             Handle(() => _viewModel?.ToggleLoopFile());
         // ── Subtitle shortcuts (via SubtitleManager) ──

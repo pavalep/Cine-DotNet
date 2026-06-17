@@ -405,7 +405,6 @@ public partial class HeaderBarControl : AvaloniaUserControl
         }
     }
     private void OnToggleLoopFile(object? sender, RoutedEventArgs e) => _viewModel?.ToggleLoopFile();
-    private void OnToggleLoopPlaylist(object? sender, RoutedEventArgs e) => _viewModel?.ToggleLoopPlaylist();
     private void OnToggleShuffle(object? sender, RoutedEventArgs e) => _viewModel?.ToggleShuffle();
     private void OnShortcutsClick(object? sender, RoutedEventArgs e)
     {

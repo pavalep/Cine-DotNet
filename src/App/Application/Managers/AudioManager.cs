@@ -45,6 +45,12 @@ public sealed class AudioManager : INotifyPropertyChanged, IDisposable
     // ── File dialog callback for "Add Audio Track…" ──
     public Func<Task<string?>>? RequestAudioFileAsync { get; set; }
 
+    // ── Persistence ──
+    private readonly AudioSettingsStore _audioStore = new();
+    private string? _currentMediaPath;
+    private System.Threading.Timer? _debounceTimer;
+    private bool _dirty;
+
     public AudioManager(IMediaPlayer player)
     {
         _player = player ?? throw new ArgumentNullException(nameof(player));
@@ -88,6 +94,7 @@ public sealed class AudioManager : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(Volume));
             OnPropertyChanged(nameof(VolumeText));
             VolumeChanged?.Invoke(this, EventArgs.Empty);
+            MarkDirty();
         }
     }
 
@@ -101,6 +108,7 @@ public sealed class AudioManager : INotifyPropertyChanged, IDisposable
             _player.Mute(value);
             OnPropertyChanged();
             VolumeChanged?.Invoke(this, EventArgs.Empty);
+            MarkDirty();
         }
     }
 
@@ -133,6 +141,7 @@ public sealed class AudioManager : INotifyPropertyChanged, IDisposable
             _isAudioNormalizationEnabled = value;
             OnPropertyChanged();
             ApplyEqualizer();
+            MarkDirty();
         }
     }
 
@@ -143,10 +152,8 @@ public sealed class AudioManager : INotifyPropertyChanged, IDisposable
         {
             if (_isDialogueBoostEnabled == value) return;
             _isDialogueBoostEnabled = value;
-            if (value)
-                _player.Command("af", "set", "lavfi=[acompressor=threshold=-20dB:ratio=4:makeup=8dB]");
-            else
-                _player.Command("af", "del", "lavfi=[acompressor=threshold=-20dB:ratio=4:makeup=8dB]");
+            ApplyEqualizer();
+            MarkDirty();
             OnPropertyChanged();
         }
     }
@@ -156,6 +163,7 @@ public sealed class AudioManager : INotifyPropertyChanged, IDisposable
         if (bandIndex < 0 || bandIndex >= 10) return;
         _equalizerBands[bandIndex] = Math.Clamp(gain, -20, 20);
         ApplyEqualizer();
+        MarkDirty();
     }
 
     public void ApplyEqualizerPreset(string presetName)
@@ -166,6 +174,7 @@ public sealed class AudioManager : INotifyPropertyChanged, IDisposable
         EqualizerPresetName = presetName;
         OnPropertyChanged(nameof(EqualizerBands));
         ApplyEqualizer();
+        MarkDirty();
     }
 
     public void ToggleAudioNormalization()
@@ -182,14 +191,17 @@ public sealed class AudioManager : INotifyPropertyChanged, IDisposable
             for (int i = 0; i < 10; i++)
             {
                 if (Math.Abs(_equalizerBands[i]) > 0.5)
-                    filters.Add($"equalizer=f={EqualizerFrequencies[i]}:t=q:width=1:g={_equalizerBands[i]:F1}");
+                    filters.Add($"equalizer=f={EqualizerFrequencies[i]}:t=q:w=1:g={_equalizerBands[i]:F1}");
             }
 
             if (_isAudioNormalizationEnabled)
-                filters.Add("drc");
+                filters.Add("lavfi=[acompressor=threshold=-20dB:ratio=4:makeup=8dB]");
 
-            var afValue = filters.Count > 0 ? string.Join(",", filters) : "";
-            _player.Command("set_property", "af", afValue);
+            if (_isDialogueBoostEnabled)
+                filters.Add("lavfi=[dialoguenhancer]");
+
+            if (filters.Count > 0)
+                _player.Command("set", "af", string.Join(",", filters));
         }
         catch { /* player not ready */ }
     }
@@ -216,6 +228,7 @@ public sealed class AudioManager : INotifyPropertyChanged, IDisposable
             _audioDelay = value;
             _player.AudioDelay = value;
             OnPropertyChanged();
+            MarkDirty();
         }
     }
 
@@ -274,6 +287,7 @@ public sealed class AudioManager : INotifyPropertyChanged, IDisposable
             _currentAudioTrackId = item.TrackIndex;
             foreach (var t in AudioTracks) t.RefreshSelection(false);
             item.RefreshSelection(true);
+            MarkDirty();
         }
     }
 
@@ -330,6 +344,108 @@ public sealed class AudioManager : INotifyPropertyChanged, IDisposable
 
     #endregion
 
+    // ═══════════════════════════════════════════════
+    //  Persistence Lifecycle
+    // ═══════════════════════════════════════════════
+
+    /// <summary>
+    /// Called by MainViewModel when a media file opens.
+    /// Loads per-file audio settings + global defaults.
+    /// </summary>
+    public void NotifyMediaOpened(string mediaPath)
+    {
+        _currentMediaPath = mediaPath;
+
+        // Load global defaults
+        var defaults = _audioStore.LoadDefaults();
+        VolumeValue = Math.Clamp(defaults.Volume, 0, VolumeMax);
+        IsMuted = defaults.IsMuted;
+        ApplyEqualizerPreset(defaults.EqualizerPreset);
+        IsAudioNormalizationEnabled = defaults.IsNormalizationEnabled;
+        IsDialogueBoostEnabled = defaults.IsDialogueBoostEnabled;
+
+        // Load per-file settings
+        var perFile = _audioStore.LoadPerFile(mediaPath);
+        if (perFile != null)
+        {
+            AudioDelay = Math.Clamp(perFile.AudioDelay, -10, 10);
+            if (perFile.EqualizerBands != null && perFile.EqualizerBands.Length == 10)
+            {
+                for (int i = 0; i < 10; i++)
+                    _equalizerBands[i] = Math.Clamp(perFile.EqualizerBands[i], -20, 20);
+                OnPropertyChanged(nameof(EqualizerBands));
+                ApplyEqualizer();
+            }
+            if (!string.IsNullOrWhiteSpace(perFile.EqualizerPreset))
+                EqualizerPresetName = perFile.EqualizerPreset;
+            if (perFile.SelectedTrackId >= 0)
+                SetPendingTrackId(perFile.SelectedTrackId);
+        }
+        else
+        {
+            // Use global last-selected track as fallback
+            if (defaults.LastSelectedTrackId >= 0)
+                SetPendingTrackId(defaults.LastSelectedTrackId);
+        }
+    }
+
+    /// <summary>Called by MainViewModel when a media file closes. Saves per-file state.</summary>
+    public void OnFileClosing()
+    {
+        if (!string.IsNullOrWhiteSpace(_currentMediaPath))
+        {
+            SavePerFileSettings();
+            _currentMediaPath = null;
+        }
+    }
+
+    /// <summary>Force-save current state to store.</summary>
+    public void SaveSettings()
+    {
+        // Save global defaults
+        _audioStore.SaveDefaults(new AudioSettingsStore.AudioGlobalDefaults
+        {
+            Volume = _volume,
+            IsMuted = _isMuted,
+            EqualizerPreset = _equalizerPresetName,
+            IsNormalizationEnabled = _isAudioNormalizationEnabled,
+            IsDialogueBoostEnabled = _isDialogueBoostEnabled,
+            LastSelectedTrackId = _currentAudioTrackId >= 0 ? _currentAudioTrackId : -1
+        });
+
+        // Save per-file
+        SavePerFileSettings();
+        _dirty = false;
+    }
+
+    private void SavePerFileSettings()
+    {
+        if (string.IsNullOrWhiteSpace(_currentMediaPath)) return;
+        _audioStore.SavePerFile(_currentMediaPath, new AudioSettingsStore.AudioPerFileSettings
+        {
+            SelectedTrackId = _currentAudioTrackId >= 0 ? _currentAudioTrackId : -1,
+            AudioDelay = _audioDelay,
+            EqualizerBands = _equalizerBands,
+            EqualizerPreset = _equalizerPresetName
+        });
+    }
+
+    /// <summary>Mark state as dirty and schedule a debounced save (2s).</summary>
+    private void MarkDirty()
+    {
+        if (_disposed) return;
+        _dirty = true;
+        _debounceTimer?.Dispose();
+        _debounceTimer = new System.Threading.Timer(_ =>
+        {
+            if (_dirty)
+            {
+                try { SaveSettings(); }
+                catch { /* best-effort */ }
+            }
+        }, null, 2000, Timeout.Infinite);
+    }
+
     #region Reset
 
     public void ResetAllAudio()
@@ -343,6 +459,13 @@ public sealed class AudioManager : INotifyPropertyChanged, IDisposable
         ApplyEqualizer();
         IsDialogueBoostEnabled = false;
         IsAudioNormalizationEnabled = false;
+
+        // Clear per-file stored settings
+        if (!string.IsNullOrWhiteSpace(_currentMediaPath))
+        {
+            _audioStore.DeletePerFile(_currentMediaPath);
+            _dirty = false;
+        }
     }
 
     #endregion
@@ -398,6 +521,22 @@ public sealed class AudioManager : INotifyPropertyChanged, IDisposable
     {
         if (_disposed) return;
         _disposed = true;
+
+        // Force-save before shutdown
+        try
+        {
+            if (_dirty)
+            {
+                SaveSettings();
+                _dirty = false;
+            }
+            if (!string.IsNullOrWhiteSpace(_currentMediaPath))
+                SavePerFileSettings();
+        }
+        catch { /* best-effort */ }
+
+        _debounceTimer?.Dispose();
+        _debounceTimer = null;
         _player.VolumeChanged -= OnPlayerVolumeChanged;
         _player.TrackListChanged -= OnPlayerTrackListChanged;
     }

@@ -55,6 +55,18 @@
                                           VerticalAlignment="Center" OnContent="" OffContent=""
                                           IsChecked="{Binding IsAudioNormalizationEnabled, Mode=TwoWay}" />
                         </Grid>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel>
+                                <TextBlock Text="Dialogue Boost" FontSize="13" FontWeight="Medium"
+                                           Foreground="{StaticResource OsdForeground}" />
+                                <TextBlock Text="Enhance speech clarity using spectral compression"
+                                           FontSize="11" Opacity="0.5"
+                                           Foreground="{StaticResource OsdForeground}" />
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          VerticalAlignment="Center" OnContent="" OffContent=""
+                                          IsChecked="{Binding IsDialogueBoostEnabled, Mode=TwoWay}" />
+                        </Grid>
                     </StackPanel>
                 </Border>
 

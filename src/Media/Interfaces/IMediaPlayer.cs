@@ -125,9 +125,14 @@ public interface IMediaPlayer
     byte[]? ScreenshotRaw(out int width, out int height);
     void GetVideoSize(out int width, out int height);
 
+    // === Audio device ===
+    bool IsAudioExclusive { get; set; }
+    string[] AudioDeviceList { get; }
+    string CurrentAudioDevice { get; set; }
+    event EventHandler? AudioDeviceChanged;
+
     // === Native rendering ===
     void InitializeRenderer(IntPtr hwnd);
-    bool UseNativeRendering { get; set; }
     void NotifyResize(int width, int height);
     void Command(string command, params string[] args);
 

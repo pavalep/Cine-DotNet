@@ -88,7 +88,8 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
     // Subtitle tracks are owned by SubtitleManager; we delegate for UI bindings.
     public ObservableCollection<TrackMenuItem> SubtitleTracks => Subtitles?.SubtitleTracks ?? _emptySubtitleTracks;
     private static readonly ObservableCollection<TrackMenuItem> _emptySubtitleTracks = new();
-    public ObservableCollection<TrackMenuItem> AudioTracks { get; } = new();
+    public ObservableCollection<TrackMenuItem> AudioTracks => Audio?.AudioTracks ?? _emptyAudioTracks;
+    private static readonly ObservableCollection<TrackMenuItem> _emptyAudioTracks = new();
     public ObservableCollection<TrackMenuItem> VideoTracks { get; } = new();
 
     // --- Other collections ---
@@ -148,8 +149,6 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
         Audio.RequestAudioFileAsync = () => RequestAudioFileAsync?.Invoke();
         Subtitles!.RequestSubtitleFileAsync = () => RequestSubtitleFileAsync?.Invoke();
 #pragma warning restore CS8603
-
-        _player.Volume = _volumeValue;
 
         // Wire player events
         _player.Opened += OnPlayerOpened;
@@ -225,13 +224,14 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public double VolumeValue
     {
-        get => _volumeValue;
+        get => Audio?.Volume ?? _volumeValue;
         set
         {
             var clamped = Math.Clamp(value, 0, VolumeMax);
             if (Math.Abs(_volumeValue - clamped) < 0.001) return;
             _volumeValue = clamped;
-            _player.Volume = clamped;
+            if (Audio != null) Audio.VolumeValue = clamped;
+            else _player.Volume = clamped;
             OnPropertyChanged();
             OnPropertyChanged(nameof(Volume));
             OnPropertyChanged(nameof(VolumeText));
@@ -245,17 +245,15 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
     }
 
     private bool _isDialogueBoostEnabled;
+    /// <summary>Proxies to AudioManager. Keeps local field for PropertyChanged notification.</summary>
     public bool IsDialogueBoostEnabled
     {
-        get => _isDialogueBoostEnabled;
+        get => Audio?.IsDialogueBoostEnabled ?? _isDialogueBoostEnabled;
         set
         {
             if (_isDialogueBoostEnabled == value) return;
             _isDialogueBoostEnabled = value;
-            if (value)
-                _player.Command("af", "set", "lavfi=[acompressor=threshold=-20dB:ratio=4:makeup=8dB]");
-            else
-                _player.Command("af", "del", "lavfi=[acompressor=threshold=-20dB:ratio=4:makeup=8dB]");
+            if (Audio != null) Audio.IsDialogueBoostEnabled = value;
             OnPropertyChanged();
         }
     }
@@ -315,8 +313,13 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public float AudioDelayValue
     {
-        get => _player.AudioDelay;
-        set { _player.AudioDelay = value; OnPropertyChanged(); }
+        get => Audio?.AudioDelay ?? _player.AudioDelay;
+        set
+        {
+            if (Audio != null) Audio.AudioDelay = value;
+            else _player.AudioDelay = value;
+            OnPropertyChanged();
+        }
     }
 
     public double ZoomValue
@@ -468,12 +471,13 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public bool IsMuted
     {
-        get => _isMuted;
+        get => Audio?.IsMuted ?? _isMuted;
         set
         {
-            if (_isMuted == value) return;
+            if (_isMuted == value && Audio?.IsMuted == value) return;
             _isMuted = value;
-            _player.Mute(value);
+            if (Audio != null) Audio.IsMuted = value;
+            else _player.Mute(value);
             OnPropertyChanged();
         }
     }
@@ -557,6 +561,10 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
         // Force-save subtitle settings before disposing
         Subtitles?.OnFileClosing();
         Subtitles?.Dispose();
+
+        // Force-save audio settings before disposing
+        Audio.OnFileClosing();
+        Audio.Dispose();
 
         // Force-save playlist before disposing
         SavePlaylist();
