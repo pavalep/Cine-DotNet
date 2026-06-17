@@ -180,6 +180,16 @@ public partial class HeaderBarControl : AvaloniaUserControl
         BtnPip.IsVisible = visible;
     }
 
+    /// <summary>
+    /// Force-close the Open menu Flyout. Required by Avalonia #18969:
+    /// StorageProvider native dialogs freeze Windows if a Flyout is still open.
+    /// Must be called BEFORE any StorageProvider dialog (OpenFilePicker etc.).
+    /// </summary>
+    public void CloseFlyout()
+    {
+        BtnOpenMenu.Flyout?.Hide();
+    }
+
     public void TrackFlyoutOpened(object? sender, EventArgs e)
     {
         _activeFlyouts++;

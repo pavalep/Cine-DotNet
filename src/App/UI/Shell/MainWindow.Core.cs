@@ -9,6 +9,7 @@ using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Cine.Avalonia.Controls;
+using Cine.Avalonia.Services;
 using Material.Icons;
 using Avalonia.Threading;
 using Cine.Avalonia.Managers;
@@ -247,6 +248,17 @@ public partial class MainWindow
         // P5.1: Session resume moved to OnOpened to let start page show first
 
         _viewModel.Playlist.CollectionChanged += (_, _) => _viewModel?.SaveSession();
+
+        // Init centralized file-dialog handler (Avalonia #21433 workaround applied)
+        _dialogHandler = new FileDialogHandler(this);
+
+        // Avalonia #18969: close the Open menu Flyout before any native
+        // file dialog opens, or the Windows message pump will deadlock.
+        _dialogHandler.OnBeforeOpen = () =>
+        {
+            var header = this.Find<HeaderBarControl>("HeaderBarControl");
+            header?.CloseFlyout();
+        };
 
         _viewModel.RequestOpenFilesAsync = OpenFileDialogAsync;
         _viewModel.RequestOpenFolderAsync = OpenFolderDialogAsync;

@@ -1074,13 +1074,16 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
                 },
                 new()
                 {
-                    // ADVANCED_CONTROL=1: we promise never to call libmpv API from
-                    // the render thread. This avoids mpv's internal timeout/quality
-                    // degradation. The render thread (Avalonia GL) is separate from
-                    // the event-loop thread where all mpv_command/mpv_get_property
-                    // calls happen.
+                    // ADVANCED_CONTROL=0 (default): mpv uses internal timeouts
+                    // instead of deadlocking forever if mpv_render_context_render()
+                    // lags. The render thread calls mpv_render_context_render() on
+                    // every update callback (within 4ms), but during loadfile the
+                    // update callback may race with the core thread that's blocking
+                    // mpv_command — ADVANCED_CONTROL=1 turns that race into a
+                    // permanent deadlock (mpv render.h: "a real deadlock will
+                    // freeze the mpv core thread forever").
                     Type = MpvRenderNative.MPV_RENDER_PARAM_ADVANCED_CONTROL,
-                    Data = (void*)mh.AllocHGlobalValue(1)
+                    Data = (void*)mh.AllocHGlobalValue(0)
                 },
                 new()
                 {
@@ -1358,6 +1361,7 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
         }
 
         CommandInternal("loadfile", path, replace ? "replace" : "append-play");
+        SetFlag("pause", false); // actually tell mpv to start playing
         SetPlaybackState(PlaybackState.Playing);
         DebugLog($"LoadFile: state set to Playing");
     }

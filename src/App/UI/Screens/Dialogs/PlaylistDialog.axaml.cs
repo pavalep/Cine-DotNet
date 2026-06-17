@@ -8,8 +8,8 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Platform.Storage;
 using Avalonia.Threading;
+using Cine.Avalonia.Services;
 using Cine.Avalonia.ViewModels;
 using KeyEventArgs = Avalonia.Input.KeyEventArgs;
 using DragEventArgs = Avalonia.Input.DragEventArgs;
@@ -34,6 +34,9 @@ public partial class PlaylistDialog : Window
 
     // Queue mode toggle
     private bool _queueMode;
+
+    // Centralized file-dialog handler (avoids Flyout/popup race with StorageProvider)
+    private FileDialogHandler? _dialogHandler;
 
     public PlaylistDialog()
     {
@@ -162,24 +165,13 @@ public partial class PlaylistDialog : Window
     {
         if (DataContext is not MainViewModel vm || vm.PlaylistItems.Count == 0) return;
 
-        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
-        {
-            Title = "Save Playlist",
-            DefaultExtension = ".m3u8",
-            FileTypeChoices = new[]
-            {
-                new FilePickerFileType("Playlist Files")
-                {
-                    Patterns = new[] { "*.m3u8", "*.m3u" }
-                }
-            }
-        });
-
-        if (file == null) return;
+        _dialogHandler ??= new FileDialogHandler(this);
+        var path = await _dialogHandler.SavePlaylistAsync();
+        if (string.IsNullOrEmpty(path)) return;
 
         try
         {
-            await using var stream = await file.OpenWriteAsync();
+            await using var stream = File.OpenWrite(path);
             await using var writer = new StreamWriter(stream);
             await writer.WriteLineAsync("#EXTM3U");
             foreach (var item in vm.PlaylistItems)
@@ -375,24 +367,8 @@ public partial class PlaylistDialog : Window
 
     private async Task<string[]?> GetOpenFilePathsAsync()
     {
-        var result = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
-        {
-            Title = "Select files to add to queue",
-            AllowMultiple = true,
-            FileTypeFilter = new[]
-            {
-                new FilePickerFileType("Media Files")
-                {
-                    Patterns = new[] { "*.mkv", "*.mp4", "*.avi", "*.mov", "*.wmv", "*.flv", "*.webm", "*.m4v" }
-                },
-                new FilePickerFileType("All Files")
-                {
-                    Patterns = new[] { "*" }
-                }
-            }
-        });
-
-        return result?.Select(f => f.Path.LocalPath).ToArray();
+        _dialogHandler ??= new FileDialogHandler(this);
+        return await _dialogHandler.OpenPlaylistFilesAsync();
     }
 
     private async void OnClearPlaylistClick(object? sender, RoutedEventArgs e)

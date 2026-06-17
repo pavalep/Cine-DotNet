@@ -21,6 +21,7 @@ public partial class MainViewModel
     //  File Operations
     // ─────────────────────────────────────────────────────
 
+    // Purely Avalonia — no MPV coupling here
     private async Task OnOpenFiles()
     {
         if (RequestOpenFilesAsync == null) return;
@@ -29,6 +30,7 @@ public partial class MainViewModel
             OpenFiles(paths);
     }
 
+    // Purely Avalonia — no MPV coupling here
     private async Task OnOpenFolder()
     {
         if (RequestOpenFolderAsync == null) return;
@@ -37,6 +39,7 @@ public partial class MainViewModel
             OpenFile(path);
     }
 
+    // Purely Avalonia — no MPV coupling here
     private async Task OnAddFiles()
     {
         if (RequestAddFilesAsync == null) return;
@@ -102,16 +105,23 @@ public partial class MainViewModel
         }
     }
 
+    /// <summary>
+    /// Open a file: updates UI state, then offloads the blocking mpv command
+    /// to a thread-pool thread so neither the UI nor mpv's own render/event
+    /// threads are starved.
+    /// </summary>
     public async void OpenFile(string path)
     {
         if (string.IsNullOrWhiteSpace(path)) return;
-        // Save audio + subtitle settings for previous file before switching
+
+        // ── Avalonia / app-layer bookkeeping (no mpv coupling) ──
         Audio?.OnFileClosing();
         Subtitles?.OnFileClosing();
         AddRecentFile(path);
         FilePath = path;
         _currentAudioTrackId = -1;
-        await Dispatcher.UIThread.OnUiThreadAsync(() => { }, DispatcherPriority.Render);
+
+        // ── mpv hand-off ──
         try
         {
             _player.Open(path);
@@ -127,13 +137,21 @@ public partial class MainViewModel
         }
     }
 
+    /// <summary>
+    /// Open a batch of files: updates playlist (Avalonia), then delegates to
+    /// <see cref="OpenFile"/> for the mpv hand-off.
+    /// </summary>
     public void OpenFiles(string[] paths)
     {
         if (paths == null || paths.Length == 0) return;
+
+        // ── Avalonia / app-layer bookkeeping ──
         Playlist.Clear();
         PlaylistItems.Clear();
         foreach (var path in paths)
             Playlist.Add(path);
+
+        // ── mpv hand-off ──
         OpenFile(paths[0]);
         SavePlaylist();
     }

@@ -200,6 +200,9 @@ public partial class MainWindow
     // Guard against duplicate PointerPressed
     private DateTime _lastClickTime = DateTime.MinValue;
 
+    // Double-tap detection: delay single-tap PlayPause so double-tap ToggleFullscreen wins
+    private volatile bool _pendingSingleTap;
+
     private void OnVideoPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         var clickNow = DateTime.UtcNow;
@@ -231,16 +234,29 @@ public partial class MainWindow
             var now = DateTime.UtcNow;
             if ((now - _lastTapTime).TotalMilliseconds < 300)
             {
+                // Double-tap → toggle fullscreen (cancel single-tap action)
                 _lastTapTime = DateTime.MinValue;
+                _pendingSingleTap = false;
                 _viewModel?.ToggleFullscreen();
                 e.Handled = true;
                 return;
             }
 
+            // Single tap: delay PlayPause by ~300ms so double-tap can cancel it.
+            // If a second tap arrives within the window, ToggleFullscreen runs instead.
             _lastTapTime = now;
-            _viewModel?.PlayPause();
-            // Icon updates via PlaybackStateManager.StateChanged — no optimistic toggle
+            _pendingSingleTap = true;
             e.Handled = true;
+
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(350);
+                if (_pendingSingleTap)
+                {
+                    _pendingSingleTap = false;
+                    await global::Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => _viewModel?.PlayPause());
+                }
+            });
         }
     }
 
