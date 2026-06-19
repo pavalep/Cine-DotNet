@@ -22,11 +22,23 @@ public static class CrashReporter
         catch { /* best-effort — crash dir creation can fail in low-disk scenarios */ }
     }
 
+    // Re-entry guard — prevents crash-loop when the crash reporter itself throws
+    private static int _inCrash;
+
     /// <summary>
     /// Write a crash dump with exception details, timestamp, and app version.
+    /// P5B.2: Re-entry guard prevents crash-loop on crash-writer failure.
+    /// P5B.2: Structured dump with OS, framework, thread, memory info.
     /// </summary>
     public static void Dump(Exception ex, string context = "")
     {
+        // Re-entry guard: if we're already writing a crash dump, don't recurse
+        if (Interlocked.Exchange(ref _inCrash, 1) == 1)
+        {
+            Debug.WriteLine($"[CrashReporter] Re-entry blocked: {ex.GetType().Name} in {context}");
+            return;
+        }
+
         try
         {
             var fileName = $"crash_{DateTime.Now:yyyyMMdd_HHmmss_fff}.txt";
@@ -37,8 +49,10 @@ public static class CrashReporter
             sw.WriteLine($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}");
             sw.WriteLine($"Process: {Process.GetCurrentProcess().ProcessName}");
             sw.WriteLine($"PID: {Environment.ProcessId}");
+            sw.WriteLine($"Thread: {Thread.CurrentThread.Name ?? "unnamed"} (#{Environment.CurrentManagedThreadId})");
             sw.WriteLine($"Context: {context}");
             sw.WriteLine($"Version: {typeof(CrashReporter).Assembly.GetName().Version ?? new Version(0,0,0,0)}");
+            sw.WriteLine($"Framework: {Environment.Version}");
             sw.WriteLine($"OS: {Environment.OSVersion}");
             sw.WriteLine($"64-bit: {Environment.Is64BitProcess}");
             sw.WriteLine($"Working Set: {Environment.WorkingSet / 1024 / 1024} MB");
@@ -52,15 +66,42 @@ public static class CrashReporter
                 sw.WriteLine("--- Stack Trace ---");
                 sw.WriteLine(ex.StackTrace);
             }
+
+            // Unwrap inner exceptions
+            var inner = ex.InnerException;
+            int depth = 1;
+            while (inner != null)
+            {
+                sw.WriteLine();
+                sw.WriteLine($"--- Inner Exception #{depth} ---");
+                sw.WriteLine(inner.ToString());
+                inner = inner.InnerException;
+                depth++;
+            }
+
             sw.Flush();
 
             // Keep only last 20 crash dumps
             CleanupOldDumps(20);
         }
-        catch
+        catch (Exception dumpEx)
         {
-            // Last resort — nothing we can do
+            // Last resort — log to Debug output if file write fails
+            Debug.WriteLine($"[CrashReporter] Failed to write crash dump: {dumpEx.Message}");
+            Debug.WriteLine($"[CrashReporter] Original error: {ex}");
         }
+        finally
+        {
+            Interlocked.Exchange(ref _inCrash, 0);
+        }
+    }
+
+    /// <summary>
+    /// Non-fatal error/warning log. Writes to cine_errors.log.
+    /// </summary>
+    public static void Log(Exception ex, bool isWarning = false)
+    {
+        LogError(isWarning ? $"[WARN] {ex.GetType().Name}: {ex.Message}" : ex.ToString());
     }
 
     /// <summary>

@@ -172,7 +172,8 @@
                             Margin="{StaticResource space-right-1}">
                     <Button x:Name="BtnMinimize" Click="OnMinimizeClick"
                             Classes="window-control"
-                            ToolTip.Tip="Minimize">
+                            ToolTip.Tip="Minimize"
+                            AutomationProperties.Name="Minimize window">
                         <materialIcons:MaterialIcon Kind="WindowMinimize" Width="14" Height="14"
                             Foreground="{StaticResource OsdForeground}" />
                     </Button>

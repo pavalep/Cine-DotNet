@@ -13,13 +13,23 @@ public class SessionManager : ISessionService
 {
     private readonly string _sessionPath;
 
-    public SessionManager()
+    public SessionManager(string? storePath = null)
     {
-        var dir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Cine");
-        Directory.CreateDirectory(dir);
-        _sessionPath = Path.Combine(dir, "session.json");
+        if (storePath != null)
+        {
+            var dir = Path.GetDirectoryName(storePath);
+            if (!string.IsNullOrEmpty(dir))
+                Directory.CreateDirectory(dir);
+            _sessionPath = storePath;
+        }
+        else
+        {
+            var dir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Cine");
+            Directory.CreateDirectory(dir);
+            _sessionPath = Path.Combine(dir, "session.json");
+        }
     }
 
     /// <inheritdoc/>
@@ -30,6 +40,7 @@ public class SessionManager : ISessionService
         {
             var session = new
             {
+                Version = 1, // schema version for future migrations
                 FilePath = filePath,
                 Position = position.Ticks,
                 SubtitleTrackId = subtitleTrackId,
@@ -38,7 +49,12 @@ public class SessionManager : ISessionService
                 AudioDelay = audioDelay,
                 RendererMode = rendererMode
             };
-            File.WriteAllText(_sessionPath, JsonSerializer.Serialize(session));
+
+            var json = JsonSerializer.Serialize(session);
+            // Atomic write: temp → rename (prevents half-written files on crash)
+            var tempPath = _sessionPath + ".tmp";
+            File.WriteAllText(tempPath, json);
+            File.Move(tempPath, _sessionPath, overwrite: true);
         }
         catch (Exception ex)
         {

@@ -27,7 +27,11 @@ public class PrimaryMenuBuilder
     private static global::Material.Icons.MaterialIconKind ParseIcon(string name)
     {
         try { return (global::Material.Icons.MaterialIconKind)Enum.Parse(typeof(global::Material.Icons.MaterialIconKind), name); }
-        catch { Console.WriteLine($"[PrimaryMenuBuilder] Unknown icon: \"{name}\""); return global::Material.Icons.MaterialIconKind.CircleOutline; }
+        catch
+        {
+            System.Diagnostics.Debug.WriteLine($"[PrimaryMenuBuilder] Unknown icon: \"{name}\"");
+            return global::Material.Icons.MaterialIconKind.CircleOutline;
+        }
     }
 
     /// <summary>Adds a section header label (e.g. "PLAYBACK").</summary>

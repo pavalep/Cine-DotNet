@@ -7,9 +7,26 @@ obj/
 Debug/
 Release/
 publish/
+publish-sc/
 resources/
 video/
 reference/
+
+# MSIX packaging output
+dist/
+*.msix
+*.msixbundle
+*.appinstaller
+
+# Certificates (never commit)
+*.pfx
+*.p12
+*.cer
+# Self-signed dev cert is generated locally
+
+# Test results
+*.trx
+TestResults/
 
 # IDE files
 .vs/
@@ -17,15 +34,19 @@ reference/
 *.user
 *.userosscache
 *.csproj.user
+.idea/
+*.sln.DotSettings.user
 
 # OS files
 Thumbs.db
 [Dd]esktop.ini
+.DS_Store
 
 # Backup/temp files
 *.bak
 *.tmp
-~*
+*~
+*.log
 
 # NuGet packages
 packages/
@@ -45,3 +66,8 @@ build/
 
 # dotnet tool
 .dotnet/
+
+# Editor temp files
+*.swp
+*.swo
+*.swn

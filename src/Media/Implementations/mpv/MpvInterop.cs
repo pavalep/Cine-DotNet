@@ -44,6 +44,17 @@ public static class MpvInterop
                 return handle;
         }
 
+        // Also search %LOCALAPPDATA%\Cine\runtime\ for downloaded mpv DLLs
+        var runtimeDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Cine", "runtime");
+        foreach (var name in CandidateNames)
+        {
+            var runtime = Path.Combine(runtimeDir, name);
+            if (File.Exists(runtime) && NativeLibrary.TryLoad(runtime, out var handle))
+                return handle;
+        }
+
         return IntPtr.Zero;
     }
 
@@ -62,6 +73,20 @@ public static class MpvInterop
         {
             var local = Path.Combine(AppContext.BaseDirectory, name);
             if (File.Exists(local) && NativeLibrary.TryLoad(local, out var handle))
+            {
+                NativeLibrary.Free(handle);
+                return true;
+            }
+        }
+
+        // Check runtime download directory
+        var runtimeDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Cine", "runtime");
+        foreach (var name in CandidateNames)
+        {
+            var runtime = Path.Combine(runtimeDir, name);
+            if (File.Exists(runtime) && NativeLibrary.TryLoad(runtime, out var handle))
             {
                 NativeLibrary.Free(handle);
                 return true;

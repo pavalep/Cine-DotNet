@@ -45,7 +45,7 @@ public sealed class AudioSettingsStore
         public string? EqualizerPreset { get; init; }
     }
 
-    private sealed record CompoundStore
+    internal sealed record CompoundStore
     {
         public int Version { get; init; } = 1;
         public AudioGlobalDefaults Global { get; init; } = new();

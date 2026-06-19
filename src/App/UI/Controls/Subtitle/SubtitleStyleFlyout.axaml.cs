@@ -169,7 +169,10 @@ public partial class SubtitleStyleFlyout : UserControl
             if (global::Avalonia.Media.Color.TryParse(hex, out var color))
                 ColorPreview.Background = new global::Avalonia.Media.SolidColorBrush(color);
         }
-        catch { /* invalid hex — keep current */ }
+        catch (Exception hexEx)
+        {
+            System.Diagnostics.Debug.WriteLine($"[SubtitleStyleFlyout] Invalid hex color: {hexEx.Message}");
+        }
     }
 
     // ── Event Handlers ──

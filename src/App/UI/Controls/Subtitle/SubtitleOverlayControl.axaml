@@ -6,6 +6,7 @@
     <Button x:Name="BtnSubtitles"
             Classes="circular-menu"
             ToolTip.Tip="Subtitles"
+            AutomationProperties.Name="Subtitles menu"
             Click="OnSubtitlesClick"
             ZIndex="20">
         <materialIcons:MaterialIcon x:Name="SubtitleIcon" Kind="Subtitles" Width="18" Height="18"

@@ -22,24 +22,24 @@ public partial class MainViewModel
 
     private async Task OnOpenFiles()
     {
-        if (RequestOpenFilesAsync == null) return;
-        var paths = await RequestOpenFilesAsync();
+        if (_fileDialog == null) return;
+        var paths = await _fileDialog.OpenFilesAsync();
         if (paths != null && paths.Length > 0)
             OpenFiles(paths);
     }
 
     private async Task OnOpenFolder()
     {
-        if (RequestOpenFolderAsync == null) return;
-        var path = await RequestOpenFolderAsync();
+        if (_fileDialog == null) return;
+        var path = await _fileDialog.OpenFolderAsync();
         if (!string.IsNullOrEmpty(path))
             OpenFile(path);
     }
 
     private async Task OnAddFiles()
     {
-        if (RequestAddFilesAsync == null) return;
-        var paths = await RequestAddFilesAsync();
+        if (_fileDialog == null) return;
+        var paths = await _fileDialog.AddFilesAsync();
         if (paths != null)
             foreach (var p in paths)
             {
@@ -50,10 +50,10 @@ public partial class MainViewModel
 
     private async Task OnAddAudio()
     {
-        if (RequestAudioFileAsync == null) return;
+        if (_fileDialog == null) return;
         try
         {
-            var path = await RequestAudioFileAsync();
+            var path = await _fileDialog.OpenAudioAsync();
             if (!string.IsNullOrWhiteSpace(path))
             {
                 _player?.AddAudio(path);
@@ -319,11 +319,7 @@ public partial class MainViewModel
         return ts.ToString("hh\\:mm\\:ss");
     }
 
-    private string GetScreenshotPath()
-    {
-        var dir = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
-        return Path.Combine(dir, $"cine_screenshot_{DateTime.Now:yyyyMMdd_HHmmss}.png");
-    }
+    private string GetScreenshotPath() => _mediaFile.GenerateScreenshotPath();
 
     public void SeekTo(double normalizedValue)
     {

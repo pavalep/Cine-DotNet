@@ -16,6 +16,7 @@ using DragEventArgs = Avalonia.Input.DragEventArgs;
 using DragDropEffects = Avalonia.Input.DragDropEffects;
 using ListBox = Avalonia.Controls.ListBox;
 using Button = Avalonia.Controls.Button;
+using Point = Avalonia.Point;
 
 namespace Cine.Avalonia.Views.Dialogs;
 
@@ -27,7 +28,7 @@ public partial class PlaylistDialog : Window
     // P3.5: Drag-reorder state
     private int _dragSourceIndex = -1;
     private bool _isDragging;
-    private global::Avalonia.Point _dragStartPoint;
+    private Point _dragStartPoint;
 
     // P3.19: Auto-scroll — prevent scroll loop
     private bool _isScrolling;
@@ -35,30 +36,61 @@ public partial class PlaylistDialog : Window
     // Queue mode toggle
     private bool _queueMode;
 
-    // Centralized file-dialog handler (avoids Flyout/popup race with StorageProvider)
+    // Centralized file-dialog handler
     private FileDialogHandler? _dialogHandler;
+
+    // Event handlers stored for unsubscribe (fixes leak on window re-open)
+    private System.Collections.Specialized.NotifyCollectionChangedEventHandler? _listChanged;
+    private System.ComponentModel.PropertyChangedEventHandler? _vmPropChanged;
+    private MainViewModel? _subscribedVm;
 
     public PlaylistDialog()
     {
         InitializeComponent();
-        AddHandler(global::Avalonia.Input.DragDrop.DropEvent, OnWindowFileDrop);
-        AddHandler(global::Avalonia.Input.DragDrop.DragEnterEvent, OnWindowDragEnter);
-        AddHandler(global::Avalonia.Input.DragDrop.DragLeaveEvent, OnWindowDragLeave);
+        AddHandler(DragDrop.DropEvent, OnWindowFileDrop);
+        AddHandler(DragDrop.DragEnterEvent, OnWindowDragEnter);
+        AddHandler(DragDrop.DragLeaveEvent, OnWindowDragLeave);
         DataContextChanged += OnDataContextChanged;
+        Closed += OnPlaylistDialogClosed;
+    }
+
+    private void OnPlaylistDialogClosed(object? sender, EventArgs e)
+    {
+        // Unsubscribe from ViewModel events to prevent leak
+        if (_subscribedVm != null && _listChanged != null)
+            _subscribedVm.Playlist.CollectionChanged -= _listChanged;
+        if (_subscribedVm != null && _vmPropChanged != null)
+            _subscribedVm.PropertyChanged -= _vmPropChanged;
+        _subscribedVm = null;
+        _listChanged = null;
+        _vmPropChanged = null;
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
-        if (DataContext is MainViewModel vm)
+        // Unsubscribe old VM if re-bound
+        if (_subscribedVm != null && _listChanged != null)
+            _subscribedVm.Playlist.CollectionChanged -= _listChanged;
+        if (_subscribedVm != null && _vmPropChanged != null)
+            _subscribedVm.PropertyChanged -= _vmPropChanged;
+
+        if (DataContext is not MainViewModel vm)
         {
-            vm.Playlist.CollectionChanged += (_, _) =>
-            {
-                UpdateEmptyState();
-                ApplySearchFilter();
-            };
-            vm.PropertyChanged += OnVmPropertyChanged;
-            UpdateEmptyState();
+            _subscribedVm = null;
+            return;
         }
+
+        _subscribedVm = vm;
+        _listChanged = (_, _) =>
+        {
+            UpdateEmptyState();
+            ApplySearchFilter();
+        };
+        _vmPropChanged = OnVmPropertyChanged;
+
+        vm.Playlist.CollectionChanged += _listChanged;
+        vm.PropertyChanged += _vmPropChanged;
+        UpdateEmptyState();
     }
 
     private void OnVmPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -99,26 +131,8 @@ public partial class PlaylistDialog : Window
     private void ApplySearchFilter()
     {
         if (DataContext is not MainViewModel vm) return;
-
-        if (string.IsNullOrWhiteSpace(_searchFilter))
-        {
-            foreach (var item in vm.PlaylistItems)
-                item.IsVisible = true;
-            NoResultsOverlay.IsVisible = false;
-        }
-        else
-        {
-            var filter = _searchFilter.Trim().ToLowerInvariant();
-            var anyVisible = false;
-            foreach (var item in vm.PlaylistItems)
-            {
-                var matches = item.Title.ToLowerInvariant().Contains(filter);
-                item.IsVisible = matches;
-                if (matches) anyVisible = true;
-            }
-            NoResultsOverlay.IsVisible = !anyVisible && vm.PlaylistItems.Count > 0;
-        }
-
+        var anyVisible = PlaylistDialogHelpers.ApplySearchFilter(vm.PlaylistItems, _searchFilter);
+        NoResultsOverlay.IsVisible = !anyVisible && vm.PlaylistItems.Count > 0;
         UpdateEmptyState();
     }
 
@@ -171,14 +185,7 @@ public partial class PlaylistDialog : Window
 
         try
         {
-            await using var stream = File.OpenWrite(path);
-            await using var writer = new StreamWriter(stream);
-            await writer.WriteLineAsync("#EXTM3U");
-            foreach (var item in vm.PlaylistItems)
-            {
-                await writer.WriteLineAsync($"#EXTINF:0,{item.Title}");
-                await writer.WriteLineAsync(item.FilePath);
-            }
+            await PlaylistDialogHelpers.ExportToM3UAsync(vm.PlaylistItems, path);
         }
         catch (Exception ex)
         {

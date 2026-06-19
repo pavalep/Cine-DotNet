@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using Cine.Avalonia.Serialization;
 
 namespace Cine.Avalonia.Managers;
 
@@ -12,13 +13,6 @@ namespace Cine.Avalonia.Managers;
 public sealed class PlaylistSettingsStore
 {
     private readonly string _storePath;
-
-    private sealed record PlaylistData(
-        int Version,
-        List<string> Items,
-        int CurrentPosition,
-        DateTime? LastPlayed
-    );
 
     private static readonly PlaylistData EmptyData = new(
         Version: 1,
@@ -56,7 +50,7 @@ public sealed class PlaylistSettingsStore
                 return null;
 
             var json = File.ReadAllText(_storePath);
-            var data = JsonSerializer.Deserialize<PlaylistData>(json);
+            var data = JsonSerializer.Deserialize(json, CineJsonContext.Default.PlaylistData);
             if (data == null || data.Version < 1 || data.Items == null || data.Items.Count == 0)
             {
                 // Corrupted or empty — clean up
@@ -90,7 +84,7 @@ public sealed class PlaylistSettingsStore
                 CurrentPosition: currentPosition,
                 LastPlayed: DateTime.UtcNow
             );
-            var json = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
+            var json = JsonSerializer.Serialize(data, CineJsonContext.Default.PlaylistData);
             File.WriteAllText(_storePath, json);
         }
         catch (Exception ex)

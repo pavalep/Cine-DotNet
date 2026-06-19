@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Cine.Avalonia.Serialization;
+using Cine.Avalonia.Services;
 using Cine.Media.Interfaces;
 
 namespace Cine.Avalonia.ViewModels;
@@ -183,7 +185,7 @@ public partial class MainViewModel
             _currentAudioTrackId,
             _player.SubtitleDelay,
             _player.AudioDelay,
-            _rendererMode.ToString());
+            Renderer.RendererMode.ToString());
     }
 
     public void LoadSession()
@@ -239,7 +241,7 @@ public partial class MainViewModel
             if (dir != null) Directory.CreateDirectory(dir);
             File.WriteAllText(RecentFilesPath, System.Text.Json.JsonSerializer.Serialize(RecentFiles.ToList()));
         }
-        catch { /* best-effort */ }
+        catch (Exception ex) { global::Cine.Core.Log.ForContext<MainViewModel>().Error(ex, "Failed to save recent files"); }
     }
 
     public void LoadRecentFiles()
@@ -248,7 +250,7 @@ public partial class MainViewModel
         {
             if (!File.Exists(RecentFilesPath)) return;
             var json = File.ReadAllText(RecentFilesPath);
-            var list = System.Text.Json.JsonSerializer.Deserialize<List<string>>(json);
+            var list = System.Text.Json.JsonSerializer.Deserialize(json, CineJsonContext.Default.ListString);
             if (list != null)
             {
                 RecentFiles.Clear();
@@ -257,7 +259,7 @@ public partial class MainViewModel
                 OnPropertyChanged(nameof(HasRecentFiles));
             }
         }
-        catch { /* best-effort — recent files are non-critical */ }
+        catch (Exception ex) { global::Cine.Core.Log.ForContext<MainViewModel>().Error(ex, "Failed to load recent files"); }
     }
 
     public void OpenRecentFile(string path)

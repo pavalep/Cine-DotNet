@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Install Cine — Modern Media Player</title>
+    <style>
+        :root {
+            --bg: #1A1A2E;
+            --accent: #6C5CE7;
+            --text: #E0E0E0;
+            --card: #16213E;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI Variable', 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            text-align: center;
+        }
+        .card {
+            background: var(--card);
+            border-radius: 16px;
+            padding: 48px 64px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            max-width: 480px;
+        }
+        .logo {
+            width: 124px;
+            height: 124px;
+            margin-bottom: 24px;
+            filter: drop-shadow(0 0 20px rgba(108,92,231,0.3));
+        }
+        h1 { font-size: 28px; margin-bottom: 8px; }
+        .subtitle { color: #888; margin-bottom: 32px; font-size: 14px; }
+        .features {
+            text-align: left;
+            margin-bottom: 32px;
+            font-size: 13px;
+            color: #999;
+            line-height: 1.8;
+        }
+        .features span { color: var(--accent); margin-right: 8px; }
+        .install-btn {
+            display: inline-block;
+            background: var(--accent);
+            color: white;
+            padding: 14px 48px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: 600;
+            transition: transform 0.15s, box-shadow 0.15s;
+            box-shadow: 0 4px 20px rgba(108,92,231,0.4);
+        }
+        .install-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(108,92,231,0.6);
+        }
+        .note {
+            margin-top: 24px;
+            font-size: 11px;
+            color: #666;
+            line-height: 1.6;
+        }
+        .alt-download {
+            margin-top: 16px;
+            font-size: 12px;
+            color: #555;
+        }
+        .alt-download a { color: var(--accent); }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <img class="logo" src="CineLogo124x124.png" alt="Cine Logo">
+        <h1>Cine Media Player</h1>
+        <p class="subtitle">A modern, high-performance media player for Windows</p>
+
+        <div class="features">
+            <p><span>▶</span> Hardware-accelerated playback via libmpv + ANGLE</p>
+            <p><span>▶</span> Picture-in-Picture with aspect-ratio-locked resize</p>
+            <p><span>▶</span> 50+ keyboard shortcuts. Full playlist management</p>
+            <p><span>▶</span> SRT / ASS / VTT subtitles. Multi-track audio. EQ</p>
+            <p><span>▶</span> Session resume. Silent auto-updates</p>
+        </div>
+
+        <!-- ms-appinstaller: protocol triggers Windows App Installer -->
+        <a class="install-btn"
+           href="ms-appinstaller:?source=https://github.com/user/Cine/releases/latest/download/Cine.appinstaller">
+            ⚡ Install Cine
+        </a>
+
+        <p class="alt-download">
+            Or <a href="https://github.com/user/Cine/releases/latest">download the MSIX directly</a>
+        </p>
+
+        <p class="note">
+            Requires Windows 10 (19041+) or Windows 11.<br>
+            .NET 10 Desktop Runtime will be downloaded automatically if needed.<br>
+            Package size: ~15 MB (framework-dependent)
+        </p>
+    </div>
+</body>
+</html>

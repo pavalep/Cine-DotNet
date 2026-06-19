@@ -111,7 +111,11 @@ public class VideoContextMenuBuilder
     private static global::Material.Icons.MaterialIconKind Icon(string name)
     {
         try { return (global::Material.Icons.MaterialIconKind)Enum.Parse(typeof(global::Material.Icons.MaterialIconKind), name); }
-        catch { return global::Material.Icons.MaterialIconKind.CircleOutline; }
+        catch
+        {
+            System.Diagnostics.Debug.WriteLine($"[VideoContextMenuBuilder] Unknown icon: \"{name}\"");
+            return global::Material.Icons.MaterialIconKind.CircleOutline;
+        }
     }
 
     private MenuItem Item(string text, string? shortcut, Action action,

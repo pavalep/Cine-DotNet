@@ -133,6 +133,7 @@
                             <Button Grid.Column="1" x:Name="ExpandButton"
                                     Classes="pip-btn"
                                     ToolTip.Tip="Return to Main Window"
+                                    AutomationProperties.Name="Return to main window"
                                     Click="OnExpandClick">
                                 <materialIcons:MaterialIcon Kind="PictureInPictureBottomRightOutline"
                                     Width="16" Height="16"

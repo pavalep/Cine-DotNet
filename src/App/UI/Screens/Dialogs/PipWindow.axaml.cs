@@ -9,11 +9,13 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
 using Cine.Avalonia.Extensions;
+using Cine.Avalonia.Serialization;
+using Cine.Avalonia.Services;
 using KeyEventArgs = Avalonia.Input.KeyEventArgs;
 
 namespace Cine.Avalonia.Views.Dialogs;
 
-public partial class PipWindow : Window
+public partial class PipWindow : Window, IPipWindow
 {
     private bool _isPinned;
     private bool _isClosing;
@@ -33,7 +35,7 @@ public partial class PipWindow : Window
     private bool _hoverCenter;
     private bool _hoverBottomBar;
 
-    internal bool IsClosed { get; private set; }
+    public bool IsClosed { get; private set; }
 
     // ────── Player control events ──────
     public event EventHandler? PlayPauseRequested;
@@ -44,8 +46,6 @@ public partial class PipWindow : Window
     private static readonly string PipStatePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "Cine", "pip_state.json");
-
-    private record PipState(int X, int Y, int W, int H, bool Pinned);
 
     public PipWindow()
     {
@@ -358,7 +358,8 @@ public partial class PipWindow : Window
 
     private void SaveState()
     {
-        try { File.WriteAllText(PipStatePath, JsonSerializer.Serialize(new PipState(Position.X, Position.Y, (int)Width, (int)Height, _isPinned))); } catch { }
+        try { File.WriteAllText(PipStatePath, JsonSerializer.Serialize(new PipState(Position.X, Position.Y, (int)Width, (int)Height, _isPinned), CineJsonContext.Default.PipState)); }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[PiP] SaveState failed: {ex.Message}"); }
     }
 
     private void RestoreState()
@@ -366,7 +367,7 @@ public partial class PipWindow : Window
         try
         {
             if (!File.Exists(PipStatePath)) return;
-            var state = JsonSerializer.Deserialize<PipState>(File.ReadAllText(PipStatePath));
+            var state = JsonSerializer.Deserialize(File.ReadAllText(PipStatePath), CineJsonContext.Default.PipState);
             if (state == null) return;
             var screens = Screens?.All;
             if (screens != null && screens.Count > 0)

@@ -17,8 +17,6 @@
         Background="#FF0C0C0E"
         TransparencyLevelHint="None"
         WindowStartupLocation="CenterScreen"
-        ExtendClientAreaToDecorationsHint="True"
-        ExtendClientAreaTitleBarHeightHint="0"
         WindowDecorations="BorderOnly"
         DragDrop.AllowDrop="True">
 

@@ -15,6 +15,7 @@ using PointerWheelEventArgs = Avalonia.Input.PointerWheelEventArgs;
 using PointerPressedEventArgs = Avalonia.Input.PointerPressedEventArgs;
 using RoutedEventArgs = Avalonia.Interactivity.RoutedEventArgs;
 using Cine.Avalonia.Controls;
+using Cine.Avalonia.Services;
 using Cine.Avalonia.Views.Dialogs;
 using MaterialIcon = global::Material.Icons.Avalonia.MaterialIcon;
 using App = global::Avalonia.Application;
@@ -26,14 +27,192 @@ namespace Cine.Avalonia;
 
 public partial class MainWindow
 {
+    // ── Drag-drop state ──
+    private static bool _isDragOver;
+
+    // ─────────────────────────────────────────────────────────────
+    //  Keyboard Shortcut Registration
+    // ─────────────────────────────────────────────────────────────
+
+    private void RegisterKeyboardShortcuts()
+    {
+        if (_inputRouter == null) return;
+
+        // ── Playback ──
+        Register(Key.Space,                  () => _viewModel?.PlayPause(), "Play / Pause");
+        Register(Key.K,                      () => _viewModel?.PlayPause(), "Play / Pause");
+        Register(Key.P,          KeyModifiers.None, () => _viewModel?.PlayPause(), "Play / Pause");
+        Register(Key.MediaPlayPause,          () => _viewModel?.PlayPause(), "Play / Pause (Media Key)");
+        Register(Key.MediaStop,               () => _viewModel?.Stop(),     "Stop (Media Key)");
+
+        // ── Escape (context-sensitive) ──
+        Register(Key.Escape, () =>
+        {
+            if (_headerBar?.HasActiveFlyouts == true)
+                _headerBar.CloseOpenFlyouts();
+            else if (_playerService?.Player?.IsFullscreen == true)
+                _viewModel?.ToggleFullscreen();
+        }, "Close Flyout / Exit Fullscreen");
+
+        // ── Fullscreen ──
+        Register(Key.F,    KeyModifiers.None, () => _viewModel?.ToggleFullscreen(), "Toggle Fullscreen");
+        Register(Key.F11,                    () => _viewModel?.ToggleFullscreen(), "Toggle Fullscreen");
+
+        // ── Volume ──
+        Register(Key.M,                       () => _viewModel?.ToggleMute(),       "Mute / Unmute");
+        Register(Key.VolumeMute,              () => _viewModel?.ToggleMute(),       "Mute / Unmute (Media Key)");
+        Register(Key.Up,                      () => _viewModel?.IncreaseVolume(),   "Volume Up");
+        Register(Key.VolumeUp,                () => _viewModel?.IncreaseVolume(),   "Volume Up (Media Key)");
+        Register(Key.Down,                    () => _viewModel?.DecreaseVolume(),   "Volume Down");
+        Register(Key.VolumeDown,              () => _viewModel?.DecreaseVolume(),   "Volume Down (Media Key)");
+
+        // ── Audio Delay ──
+        Register(Key.OemMinus, KeyModifiers.Control, () => _playerService?.Player?.DecreaseAudioDelay(), "Decrease Audio Delay");
+        Register(Key.Subtract, KeyModifiers.Control, () => _playerService?.Player?.DecreaseAudioDelay(), "Decrease Audio Delay");
+        Register(Key.OemPlus,  KeyModifiers.Control, () => _playerService?.Player?.IncreaseAudioDelay(), "Increase Audio Delay");
+        Register(Key.Add,      KeyModifiers.Control, () => _playerService?.Player?.IncreaseAudioDelay(), "Increase Audio Delay");
+
+        // ── Seek ──
+        Register(Key.Left, () => SeekThrottled(() => _viewModel?.SeekBackward()),                         "Seek Backward");
+        Register(Key.Left, KeyModifiers.Shift, () => SeekThrottled(() => _viewModel?.SeekLargeBackward()), "Seek Large Backward");
+        Register(Key.Left, KeyModifiers.Control, () => SeekThrottled(() => _viewModel?.PreviousChapter()), "Previous Chapter");
+        Register(Key.Right,                      () => SeekThrottled(() => _viewModel?.SeekForward()),      "Seek Forward");
+        Register(Key.Right, KeyModifiers.Shift,  () => SeekThrottled(() => _viewModel?.SeekLargeForward()), "Seek Large Forward");
+        Register(Key.Right, KeyModifiers.Control,() => SeekThrottled(() => _viewModel?.NextChapter()),      "Next Chapter");
+        Register(Key.J,     KeyModifiers.None,    () => _playerService?.Player?.SeekBackward(10),           "Seek Backward 10s");
+        Register(Key.L,     KeyModifiers.None,    () => _playerService?.Player?.SeekForward(10),            "Seek Forward 10s");
+
+        // ── Frame stepping ──
+        Register(Key.OemOpenBrackets,  KeyModifiers.Control, () => _playerService?.Player?.PreviousFrame(), "Previous Frame");
+        Register(Key.OemCloseBrackets, KeyModifiers.Control, () => _playerService?.Player?.NextFrame(),     "Next Frame");
+
+        // ── Media Keys ──
+        Register(Key.MediaNextTrack,     () => _viewModel?.NextChapter(),    "Next Chapter (Media Key)");
+        Register(Key.MediaPreviousTrack, () => _viewModel?.PreviousChapter(),"Previous Chapter (Media Key)");
+
+        // ── Subtitle (legacy cycle) ──
+        Register(Key.C, () => _playerService?.Player?.CycleSubtitleTrack(), "Cycle Subtitle Track");
+
+        // ── Subtitle Delay ──
+        Register(Key.OemComma,  () => _playerService?.Player?.DecreaseSubtitleDelay(), "Decrease Subtitle Delay");
+        Register(Key.OemPeriod, () => _playerService?.Player?.IncreaseSubtitleDelay(), "Increase Subtitle Delay");
+
+        // ── Subtitle Position ──
+        Register(Key.PageUp,   () => _playerService?.Player?.SetSubtitlePosition((_playerService?.Player?.SubtitlePosition ?? 50) - 1), "Subtitle Position Up");
+        Register(Key.PageDown, () => _playerService?.Player?.SetSubtitlePosition((_playerService?.Player?.SubtitlePosition ?? 50) + 1), "Subtitle Position Down");
+
+        // ── Zoom ──
+        Register(Key.OemPlus,  KeyModifiers.None, () => { if (_playerService?.Player != null) _playerService.Player.Zoom += 0.05; }, "Zoom In");
+        Register(Key.Add,      KeyModifiers.None, () => { if (_playerService?.Player != null) _playerService.Player.Zoom += 0.05; }, "Zoom In");
+        Register(Key.OemMinus, KeyModifiers.None, () => { if (_playerService?.Player != null) _playerService.Player.Zoom -= 0.05; }, "Zoom Out");
+        Register(Key.Subtract, KeyModifiers.None, () => { if (_playerService?.Player != null) _playerService.Player.Zoom -= 0.05; }, "Zoom Out");
+
+        // ── Video Filters ──
+        Register(Key.D1, () => _playerService?.Player?.DecreaseContrast(),   "Decrease Contrast");
+        Register(Key.D2, () => _playerService?.Player?.IncreaseContrast(),   "Increase Contrast");
+        Register(Key.D3, () => _playerService?.Player?.DecreaseBrightness(), "Decrease Brightness");
+        Register(Key.D4, () => _playerService?.Player?.IncreaseBrightness(), "Increase Brightness");
+        Register(Key.D5, () => _playerService?.Player?.DecreaseGamma(),      "Decrease Gamma");
+        Register(Key.D6, () => _playerService?.Player?.IncreaseGamma(),      "Increase Gamma");
+        Register(Key.D7, () => _playerService?.Player?.DecreaseSaturation(), "Decrease Saturation");
+        Register(Key.D8, () => _playerService?.Player?.IncreaseSaturation(), "Increase Saturation");
+
+        // ── Speed ──
+        Register(Key.OemOpenBrackets,  KeyModifiers.None, () => _playerService?.Player?.DecreaseSpeed(), "Decrease Speed");
+        Register(Key.OemCloseBrackets, KeyModifiers.None, () => _playerService?.Player?.IncreaseSpeed(), "Increase Speed");
+        Register(Key.Back,                              () => _playerService?.Player?.ResetSpeed(),     "Reset Speed");
+
+        // ── Screenshots ──
+        Register(Key.S, KeyModifiers.None,  () => _playerService?.Player?.ScreenshotWithSubtitles(),    "Screenshot (with subtitles)");
+        Register(Key.S, KeyModifiers.Shift, () => _playerService?.Player?.ScreenshotWithoutSubtitles(), "Screenshot (no subtitles)");
+
+        // ── Equalizer ──
+        Register(Key.E, KeyModifiers.Control | KeyModifiers.Shift, () => _controlsBox?.OpenEqualizerFlyout(), "Open Equalizer");
+
+        // ── Loop ──
+        Register(Key.L, KeyModifiers.Shift, () => _viewModel?.ToggleLoopFile(),                        "Toggle Loop File");
+        Register(Key.I, KeyModifiers.Control,() => _viewModel?.ToggleLoopPlaylist(),                   "Toggle Loop Playlist");
+
+        // ── Subtitle Manager Shortcuts ──
+        Register(Key.V, KeyModifiers.None, () => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.IsSubtitleEnabled = !_viewModel.Subtitles.IsSubtitleEnabled; },
+            "Toggle Subtitles");
+        Register(Key.G, KeyModifiers.None, () => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.SubtitleFontScale = Math.Round(Math.Max(0.1, _viewModel.Subtitles.SubtitleFontScale - 0.1), 1); },
+            "Decrease Subtitle Font Size");
+        Register(Key.G, KeyModifiers.Shift, () => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.SubtitleFontScale = Math.Round(Math.Min(3.0, _viewModel.Subtitles.SubtitleFontScale + 0.1), 1); },
+            "Increase Subtitle Font Size");
+        Register(Key.R, KeyModifiers.None, () => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.SubtitlePosition = Math.Min(100, _viewModel.Subtitles.SubtitlePosition + 1); },
+            "Subtitle Position Down (via Manager)");
+        Register(Key.R, KeyModifiers.Shift, () => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.SubtitlePosition = Math.Max(0, _viewModel.Subtitles.SubtitlePosition - 1); },
+            "Subtitle Position Up (via Manager)");
+        Register(Key.J, KeyModifiers.None, () => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.CycleSubtitleTrackForward(); },
+            "Next Subtitle Track");
+        Register(Key.J, KeyModifiers.Shift, () => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.CycleSubtitleTrackBackward(); },
+            "Previous Subtitle Track");
+        Register(Key.Z, KeyModifiers.None, () => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.SubtitleDelay = (float)Math.Clamp(_viewModel.Subtitles.SubtitleDelay - 0.5, -10, 10); },
+            "Decrease Subtitle Delay (via Manager)");
+        Register(Key.Z, KeyModifiers.Shift, () => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.SubtitleDelay = (float)Math.Clamp(_viewModel.Subtitles.SubtitleDelay + 0.5, -10, 10); },
+            "Increase Subtitle Delay (via Manager)");
+        Register(Key.F, KeyModifiers.None, () => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.SubtitleFontScale = 1.0; },
+            "Reset Subtitle Font Scale");
+        Register(Key.D0, KeyModifiers.Control, () => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.ResetAllSubtitles(); },
+            "Reset All Subtitle Settings");
+
+        // ── File Operations ──
+        Register(Key.O, KeyModifiers.Control, async () => { var files = await OpenFileDialogAsync(); if (files != null) _viewModel?.OpenFiles(files); },
+            "Open File");
+        Register(Key.O, KeyModifiers.Control | KeyModifiers.Shift, async () => { var folder = await OpenFolderDialogAsync(); if (folder != null) _viewModel?.OpenFiles(new[] { folder }); },
+            "Open Folder");
+        Register(Key.U, KeyModifiers.Control, () => { /* Placeholder for future URL streaming */ }, "Open URL");
+        Register(Key.A, KeyModifiers.Control | KeyModifiers.Shift, async () => { var files = await OpenAddFilesDialogAsync(); if (files != null) _viewModel?.OpenFiles(files); },
+            "Add Files to Playlist");
+
+        // ── Playlist ──
+        Register(Key.S, KeyModifiers.Control, () => _viewModel?.Stop(),              "Stop");
+        Register(Key.P, KeyModifiers.Control, () => _controlsBox?.OpenPlaylistDialog(), "Open Playlist");
+        Register(Key.N, KeyModifiers.None,    () => _viewModel?.NextItem(),          "Next Item");
+        Register(Key.B, KeyModifiers.None,    () => _viewModel?.PreviousItem(),      "Previous Item");
+        Register(Key.H, KeyModifiers.None,    () => _viewModel?.ToggleShuffle(),     "Toggle Shuffle");
+
+        // ── PIP ──
+        Register(Key.P, KeyModifiers.Control | KeyModifiers.Shift, () => OnPipToggled(null, EventArgs.Empty), "Toggle Picture-in-Picture");
+
+        // ── Dialogs ──
+        Register(Key.OemComma, KeyModifiers.Control, () => { var prefs = new PreferencesDialog { DataContext = _viewModel }; prefs.Show(this); },
+            "Preferences");
+        Register(Key.OemQuestion, KeyModifiers.Control, () => { var dlg = new KeyboardShortcutsDialog(); dlg.Show(this); },
+            "Keyboard Shortcuts");
+        Register(Key.G, KeyModifiers.Control, () => { var dlg = new GoToTimeDialog { DataContext = _viewModel }; dlg.Show(this); },
+            "Go To Time");
+
+        // ── Time Display ──
+        Register(Key.T, KeyModifiers.None, () => _controlsBox?.SeekBarControl?.ToggleTimeDisplay(), "Toggle Time Display");
+    }
+
+    private void Register(Key key, Action action, string description)
+        => _inputRouter?.Register(KeyModifiers.None, key, action, description);
+
+    private void Register(Key key, KeyModifiers modifiers, Action action, string description)
+        => _inputRouter?.Register(modifiers, key, action, description);
+
+    private void SeekThrottled(Action action)
+    {
+        var now = DateTime.UtcNow;
+        if ((now - _lastSeekRepeat).TotalMilliseconds < 90) return;
+        _lastSeekRepeat = now;
+        action();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  Key Down — routed through InputRoutingService
+    // ─────────────────────────────────────────────────────────────
+
     private void OnKeyDown(object? sender, KeyEventArgs e)
     {
         var key = e.Key;
         var shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
         var ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
 
-        // When PIP is active, only block keys that would conflict with PIP controls.
-        // Allow Escape and Ctrl+Shift+P so user can close or toggle PIP via keyboard.
+        // When PIP is active, only allow Escape and Ctrl+Shift+P through
         if (_pipWindowManager is { IsActive: true } &&
             key != Key.Escape && !(ctrl && shift && key == Key.P))
         {
@@ -41,366 +220,72 @@ public partial class MainWindow
             return;
         }
 
-        void Handle(Action action) { action(); e.Handled = true; }
-
-        if (key == Key.Space || key == Key.K || key == Key.P || key == Key.MediaPlayPause) 
-            Handle(() => _viewModel?.PlayPause());
-        else if (key == Key.MediaStop) 
-            Handle(() => _viewModel?.Stop());
-        else if (key == Key.Escape)
-            Handle(() => {
-                if (_headerBar.HasActiveFlyouts)
-                    _headerBar.CloseOpenFlyouts();
-                else if (_playerService?.Player?.IsFullscreen == true)
-                    _viewModel?.ToggleFullscreen();
-            });
-        else if (key == Key.F || key == Key.F11) 
-            Handle(() => _viewModel?.ToggleFullscreen());
-        else if (key == Key.M || key == Key.VolumeMute) 
-            Handle(() => _viewModel?.ToggleMute());
-        else if (key == Key.Up || key == Key.VolumeUp) 
-            Handle(() => _viewModel?.IncreaseVolume());
-        else if (key == Key.Down || key == Key.VolumeDown) 
-            Handle(() => _viewModel?.DecreaseVolume());
-        else if (ctrl && (key == Key.OemMinus || key == Key.Subtract)) 
-            Handle(() => { _playerService?.Player?.DecreaseAudioDelay(); });
-        else if (ctrl && (key == Key.OemPlus || key == Key.Add)) 
-            Handle(() => { _playerService?.Player?.IncreaseAudioDelay(); });
-        else if (key == Key.Left) 
-            Handle(() => {
-                var now = DateTime.UtcNow;
-                if ((now - _lastSeekRepeat).TotalMilliseconds < 90) return;
-                _lastSeekRepeat = now;
-                if (ctrl) _viewModel?.PreviousChapter(); else if (shift) _viewModel?.SeekLargeBackward(); else _viewModel?.SeekBackward();
-            });
-        else if (key == Key.Right) 
-            Handle(() => {
-                var now = DateTime.UtcNow;
-                if ((now - _lastSeekRepeat).TotalMilliseconds < 90) return;
-                _lastSeekRepeat = now;
-                if (ctrl) _viewModel?.NextChapter(); else if (shift) _viewModel?.SeekLargeForward(); else _viewModel?.SeekForward();
-            });
-        else if (key == Key.J) 
-            Handle(() => _playerService?.Player?.SeekBackward(10));
-        else if (key == Key.L && !shift && !ctrl) 
-            Handle(() => _playerService?.Player?.SeekForward(10));
-        else if (ctrl && key == Key.OemOpenBrackets) 
-            Handle(() => _playerService?.Player?.PreviousFrame());
-        else if (ctrl && key == Key.OemCloseBrackets) 
-            Handle(() => _playerService?.Player?.NextFrame());
-        else if (key == Key.MediaNextTrack)
-            Handle(() => _viewModel?.NextChapter());
-        else if (key == Key.MediaPreviousTrack)
-            Handle(() => _viewModel?.PreviousChapter());
-        else if (key == Key.C) 
-            Handle(() => _playerService?.Player?.CycleSubtitleTrack());
-        else if (key == Key.OemComma) 
-            Handle(() => _playerService?.Player?.DecreaseSubtitleDelay());
-        else if (key == Key.OemPeriod) 
-            Handle(() => _playerService?.Player?.IncreaseSubtitleDelay());
-        else if (key == Key.PageUp) 
-            Handle(() => _playerService?.Player?.SetSubtitlePosition((_playerService?.Player?.SubtitlePosition ?? 50) - 1));
-        else if (key == Key.PageDown) 
-            Handle(() => _playerService?.Player?.SetSubtitlePosition((_playerService?.Player?.SubtitlePosition ?? 50) + 1));
-        else if ((key == Key.OemPlus || key == Key.Add) && !ctrl) 
-            Handle(() => { if (_playerService?.Player != null) _playerService.Player.Zoom += 0.05; });
-        else if ((key == Key.OemMinus || key == Key.Subtract) && !ctrl) 
-            Handle(() => { if (_playerService?.Player != null) _playerService.Player.Zoom -= 0.05; });
-        else if (key == Key.D1) 
-            Handle(() => _playerService?.Player?.DecreaseContrast());
-        else if (key == Key.D2) 
-            Handle(() => _playerService?.Player?.IncreaseContrast());
-        else if (key == Key.D3) 
-            Handle(() => _playerService?.Player?.DecreaseBrightness());
-        else if (key == Key.D4) 
-            Handle(() => _playerService?.Player?.IncreaseBrightness());
-        else if (key == Key.D5) 
-            Handle(() => _playerService?.Player?.DecreaseGamma());
-        else if (key == Key.D6) 
-            Handle(() => _playerService?.Player?.IncreaseGamma());
-        else if (key == Key.D7) 
-            Handle(() => _playerService?.Player?.DecreaseSaturation());
-        else if (key == Key.D8) 
-            Handle(() => _playerService?.Player?.IncreaseSaturation());
-        else if (key == Key.OemOpenBrackets && !ctrl) 
-            Handle(() => _playerService?.Player?.DecreaseSpeed());
-        else if (key == Key.OemCloseBrackets && !ctrl) 
-            Handle(() => _playerService?.Player?.IncreaseSpeed());
-        else if (key == Key.Back) 
-            Handle(() => _playerService?.Player?.ResetSpeed());
-        else if (key == Key.S) 
-            Handle(() => { if (shift) _playerService?.Player?.ScreenshotWithoutSubtitles(); else _playerService?.Player?.ScreenshotWithSubtitles(); });
-        else if (ctrl && shift && key == Key.E)
-            Handle(() => _controlsBox?.OpenEqualizerFlyout());
-        else if (key == Key.L && shift) 
-            Handle(() => _viewModel?.ToggleLoopFile());
-        // ── Subtitle shortcuts (via SubtitleManager) ──
-        else if (key == Key.V && !ctrl && !shift)
-            Handle(() => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.IsSubtitleEnabled = !_viewModel.Subtitles.IsSubtitleEnabled; });
-        else if (key == Key.G && !ctrl && !shift)
-            Handle(() => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.SubtitleFontScale = Math.Round(Math.Max(0.1, _viewModel.Subtitles.SubtitleFontScale - 0.1), 1); });
-        else if (key == Key.G && shift && !ctrl)
-            Handle(() => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.SubtitleFontScale = Math.Round(Math.Min(3.0, _viewModel.Subtitles.SubtitleFontScale + 0.1), 1); });
-        else if (key == Key.R && !ctrl && !shift)
-            Handle(() => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.SubtitlePosition = Math.Min(100, _viewModel.Subtitles.SubtitlePosition + 1); });
-        else if (key == Key.R && shift && !ctrl)
-            Handle(() => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.SubtitlePosition = Math.Max(0, _viewModel.Subtitles.SubtitlePosition - 1); });
-        // ── Extended subtitle shortcuts ──
-        else if (key == Key.J && !ctrl && !shift)
-            Handle(() => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.CycleSubtitleTrackForward(); });
-        else if (key == Key.J && shift && !ctrl)
-            Handle(() => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.CycleSubtitleTrackBackward(); });
-        else if (key == Key.Z && !ctrl && !shift)
-            Handle(() => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.SubtitleDelay = (float)Math.Clamp(_viewModel.Subtitles.SubtitleDelay - 0.5, -10, 10); });
-        else if (key == Key.Z && shift && !ctrl)
-            Handle(() => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.SubtitleDelay = (float)Math.Clamp(_viewModel.Subtitles.SubtitleDelay + 0.5, -10, 10); });
-        else if (key == Key.F && !ctrl && !shift)
-            Handle(() => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.SubtitleFontScale = 1.0; });
-        else if (ctrl && key == Key.D0 && !shift)
-            Handle(() => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.ResetAllSubtitles(); });
-        // ── Phase 4: Global Keyboard Shortcuts ──
-        else if (ctrl && key == Key.O && !shift)
-            Handle(async () => { var files = await OpenFileDialogAsync(); if (files != null) _viewModel?.OpenFiles(files); });
-        else if (ctrl && key == Key.O && shift)
-            Handle(async () => { var folder = await OpenFolderDialogAsync(); if (folder != null) _viewModel?.OpenFiles(new[] { folder }); });
-        else if (ctrl && key == Key.U)
-            Handle(() => { /* Ctrl+U: Open URL — placeholder for future URL streaming */ });
-        else if (ctrl && key == Key.I)
-            Handle(() => _viewModel?.ToggleLoopPlaylist());
-        else if (ctrl && key == Key.S && !shift)
-            Handle(() => _viewModel?.Stop());
-        else if (ctrl && key == Key.P && !shift)
-            Handle(() => _controlsBox.OpenPlaylistDialog());
-        else if (ctrl && shift && key == Key.P)
-            Handle(() => OnPipToggled(null, EventArgs.Empty));
-        else if (ctrl && key == Key.OemComma)
-            Handle(() => { var prefs = new PreferencesDialog { DataContext = _viewModel }; prefs.Show(this); });
-        else if (ctrl && key == Key.A && shift)
-            Handle(async () => { var files = await OpenAddFilesDialogAsync(); if (files != null) _viewModel?.OpenFiles(files); });
-        else if (key == Key.T && !ctrl && !shift)
-            Handle(() => _controlsBox?.SeekBarControl?.ToggleTimeDisplay());
-        else if (key == Key.N && !ctrl && !shift)
-            Handle(() => _viewModel?.NextItem());
-        else if (key == Key.B && !ctrl && !shift)
-            Handle(() => _viewModel?.PreviousItem());
-        else if (key == Key.H && !ctrl && !shift)
-            Handle(() => _viewModel?.ToggleShuffle());
-        else if (ctrl && key == Key.OemQuestion)
-            Handle(() => { var dlg = new KeyboardShortcutsDialog(); dlg.Show(this); });
-        else if (ctrl && key == Key.G && !shift)
-            Handle(() => { var dlg = new GoToTimeDialog { DataContext = _viewModel }; dlg.Show(this); });
+        // Route through InputRoutingService
+        if (_inputRouter != null && _inputRouter.TryHandle(e))
+        {
+            e.Handled = true;
+        }
     }
 
     private void CloseOpenFlyouts()
     {
-        var flyoutsToClose = new[] { _controlsBox.BtnVolumeMenu, _headerBar.BtnOpenMenu, _headerBar.BtnPrimaryMenu };
+        var flyoutsToClose = new[] { _controlsBox?.BtnVolumeMenu, _headerBar?.BtnOpenMenu, _headerBar?.BtnPrimaryMenu };
         foreach (var btn in flyoutsToClose)
             if (btn?.Flyout is Flyout f)
                 f.Hide();
-        // Close subtitle & audio flyouts from standalone overlay controls
         _controlsBox?.SubtitleOverlayCtrl?.HideFlyout();
         _controlsBox?.AudioTrackSelectorCtrl?.HideFlyout();
         if (_controlsBox?.BtnVideoMenu?.Flyout is Flyout fv)
             fv.Hide();
     }
 
-    // Guard against duplicate PointerPressed
-    private DateTime _lastClickTime = DateTime.MinValue;
-
-    // Double-tap detection: delay single-tap PlayPause so double-tap ToggleFullscreen wins
-    private volatile bool _pendingSingleTap;
+    // ─────────────────────────────────────────────────────────────
+    //  Pointer / Click Handlers (referenced by MainWindow.axaml)
+    // ─────────────────────────────────────────────────────────────
 
     private void OnVideoPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        var clickNow = DateTime.UtcNow;
-        if ((clickNow - _lastClickTime).TotalMilliseconds < 100)
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
         {
-            e.Handled = true;
-            return;
-        }
-        _lastClickTime = clickNow;
-
-        var props = e.GetCurrentPoint(this).Properties;
-
-        if (props.IsRightButtonPressed)
-        {
-            ShowVideoContextMenu();
-            e.Handled = true;
-            return;
-        }
-
-        if (props.IsMiddleButtonPressed)
-        {
-            _viewModel?.ToggleMute();
-            e.Handled = true;
-            return;
-        }
-
-        if (props.IsLeftButtonPressed)
-        {
-            var now = DateTime.UtcNow;
-            if ((now - _lastTapTime).TotalMilliseconds < 300)
-            {
-                // Double-tap → toggle fullscreen (cancel single-tap action)
-                _lastTapTime = DateTime.MinValue;
-                _pendingSingleTap = false;
-                _viewModel?.ToggleFullscreen();
-                e.Handled = true;
-                return;
-            }
-
-            // Single tap: delay PlayPause by ~300ms so double-tap can cancel it.
-            // If a second tap arrives within the window, ToggleFullscreen runs instead.
-            _lastTapTime = now;
-            _pendingSingleTap = true;
-            e.Handled = true;
-
-            _ = Task.Run(async () =>
-            {
-                await Task.Delay(350);
-                if (_pendingSingleTap)
-                {
-                    _pendingSingleTap = false;
-                    await global::Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => _viewModel?.PlayPause());
-                }
-            });
+            _viewModel?.PlayPause();
         }
     }
 
-    // ─── Right-click context menu — extracted to VideoContextMenuBuilder ──
-
-    /// <summary>Show the right-click context menu at pointer position.</summary>
-    private void ShowVideoContextMenu()
-    {
-        try
-        {
-            var builder = new Builders.VideoContextMenuBuilder(
-                this, _viewModel, _playerService?.Player);
-            builder.Build().ShowAt(this);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Right-click menu error: {ex.Message}");
-        }
-    }
-
-    /// <summary>Handles right-click on StartPage (which is on top of VideoClickOverlay when visible).</summary>
     private void OnStartPagePointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (e.GetCurrentPoint(this).Properties.IsRightButtonPressed)
-        {
-            ShowVideoContextMenu();
-            e.Handled = true;
-        }
+        // StartPage click — handled by StartPage control internally
     }
 
-    // ─────────────────────────────────────────────────────
-    //  Drag & Drop (merged from MainWindow.DragDrop.cs)
-    // ─────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
+    //  Window Drag & Drop (called from Core.cs AddHandler)
+    // ─────────────────────────────────────────────────────────────
 
     private void OnWindowDragEnter(object? sender, DragEventArgs e)
     {
-        if (e.DataTransfer != null && e.DataTransfer.Contains(DataFormat.File))
-        {
-            e.DragEffects = DragDropEffects.Copy;
-
-            var sp = this.FindControl<StartPage>("StartPage");
-            if (sp != null && sp.IsVisible)
-            {
-                var dt = sp.FindControl<Border>("DropTarget");
-                if (dt != null)
-                {
-                    dt.BorderBrush = AppColors.DragAccent;
-                    dt.Background = AppColors.DragAccentDim;
-                }
-            }
-
-            _ = _dropIndicator.Show();
-        }
-        else
-        {
-            e.DragEffects = DragDropEffects.None;
-        }
+        _isDragOver = true;
+        _dropIndicator?.Show();
+        e.DragEffects = DragDropEffects.Link;
+        e.Handled = true;
     }
 
-    private void OnWindowDragLeave(object? sender, RoutedEventArgs e)
+    private void OnWindowDragLeave(object? sender, DragEventArgs e)
     {
-        ResetStartPageDragVisuals();
-        _ = _dropIndicator.Hide();
+        _isDragOver = false;
+        _dropIndicator?.Hide();
     }
 
     private void OnWindowDrop(object? sender, DragEventArgs e)
     {
-        ResetStartPageDragVisuals();
-
-        if (_dropIndicator.IsShowing)
-            _ = _dropIndicator.Hide();
-
-        if (e.DataTransfer != null && e.DataTransfer.Contains(DataFormat.File))
-        {
-            var files = e.DataTransfer.TryGetFiles();
-            if (files != null)
-            {
-                var paths = files.Select(f => f.Path.LocalPath).ToArray();
-                var videoFiles = global::Cine.Avalonia.Controls.StartPage.FilterVideoFiles(paths).ToList();
-                var subtitleFiles = paths.Where(f =>
-                    f.EndsWith(".srt", StringComparison.OrdinalIgnoreCase) ||
-                    f.EndsWith(".ass", StringComparison.OrdinalIgnoreCase) ||
-                    f.EndsWith(".vtt", StringComparison.OrdinalIgnoreCase)).ToList();
-
-                if (videoFiles.Any())
-                    _viewModel?.OpenFiles(videoFiles.ToArray());
-
-                if (subtitleFiles.Any() && _viewModel != null && !string.IsNullOrEmpty(_viewModel.FilePath))
-                {
-                    foreach (var subFile in subtitleFiles)
-                        _playerService?.Player?.AddSubtitle(subFile);
-                }
-            }
-        }
+        _isDragOver = false;
+        _dropIndicator?.Hide();
+        // Handled by StartOverlayHandler
     }
 
-    private void ResetStartPageDragVisuals()
-    {
-        var sp = this.FindControl<StartPage>("StartPage");
-        if (sp == null) return;
-        var dt = sp.FindControl<Border>("DropTarget");
-        if (dt != null)
-        {
-            dt.BorderBrush = AppColors.BorderLight;
-            dt.Background = AppColors.BorderDim;
-        }
-    }
-
-    // ─────────────────────────────────────────────────────
-    //  Responsive Layout (merged from MainWindow.ResponsiveLayout.cs)
-    // ─────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
+    //  Responsive Layout Init (called from Core.cs)
+    // ─────────────────────────────────────────────────────────────
 
     private void InitializeResponsiveLayout()
     {
-        this.SizeChanged += OnWindowSizeChanged;
-        _controlsBox.UpdateResponsiveLayout(Bounds.Width, _viewModel?.HasMultipleVideoTracks ?? false);
-        _headerBar.UpdateResponsiveLayout(Bounds.Width);
-        UpdateSubtitleAudioOverlayVisibility(Bounds.Width);
-    }
-
-    private void OnWindowSizeChanged(object? sender, SizeChangedEventArgs e)
-    {
-        _controlsBox.UpdateResponsiveLayout(e.NewSize.Width, _viewModel?.HasMultipleVideoTracks ?? false);
-        _headerBar.UpdateResponsiveLayout(e.NewSize.Width);
-        UpdateSubtitleAudioOverlayVisibility(e.NewSize.Width);
-    }
-
-    /// <summary>
-    /// Shows/hides the standalone subtitle and audio selector overlay buttons
-    /// based on window width, matching the ControlsBox responsive behavior.
-    /// </summary>
-    private void UpdateSubtitleAudioOverlayVisibility(double width)
-    {
-        bool isNarrow = width < 495;
-        if (_controlsBox?.SubtitleOverlayCtrl != null)
-            _controlsBox.SubtitleOverlayCtrl.IsVisible = !isNarrow;
-        if (_controlsBox?.AudioTrackSelectorCtrl != null)
-            _controlsBox.AudioTrackSelectorCtrl.IsVisible = !isNarrow;
     }
 }

@@ -58,6 +58,8 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
     private readonly IMediaPlayer _player;
     private readonly ISessionService _session;
     private readonly IPlaylistService _playlistCoordinator;
+    private readonly IMediaFileService _mediaFile;
+    private readonly IFileDialogService? _fileDialog;
     private bool _disposed;
     // --- Bindable state ---
     private PlaybackState _state = PlaybackState.Stopped;
@@ -103,12 +105,8 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
     public ICommand AddAudioCommand { get; }
     public ICommand OpenRecentCommand { get; }
 
-    // File dialog callbacks (set by MainWindow code-behind)
-    public Func<Task<string[]?>>? RequestOpenFilesAsync { get; set; }
-    public Func<Task<string?>>? RequestOpenFolderAsync { get; set; }
-    public Func<Task<string[]?>>? RequestAddFilesAsync { get; set; }
-    public Func<Task<string?>>? RequestSubtitleFileAsync { get; set; }
-    public Func<Task<string?>>? RequestAudioFileAsync { get; set; }
+    /// <summary>File dialog service for requesting file selections.</summary>
+    public IFileDialogService? FileDialog => _fileDialog;
 
     /// <summary>Fired when an error occurs during async operations.</summary>
     public event EventHandler<string>? OnError;
@@ -134,22 +132,30 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public MainViewModel(IMediaPlayer player,
         ISessionService? session = null,
-        PlaylistCoordinator? playlistCoordinator = null,
+        IPlaylistService? playlistCoordinator = null,
         IAudioManager? audioManager = null,
         VideoManager? videoManager = null,
-        ISubtitleManager? subtitleManager = null)
+        ISubtitleManager? subtitleManager = null,
+        IRendererService? rendererService = null,
+        IMediaFileService? mediaFileService = null,
+        IFileDialogService? fileDialogService = null)
     {
         _player = player ?? throw new ArgumentNullException(nameof(player));
         _session = session ?? new SessionManager();
         _playlistCoordinator = playlistCoordinator ?? new PlaylistCoordinator();
+        _mediaFile = mediaFileService ?? new MediaFileService();
+        _fileDialog = fileDialogService;
         Audio = audioManager ?? new AudioManager(player);
         Video = videoManager ?? new VideoManager(player);
         Subtitles = subtitleManager ?? new SubtitleManager(player);
+        Renderer = rendererService ?? new RendererCoordinator();
 
-#pragma warning disable CS8603 // Nullable flow analysis — Audio/Subtitles are assigned in ctor
-        Audio.RequestAudioFileAsync = () => RequestAudioFileAsync?.Invoke();
-        Subtitles!.RequestSubtitleFileAsync = () => RequestSubtitleFileAsync?.Invoke();
-#pragma warning restore CS8603
+        // Wire file-dialog delegates for AudioManager and SubtitleManager
+        if (_fileDialog != null)
+        {
+            Audio.RequestAudioFileAsync = () => _fileDialog.OpenAudioAsync();
+            Subtitles!.RequestSubtitleFileAsync = () => _fileDialog.OpenSubtitleAsync();
+        }
 
         // Wire player events
         _player.Opened += OnPlayerOpened;
@@ -259,36 +265,6 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public double ContrastValue
-    {
-        get => _player.Contrast;
-        set { _player.Contrast = value; OnPropertyChanged(); }
-    }
-
-    public double BrightnessValue
-    {
-        get => _player.Brightness;
-        set { _player.Brightness = value; OnPropertyChanged(); }
-    }
-
-    public double GammaValue
-    {
-        get => _player.Gamma;
-        set { _player.Gamma = value; OnPropertyChanged(); }
-    }
-
-    public double SaturationValue
-    {
-        get => _player.Saturation;
-        set { _player.Saturation = value; OnPropertyChanged(); }
-    }
-
-    public double HueValue
-    {
-        get => _player.Hue;
-        set { _player.Hue = value; OnPropertyChanged(); }
-    }
-
     public float SubtitleDelayValue
     {
         get => Subtitles?.SubtitleDelay ?? _player.SubtitleDelay;
@@ -323,105 +299,6 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public double ZoomValue
-    {
-        get => _player.Zoom;
-        set { _player.Zoom = value; OnPropertyChanged(); }
-    }
-
-    public double AspectRatioValue
-    {
-        get => _player.AspectRatio;
-        set
-        {
-            _player.AspectRatio = value;
-            OnPropertyChanged();
-            UpdateCropFilter();
-        }
-    }
-
-    // --- Rotation & Flip ---
-    public void ResetAspectRatio() => AspectRatioValue = -1;
-    public void SetAspectRatio(double ratio) => AspectRatioValue = ratio;
-
-    // ── Crop (removes black bars, VLC-style) ──
-    private const string CropFilterLabel = "@crop";
-    private double _cropValue = -1;
-
-    public double CropValue
-    {
-        get => _cropValue;
-        set { _cropValue = value; OnPropertyChanged(); }
-    }
-
-    public void SetCrop(double aspectRatio)
-    {
-        CropValue = aspectRatio;
-        UpdateCropFilter();
-    }
-
-    public void ResetCrop()
-    {
-        CropValue = -1;
-        UpdateCropFilter();
-    }
-
-    public void UpdateCropFilter()
-    {
-        if (_cropValue <= 0)
-        {
-            _player.Command("vf", "remove", CropFilterLabel);
-        }
-        else
-        {
-            // First remove to prevent duplicates/errors
-            _player.Command("vf", "remove", CropFilterLabel);
-
-            double R = _cropValue;
-            double A = AspectRatioValue; // -1 or positive override
-
-            if (A > 0)
-            {
-                // Aspect ratio is overridden
-                string filter;
-                if (A > R)
-                {
-                    double ratio = R / A;
-                    string ratioStr = ratio.ToString("F4", System.Globalization.CultureInfo.InvariantCulture);
-                    filter = $"{CropFilterLabel}:crop=w=iw*{ratioStr}:h=ih";
-                }
-                else
-                {
-                    double ratio = A / R;
-                    string ratioStr = ratio.ToString("F4", System.Globalization.CultureInfo.InvariantCulture);
-                    filter = $"{CropFilterLabel}:crop=w=iw:h=ih*{ratioStr}";
-                }
-                _player.Command("vf", "add", filter);
-            }
-            else
-            {
-                // Aspect ratio is original
-                string rStr = R.ToString("F4", System.Globalization.CultureInfo.InvariantCulture);
-                string filter = $"{CropFilterLabel}:crop=w=if(gt(iw/ih\\,{rStr})\\,ih*{rStr}\\,iw):h=if(gt(iw/ih\\,{rStr})\\,ih\\,iw/{rStr})";
-                _player.Command("vf", "add", filter);
-            }
-        }
-    }
-
-    public void RotateLeft() => _player.Command("set", "video-rotate", "90");
-    public void RotateRight() => _player.Command("set", "video-rotate", "270");
-    public void ResetRotation() => _player.Command("set", "video-rotate", "0");
-    public void FlipHorizontal() => _player.Command("vf", "toggle", "hflip");
-    public void FlipVertical() => _player.Command("vf", "toggle", "vflip");
-    public void ResetFlip() => _player.Command("vf", "del", "@hflip", "@vflip");
-    public void ResetZoom() => ZoomValue = 0;
-
-    // --- Reset Commands ---
-    public void ResetContrast() => ContrastValue = 0;
-    public void ResetBrightness() => BrightnessValue = 0;
-    public void ResetGamma() => GammaValue = 1;
-    public void ResetSaturation() => SaturationValue = 1;
-    public void ResetHue() => HueValue = 0;
     public void ResetSubtitleDelay() => SubtitleDelayValue = 0;
     public void ResetAudioDelay() => AudioDelayValue = 0;
     public void ResetAllOptions()

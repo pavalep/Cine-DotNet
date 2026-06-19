@@ -104,13 +104,59 @@ public class App : global::Avalonia.Application
         Console.WriteLine(msg);
     }
 
+    /// <summary>True when running as an MSIX packaged app (installed to WindowsApps).</summary>
+    private static bool IsRunningAsPackaged()
+    {
+        return AppContext.BaseDirectory.Contains("WindowsApps", StringComparison.OrdinalIgnoreCase);
+    }
+
     public static void Main(string[] args)
     {
+        // ── Six-Layer Exception Defense ──
+        // Layer 4: Thread-pool / non-task exceptions (informational — can't prevent termination)
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+        {
+            CrashReporter.Dump((Exception)e.ExceptionObject, "AppDomain.UnhandledException");
+        };
+
+        // Layer 3: Forgotten task exceptions (fire on finalizer — delayed)
+        TaskScheduler.UnobservedTaskException += (_, e) =>
+        {
+            CrashReporter.Log(e.Exception, isWarning: true);
+            e.SetObserved(); // prevent process teardown
+        };
+
+        // Install global handlers for Layer 4+ (handles native AV, etc.)
         CrashReporter.InstallGlobalHandlers();
 
+        // Layer 5: Last line of defense — global try-catch around entire app lifetime
         try
         {
             Log("=== Cine.Avalonia starting ===");
+
+            // ── On-demand runtime download ──
+            // When running as MSIX (has package identity), libmpv DLLs are excluded
+            // from the package. Download them on first launch.
+            // When running locally (dotnet run), DLLs are already in bin/ — skip.
+            if (IsRunningAsPackaged())
+            {
+                try
+                {
+                    if (!RuntimeDownloader.IsRuntimeReady())
+                    {
+                        Log("MSIX: Runtime DLLs missing — downloading on demand...");
+                        System.Console.WriteLine("Downloading media runtime (first launch, this may take a minute)...");
+                        RuntimeDownloader.EnsureRuntimeAsync().GetAwaiter().GetResult();
+                        Log("MSIX: Runtime download complete.");
+                    }
+                }
+                catch (Exception dlEx)
+                {
+                    Log($"MSIX: Runtime download failed: {dlEx.Message}");
+                    System.Console.WriteLine($"Warning: Could not download media runtime. ({dlEx.Message})");
+                }
+            }
+
             var sw = Stopwatch.StartNew();
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
             sw.Stop();
@@ -168,10 +214,19 @@ public class App : global::Avalonia.Application
 
         try
         {
+            // ── Six-Layer Exception Defense: Layer 1 (UI thread) + Layer 2 (filter) ──
             Dispatcher.UIThread.UnhandledException += (_, e) =>
             {
                 Log($"UIThread.UnhandledException: {e.Exception}");
+                CrashReporter.Log(e.Exception, isWarning: true);
                 e.Handled = true;
+            };
+
+            // Layer 2: Filter benign exceptions — don't trap cancellation
+            Dispatcher.UIThread.UnhandledExceptionFilter += (_, e) =>
+            {
+                if (e.Exception is TaskCanceledException or OperationCanceledException)
+                    e.RequestCatch = false;
             };
 
             _serviceProvider = ConfigureServices();
@@ -192,7 +247,16 @@ public class App : global::Avalonia.Application
                     Log("MainWindow created and assigned successfully.");
 
                     // Register file associations for double-click support
-                    try { Cine.Avalonia.Services.FileAssociationService.Register(); } catch { }
+                    try
+                    {
+                        var registry = new Cine.Avalonia.Services.WindowsRegistryService();
+                        var fileAssoc = new Cine.Avalonia.Services.FileAssociationService(registry);
+                        fileAssoc.RegisterOnStartup();
+                    }
+                    catch (Exception regEx)
+                    {
+                        Log($"File association registration failed: {regEx.Message}");
+                    }
                 }
                 catch (Exception ex)
                 {

@@ -238,7 +238,8 @@
                     <ToggleButton x:Name="BtnFullscreen"
                                   Classes="circular-toggle"
                                   Click="OnToggleFullscreen"
-                                  ToolTip.Tip="Fullscreen (F)">
+                                  ToolTip.Tip="Fullscreen (F)"
+                                  AutomationProperties.Name="Toggle fullscreen">
                         <materialIcons:MaterialIcon x:Name="FullscreenIconPath" Kind="Fullscreen" Width="18" Height="18"
                             Foreground="{StaticResource OsdForeground}" />
                     </ToggleButton>

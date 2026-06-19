@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Cine.Core;
 
@@ -7,8 +8,9 @@ namespace Cine.Avalonia.Services;
 /// <summary>
 /// Registers Cine as the default player for supported video/audio formats on Windows.
 /// Writes to HKEY_CURRENT_USER\Software\Classes (no admin required).
+/// Per-format try-catch ensures one failed format doesn't block others.
 /// </summary>
-public static class FileAssociationService
+public sealed class FileAssociationService
 {
     private static readonly string[] VideoFormats =
     {
@@ -30,56 +32,58 @@ public static class FileAssociationService
 
     private const string AppId = "CineMediaPlayer";
     private const string AppName = "Cine Media Player";
+    private const string SubAppId = "CineMediaPlayer.sub";
+
+    private readonly IRegistryService _registry;
+    private readonly string _executablePath;
+
+    public FileAssociationService(IRegistryService registry, string? executablePath = null)
+    {
+        _registry = registry ?? throw new ArgumentNullException(nameof(registry));
+        _executablePath = executablePath ?? GetExecutablePath();
+    }
+
+    public string ExecutablePath => _executablePath;
 
     /// <summary>Register all supported file types.</summary>
-    public static void Register()
+    public void Register()
     {
-        try
-        {
-            RegisterAllFormats(VideoFormats, "video");
-            RegisterAllFormats(AudioFormats, "audio");
-            RegisterSubtitleFormats();
+        int videoOk = 0, audioOk = 0, subOk = 0;
+        int videoFail = 0, audioFail = 0, subFail = 0;
 
-            // Notify Windows shell
-            SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, IntPtr.Zero, IntPtr.Zero);
+        videoFail = RegisterFormatList(VideoFormats, "video", ref videoOk);
+        audioFail = RegisterFormatList(AudioFormats, "audio", ref audioOk);
+        subFail = RegisterSubtitleFormats(ref subOk);
 
-            Log.ForContext("FileAssociation").Info("File associations registered ({0} video, {1} audio, {2} subtitle)",
-                VideoFormats.Length, AudioFormats.Length, SubtitleFormats.Length);
-        }
-        catch (Exception ex)
-        {
-            Log.ForContext("FileAssociation").Error(ex, "Failed to register file associations");
-        }
+        NotifyShell();
+
+        Log.ForContext("FileAssociation").Info(
+            "File associations registered. Video: {0} ok/{1} fail, Audio: {2} ok/{3} fail, Subtitle: {4} ok/{5} fail",
+            videoOk, videoFail, audioOk, audioFail, subOk, subFail);
     }
 
     /// <summary>Remove all registered file types.</summary>
-    public static void Unregister()
+    public void Unregister()
     {
-        try
-        {
-            foreach (var ext in VideoFormats)
-                RemoveAssociation(ext);
-            foreach (var ext in AudioFormats)
-                RemoveAssociation(ext);
-            foreach (var ext in SubtitleFormats)
-                RemoveAssociation(ext);
+        int removed = 0, failed = 0;
+        foreach (var ext in VideoFormats)
+            if (TryUnregister(ext)) removed++; else failed++;
+        foreach (var ext in AudioFormats)
+            if (TryUnregister(ext)) removed++; else failed++;
+        foreach (var ext in SubtitleFormats)
+            if (TryUnregister(ext)) removed++; else failed++;
 
-            SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, IntPtr.Zero, IntPtr.Zero);
-        }
-        catch (Exception ex)
-        {
-            Log.ForContext("FileAssociation").Error(ex, "Failed to unregister file associations");
-        }
+        NotifyShell();
+        Log.ForContext("FileAssociation").Info("File associations unregistered: {0} removed, {1} failed", removed, failed);
     }
 
     /// <summary>Check if Cine is the default for a given extension.</summary>
-    public static bool IsRegistered(string extension)
+    public bool IsRegistered(string extension)
     {
         try
         {
-            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
-                $@"Software\Classes\{extension}\OpenWithProgids");
-            return key?.GetValue(AppId) != null;
+            var keyPath = $@"{extension}\OpenWithProgids";
+            return _registry.GetValue(keyPath, AppId) != null;
         }
         catch
         {
@@ -87,56 +91,109 @@ public static class FileAssociationService
         }
     }
 
-    private static void RegisterAllFormats(string[] formats, string type)
+    /// <summary>
+    /// Optionally run registration on a background thread.
+    /// Registry writes can block the UI thread briefly; use this at startup.
+    /// </summary>
+    public void RegisterOnStartup()
     {
+        if (!IsExecutableValid(_executablePath))
+        {
+            Log.ForContext("FileAssociation").Warning(
+                "Skipping file association registration — executable path does not end with .exe: {0}", _executablePath);
+            return;
+        }
+
+        System.Threading.ThreadPool.QueueUserWorkItem(_ => Register());
+    }
+
+    // ── Private helpers ──
+
+    private int RegisterFormatList(string[] formats, string type, ref int okCount)
+    {
+        int failCount = 0;
         foreach (var ext in formats)
         {
-            // Create progid key
-            using var progid = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(
-                $@"Software\Classes\{AppId}\shell\open\command");
-            progid.SetValue("", $"\"{GetExecutablePath()}\" \"%1\"");
+            try
+            {
+                var commandPath = $@"{AppId}\shell\open\command";
+                _registry.SetValue(commandPath, "", $"\"{_executablePath}\" \"%1\"");
 
-            // Set friendly name
-            using var progidName = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(
-                $@"Software\Classes\{AppId}");
-            progidName.SetValue("", $"{AppName} {type} file");
+                _registry.SetValue(AppId, "", $"{AppName} {type} file");
 
-            // Associate extension
-            using var extKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(
-                $@"Software\Classes\{ext}\OpenWithProgids");
-            extKey.SetValue(AppId, Array.Empty<byte>(), Microsoft.Win32.RegistryValueKind.None);
+                var progIdPath = $@"{ext}\OpenWithProgids";
+                _registry.SetBinaryValue(progIdPath, AppId, Array.Empty<byte>());
+
+                okCount++;
+            }
+            catch (Exception ex)
+            {
+                failCount++;
+                Log.ForContext("FileAssociation").Error(ex, "Failed to register format {0} ({1})", ext, type);
+            }
         }
+        return failCount;
     }
 
-    private static void RegisterSubtitleFormats()
+    private int RegisterSubtitleFormats(ref int okCount)
     {
+        int failCount = 0;
         foreach (var ext in SubtitleFormats)
         {
-            using var progid = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(
-                $@"Software\Classes\{AppId}.sub\shell\open\command");
-            progid.SetValue("", $"\"{GetExecutablePath()}\" \"%1\"");
+            try
+            {
+                var commandPath = $@"{SubAppId}\shell\open\command";
+                _registry.SetValue(commandPath, "", $"\"{_executablePath}\" \"%1\"");
 
-            using var extKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(
-                $@"Software\Classes\{ext}\OpenWithProgids");
-            extKey.SetValue(AppId + ".sub", Array.Empty<byte>(), Microsoft.Win32.RegistryValueKind.None);
+                var progIdPath = $@"{ext}\OpenWithProgids";
+                _registry.SetBinaryValue(progIdPath, SubAppId, Array.Empty<byte>());
+
+                okCount++;
+            }
+            catch (Exception ex)
+            {
+                failCount++;
+                Log.ForContext("FileAssociation").Error(ex, "Failed to register subtitle format {0}", ext);
+            }
         }
+        return failCount;
     }
 
-    private static void RemoveAssociation(string ext)
+    private bool TryUnregister(string ext)
     {
         try
         {
-            using var extKey = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
-                $@"Software\Classes\{ext}\OpenWithProgids", writable: true);
-            extKey?.DeleteValue(AppId, throwOnMissingValue: false);
-            extKey?.DeleteValue(AppId + ".sub", throwOnMissingValue: false);
+            _registry.DeleteValue($@"{ext}\OpenWithProgids", AppId);
+            _registry.DeleteValue($@"{ext}\OpenWithProgids", SubAppId);
+            return true;
         }
-        catch { /* Not registered */ }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private void NotifyShell()
+    {
+        try
+        {
+            SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, IntPtr.Zero, IntPtr.Zero);
+        }
+        catch
+        {
+            // Non-critical — shell notification is best effort
+        }
+    }
+
+    private static bool IsExecutableValid(string path)
+    {
+        return !string.IsNullOrEmpty(path) &&
+               path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string GetExecutablePath()
     {
-        using var process = System.Diagnostics.Process.GetCurrentProcess();
+        using var process = Process.GetCurrentProcess();
         return process.MainModule?.FileName ?? "Cine.exe";
     }
 

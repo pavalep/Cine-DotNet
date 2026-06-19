@@ -350,7 +350,7 @@ public class MpvVideoView : Decorator
             _renderCts?.Dispose();
             _renderCts = null;
         }
-        catch { /* best-effort during shutdown */ }
+        catch (Exception ex) { Log($"Shutdown: CTS cancel failed: {ex.Message}"); }
 
         if (_renderThread != null && _renderThread.IsAlive)
         {
@@ -368,11 +368,11 @@ public class MpvVideoView : Decorator
         }
 
         try { _angleContext?.Dispose(); }
-        catch { /* best-effort during shutdown */ }
+        catch (Exception ex) { Log($"Shutdown: ANGLE context dispose failed: {ex.Message}"); }
         _angleContext = null;
 
         try { _writeableBitmap?.Dispose(); }
-        catch { /* best-effort during shutdown */ }
+        catch (Exception ex) { Log($"Shutdown: WriteableBitmap dispose failed: {ex.Message}"); }
         _writeableBitmap = null;
 
         Log("Shutdown complete");

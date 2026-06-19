@@ -2,6 +2,7 @@ using System.Collections.Frozen;
 using System.Reflection;
 using System.Text.Json;
 using Avalonia.Media;
+using Cine.Avalonia.Serialization;
 
 namespace Cine.Avalonia;
 

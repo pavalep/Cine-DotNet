@@ -58,7 +58,6 @@ public partial class MainWindow
 
         if (isFullscreen)
         {
-            ExtendClientAreaToDecorationsHint = false;
             _headerBar.IsVisible = false;
             _headerBar.IsHitTestVisible = false;
             _headerBar.HideWindowControls();
@@ -69,7 +68,6 @@ public partial class MainWindow
         }
         else
         {
-            ExtendClientAreaToDecorationsHint = true;
             _headerBar.IsVisible = true;
             _headerBar.IsHitTestVisible = true;
             _fullscreenHeader.Hide();

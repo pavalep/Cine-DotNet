@@ -15,7 +15,7 @@ namespace Cine.Avalonia.Services;
 /// </summary>
 public sealed class PipWindowManager : IDisposable
 {
-    private readonly PipService _pipService;
+    private readonly IPipService _pipService;
     private readonly MainViewModel _viewModel;
     private readonly HeaderBarControl _headerBar;
     private readonly ControlsBoxControl _controlsBox;
@@ -25,21 +25,21 @@ public sealed class PipWindowManager : IDisposable
     private bool _disposed;
 
     public PipWindowManager(
-        PipService pipService,
-        MainViewModel viewModel,
-        HeaderBarControl headerBar,
-        ControlsBoxControl controlsBox,
-        MpvVideoView mpvVideoView,
-        PlayerService playerService,
-        Action<string> showOsdNotification)
+        IPipService pipService,
+        MainViewModel? viewModel,
+        HeaderBarControl? headerBar,
+        ControlsBoxControl? controlsBox,
+        MpvVideoView? mpvVideoView,
+        PlayerService? playerService,
+        Action<string>? showOsdNotification)
     {
         _pipService = pipService ?? throw new ArgumentNullException(nameof(pipService));
-        _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
-        _headerBar = headerBar ?? throw new ArgumentNullException(nameof(headerBar));
-        _controlsBox = controlsBox ?? throw new ArgumentNullException(nameof(controlsBox));
-        _mpvVideoView = mpvVideoView ?? throw new ArgumentNullException(nameof(mpvVideoView));
-        _playerService = playerService ?? throw new ArgumentNullException(nameof(playerService));
-        _showOsdNotification = showOsdNotification ?? throw new ArgumentNullException(nameof(showOsdNotification));
+        _viewModel = viewModel!;
+        _headerBar = headerBar!;
+        _controlsBox = controlsBox!;
+        _mpvVideoView = mpvVideoView!;
+        _playerService = playerService!;
+        _showOsdNotification = showOsdNotification ?? (_ => { });
 
         WireEvents();
     }
@@ -101,20 +101,21 @@ public sealed class PipWindowManager : IDisposable
             return;
         }
 
-        _mpvVideoView.DisplayEnabled = false;
+        if (_mpvVideoView != null)
+            _mpvVideoView.DisplayEnabled = false;
 
         var pipWindow = _pipService.EnterPip();
 
         if (pipWindow != null)
         {
-            _headerBar.SetPipChecked(true);
+            _headerBar?.SetPipChecked(true);
             pipWindow.SetPlayingState(_viewModel.IsPlaying);
             pipWindow.SetMuted(_viewModel.IsMuted);
 
             string fileName = Path.GetFileName(_viewModel.FilePath);
             pipWindow.SetFileName(fileName, fileName);
 
-            var player = _playerService.Player;
+            var player = _playerService?.Player;
             if (player != null)
             {
                 player.GetVideoSize(out int vw, out int vh);
@@ -128,7 +129,8 @@ public sealed class PipWindowManager : IDisposable
         }
         else
         {
-            _mpvVideoView.DisplayEnabled = true;
+            if (_mpvVideoView != null)
+                _mpvVideoView.DisplayEnabled = true;
             _showOsdNotification("PiP failed");
         }
     }
@@ -136,10 +138,11 @@ public sealed class PipWindowManager : IDisposable
     private void ExitPip()
     {
         _pipService.ExitPip();
-        _headerBar.SetPipChecked(false);
-        _mpvVideoView.DisplayEnabled = true;
+        _headerBar?.SetPipChecked(false);
+        if (_mpvVideoView != null)
+            _mpvVideoView.DisplayEnabled = true;
         if (_controlsBox != null)
-            _controlsBox.SyncPlayPauseIcon(_viewModel.IsPlaying);
+            _controlsBox.SyncPlayPauseIcon(_viewModel?.IsPlaying ?? false);
     }
 
     // ── PipService event handlers ──
@@ -169,8 +172,9 @@ public sealed class PipWindowManager : IDisposable
 
     private void OnPipClosed(object? sender, EventArgs e)
     {
-        _headerBar.SetPipChecked(false);
-        _mpvVideoView.DisplayEnabled = true;
+        _headerBar?.SetPipChecked(false);
+        if (_mpvVideoView != null)
+            _mpvVideoView.DisplayEnabled = true;
     }
 
     public void Dispose()
@@ -181,5 +185,6 @@ public sealed class PipWindowManager : IDisposable
         _pipService.SeekRequested -= OnPipSeekRequested;
         _pipService.MuteToggled -= OnPipMuteToggled;
         _pipService.PipClosed -= OnPipClosed;
+        _pipService.Dispose();
     }
 }
