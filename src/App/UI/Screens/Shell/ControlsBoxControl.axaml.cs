@@ -38,7 +38,11 @@ public partial class ControlsBoxControl : AvaloniaUserControl
             Directory.CreateDirectory(dir);
             File.AppendAllText(Path.Combine(dir, "cine_playpause.log"), $"[{DateTime.Now:HH:mm:ss.fff}] {msg}{Environment.NewLine}");
         }
-        catch { }
+        catch (Exception ex)
+        {
+            global::Cine.Core.Log.ForContext<ControlsBoxControl>()
+                .Warning("State comparison failed: {Error}", ex.Message);
+        }
     }
 
     public SeekBarControl SeekBarControl => SeekBar;
@@ -188,7 +192,7 @@ public partial class ControlsBoxControl : AvaloniaUserControl
 
     public void UpdateResponsiveLayout(double width, bool hasMultipleVideoTracks)
     {
-        bool isNarrow = width < 495;
+        bool isNarrow = width < UiConstants.BreakpointNarrow;
         if (isNarrow)
         {
             SetVis(BtnVideoMenu, false);

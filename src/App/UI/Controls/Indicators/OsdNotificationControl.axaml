@@ -7,7 +7,7 @@
             HorizontalAlignment="Center"
             VerticalAlignment="Bottom"
             Padding="16,10,16,10"
-            CornerRadius="20"
+            CornerRadius="{StaticResource radius-full}"
             Background="{StaticResource OsdBackground}">
         <Border.RenderTransform>
             <TranslateTransform X="0" Y="20" />

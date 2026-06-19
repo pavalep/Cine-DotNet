@@ -8,11 +8,11 @@
   <Border Background="{DynamicResource PopoverBackground}"
           BorderBrush="{DynamicResource PopoverBorder}"
           BorderThickness="1"
-          CornerRadius="8"
-          Padding="8"
-          MinWidth="260"
-          MaxWidth="300">
-    <StackPanel Spacing="8">
+          Padding="{StaticResource space-2}"
+          MinWidth="{StaticResource size-dialog-min-width-flyout}"
+          MaxWidth="{StaticResource size-flyout-subtitle-max}"
+          CornerRadius="{StaticResource radius-sm}">
+    <StackPanel Spacing="{StaticResource space-spacing-2}">
       <!-- ════════ Header ════════ -->
       <Grid ColumnDefinitions="*,Auto">
         <TextBlock Text="Subtitle Settings"
@@ -23,8 +23,8 @@
         <Button x:Name="CloseBtn"
                 Grid.Column="1"
                 Content="✕"
-                Width="24" Height="24"
-                CornerRadius="12"
+                Width="{StaticResource size-button-flat}" Height="{StaticResource size-button-flat}"
+                CornerRadius="{StaticResource radius-full}"
                 Background="Transparent"
                 BorderThickness="0"
                 Foreground="{DynamicResource OsdForeground}"
@@ -47,7 +47,7 @@
       </Grid>
 
       <!-- ════════ Track Selection ════════ -->
-      <StackPanel Spacing="2">
+      <StackPanel Spacing="{StaticResource space-spacing-0_5}">
         <TextBlock Text="Track"
                    FontSize="10"
                    FontWeight="SemiBold"
@@ -76,7 +76,7 @@
       </StackPanel>
 
       <!-- ════════ Font Size ════════ -->
-      <StackPanel Spacing="2">
+      <StackPanel Spacing="{StaticResource space-spacing-0_5}">
         <Grid ColumnDefinitions="*,Auto">
           <TextBlock Text="Font Size"
                      FontSize="10"
@@ -99,7 +99,7 @@
       </StackPanel>
 
       <!-- ════════ Position ════════ -->
-      <StackPanel Spacing="2">
+      <StackPanel Spacing="{StaticResource space-spacing-0_5}">
         <Grid ColumnDefinitions="*,Auto">
           <TextBlock Text="Position"
                      FontSize="10"
@@ -121,7 +121,7 @@
       </StackPanel>
 
       <!-- ════════ Delay ════════ -->
-      <StackPanel Spacing="2">
+      <StackPanel Spacing="{StaticResource space-spacing-0_5}">
         <Grid ColumnDefinitions="*,Auto">
           <TextBlock Text="Delay"
                      FontSize="10"
@@ -180,7 +180,7 @@
       </StackPanel>
 
       <!-- ════════ Font Family ════════ -->
-      <StackPanel Spacing="2">
+      <StackPanel Spacing="{StaticResource space-spacing-0_5}">
         <TextBlock Text="Font"
                    FontSize="10"
                    FontWeight="SemiBold"
@@ -196,7 +196,7 @@
       </StackPanel>
 
       <!-- ════════ Border Size ════════ -->
-      <StackPanel Spacing="2">
+      <StackPanel Spacing="{StaticResource space-spacing-0_5}">
         <Grid ColumnDefinitions="*,Auto">
           <TextBlock Text="Border"
                      FontSize="10"
@@ -219,7 +219,7 @@
       </StackPanel>
 
       <!-- ════════ Shadow Offset ════════ -->
-      <StackPanel Spacing="2">
+      <StackPanel Spacing="{StaticResource space-spacing-0_5}">
         <Grid ColumnDefinitions="*,Auto">
           <TextBlock Text="Shadow"
                      FontSize="10"
@@ -242,7 +242,7 @@
       </StackPanel>
 
       <!-- ════════ Color ════════ -->
-      <StackPanel Spacing="2">
+      <StackPanel Spacing="{StaticResource space-spacing-0_5}">
         <Grid ColumnDefinitions="*,Auto">
           <TextBlock Text="Color"
                      FontSize="10"

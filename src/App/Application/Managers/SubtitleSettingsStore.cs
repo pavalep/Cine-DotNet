@@ -77,7 +77,8 @@ public sealed class SubtitleSettingsStore
         catch (Exception ex) when (ex is IOException or JsonException)
         {
             // Corrupted — regenerate
-            try { File.Delete(DefaultsPath); } catch { }
+            try { File.Delete(DefaultsPath); }
+            catch (Exception innerEx) { global::Cine.Core.Log.ForContext<SubtitleSettingsStore>().Error(innerEx, "Failed to delete corrupted defaults"); }
         }
 
         SaveDefaults(BuiltInDefaults);
@@ -131,7 +132,8 @@ public sealed class SubtitleSettingsStore
         catch (Exception ex) when (ex is IOException or JsonException)
         {
             // Corrupted — delete and return null
-            try { File.Delete(PerFilePath(ComputeHash(filePath))); } catch { }
+            try { File.Delete(PerFilePath(ComputeHash(filePath))); }
+            catch (Exception innerEx) { global::Cine.Core.Log.ForContext<SubtitleSettingsStore>().Error(innerEx, "Failed to delete corrupted per-file settings"); }
             return null;
         }
     }
@@ -168,6 +170,9 @@ public sealed class SubtitleSettingsStore
             var path = PerFilePath(ComputeHash(filePath));
             if (File.Exists(path)) File.Delete(path);
         }
-        catch { }
+        catch (Exception ex)
+        {
+            global::Cine.Core.Log.ForContext<SubtitleSettingsStore>().Error(ex, "DeletePerFile failed");
+        }
     }
 }

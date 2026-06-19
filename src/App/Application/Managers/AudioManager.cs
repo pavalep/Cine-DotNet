@@ -9,6 +9,7 @@ using Cine.Media.Events;
 using Cine.Media.Interfaces;
 using Cine.Media.Models;
 using Cine.Avalonia.Models;
+using Cine.Avalonia.Services;
 
 namespace Cine.Avalonia.Managers;
 
@@ -19,7 +20,7 @@ namespace Cine.Avalonia.Managers;
 /// Subscribes to IMediaPlayer events once and exposes unified properties + events.
 /// All UI code reads from / subscribes to this manager.
 /// </summary>
-public sealed class AudioManager : INotifyPropertyChanged, IDisposable
+public sealed class AudioManager : IAudioManager
 {
     private readonly IMediaPlayer _player;
     private bool _disposed;
@@ -51,6 +52,17 @@ public sealed class AudioManager : INotifyPropertyChanged, IDisposable
     private System.Threading.Timer? _debounceTimer;
     private bool _dirty;
 
+    // ── Lazy constructed track menu — only created when first accessed ──
+    private Lazy<ObservableCollection<TrackMenuItem>> _audioTracks = new(() =>
+    {
+        var col = new ObservableCollection<TrackMenuItem>
+        {
+            new("Add Audio Track…", TrackType.Audio, -1, _ => { }),
+            new("None", TrackType.Audio, -2, _ => { }),
+        };
+        return col;
+    });
+
     public AudioManager(IMediaPlayer player)
     {
         _player = player ?? throw new ArgumentNullException(nameof(player));
@@ -64,7 +76,7 @@ public sealed class AudioManager : INotifyPropertyChanged, IDisposable
         _player.VolumeChanged += OnPlayerVolumeChanged;
         _player.TrackListChanged += OnPlayerTrackListChanged;
 
-        BuildEmptyTrackMenus();
+        // Note: track menus are lazily created on first access.
     }
 
     // ── Observable Properties ──
@@ -203,7 +215,11 @@ public sealed class AudioManager : INotifyPropertyChanged, IDisposable
             if (filters.Count > 0)
                 _player.Command("set", "af", string.Join(",", filters));
         }
-        catch { /* player not ready */ }
+        catch (Exception ex)
+        {
+            global::Cine.Core.Log.ForContext<AudioManager>()
+                .Debug("Failed to apply EQ — player not ready: {Error}", ex.Message);
+        }
     }
 
     private static double[] GetPreset(string name) => name switch
@@ -238,7 +254,7 @@ public sealed class AudioManager : INotifyPropertyChanged, IDisposable
 
     #region Audio Tracks
 
-    public ObservableCollection<TrackMenuItem> AudioTracks { get; } = new();
+    public ObservableCollection<TrackMenuItem> AudioTracks => _audioTracks.Value;
 
     /// <summary>True if the current media has at least one audio track.</summary>
     public bool IsAudioEnabled => AudioTracks.Any(t => t.IsSelected && !t.IsPseudoEntry);
@@ -256,12 +272,6 @@ public sealed class AudioManager : INotifyPropertyChanged, IDisposable
     public void SetPendingTrackId(int trackId)
     {
         _pendingAudioTrackId = trackId;
-    }
-
-    private void BuildEmptyTrackMenus()
-    {
-        AudioTracks.Add(new TrackMenuItem("Add Audio Track…", TrackType.Audio, -1, OnSelectAudio));
-        AudioTracks.Add(new TrackMenuItem("None", TrackType.Audio, -2, OnSelectAudio));
     }
 
     private void OnSelectAudio(TrackMenuItem item)
@@ -300,7 +310,12 @@ public sealed class AudioManager : INotifyPropertyChanged, IDisposable
             if (!string.IsNullOrWhiteSpace(path))
                 _player.AddAudio(path);
         }
-        catch { /* user cancelled or error */ }
+        catch (Exception ex)
+        {
+            // User cancelled the file dialog or an error occurred
+            global::Cine.Core.Log.ForContext<AudioManager>()
+                .Info("Add audio dialog: {Message}", ex.Message);
+        }
     }
 
     /// <summary>
@@ -441,7 +456,11 @@ public sealed class AudioManager : INotifyPropertyChanged, IDisposable
             if (_dirty)
             {
                 try { SaveSettings(); }
-                catch { /* best-effort */ }
+                catch (Exception ex)
+                {
+                    global::Cine.Core.Log.ForContext<AudioManager>()
+                        .Warning("Debounce save failed: {Error}", ex.Message);
+                }
             }
         }, null, 2000, Timeout.Infinite);
     }
@@ -533,7 +552,11 @@ public sealed class AudioManager : INotifyPropertyChanged, IDisposable
             if (!string.IsNullOrWhiteSpace(_currentMediaPath))
                 SavePerFileSettings();
         }
-        catch { /* best-effort */ }
+        catch (Exception ex)
+        {
+            global::Cine.Core.Log.ForContext<AudioManager>()
+                .Warning("Dispose save failed: {Error}", ex.Message);
+        }
 
         _debounceTimer?.Dispose();
         _debounceTimer = null;

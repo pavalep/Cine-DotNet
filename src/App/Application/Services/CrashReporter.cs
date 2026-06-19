@@ -18,7 +18,8 @@ public static class CrashReporter
         CrashDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Cine", "crash");
-        try { Directory.CreateDirectory(CrashDir); } catch { }
+        try { Directory.CreateDirectory(CrashDir); }
+        catch { /* best-effort — crash dir creation can fail in low-disk scenarios */ }
     }
 
     /// <summary>
@@ -77,7 +78,10 @@ public static class CrashReporter
             if (ex != null) sw.WriteLine($"  Exception: {ex.Message}");
             sw.Flush();
         }
-        catch { }
+        catch
+        {
+            /* best-effort — this IS the crash writer, can't log downstream */
+        }
     }
 
     /// <summary>
@@ -94,7 +98,8 @@ public static class CrashReporter
         TaskScheduler.UnobservedTaskException += (_, e) =>
         {
             Dump(e.Exception, "TaskScheduler.UnobservedTaskException");
-            try { e.SetObserved(); } catch { }
+            try { e.SetObserved(); }
+            catch { /* SetObserved throws if already observed — safe to ignore */ }
         };
     }
 
@@ -109,6 +114,6 @@ public static class CrashReporter
             for (int i = 0; i < files.Length - maxFiles; i++)
                 files[i].Delete();
         }
-        catch { }
+        catch { /* best-effort cleanup — not critical */ }
     }
 }

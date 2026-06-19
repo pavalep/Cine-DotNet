@@ -201,36 +201,36 @@
             </Grid>
         </Border>
 
-        <!-- Resize handles -->
-        <Border Classes="pip-resize-edge"
+        <!-- Resize handles (ZIndex ensures they stay on top of pip-container) -->
+        <Border Background="Transparent" IsHitTestVisible="True" ZIndex="100"
                 HorizontalAlignment="Stretch" VerticalAlignment="Top"
                 Height="8" Cursor="SizeNorthSouth"
                 PointerPressed="OnTopEdgePointerPressed" />
-        <Border Classes="pip-resize-edge"
+        <Border Background="Transparent" IsHitTestVisible="True" ZIndex="100"
                 HorizontalAlignment="Stretch" VerticalAlignment="Bottom"
                 Height="8" Cursor="SizeNorthSouth"
                 PointerPressed="OnBottomEdgePointerPressed" />
-        <Border Classes="pip-resize-edge"
+        <Border Background="Transparent" IsHitTestVisible="True" ZIndex="100"
                 HorizontalAlignment="Left" VerticalAlignment="Stretch"
                 Width="8" Cursor="SizeWestEast"
                 PointerPressed="OnLeftEdgePointerPressed" />
-        <Border Classes="pip-resize-edge"
+        <Border Background="Transparent" IsHitTestVisible="True" ZIndex="100"
                 HorizontalAlignment="Right" VerticalAlignment="Stretch"
                 Width="8" Cursor="SizeWestEast"
                 PointerPressed="OnRightEdgePointerPressed" />
-        <Border Classes="pip-resize-edge"
+        <Border Background="Transparent" IsHitTestVisible="True" ZIndex="101"
                 HorizontalAlignment="Left" VerticalAlignment="Top"
                 Width="14" Height="14" Cursor="TopLeftCorner"
                 PointerPressed="OnTopLeftCornerPointerPressed" />
-        <Border Classes="pip-resize-edge"
+        <Border Background="Transparent" IsHitTestVisible="True" ZIndex="101"
                 HorizontalAlignment="Right" VerticalAlignment="Top"
                 Width="14" Height="14" Cursor="TopRightCorner"
                 PointerPressed="OnTopRightCornerPointerPressed" />
-        <Border Classes="pip-resize-edge"
+        <Border Background="Transparent" IsHitTestVisible="True" ZIndex="101"
                 HorizontalAlignment="Left" VerticalAlignment="Bottom"
                 Width="14" Height="14" Cursor="BottomLeftCorner"
                 PointerPressed="OnBottomLeftCornerPointerPressed" />
-        <Border Classes="pip-resize-edge"
+        <Border Background="Transparent" IsHitTestVisible="True" ZIndex="101"
                 HorizontalAlignment="Right" VerticalAlignment="Bottom"
                 Width="14" Height="14" Cursor="BottomRightCorner"
                 PointerPressed="OnBottomRightCornerPointerPressed" />

@@ -22,21 +22,24 @@ public class FileLogger : ILogger, IDisposable
         _logDir = logDir ?? Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Cine", "logs");
-        Directory.CreateDirectory(_logDir);
 
-        _logFile = Path.Combine(_logDir, $"{name}_{DateTime.Now:yyyy-MM-dd}.log");
-
+        string logFile = "";
+        StreamWriter? writer = null;
         try
         {
-            _writer = new StreamWriter(_logFile, append: true, Encoding.UTF8)
+            Directory.CreateDirectory(_logDir);
+            logFile = Path.Combine(_logDir, $"{name}_{DateTime.Now:yyyy-MM-dd}.log");
+            writer = new StreamWriter(logFile, append: true, Encoding.UTF8)
             {
                 AutoFlush = false // Batch writes for performance
             };
         }
         catch
         {
-            // Can't log - no file system access; fallback silent
+            // File system unavailable (e.g. sandbox, permissions) — log to Debug/Trace only
         }
+        _logFile = logFile;
+        _writer = writer;
     }
 
     public void Trace(string message, params object?[] args) => Write("TRACE", null, message, args);
@@ -58,7 +61,20 @@ public class FileLogger : ILogger, IDisposable
     private void Write(string level, Exception? ex, string message, object?[] args)
     {
         var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-        var formatted = args.Length > 0 ? string.Format(message, args) : message;
+        var formatted = message;
+        if (args.Length > 0)
+        {
+            try
+            {
+                formatted = string.Format(message, args);
+            }
+            catch (FormatException)
+            {
+                // Message uses named placeholders (e.g. Serilog-style {Path})
+                // that string.Format can't handle — fall back to raw message + args
+                formatted = message + " " + string.Join(", ", args);
+            }
+        }
 
         // Build context string
         string ctx = "";
@@ -72,13 +88,20 @@ public class FileLogger : ILogger, IDisposable
         // Always write to Debug output
         System.Diagnostics.Debug.WriteLine(line);
 
-        // Write to file
+        // Write to file (resilient to sandbox / permissions restrictions)
         if (_writer != null)
         {
-            lock (_lock)
+            try
             {
-                _writer.WriteLine(line);
-                _writer.Flush(); // Ensure log is written immediately for crash safety
+                lock (_lock)
+                {
+                    _writer.WriteLine(line);
+                    _writer.Flush();
+                }
+            }
+            catch
+            {
+                // File system unavailable — log to Debug/Trace only
             }
         }
 

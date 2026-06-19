@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>Cine.Benchmarks</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
+    <PackageReference Include="NSubstitute" Version="5.3.0" />
+  </ItemGroup>
+
+  <!--
+    Use direct DLL references instead of ProjectReference because BenchmarkDotNet
+    generates an auto-project targeting "net10.0" (without "-windows") which can't
+    resolve ProjectReferences that target net10.0-windows.
+  -->
+  <ItemGroup>
+    <Reference Include="App" HintPath="..\..\src\App\bin\$(Configuration)\net10.0-windows\App.dll" />
+    <Reference Include="Core" HintPath="..\..\src\Core\bin\$(Configuration)\net10.0\Core.dll" />
+    <Reference Include="Media" HintPath="..\..\src\Media\bin\$(Configuration)\net10.0-windows\Media.dll" />
+  </ItemGroup>
+
+</Project>

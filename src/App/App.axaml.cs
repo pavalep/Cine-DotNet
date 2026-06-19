@@ -21,7 +21,6 @@ public class App : global::Avalonia.Application
 {
     private IServiceProvider? _serviceProvider;
 
-    #region debug-point A:runtime-reporter
     private static readonly HttpClient DebugHttpClient = new();
     private static readonly object DebugEnvLock = new();
     private static string? _debugServerUrl;
@@ -98,7 +97,6 @@ public class App : global::Avalonia.Application
         yield return AppContext.BaseDirectory;
         yield return Environment.CurrentDirectory;
     }
-    #endregion
 
     private static void Log(string msg)
     {

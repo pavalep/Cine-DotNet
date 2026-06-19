@@ -51,7 +51,7 @@ namespace Cine.Media.Implementations;
 
 internal sealed class MfHelper : IDisposable
 {
-    #region debug-point V0:runtime-reporter
+    #region V0:runtime-reporter
     private static readonly HttpClient DebugHttpClient = new();
     private static readonly object DebugEnvLock = new();
     private static string? _debugServerUrl;
@@ -137,7 +137,7 @@ internal sealed class MfHelper : IDisposable
     }
     #endregion
 
-    #region debug-point V0:propvariant
+    #region V0:propvariant
     [StructLayout(LayoutKind.Sequential)]
     private struct PropVariant
     {

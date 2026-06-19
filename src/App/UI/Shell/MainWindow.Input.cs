@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -12,8 +14,13 @@ using KeyEventArgs = Avalonia.Input.KeyEventArgs;
 using PointerWheelEventArgs = Avalonia.Input.PointerWheelEventArgs;
 using PointerPressedEventArgs = Avalonia.Input.PointerPressedEventArgs;
 using RoutedEventArgs = Avalonia.Interactivity.RoutedEventArgs;
+using Cine.Avalonia.Controls;
 using Cine.Avalonia.Views.Dialogs;
 using MaterialIcon = global::Material.Icons.Avalonia.MaterialIcon;
+using App = global::Avalonia.Application;
+using SizeChangedEventArgs = Avalonia.Controls.SizeChangedEventArgs;
+using DragEventArgs = Avalonia.Input.DragEventArgs;
+using DragDropEffects = Avalonia.Input.DragDropEffects;
 
 namespace Cine.Avalonia;
 
@@ -27,7 +34,7 @@ public partial class MainWindow
 
         // When PIP is active, only block keys that would conflict with PIP controls.
         // Allow Escape and Ctrl+Shift+P so user can close or toggle PIP via keyboard.
-        if (_pipService is { IsActive: true } &&
+        if (_pipWindowManager is { IsActive: true } &&
             key != Key.Escape && !(ctrl && shift && key == Key.P))
         {
             e.Handled = true;
@@ -285,5 +292,115 @@ public partial class MainWindow
             ShowVideoContextMenu();
             e.Handled = true;
         }
+    }
+
+    // ─────────────────────────────────────────────────────
+    //  Drag & Drop (merged from MainWindow.DragDrop.cs)
+    // ─────────────────────────────────────────────────────
+
+    private void OnWindowDragEnter(object? sender, DragEventArgs e)
+    {
+        if (e.DataTransfer != null && e.DataTransfer.Contains(DataFormat.File))
+        {
+            e.DragEffects = DragDropEffects.Copy;
+
+            var sp = this.FindControl<StartPage>("StartPage");
+            if (sp != null && sp.IsVisible)
+            {
+                var dt = sp.FindControl<Border>("DropTarget");
+                if (dt != null)
+                {
+                    dt.BorderBrush = AppColors.DragAccent;
+                    dt.Background = AppColors.DragAccentDim;
+                }
+            }
+
+            _ = _dropIndicator.Show();
+        }
+        else
+        {
+            e.DragEffects = DragDropEffects.None;
+        }
+    }
+
+    private void OnWindowDragLeave(object? sender, RoutedEventArgs e)
+    {
+        ResetStartPageDragVisuals();
+        _ = _dropIndicator.Hide();
+    }
+
+    private void OnWindowDrop(object? sender, DragEventArgs e)
+    {
+        ResetStartPageDragVisuals();
+
+        if (_dropIndicator.IsShowing)
+            _ = _dropIndicator.Hide();
+
+        if (e.DataTransfer != null && e.DataTransfer.Contains(DataFormat.File))
+        {
+            var files = e.DataTransfer.TryGetFiles();
+            if (files != null)
+            {
+                var paths = files.Select(f => f.Path.LocalPath).ToArray();
+                var videoFiles = global::Cine.Avalonia.Controls.StartPage.FilterVideoFiles(paths).ToList();
+                var subtitleFiles = paths.Where(f =>
+                    f.EndsWith(".srt", StringComparison.OrdinalIgnoreCase) ||
+                    f.EndsWith(".ass", StringComparison.OrdinalIgnoreCase) ||
+                    f.EndsWith(".vtt", StringComparison.OrdinalIgnoreCase)).ToList();
+
+                if (videoFiles.Any())
+                    _viewModel?.OpenFiles(videoFiles.ToArray());
+
+                if (subtitleFiles.Any() && _viewModel != null && !string.IsNullOrEmpty(_viewModel.FilePath))
+                {
+                    foreach (var subFile in subtitleFiles)
+                        _playerService?.Player?.AddSubtitle(subFile);
+                }
+            }
+        }
+    }
+
+    private void ResetStartPageDragVisuals()
+    {
+        var sp = this.FindControl<StartPage>("StartPage");
+        if (sp == null) return;
+        var dt = sp.FindControl<Border>("DropTarget");
+        if (dt != null)
+        {
+            dt.BorderBrush = AppColors.BorderLight;
+            dt.Background = AppColors.BorderDim;
+        }
+    }
+
+    // ─────────────────────────────────────────────────────
+    //  Responsive Layout (merged from MainWindow.ResponsiveLayout.cs)
+    // ─────────────────────────────────────────────────────
+
+    private void InitializeResponsiveLayout()
+    {
+        this.SizeChanged += OnWindowSizeChanged;
+        _controlsBox.UpdateResponsiveLayout(Bounds.Width, _viewModel?.HasMultipleVideoTracks ?? false);
+        _headerBar.UpdateResponsiveLayout(Bounds.Width);
+        UpdateSubtitleAudioOverlayVisibility(Bounds.Width);
+    }
+
+    private void OnWindowSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        _controlsBox.UpdateResponsiveLayout(e.NewSize.Width, _viewModel?.HasMultipleVideoTracks ?? false);
+        _headerBar.UpdateResponsiveLayout(e.NewSize.Width);
+        UpdateSubtitleAudioOverlayVisibility(e.NewSize.Width);
+    }
+
+    /// <summary>
+    /// Shows/hides the standalone subtitle and audio selector overlay buttons
+    /// based on window width, matching the ControlsBox responsive behavior.
+    /// </summary>
+    private void UpdateSubtitleAudioOverlayVisibility(double width)
+    {
+        bool isNarrow = width < 495;
+        if (_controlsBox?.SubtitleOverlayCtrl != null)
+            _controlsBox.SubtitleOverlayCtrl.IsVisible = !isNarrow;
+        if (_controlsBox?.AudioTrackSelectorCtrl != null)
+            _controlsBox.AudioTrackSelectorCtrl.IsVisible = !isNarrow;
     }
 }

@@ -1,0 +1,22 @@
+name: Performance Benchmarks
+
+on:
+  workflow_dispatch: # Manual trigger only
+  schedule:
+    - cron: '0 0 1 * *' # Monthly on 1st
+
+jobs:
+  benchmark:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build benchmarks
+        run: dotnet run --project tests\Cine.Benchmarks\Cine.Benchmarks.csproj -c Release

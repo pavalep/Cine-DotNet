@@ -83,7 +83,8 @@ public sealed class AudioSettingsStore
         }
         catch (Exception ex) when (ex is IOException or JsonException)
         {
-            try { File.Delete(_storePath); } catch { }
+            try { File.Delete(_storePath); }
+            catch (Exception innerEx) { global::Cine.Core.Log.ForContext<AudioSettingsStore>().Error(innerEx, "Failed to delete corrupted audio settings"); }
         }
         return new CompoundStore();
     }
@@ -169,7 +170,10 @@ public sealed class AudioSettingsStore
             perFile.Remove(hash);
             SaveCompound(compound with { PerFile = perFile });
         }
-        catch { }
+        catch (Exception ex)
+        {
+            global::Cine.Core.Log.ForContext<AudioSettingsStore>().Error(ex, "DeletePerFile failed");
+        }
     }
 
     /// <summary>Remove ALL per-file entries (used by Reset to Default).</summary>
@@ -180,6 +184,9 @@ public sealed class AudioSettingsStore
             var compound = LoadCompound();
             SaveCompound(compound with { PerFile = null });
         }
-        catch { }
+        catch (Exception ex)
+        {
+            global::Cine.Core.Log.ForContext<AudioSettingsStore>().Error(ex, "ClearAllPerFile failed");
+        }
     }
 }

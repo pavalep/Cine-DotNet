@@ -19,6 +19,8 @@ using Cine.Avalonia.ViewModels;
 using Cine.Core;
 using Cine.Media.Interfaces;
 using Cine.Media.Implementations;
+using Cine.Media.Events;
+using Cine.Media.Models;
 using App = global::Avalonia.Application;
 using Control = Avalonia.Controls.Control;
 using SizeChangedEventArgs = Avalonia.Controls.SizeChangedEventArgs;
@@ -60,8 +62,8 @@ public partial class MainWindow
     private const double NarrowBreakpoint = 600.0;
     private const double MediumBreakpoint = 1024.0;
 
-    // PIP / compact mini-player mode
-    private PipService? _pipService;
+    // PIP / compact mini-player mode — encapsulated in PipWindowManager
+    private PipWindowManager? _pipWindowManager;
 
     // Session save
     private DispatcherTimer? _sessionSaveTimer;
@@ -79,7 +81,6 @@ public partial class MainWindow
     private DragDropOverlayControl _dropIndicator = null!;
     private OsdNotificationControl _osdNotification = null!;
 
-    #region debug-log
     private static readonly string DebugLogFile = CreateLogFilePath();
 
     private static string CreateLogFilePath()
@@ -104,9 +105,7 @@ public partial class MainWindow
             File.AppendAllText(DebugLogFile, $"[{DateTime.Now:HH:mm:ss.fff}] [MainWindow] {message}{Environment.NewLine}")
         );
     }
-    #endregion
 
-    #region debug-point B:startup-visual-state
     private void ReportWindowState(string location, string hypothesisId = "B")
     {
         try
@@ -129,7 +128,6 @@ public partial class MainWindow
         }
         catch (Exception ex) { Log.ForContext<MainWindow>().Error(ex, "DumpState failed"); }
     }
-    #endregion
 
     public static void TrySetIcon(Material.Icons.Avalonia.MaterialIcon icon, string resourceKey)
     {
@@ -180,6 +178,7 @@ public partial class MainWindow
         catch (Exception ex)
         {
             DebugLog($"Player initialization FAILED: {ex}");
+            Log.ForContext<MainWindow>().Error(ex, "Player initialization failed");
             _isDisposed = true;
             _ = Dispatcher.UIThread.OnUiThreadAsync(async () =>
             {
@@ -208,7 +207,7 @@ public partial class MainWindow
         _videoManager = new VideoManager(player);
         _subtitleManager = new SubtitleManager(player);
 
-        _viewModel = new MainViewModel(player, _audioManager, _videoManager, _subtitleManager);
+        _viewModel = new MainViewModel(player, null, null, _audioManager, _videoManager, _subtitleManager);
         DataContext = _viewModel;
 
         _viewModel.SessionResumeRequested = (path, pos) =>
@@ -396,16 +395,19 @@ public partial class MainWindow
         InitializeSessionSave();
         InitializeResponsiveLayout();
 
-        // Initialize PIP service — shares frames from the main MpvVideoView
-        _pipService = new PipService(MpvVideoView);
+        // Initialize PIP manager — owns PipService + bridges events to UI
+        _pipWindowManager = new PipWindowManager(
+            new PipService(MpvVideoView),
+            _viewModel!,
+            _headerBar,
+            _controlsBox,
+            MpvVideoView,
+            _playerService!,
+            msg => ShowOsdNotification(msg));
 
-        // Wire PIP player controls
+        // Wire header toggle buttons → OnPipToggled → PipWindowManager
         _headerBar.PipToggled += OnPipToggled;
         _fullscreenHeader.PipToggled += OnPipToggled;
-        _pipService.PlayPauseRequested += OnPipPlayPauseRequested;
-        _pipService.SeekRequested += OnPipSeekRequested;
-        _pipService.MuteToggled += OnPipMuteToggled;
-        _pipService.PipClosed += OnPipClosed;
 
         AddHandler(global::Avalonia.Input.DragDrop.DragEnterEvent, OnWindowDragEnter);
         AddHandler(global::Avalonia.Input.DragDrop.DragLeaveEvent, OnWindowDragLeave);
@@ -466,7 +468,10 @@ public partial class MainWindow
             _headerBar.HeaderBar.IsHitTestVisible = !isFullscreen;
         }
 
-        // P5.1: Resume session only if no command-line file was queued
+        // P5.1a: Restore playlist items (does not open any file — purely UI)
+        _viewModel?.LoadPlaylist();
+
+        // P5.1b: Resume session only if no command-line file was queued
         if (string.IsNullOrEmpty(_queuedOpenPath))
             _viewModel?.LoadSession();
 
@@ -574,7 +579,7 @@ public partial class MainWindow
         _viewModel?.SaveSession();
         MpvVideoView.Shutdown();
         _playerService?.Dispose();
-        _pipService?.Dispose();
+        _pipWindowManager?.Dispose();
         base.OnClosed(e);
     }
 
@@ -738,5 +743,226 @@ public partial class MainWindow
     private struct RECT
     {
         public int left, top, right, bottom;
+    }
+
+    // ─────────────────────────────────────────────────────
+    //  File Dialog Delegates (merged from FileDialogs.cs)
+    // ─────────────────────────────────────────────────────
+
+    /// <summary>All file-dialog operations are delegated to FileDialogHandler
+    /// so the Avalonia #21433 workaround (Task.Delay) is applied in one place.</summary>
+    private FileDialogHandler? _dialogHandler;
+
+    private Task<string[]?> OpenFileDialogAsync() =>
+        _dialogHandler!.OpenFilesAsync()!;
+
+    private Task<string?> OpenFolderDialogAsync() =>
+        _dialogHandler!.OpenFolderAsync()!;
+
+    private Task<string[]?> OpenAddFilesDialogAsync() =>
+        _dialogHandler!.AddFilesAsync()!;
+
+    private Task<string?> OpenSubtitleDialogAsync() =>
+        _dialogHandler!.OpenSubtitleAsync()!;
+
+    private Task<string?> OpenAudioDialogAsync() =>
+        _dialogHandler!.OpenAudioAsync()!;
+
+    // ─────────────────────────────────────────────────────
+    //  Media Event Handlers (merged from MainWindow.Media.cs)
+    // ─────────────────────────────────────────────────────
+
+    private TimeSpan _lastPositionTextTime = TimeSpan.Zero;
+    private TimeSpan _lastReportedDuration = TimeSpan.Zero;
+
+    private void OnMediaOpened(object? sender, EventArgs e)
+    {
+        ErrorBoundary.Run(async () =>
+        {
+            await Dispatcher.UIThread.OnUiThreadAsync(() =>
+            {
+            _viewModel?.RefreshState();
+            _isLoading = false;
+            _spinnerOverlay.Stop();
+
+            // Clear replay mode when new media opens
+            _controlsBox.SetReplayMode(false);
+            _replayOverlay.Hide();
+
+            // Hide start page
+            if (StartPage != null)
+            {
+                StartPage.Opacity = 0;
+                // Don't hide immediately — let fade transition complete
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(350);
+                    await Dispatcher.UIThread.OnUiThreadAsync(() =>
+                    {
+                        if (StartPage != null) StartPage.IsVisible = false;
+                        // Keep PlaybackBackground visible during start page fade,
+                        // then hide after fade completes so there's never a flash of
+                        // the raw window background between layers.
+                        PlaybackBackground.IsVisible = false;
+                    });
+                });
+            }
+            // If no start page (already hidden), hide playback background immediately
+            if (StartPage == null || !StartPage.IsVisible)
+                PlaybackBackground.IsVisible = false;
+
+            if (_dropIndicator.IsShowing)
+                _ = _dropIndicator.Hide();
+
+            // Video is displayed via the OpenGL render API (ANGLE + pixel readback
+            // to VideoFrameImage). No child HWND or video host needed.
+
+            // Delay controls appearance to avoid overlap with fading start page.
+            // ShowUiControls calls InvalidateMeasure() to ensure correct height.
+            _ = Dispatcher.UIThread.OnUiThreadAsync(async () =>
+            {
+                await Task.Delay(250);
+                ShowUiControls();
+            });
+            _headerBar.ShowOpenMenu();
+
+            if (_viewModel != null)
+            {
+                _lastDuration = _viewModel.Duration;
+                var d = _lastDuration;
+                var seekBar = _controlsBox.SeekBarControl;
+                if (d.TotalSeconds > 0)
+                {
+                    seekBar.SetDurationText(SeekBarControl.FormatTimeSpan(d));
+                    seekBar.SetPositionText(SeekBarControl.FormatTimeSpan(_viewModel.Position));
+                }
+            }
+            // Always sync icon from the manager after media opens — this is the
+            // authoritative source that's guaranteed to reflect the player's real state.
+            _stateManager?.Refresh();
+            if (_stateManager != null)
+                _controlsBox.SyncPlayPauseIcon(_stateManager.IsPlaying);
+            _autoHideTimer?.Stop();
+            _autoHideTimer?.Start();
+        });
+        });
+    }
+
+    /// <summary>
+    /// Called from PlaybackStateManager.StateChanged — the SINGLE authoritative
+    /// handler for play/pause/stop transitions. All icon updates and PIP sync
+    /// flow through here, eliminating desync from competing state sources.
+    /// </summary>
+    private void OnManagerStateChanged(object? sender, PlaybackStateChangedEventArgs e)
+    {
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.OnUiThread(() => OnManagerStateChanged(sender, e));
+            return;
+        }
+
+        DebugLog($"OnManagerStateChanged: e.State={e.State}");
+
+        _controlsBox.SyncPlayPauseIcon(e.State == PlaybackState.Playing);
+
+        SyncPipPlayState(e.State);
+        bool isEnded = e.State == PlaybackState.Stopped && _viewModel?.FilePath != null;
+        SyncPipReplayMode(isEnded);
+    }
+
+    private void OnPlaybackStateChanged(object? sender, PlaybackStateChangedEventArgs e)
+    {
+        Dispatcher.UIThread.OnUiThread(() =>
+        {
+            DebugLog($"OnPlaybackStateChanged: e.State={e.State} e.IsPaused={e.IsPaused}");
+
+            if (!e.IsPaused && e.State == PlaybackState.Playing)
+            {
+                _controlsBox.SetReplayMode(false);
+            }
+
+            if (e.IsPaused)
+                _pauseOverlay.Show();
+            else
+                _pauseOverlay.Hide();
+
+            bool isEnded = e.State == PlaybackState.Stopped && _viewModel?.FilePath != null;
+            if (isEnded)
+            {
+                _replayOverlay.Show();
+            }
+        });
+    }
+
+    private void OnMediaEnded(object? sender, EventArgs e)
+    {
+        Dispatcher.UIThread.OnUiThread(() =>
+        {
+            _replayOverlay.Show();
+            _controlsBox.SetReplayMode(true);
+            SyncPipReplayMode(true);
+        });
+    }
+
+    private void OnPositionChanged(object? sender, PositionChangedEventArgs e)
+    {
+        Dispatcher.UIThread.OnUiThread(() =>
+        {
+            _lastPosition = e.Position;
+            _lastDuration = e.Duration;
+
+            var seekBar = _controlsBox?.SeekBarControl;
+            if (seekBar == null) return;
+
+            seekBar.UpdatePosition(_lastPosition);
+
+            if (Math.Abs((_lastDuration - _lastReportedDuration).TotalSeconds) >= 0.5)
+            {
+                _lastReportedDuration = _lastDuration;
+                seekBar.UpdateDuration(_lastDuration);
+            }
+
+            if (Math.Abs((e.Position - _lastPositionTextTime).TotalSeconds) >= 0.1)
+            {
+                _lastPositionTextTime = e.Position;
+                seekBar.SetPositionText(SeekBarControl.FormatTimeSpan(_lastPosition));
+                seekBar.SetDurationText(SeekBarControl.FormatTimeSpan(_lastDuration));
+            }
+
+            SyncPipPosition(sender, e);
+        });
+    }
+
+    private void OnChapterListChanged(object? sender, EventArgs e)
+    {
+        var seekBar = _controlsBox?.SeekBarControl;
+        seekBar?.UpdateChapterMarkers();
+    }
+
+    private void OnOsdNotificationClicked(object? sender, EventArgs e)
+    {
+        if (!string.IsNullOrEmpty(_queuedOpenPath) && System.IO.File.Exists(_queuedOpenPath))
+        {
+            var path = _queuedOpenPath;
+            var pos = _sessionResumePosition;
+            _queuedOpenPath = null;
+            _sessionResumePosition = TimeSpan.Zero;
+            _viewModel?.OpenFile(path);
+            _viewModel?.ClearSession();
+            if (pos.TotalSeconds > 0)
+            {
+                var player = _playerService?.Player;
+                if (player == null) return;
+
+                EventHandler? handler = null;
+                handler = (_, _) =>
+                {
+                    player.Seek(pos);
+                    player.Play();
+                    player.Opened -= handler;
+                };
+                player.Opened += handler;
+            }
+        }
     }
 }

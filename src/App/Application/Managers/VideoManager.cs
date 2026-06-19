@@ -25,10 +25,22 @@ public sealed class VideoManager : INotifyPropertyChanged, IDisposable
     // ── Video Tracks ──
     private int _currentVideoTrackId = -1;
 
+    // ── Lazy constructed track menu — only created when first accessed ──
+    private Lazy<ObservableCollection<TrackMenuItem>> _videoTracks = new(() =>
+    {
+        var col = new ObservableCollection<TrackMenuItem>
+        {
+            new("Add Video Track…", TrackType.Video, -1, _ => { }),
+            new("None", TrackType.Video, -2, _ => { }),
+            new("No video tracks", TrackType.Video, -1, _ => { }),
+        };
+        return col;
+    });
+
     public VideoManager(IMediaPlayer player)
     {
         _player = player ?? throw new ArgumentNullException(nameof(player));
-        BuildEmptyTrackMenus();
+        // Note: track menus are lazily created on first access.
     }
 
     // ── Observable Properties ──
@@ -100,18 +112,10 @@ public sealed class VideoManager : INotifyPropertyChanged, IDisposable
 
     #region Video Tracks
 
-    public ObservableCollection<TrackMenuItem> VideoTracks { get; } = new();
+    public ObservableCollection<TrackMenuItem> VideoTracks => _videoTracks.Value;
 
     /// <summary>True if the current media has multiple video tracks.</summary>
     public bool HasMultipleVideoTracks => VideoTracks.Count(t => !t.IsPseudoEntry) > 1;
-
-    private void BuildEmptyTrackMenus()
-    {
-        VideoTracks.Clear();
-        VideoTracks.Add(new TrackMenuItem("Add Video Track…", TrackType.Video, -1, OnSelectVideo));
-        VideoTracks.Add(new TrackMenuItem("None", TrackType.Video, -2, OnSelectVideo));
-        VideoTracks.Add(new TrackMenuItem("No video tracks", TrackType.Video, -1, OnSelectVideo));
-    }
 
     private void OnSelectVideo(TrackMenuItem item)
     {

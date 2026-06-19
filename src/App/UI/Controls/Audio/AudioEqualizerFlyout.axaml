@@ -12,7 +12,7 @@
             <Setter Property="BorderBrush" Value="{DynamicResource PopoverBorder}" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="{DynamicResource OsdForeground}" />
-            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="CornerRadius" Value="{StaticResource radius-xs}" />
         </Style>
         <Style Selector="Button.eq-preset:pointerover">
             <Setter Property="Background" Value="{DynamicResource PopoverBorder}" />
@@ -31,15 +31,15 @@
         </Style>
         <Style Selector="Button.eq-close:pointerover">
             <Setter Property="Background" Value="#33FFFFFF" />
-            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="CornerRadius" Value="{StaticResource radius-xs}" />
         </Style>
     </UserControl.Styles>
     <Border Background="{DynamicResource PopoverBackground}"
             BorderBrush="{DynamicResource PopoverBorder}"
             BorderThickness="1"
-            CornerRadius="8"
+            CornerRadius="{StaticResource radius-sm}"
             Padding="14,12"
-            Width="480">
+            Width="{StaticResource size-dialog-equalizer-width}">
         <StackPanel Spacing="10">
             <!-- Header with close -->
             <Grid ColumnDefinitions="Auto,*,Auto,Auto">

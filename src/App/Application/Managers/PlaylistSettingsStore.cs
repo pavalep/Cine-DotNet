@@ -27,13 +27,23 @@ public sealed class PlaylistSettingsStore
         LastPlayed: null
     );
 
-    public PlaylistSettingsStore()
+    public PlaylistSettingsStore(string? storePath = null)
     {
-        var dir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Cine");
-        Directory.CreateDirectory(dir);
-        _storePath = Path.Combine(dir, "playlist.json");
+        if (storePath != null)
+        {
+            var dir = Path.GetDirectoryName(storePath);
+            if (!string.IsNullOrEmpty(dir))
+                Directory.CreateDirectory(dir);
+            _storePath = storePath;
+        }
+        else
+        {
+            var dir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Cine");
+            Directory.CreateDirectory(dir);
+            _storePath = Path.Combine(dir, "playlist.json");
+        }
     }
 
     /// <summary>Load playlist from disk. Returns null if no saved playlist exists.</summary>
@@ -98,6 +108,7 @@ public sealed class PlaylistSettingsStore
 
     private void TryDelete()
     {
-        try { if (File.Exists(_storePath)) File.Delete(_storePath); } catch { }
+        try { if (File.Exists(_storePath)) File.Delete(_storePath); }
+        catch (Exception ex) { global::Cine.Core.Log.ForContext<PlaylistSettingsStore>().Error(ex, "Failed to delete playlist file"); }
     }
 }

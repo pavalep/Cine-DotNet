@@ -3,6 +3,7 @@
         xmlns:vm="using:Cine.Avalonia.ViewModels"
         xmlns:components="using:Cine.Avalonia.Components"
         xmlns:conv="using:Cine.Avalonia.Converters"
+        xmlns:uiconsts="using:Cine.Avalonia"
 
         xmlns:controls="clr-namespace:Cine.Avalonia.Controls"
         xmlns:local="using:Cine.Avalonia.Controls"
@@ -11,7 +12,8 @@
         x:DataType="vm:MainViewModel"
         Title="Cine"
         Width="800" Height="600"
-        MinWidth="600" MinHeight="337"
+        MinWidth="600"
+        MinHeight="337"
         Background="#FF0C0C0E"
         TransparencyLevelHint="None"
         WindowStartupLocation="CenterScreen"
@@ -106,7 +108,7 @@
 
         <!-- FULLSCREEN HEADER — ZIndex=25, top, floats over video -->
         <controls:FullscreenHeaderControl x:Name="FullscreenHeaderControl"
-                                          VerticalAlignment="Top" Height="44" />
+                                          VerticalAlignment="Top" Height="{StaticResource size-fullscreen-header}" />
 
         <!-- CONTROLS BOX — ZIndex=15, bottom, floats over video -->
         <controls:ControlsBoxControl x:Name="ControlsBoxControl"

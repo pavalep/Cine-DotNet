@@ -12,6 +12,7 @@ using Avalonia.Threading;
 using Cine.Avalonia.Managers;
 using Cine.Avalonia.Models;
 using Cine.Avalonia.Extensions;
+using Cine.Avalonia.Services;
 using Cine.Avalonia.Utilities;
 using Cine.Core;
 using Cine.Media.Interfaces;
@@ -55,6 +56,8 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
     }
 
     private readonly IMediaPlayer _player;
+    private readonly ISessionService _session;
+    private readonly IPlaylistService _playlistCoordinator;
     private bool _disposed;
     // --- Bindable state ---
     private PlaybackState _state = PlaybackState.Stopped;
@@ -67,9 +70,6 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
     private bool _isMuted;
     private string _filePath = string.Empty;
     private string _chapterTitle = string.Empty;
-    private bool _isShuffleEnabled;
-    private bool _isLoopFileEnabled;
-    private bool _isLoopPlaylistEnabled;
     private bool _isAudioEnabled = true;
     private bool _isFullscreen;
     private bool _hasMultiplePlaylistItems;
@@ -80,9 +80,6 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
 
     // Pending track restore values loaded from session data
     private int? _pendingAudioTrackId;
-
-    // Playlist persistence
-    private readonly Managers.PlaylistSettingsStore _playlistStore = new();
 
     // ── Typed track collections ──
     // Subtitle tracks are owned by SubtitleManager; we delegate for UI bindings.
@@ -117,9 +114,9 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
     public event EventHandler<string>? OnError;
 
     // ── Domain Managers ──
-    public AudioManager Audio { get; }
+    public IAudioManager Audio { get; }
     public VideoManager Video { get; }
-    public SubtitleManager Subtitles { get; } = null!;
+    public ISubtitleManager Subtitles { get; } = null!;
 
     public string Title => !string.IsNullOrEmpty(_filePath)
         ? TruncateFilename(Path.GetFileName(_filePath))
@@ -136,11 +133,15 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
     }
 
     public MainViewModel(IMediaPlayer player,
-        AudioManager? audioManager = null,
+        ISessionService? session = null,
+        PlaylistCoordinator? playlistCoordinator = null,
+        IAudioManager? audioManager = null,
         VideoManager? videoManager = null,
-        SubtitleManager? subtitleManager = null)
+        ISubtitleManager? subtitleManager = null)
     {
         _player = player ?? throw new ArgumentNullException(nameof(player));
+        _session = session ?? new SessionManager();
+        _playlistCoordinator = playlistCoordinator ?? new PlaylistCoordinator();
         Audio = audioManager ?? new AudioManager(player);
         Video = videoManager ?? new VideoManager(player);
         Subtitles = subtitleManager ?? new SubtitleManager(player);
@@ -496,20 +497,20 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public bool IsShuffleEnabled
     {
-        get => _isShuffleEnabled;
-        set { _isShuffleEnabled = value; OnPropertyChanged(); }
+        get => _playlistCoordinator.IsShuffleEnabled;
+        set { _playlistCoordinator.IsShuffleEnabled = value; OnPropertyChanged(); }
     }
 
     public bool IsLoopFileEnabled
     {
-        get => _isLoopFileEnabled;
-        set { _isLoopFileEnabled = value; OnPropertyChanged(); }
+        get => _playlistCoordinator.IsLoopFileEnabled;
+        set { _playlistCoordinator.IsLoopFileEnabled = value; OnPropertyChanged(); }
     }
 
     public bool IsLoopPlaylistEnabled
     {
-        get => _isLoopPlaylistEnabled;
-        set { _isLoopPlaylistEnabled = value; OnPropertyChanged(); }
+        get => _playlistCoordinator.IsLoopPlaylistEnabled;
+        set { _playlistCoordinator.IsLoopPlaylistEnabled = value; OnPropertyChanged(); }
     }
 
     public bool IsFullscreen

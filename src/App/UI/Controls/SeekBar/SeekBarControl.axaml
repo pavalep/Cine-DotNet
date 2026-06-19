@@ -4,7 +4,7 @@
              x:Class="Cine.Avalonia.Controls.SeekBarControl"
              x:DataType="vm:MainViewModel"
              x:Name="SeekBarRoot">
-    <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="4">
+    <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="{StaticResource space-spacing-1}">
 
         <!-- Seek Area (hexpand, with chapter markers) -->
         <Grid Grid.Column="0"
@@ -83,8 +83,7 @@
                     BoxShadow="{StaticResource elevation-4}">
                 <TextBlock x:Name="ChapterPreviewText"
                            Text="Chapter"
-                           FontSize="12"
-                           FontWeight="Medium"
+                           Classes="md3-caption"
                            Foreground="{StaticResource OsdForeground}" />
             </Border>
         </Grid>

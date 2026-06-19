@@ -8,12 +8,11 @@ using Cine.Avalonia.Extensions;
 using Cine.Media.Events;
 using Cine.Media.Interfaces;
 using Cine.Media.Models;
-using System.Text.Json;
 
 namespace Cine.Avalonia.ViewModels;
 
 /// <summary>
-/// Playback actions, file operations, and event handlers.
+/// File operations, renderer mode, audio EQ presets, and player event handlers.
 /// </summary>
 public partial class MainViewModel
 {
@@ -21,7 +20,6 @@ public partial class MainViewModel
     //  File Operations
     // ─────────────────────────────────────────────────────
 
-    // Purely Avalonia — no MPV coupling here
     private async Task OnOpenFiles()
     {
         if (RequestOpenFilesAsync == null) return;
@@ -30,7 +28,6 @@ public partial class MainViewModel
             OpenFiles(paths);
     }
 
-    // Purely Avalonia — no MPV coupling here
     private async Task OnOpenFolder()
     {
         if (RequestOpenFolderAsync == null) return;
@@ -39,14 +36,16 @@ public partial class MainViewModel
             OpenFile(path);
     }
 
-    // Purely Avalonia — no MPV coupling here
     private async Task OnAddFiles()
     {
         if (RequestAddFilesAsync == null) return;
         var paths = await RequestAddFilesAsync();
         if (paths != null)
             foreach (var p in paths)
+            {
+                _playlistCoordinator.Add(p);
                 Playlist.Add(p);
+            }
     }
 
     private async Task OnAddAudio()
@@ -67,9 +66,7 @@ public partial class MainViewModel
         }
     }
 
-    /// <summary>
-    /// Load an external subtitle file directly (bypasses file dialog).
-    /// </summary>
+    /// <summary>Load an external subtitle file directly (bypasses file dialog).</summary>
     public void LoadExternalSubtitle(string filePath)
     {
         if (string.IsNullOrWhiteSpace(filePath) || _player == null) return;
@@ -86,9 +83,7 @@ public partial class MainViewModel
         }
     }
 
-    /// <summary>
-    /// Load an external audio file directly (bypasses file dialog).
-    /// </summary>
+    /// <summary>Load an external audio file directly (bypasses file dialog).</summary>
     public void LoadExternalAudio(string filePath)
     {
         if (string.IsNullOrWhiteSpace(filePath) || _player == null) return;
@@ -145,294 +140,20 @@ public partial class MainViewModel
     {
         if (paths == null || paths.Length == 0) return;
 
-        // ── Avalonia / app-layer bookkeeping ──
+        _playlistCoordinator.Clear();
+        _playlistCoordinator.AddRange(paths);
         Playlist.Clear();
         PlaylistItems.Clear();
         foreach (var path in paths)
             Playlist.Add(path);
 
-        // ── mpv hand-off ──
         OpenFile(paths[0]);
         SavePlaylist();
     }
 
     // ─────────────────────────────────────────────────────
-    //  Playback Commands
+    //  Audio EQ Presets
     // ─────────────────────────────────────────────────────
-
-    public void PlayPause()
-    {
-        Log($"PlayPause called. _player.IsPlaying={_player.IsPlaying} _state={_state}");
-        if (_player.IsPlaying)
-            _player.Pause();
-        else
-            _player.Play();
-    }
-
-    public void Stop() => _player.Stop();
-
-    public int PlaylistPosition
-    {
-        get => _player.PlaylistPosition;
-        set
-        {
-            _player.PlaylistPosition = value;
-            OnPropertyChanged();
-            foreach (var item in PlaylistItems) item.NotifyPlayingChanged();
-        }
-    }
-
-    public void PlayPlaylistItem(int index)
-    {
-        PlaylistPosition = index;
-    }
-
-    public void RemovePlaylistItem(int index)
-    {
-        if (index < 0 || index >= PlaylistItems.Count) return;
-        var removedIsCurrent = PlaylistPosition == index;
-        PlaylistItems.RemoveAt(index);
-        Playlist.RemoveAt(index);
-        for (int i = index; i < PlaylistItems.Count; i++)
-            PlaylistItems[i].NotifyPlayingChanged();
-        HasMultiplePlaylistItems = PlaylistItems.Count > 1;
-        if (removedIsCurrent && PlaylistItems.Count > 0)
-        {
-            var newIdx = Math.Min(index, PlaylistItems.Count - 1);
-            PlayPlaylistItem(newIdx);
-        }
-        else if (removedIsCurrent)
-        {
-            PlaylistPosition = -1;
-        }
-        SavePlaylist();
-    }
-
-    /// <summary>Persist current playlist to disk.</summary>
-    private void SavePlaylist()
-    {
-        _playlistStore.SavePlaylist(Playlist, PlaylistPosition);
-    }
-
-    /// <summary>Restore playlist from disk, and open the last-played item.</summary>
-    private void LoadPlaylist()
-    {
-        var savedItems = _playlistStore.LoadPlaylist(out int savedPosition);
-        if (savedItems == null || savedItems.Count == 0) return;
-
-        Playlist.Clear();
-        PlaylistItems.Clear();
-        foreach (var path in savedItems)
-        {
-            Playlist.Add(path);
-            PlaylistItems.Add(new PlaylistItemViewModel(this, PlaylistItems.Count, path));
-        }
-        HasMultiplePlaylistItems = Playlist.Count > 1;
-
-        // Open last-played item (or first if position is invalid)
-        if (savedPosition >= 0 && savedPosition < Playlist.Count)
-            OpenFile(Playlist[savedPosition]);
-        else
-            OpenFile(Playlist[0]);
-    }
-
-    /// <summary>Remove all playlist items, stop playback, clear saved playlist.</summary>
-    public void ClearPlaylist()
-    {
-        if (PlaylistItems.Count == 0) return;
-        _player.Stop();
-        Playlist.Clear();
-        PlaylistItems.Clear();
-        PlaylistPosition = -1;
-        HasMultiplePlaylistItems = false;
-        _playlistStore.ClearPlaylist();
-    }
-
-    public void PlayNext()
-    {
-        if (PlaylistItems.Count == 0) return;
-        var nextIdx = PlaylistPosition + 1;
-        if (nextIdx >= PlaylistItems.Count)
-        {
-            if (IsLoopPlaylistEnabled)
-                nextIdx = 0;
-            else
-                return;
-        }
-        PlayPlaylistItem(nextIdx);
-    }
-
-    public void PlayPrevious()
-    {
-        if (PlaylistItems.Count == 0) return;
-        var prevIdx = PlaylistPosition - 1;
-        if (prevIdx < 0)
-        {
-            if (IsLoopPlaylistEnabled)
-                prevIdx = PlaylistItems.Count - 1;
-            else
-                return;
-        }
-        PlayPlaylistItem(prevIdx);
-    }
-
-    /// <summary>Insert files after the currently playing item (queue mode).</summary>
-    public void InsertAfterCurrent(string path)
-    {
-        if (string.IsNullOrWhiteSpace(path)) return;
-        int insertIdx = PlaylistPosition >= 0 ? PlaylistPosition + 1 : PlaylistItems.Count;
-        Playlist.Insert(insertIdx, path);
-        PlaylistItems.Insert(insertIdx, new PlaylistItemViewModel(this, insertIdx, path));
-        // Bump indices of subsequent items
-        for (int i = insertIdx + 1; i < PlaylistItems.Count; i++)
-            PlaylistItems[i].NotifyPlayingChanged();
-        HasMultiplePlaylistItems = PlaylistItems.Count > 1;
-        SavePlaylist();
-    }
-
-    /// <summary>Insert multiple files after the current item.</summary>
-    public void InsertAfterCurrent(string[] paths)
-    {
-        if (paths == null || paths.Length == 0) return;
-        int insertIdx = PlaylistPosition >= 0 ? PlaylistPosition + 1 : PlaylistItems.Count;
-        for (int i = 0; i < paths.Length; i++)
-        {
-            if (string.IsNullOrWhiteSpace(paths[i])) continue;
-            Playlist.Insert(insertIdx + i, paths[i]);
-            PlaylistItems.Insert(insertIdx + i, new PlaylistItemViewModel(this, insertIdx + i, paths[i]));
-        }
-        // Bump indices of items after the inserted block
-        for (int i = insertIdx + paths.Length; i < PlaylistItems.Count; i++)
-            PlaylistItems[i].NotifyPlayingChanged();
-        HasMultiplePlaylistItems = PlaylistItems.Count > 1;
-        SavePlaylist();
-    }
-
-    /// <summary>Sort playlist items alphabetically by title.</summary>
-    public void SortPlaylistByTitle()
-    {
-        var sorted = PlaylistItems
-            .Select((item, i) => new { item, path = Playlist[i] })
-            .OrderBy(x => x.item.Title, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        Playlist.Clear();
-        PlaylistItems.Clear();
-        foreach (var entry in sorted)
-        {
-            Playlist.Add(entry.path);
-            PlaylistItems.Add(new PlaylistItemViewModel(this, PlaylistItems.Count, entry.path));
-        }
-        SavePlaylist();
-    }
-
-    public void SeekForward() => _player.Seek(Position + TimeSpan.FromSeconds(5));
-    public void SeekBackward() => _player.Seek(Position - TimeSpan.FromSeconds(5));
-    public void SeekLargeForward() => _player.Seek(Position + TimeSpan.FromSeconds(60));
-    public void SeekLargeBackward() => _player.Seek(Position - TimeSpan.FromSeconds(60));
-    public void IncreaseVolume() => VolumeValue = Math.Min(VolumeMax, VolumeValue + 5);
-    public void DecreaseVolume() => VolumeValue = Math.Max(0, VolumeValue - 5);
-    public void ToggleMute() => IsMuted = !IsMuted;
-
-    public void ToggleFullscreen()
-    {
-        _player.SetFullscreen(!_player.IsFullscreen);
-        IsFullscreen = _player.IsFullscreen;
-    }
-
-    public void NextChapter() => _player.NextChapter();
-    public void PreviousChapter() => _player.PreviousChapter();
-    public void NextItem() => _player.NextPlaylistItem();
-    public void PreviousItem() => _player.PreviousPlaylistItem();
-
-    public void ToggleLoopFile()
-    {
-        _player.ToggleLoopFile();
-        SyncLoopFlags();
-    }
-
-    public void ToggleLoopPlaylist()
-    {
-        _player.ToggleLoopPlaylist();
-        SyncLoopFlags();
-    }
-
-    public void ToggleShuffle()
-    {
-        _player.IsShuffled = !_player.IsShuffled;
-        IsShuffleEnabled = _player.IsShuffled;
-        RefreshPlaylistState();
-    }
-
-    public void ResetSpeed() => SpeedValue = 1.0;
-    public void SetSpeed(double speed) => SpeedValue = speed;
-    public void Screenshot() => _player.TakeScreenshot(GetScreenshotPath());
-
-    // ─────────────────────────────────────────────────────
-    //  PIP Decode Resolution
-    // ─────────────────────────────────────────────────────
-
-    private string _pipResolution = "Auto";
-
-    public string PipResolution
-    {
-        get => _pipResolution;
-        set { _pipResolution = value; OnPropertyChanged(); }
-    }
-
-    public static readonly string[] PipResolutionOptions = { "Auto", "480p", "720p", "1080p", "Source" };
-
-    public void SetPipResolution(string resolution)
-    {
-        PipResolution = resolution;
-        OnPropertyChanged(nameof(PipResolution));
-    }
-
-    // ─────────────────────────────────────────────────────
-    //  Audio Settings (proxied to AudioManager)
-    // ─────────────────────────────────────────────────────
-
-    public void ToggleAudioNormalization()
-    {
-        IsAudioNormalizationEnabled = !IsAudioNormalizationEnabled;
-    }
-
-    private bool _isAudioNormalizationEnabled;
-
-    /// <summary>Proxies to AudioManager. Keeps local field for PropertyChanged notification.</summary>
-    public bool IsAudioNormalizationEnabled
-    {
-        get => Audio?.IsAudioNormalizationEnabled ?? _isAudioNormalizationEnabled;
-        set
-        {
-            _isAudioNormalizationEnabled = value;
-            if (Audio != null) Audio.IsAudioNormalizationEnabled = value;
-            OnPropertyChanged();
-        }
-    }
-
-    /// <summary>Renderer mode: Auto (D3D11 hardware), Software (software only).</summary>
-    public enum RendererType { Auto, Software }
-
-    private RendererType _rendererMode;
-
-    public RendererType RendererMode
-    {
-        get => _rendererMode;
-        set
-        {
-            if (_rendererMode == value) return;
-            _rendererMode = value;
-            OnPropertyChanged();
-            OnPropertyChanged(nameof(IsHardwareAccelerationEnabled));
-        }
-    }
-
-    public bool IsHardwareAccelerationEnabled
-    {
-        get => _rendererMode == RendererType.Auto;
-        set => RendererMode = value ? RendererType.Auto : RendererType.Software;
-    }
 
     private static double[] GetPreset(string name) => name switch
     {
@@ -443,138 +164,6 @@ public partial class MainViewModel
         "Bass Boost" => new[] { 6.0, 5.0, 4.0, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 },
         _ => new double[10]
     };
-
-    // ─────────────────────────────────────────────────────
-    //  Session Resume
-    // ─────────────────────────────────────────────────────
-
-    public Action<string, TimeSpan>? SessionResumeRequested { get; set; }
-
-    private static string SessionPath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "Cine", "session.json");
-
-    public void SaveSession()
-    {
-        try
-        {
-            var dir = Path.GetDirectoryName(SessionPath);
-            if (dir != null) Directory.CreateDirectory(dir);
-            var session = new
-            {
-                FilePath = _filePath,
-                Position = _player.Position.Ticks,
-                Playlist = Playlist.ToList(),
-                SubtitleTrackId = Subtitles?.CurrentSubtitleTrackId ?? -1,
-                AudioTrackId = _currentAudioTrackId,
-                SubtitleDelay = _player.SubtitleDelay,
-                AudioDelay = _player.AudioDelay,
-                RendererMode = _rendererMode.ToString()
-            };
-            File.WriteAllText(SessionPath, JsonSerializer.Serialize(session));
-        }
-        catch (Exception ex) { global::Cine.Core.Log.ForContext<MainViewModel>().Error(ex, "SaveSession failed"); }
-    }
-
-    public void LoadSession()
-    {
-        try
-        {
-            var json = File.ReadAllText(SessionPath);
-            using var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement;
-            if (root.TryGetProperty("FilePath", out var pathEl) && pathEl.GetString() is string path
-                && File.Exists(path)
-                && root.TryGetProperty("Position", out var posEl))
-            {
-                var pos = TimeSpan.FromTicks(posEl.GetInt64());
-                SessionResumeRequested?.Invoke(path, pos);
-            }
-            if (root.TryGetProperty("Playlist", out var plEl))
-            {
-                foreach (var item in plEl.EnumerateArray())
-                {
-                    var p = item.GetString();
-                    if (!string.IsNullOrEmpty(p) && File.Exists(p))
-                        Playlist.Add(p);
-                }
-                if (Playlist.Count > 0)
-                    OnPropertyChanged(nameof(HasMultiplePlaylistItems));
-            }
-            if (root.TryGetProperty("SubtitleTrackId", out var subIdEl))
-                Subtitles?.SelectTrackById(subIdEl.GetInt32());
-            if (root.TryGetProperty("AudioTrackId", out var audIdEl))
-                _pendingAudioTrackId = audIdEl.GetInt32();
-            if (root.TryGetProperty("SubtitleDelay", out var subDelayEl))
-                _player.SubtitleDelay = (float)subDelayEl.GetDouble();
-            if (root.TryGetProperty("AudioDelay", out var audDelayEl))
-                _player.AudioDelay = (float)audDelayEl.GetDouble();
-            if (root.TryGetProperty("RendererMode", out var rmEl) && Enum.TryParse<RendererType>(rmEl.GetString(), out var rm))
-                RendererMode = rm;
-        }
-        catch { /* best-effort */ }
-    }
-
-    public void ClearSession()
-    {
-        try { if (File.Exists(SessionPath)) File.Delete(SessionPath); }
-        catch { /* best-effort */ }
-    }
-
-    // ─────────────────────────────────────────────────────
-    //  Recent Files
-    // ─────────────────────────────────────────────────────
-
-    private static string RecentFilesPath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "Cine", "recent.json");
-
-    public bool HasRecentFiles => RecentFiles.Count > 0;
-
-    public void AddRecentFile(string path)
-    {
-        RecentFiles.Remove(path);
-        RecentFiles.Insert(0, path);
-        while (RecentFiles.Count > 10)
-            RecentFiles.RemoveAt(RecentFiles.Count - 1);
-        SaveRecentFiles();
-        OnPropertyChanged(nameof(HasRecentFiles));
-    }
-
-    private void SaveRecentFiles()
-    {
-        try
-        {
-            var dir = Path.GetDirectoryName(RecentFilesPath);
-            if (dir != null) Directory.CreateDirectory(dir);
-            File.WriteAllText(RecentFilesPath, JsonSerializer.Serialize(RecentFiles.ToList()));
-        }
-        catch { /* best-effort */ }
-    }
-
-    public void LoadRecentFiles()
-    {
-        try
-        {
-            if (!File.Exists(RecentFilesPath)) return;
-            var json = File.ReadAllText(RecentFilesPath);
-            var list = JsonSerializer.Deserialize<List<string>>(json);
-            if (list != null)
-            {
-                RecentFiles.Clear();
-                foreach (var f in list.Where(File.Exists))
-                    RecentFiles.Add(f);
-                OnPropertyChanged(nameof(HasRecentFiles));
-            }
-        }
-        catch { }
-    }
-
-    public void OpenRecentFile(string path)
-    {
-        if (!string.IsNullOrWhiteSpace(path) && File.Exists(path))
-            OpenFile(path);
-    }
 
     // ─────────────────────────────────────────────────────
     //  Event Handlers

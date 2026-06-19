@@ -36,7 +36,7 @@
                 </StackPanel.Styles>
 
                 <!-- Group 1: Transport -->
-                <StackPanel Orientation="Horizontal" Spacing="2">
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource space-spacing-0_5}">
                     <Button x:Name="BtnPrevious"
                             Classes="circular-transport"
                             Click="OnPrevious"
@@ -67,7 +67,7 @@
                 <Rectangle Width="1" Height="20" Fill="{StaticResource AppDivider}"
                            VerticalAlignment="Center" Margin="{StaticResource space-h-2}" IsHitTestVisible="False" />
 
-                <StackPanel Orientation="Horizontal" Spacing="2">
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource space-spacing-0_5}">
                     <Button x:Name="BtnVolumeMenu"
                             Classes="circular-menu"
                             ToolTip.Tip="Volume (M)"
@@ -120,7 +120,7 @@
                                             </Slider.Resources>
                                         </Slider>
                                         <!-- Volume presets row -->
-                                        <Grid ColumnDefinitions="*,*,*,*" Margin="0,2,0,0">
+                                        <Grid ColumnDefinitions="*,*,*,*" Margin="{StaticResource space-v-0_5}">
                                             <Button Grid.Column="0" Classes="circular-sm" 
                                                     ToolTip.Tip="Mute" 
                                                     Click="OnToggleMute"
@@ -183,7 +183,7 @@
                            VerticalAlignment="Center" Margin="{StaticResource space-h-2}" IsHitTestVisible="False" />
 
                 <!-- Group 3: Mode -->
-                <StackPanel Orientation="Horizontal" Spacing="2">
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource space-spacing-0_5}">
                     <ToggleButton x:Name="BtnShufflePlaylist"
                                   Classes="circular-toggle"
                                   IsChecked="{Binding IsShuffleEnabled}"
@@ -218,7 +218,7 @@
                            VerticalAlignment="Center" Margin="{StaticResource space-h-2}" IsHitTestVisible="False" />
 
                 <!-- Group 4: Tools -->
-                <StackPanel Orientation="Horizontal" Spacing="2">
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource space-spacing-0_5}">
                     <Button x:Name="BtnChaptersMenu"
                             Classes="circular-menu"
                             IsVisible="{Binding HasChapters}"
@@ -228,11 +228,11 @@
                             Foreground="{StaticResource OsdForeground}" />
                     </Button>
                     <controls:SubtitleOverlayControl x:Name="SubOverlayCtrl"
-                                                     Width="40" Height="40"
+                                                     Classes="circular-transport"
                                                      Padding="0"
                                                      VerticalAlignment="Center" />
                     <controls:AudioTrackSelectorControl x:Name="AudioOverlayCtrl"
-                                                        Width="40" Height="40"
+                                                        Classes="circular-transport"
                                                         Padding="0"
                                                         VerticalAlignment="Center" />
                     <ToggleButton x:Name="BtnFullscreen"

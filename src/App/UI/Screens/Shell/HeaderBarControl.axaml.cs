@@ -371,8 +371,8 @@ public partial class HeaderBarControl : AvaloniaUserControl
     {
         // Narrow (< 600px): hide PIP button, reduce title max-width
         // Very narrow (< 400px): hide window controls
-        bool isNarrow = width < 600;
-        bool isVeryNarrow = width < 400;
+        bool isNarrow = width < UiConstants.BreakpointCompact;
+        bool isVeryNarrow = width < UiConstants.BreakpointTiny;
 
         if (isNarrow)
         {

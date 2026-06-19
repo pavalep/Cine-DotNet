@@ -20,11 +20,11 @@
         <Grid>
             <!-- Drop Target Overlay Visuals -->
             <Border x:Name="DropTarget"
-                    Margin="16"
+                    Margin="{StaticResource space-4}"
                     BorderThickness="2"
                     CornerRadius="16"
                     BorderBrush="{StaticResource AppAccent}"
-                    Background="#1A0078D4"
+                    Background="{StaticResource AppDragAccentDim}"
                     IsHitTestVisible="False"
                     IsVisible="False">
                 <Border.OpacityMask>
@@ -85,7 +85,7 @@
                         Click="BtnOpenFolder_Click" />
 
                 <!-- Recent files section -->
-                <StackPanel Spacing="4" Margin="0,16,0,0"
+                <StackPanel Spacing="{StaticResource space-spacing-1}" Margin="0,16,0,0"
                             IsVisible="{Binding HasRecentFiles}">
                     <TextBlock Text="Recent" FontSize="12" FontWeight="SemiBold"
                                Foreground="{StaticResource AppTextOnDarkTertiary}" Margin="40,0,40,4" />

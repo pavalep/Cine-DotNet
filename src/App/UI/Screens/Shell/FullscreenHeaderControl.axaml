@@ -5,7 +5,7 @@
              x:Class="Cine.Avalonia.Controls.FullscreenHeaderControl"
              x:DataType="vm:MainViewModel">
     <Border x:Name="FullscreenHeader"
-            VerticalAlignment="Top" Height="44"
+            VerticalAlignment="Top" Height="{StaticResource size-fullscreen-header}"
             IsVisible="False"
             Background="{StaticResource HeaderGradient}"
             ZIndex="25">
@@ -15,7 +15,7 @@
                        Foreground="{StaticResource OsdForeground}"
                        FontSize="13" FontWeight="SemiBold"
                        VerticalAlignment="Center" />
-            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="{StaticResource space-spacing-1}">
                 <Button x:Name="BtnFullscreenMenu"
                         Classes="circular-menu"
                         ToolTip.Tip="Menu">

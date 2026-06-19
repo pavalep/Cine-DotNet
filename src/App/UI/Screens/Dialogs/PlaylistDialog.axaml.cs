@@ -230,7 +230,11 @@ public partial class PlaylistDialog : Window
                     });
                 }
             }
-            catch { /* silently fail */ }
+            catch (Exception ex)
+            {
+                global::Cine.Core.Log.ForContext<PlaylistDialog>()
+                    .Warning("Failed to open file in explorer: {Error}", ex.Message);
+            }
         }
     }
 
@@ -247,7 +251,11 @@ public partial class PlaylistDialog : Window
                     UseShellExecute = true
                 });
             }
-            catch { /* silently fail */ }
+            catch (Exception ex)
+            {
+                global::Cine.Core.Log.ForContext<PlaylistDialog>()
+                    .Warning("Failed to open properties in explorer: {Error}", ex.Message);
+            }
         }
     }
 

@@ -3,7 +3,7 @@ using Avalonia.Threading;
 using Cine.Avalonia.Controls;
 using Cine.Avalonia.Views.Dialogs;
 
-namespace Cine.Avalonia.ViewModels;
+namespace Cine.Avalonia.Services;
 
 /// <summary>
 /// Manages PiP (Picture-in-Picture) lifecycle.
@@ -89,7 +89,7 @@ public class PipService : IDisposable
         if (_pipWindow != null)
         {
             _pipWindow.Closed -= OnPipWindowClosed;
-            try { _pipWindow.Close(); } catch { }
+            try { _pipWindow.Close(); } catch { /* window may already be disposed */ }
             _pipWindow = null;
         }
         _isActive = false;
@@ -116,7 +116,7 @@ public class PipService : IDisposable
         if (_pipWindow != null)
         {
             _pipWindow.Closed -= OnPipWindowClosed;
-            try { _pipWindow.Close(); } catch { }
+            try { _pipWindow.Close(); } catch { /* window may already be disposed */ }
             _pipWindow = null;
         }
         _isActive = false;

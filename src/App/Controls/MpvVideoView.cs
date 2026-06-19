@@ -72,12 +72,16 @@ public class MpvVideoView : Decorator
             Directory.CreateDirectory(dir);
             return Path.Combine(dir, "cine_mainwin_gl.log");
         }
-        catch { return Path.Combine(Path.GetTempPath(), "cine_mainwin_gl.log"); }
+        catch
+        {
+            // Fall back to temp path — debug logging is best-effort
+            return Path.Combine(Path.GetTempPath(), "cine_mainwin_gl.log");
+        }
     }
     private static void Log(string msg)
     {
         try { File.AppendAllText(LogPath, $"[{DateTime.Now:HH:mm:ss.fff}] {msg}{Environment.NewLine}"); }
-        catch { }
+        catch { /* best-effort debug logging — can't use Log.ForContext here (circular) */ }
     }
 
     public MpvVideoView()
@@ -346,7 +350,7 @@ public class MpvVideoView : Decorator
             _renderCts?.Dispose();
             _renderCts = null;
         }
-        catch { }
+        catch { /* best-effort during shutdown */ }
 
         if (_renderThread != null && _renderThread.IsAlive)
         {
@@ -358,14 +362,17 @@ public class MpvVideoView : Decorator
         if (_player != null)
         {
             _player.Opened -= OnPlayerOpened;
-            try { _player.DeinitializeRenderApi(); } catch { }
+            try { _player.DeinitializeRenderApi(); }
+            catch { /* best-effort during shutdown */ }
             _player = null;
         }
 
-        try { _angleContext?.Dispose(); } catch { }
+        try { _angleContext?.Dispose(); }
+        catch { /* best-effort during shutdown */ }
         _angleContext = null;
 
-        try { _writeableBitmap?.Dispose(); } catch { }
+        try { _writeableBitmap?.Dispose(); }
+        catch { /* best-effort during shutdown */ }
         _writeableBitmap = null;
 
         Log("Shutdown complete");

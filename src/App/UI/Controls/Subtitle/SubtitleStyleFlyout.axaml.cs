@@ -4,17 +4,17 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
-using Cine.Avalonia.Managers;
+using Cine.Avalonia.Services;
 
 namespace Cine.Avalonia.Controls.Subtitle;
 
 /// <summary>
 /// Flyout content for subtitle style controls (font size, position, delay, track, visibility).
-/// Should be hosted inside a Popup or Flyout. Binds to SubtitleManager directly.
+/// Should be hosted inside a Popup or Flyout. Binds to ISubtitleManager directly.
 /// </summary>
 public partial class SubtitleStyleFlyout : UserControl
 {
-    private SubtitleManager? _manager;
+    private ISubtitleManager? _manager;
     private bool _isUpdating;
 
     private static readonly string[] CommonFonts = new[]
@@ -49,9 +49,9 @@ public partial class SubtitleStyleFlyout : UserControl
     }
 
     /// <summary>
-    /// Bind this flyout to a SubtitleManager.
+    /// Bind this flyout to a ISubtitleManager.
     /// </summary>
-    public void Bind(SubtitleManager manager)
+    public void Bind(ISubtitleManager manager)
     {
         _manager = manager;
 
@@ -93,32 +93,32 @@ public partial class SubtitleStyleFlyout : UserControl
         _isUpdating = true;
         switch (e.PropertyName)
         {
-            case nameof(SubtitleManager.IsSubtitleEnabled):
+            case nameof(ISubtitleManager.IsSubtitleEnabled):
                 SubtitleToggle.IsChecked = _manager.IsSubtitleEnabled;
                 break;
-            case nameof(SubtitleManager.SubtitleFontScale):
+            case nameof(ISubtitleManager.SubtitleFontScale):
                 FontSizeSlider.Value = _manager.SubtitleFontScale;
                 break;
-            case nameof(SubtitleManager.SubtitlePosition):
+            case nameof(ISubtitleManager.SubtitlePosition):
                 PositionSlider.Value = _manager.SubtitlePosition;
                 break;
-            case nameof(SubtitleManager.SubtitleDelay):
+            case nameof(ISubtitleManager.SubtitleDelay):
                 DelaySlider.Value = _manager.SubtitleDelay;
                 break;
-            case nameof(SubtitleManager.SubtitleBorderSize):
+            case nameof(ISubtitleManager.SubtitleBorderSize):
                 BorderSlider.Value = _manager.SubtitleBorderSize;
                 break;
-            case nameof(SubtitleManager.SubtitleShadowOffset):
+            case nameof(ISubtitleManager.SubtitleShadowOffset):
                 ShadowSlider.Value = _manager.SubtitleShadowOffset;
                 break;
-            case nameof(SubtitleManager.SubtitleFont):
+            case nameof(ISubtitleManager.SubtitleFont):
                 FontCombo.SelectedItem = _manager.SubtitleFont;
                 break;
-            case nameof(SubtitleManager.SubtitleColor):
+            case nameof(ISubtitleManager.SubtitleColor):
                 ColorInput.Text = _manager.SubtitleColor;
                 UpdateColorPreview(_manager.SubtitleColor);
                 break;
-            case nameof(SubtitleManager.HasTextSubtitles):
+            case nameof(ISubtitleManager.HasTextSubtitles):
                 UpdateStyleControlsEnabled(_manager.HasTextSubtitles);
                 break;
         }

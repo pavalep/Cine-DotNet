@@ -4,13 +4,13 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media;
-using Cine.Avalonia.Managers;
+using Cine.Avalonia.Services;
 
 namespace Cine.Avalonia.Controls;
 
 public partial class AudioEqualizerFlyout : UserControl
 {
-    private readonly AudioManager? _manager;
+    private readonly IAudioManager? _manager;
     private readonly Slider[] _eqSliders = new Slider[10];
     private readonly TextBlock[] _valueLabels = new TextBlock[10];
 
@@ -27,7 +27,11 @@ public partial class AudioEqualizerFlyout : UserControl
             if (global::Avalonia.Application.Current?.TryFindResource(key, out var result) == true && result is IBrush brush)
                 return brush;
         }
-        catch { }
+        catch (Exception ex)
+        {
+            global::Cine.Core.Log.ForContext<AudioEqualizerFlyout>()
+                .Warning("Resource lookup failed for key {Key}: {Error}", key, ex.Message);
+        }
         return fallback;
     }
 
@@ -38,7 +42,7 @@ public partial class AudioEqualizerFlyout : UserControl
         WireEvents();
     }
 
-    public AudioEqualizerFlyout(AudioManager manager) : this()
+    public AudioEqualizerFlyout(IAudioManager manager) : this()
     {
         _manager = manager;
         LoadFromManager();

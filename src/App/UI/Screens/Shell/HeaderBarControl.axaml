@@ -8,11 +8,11 @@
              x:Name="HeaderBarRoot">
     <Border x:Name="HeaderBar" Classes="header-bar"
             Background="{StaticResource HeaderGradient}"
-            BorderBrush="#1AFFFFFF"
+            BorderBrush="{StaticResource AppBorderDim}"
             BorderThickness="0,0,0,1"
             VerticalAlignment="Top"
             HorizontalAlignment="Stretch"
-            Height="56"
+            Height="{StaticResource size-header-bar}"
             IsHitTestVisible="True"
             ZIndex="20"
             PointerPressed="OnHeaderPointerPressed">
@@ -28,8 +28,8 @@
                     x:Name="BtnOpenMenu"
                     IsVisible="False"
                     VerticalAlignment="Center"
-                    Margin="8,0,4,0"
-                    Background="rgba(255,255,255,0.12)"
+                    Margin="{StaticResource space-h-l2-r1}"
+                    Background="{StaticResource AppHover}"
                     CornerRadius="99"
                     BorderThickness="0"
                     Padding="14,6">
@@ -38,16 +38,16 @@
                         <Setter Property="Background" Value="Transparent" />
                     </Style>
                     <Style Selector="Button#BtnOpenMenu:pointerover">
-                        <Setter Property="Background" Value="rgba(255,255,255,0.17)" />
+                        <Setter Property="Background" Value="{StaticResource AppHoverStrong}" />
                     </Style>
                     <Style Selector="Button#BtnOpenMenu:pressed">
-                        <Setter Property="Background" Value="rgba(255,255,255,0.25)" />
+                        <Setter Property="Background" Value="{StaticResource AppPressed}" />
                     </Style>
                 </Button.Styles>
-                <StackPanel Orientation="Horizontal" Spacing="5">
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource space-spacing-1}">
                     <TextBlock Text="Open"
                                Foreground="{StaticResource OsdForeground}"
-                               FontSize="13" FontWeight="Medium"
+                               Classes="md3-body2"
                                VerticalAlignment="Center" />
                     <materialIcons:MaterialIcon Kind="MenuDown" Width="8" Height="8"
                         Foreground="{StaticResource OsdForeground}"
@@ -60,9 +60,9 @@
                         <Border Background="{StaticResource PopoverBackground}"
                                 BorderBrush="{StaticResource PopoverBorder}"
                                 BorderThickness="1"
-                                CornerRadius="8"
-                                Padding="4">
-                            <StackPanel Width="200">
+                                CornerRadius="{StaticResource radius-sm}"
+                                Padding="{StaticResource space-1}">
+                            <StackPanel Width="{StaticResource size-dialog-min-width-menu}">
                                 <StackPanel.Styles>
                                     <Style Selector="Button.flyout-item">
                                         <Setter Property="Background" Value="Transparent" />
@@ -72,7 +72,7 @@
                                         <Setter Property="Cursor" Value="Arrow" />
                                     </Style>
                                     <Style Selector="Button.flyout-item:pointerover">
-                                        <Setter Property="Background" Value="rgba(255,255,255,0.08)" />
+                                        <Setter Property="Background" Value="{StaticResource AppHoverSubtle}" />
                                     </Style>
                                     <Style Selector="Button.flyout-item TextBlock">
                                         <Setter Property="FontSize" Value="13" />
@@ -85,7 +85,7 @@
                                     <Grid ColumnDefinitions="Auto,*">
                                         <materialIcons:MaterialIcon Kind="Play" Width="14" Height="14"
                                             Foreground="{StaticResource OsdForeground}" />
-                                        <TextBlock Grid.Column="1" Text="Open Files" Margin="10,0,0,0" />
+                                        <TextBlock Grid.Column="1" Text="Open Files" Margin="{StaticResource space-left-10}" />
                                     </Grid>
                                 </Button>
                                 <Button Classes="flyout-item"
@@ -93,7 +93,7 @@
                                     <Grid ColumnDefinitions="Auto,*">
                                         <materialIcons:MaterialIcon Kind="Folder" Width="14" Height="14"
                                             Foreground="{StaticResource OsdForeground}" />
-                                        <TextBlock Grid.Column="1" Text="Open Folder" Margin="10,0,0,0" />
+                                        <TextBlock Grid.Column="1" Text="Open Folder" Margin="{StaticResource space-left-10}" />
                                     </Grid>
                                 </Button>
                                 <Separator Background="{StaticResource PopoverBorder}" />
@@ -102,7 +102,7 @@
                                     <Grid ColumnDefinitions="Auto,*">
                                         <materialIcons:MaterialIcon Kind="Plus" Width="14" Height="14"
                                             Foreground="{StaticResource OsdForeground}" />
-                                        <TextBlock Grid.Column="1" Text="Add Files" Margin="10,0,0,0" />
+                                        <TextBlock Grid.Column="1" Text="Add Files" Margin="{StaticResource space-left-10}" />
                                     </Grid>
                                 </Button>
                             </StackPanel>
@@ -120,7 +120,7 @@
                     VerticalAlignment="Center">
                 <TextBlock x:Name="TitleText" Text="Cine"
                            Foreground="{StaticResource OsdForeground}"
-                           FontSize="14" FontWeight="SemiBold"
+                           Classes="md3-subtitle1"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center"
                            TextTrimming="CharacterEllipsis"
@@ -133,7 +133,7 @@
                         Spacing="0">
                 <ToggleButton x:Name="BtnPip" IsVisible="False"
                               Classes="circular-menu"
-                              Margin="0,0,4,0"
+                              Margin="{StaticResource space-right-1}"
                               Click="OnTogglePip"
                               ToolTip.Tip="Picture-in-Picture"
                               AutomationProperties.Name="Picture in Picture">
@@ -145,7 +145,7 @@
                 <Button x:Name="BtnPrimaryMenu" IsVisible="False"
                         Classes="circular-menu"
                         ToolTip.Tip="Main Menu"
-                        Margin="0,0,4,0"
+                        Margin="{StaticResource space-right-1}"
                         AutomationProperties.Name="Main menu">
                     <materialIcons:MaterialIcon Kind="DotsHorizontal" Width="18" Height="18"
                         Foreground="{StaticResource OsdForeground}" />
@@ -161,7 +161,7 @@
                         ToolTip.Tip="Close"
                         Click="OnFullscreenCloseClick"
                         IsVisible="False"
-                        Margin="0,0,4,0">
+                        Margin="{StaticResource space-right-1}">
                     <materialIcons:MaterialIcon Kind="Close" Width="18" Height="18"
                         Foreground="{StaticResource OsdForeground}" />
                 </Button>
@@ -169,7 +169,7 @@
                 <!-- Native Window Controls -->
                 <StackPanel Orientation="Horizontal" Spacing="0"
                             IsVisible="True" x:Name="WindowControlsPanel"
-                            Margin="0,0,4,0">
+                            Margin="{StaticResource space-right-1}">
                     <Button x:Name="BtnMinimize" Click="OnMinimizeClick"
                             Classes="window-control"
                             ToolTip.Tip="Minimize">

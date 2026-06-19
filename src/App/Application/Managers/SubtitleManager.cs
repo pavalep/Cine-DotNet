@@ -8,6 +8,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Timers;
 using Cine.Avalonia.Models;
+using Cine.Avalonia.Services;
 using Cine.Media.Events;
 using Cine.Media.Interfaces;
 using Cine.Media.Models;
@@ -19,7 +20,7 @@ namespace Cine.Avalonia.Managers;
 /// Single source of truth — subscribes directly to player events.
 /// Handles persistence with debounced auto-save and session override.
 /// </summary>
-public sealed class SubtitleManager : INotifyPropertyChanged, IDisposable
+public sealed class SubtitleManager : ISubtitleManager
 {
     private readonly IMediaPlayer _player;
     private readonly SubtitleSettingsStore _store;
@@ -55,6 +56,17 @@ public sealed class SubtitleManager : INotifyPropertyChanged, IDisposable
     private EventHandler<TrackListChangedEventArgs>? _trackListHandler;
     private EventHandler<SubtitlePropertyChangedEventArgs>? _subPropHandler;
 
+    // ── Lazy constructed track menu — only created when first accessed ──
+    private Lazy<ObservableCollection<TrackMenuItem>> _subtitleTracks = new(() =>
+    {
+        var col = new ObservableCollection<TrackMenuItem>
+        {
+            new("Add Subtitle Track…", TrackType.Subtitle, -1, _ => { }),
+            new("None", TrackType.Subtitle, -2, _ => { }),
+        };
+        return col;
+    });
+
     public SubtitleManager(IMediaPlayer player)
     {
         _player = player ?? throw new ArgumentNullException(nameof(player));
@@ -71,18 +83,15 @@ public sealed class SubtitleManager : INotifyPropertyChanged, IDisposable
         _player.SubtitlePropertyChanged += _subPropHandler;
         _player.Opened += OnPlayerOpened;
 
-        // Debounced save timer
-        _saveTimer = new System.Timers.Timer(SaveDebounceMs) { AutoReset = false };
-        _saveTimer.Elapsed += (_, _) => FlushSave();
-
-        BuildEmptyTrackMenus();
+        // Note: _saveTimer and track menus are created lazily on first use.
+        // Track menus are wired with callbacks when actually populated.
     }
 
     // ═══════════════════════════════════════════════
     //  Observable Properties — single source of truth
     // ═══════════════════════════════════════════════
 
-    public ObservableCollection<TrackMenuItem> SubtitleTracks { get; } = new();
+    public ObservableCollection<TrackMenuItem> SubtitleTracks => _subtitleTracks.Value;
 
     public bool IsSubtitleEnabled
     {
@@ -584,8 +593,16 @@ public sealed class SubtitleManager : INotifyPropertyChanged, IDisposable
     private void MarkDirty()
     {
         _settingsDirty = true;
-        _saveTimer?.Stop();
-        _saveTimer?.Start();
+
+        // Lazy create save timer on first dirty mark
+        if (_saveTimer == null)
+        {
+            _saveTimer = new System.Timers.Timer(SaveDebounceMs) { AutoReset = false };
+            _saveTimer.Elapsed += (_, _) => FlushSave();
+        }
+
+        _saveTimer.Stop();
+        _saveTimer.Start();
     }
 
     /// <summary>Immediately flush dirty settings to disk. Called on file close / app exit.</summary>

@@ -13,6 +13,7 @@
     <StyleInclude Source="avares://App/UI/Resources/Spacing.axaml" />
     <StyleInclude Source="avares://App/UI/Resources/Elevation.axaml" />
     <StyleInclude Source="avares://App/UI/Resources/Radius.axaml" />
+    <StyleInclude Source="avares://App/UI/Resources/Sizes.axaml" />
     
     <!-- ======================== -->
     <!--  GLOBAL STYLES           -->
@@ -37,16 +38,16 @@
     <!--  TRANSPORT BUTTONS       -->
     <!-- ======================== -->
     
-    <!-- Circular Transport Button (40×40 — MD3 minimum touch target) -->
-    <Style Selector="Button.circular-transport">
-        <Setter Property="Width" Value="40" />
-        <Setter Property="Height" Value="40" />
+    <!-- ── Base Circular Button (40×40 — MD3 minimum touch target) ── -->
+    <Style Selector="Button.circular">
+        <Setter Property="Width" Value="{StaticResource size-button-circular}" />
+        <Setter Property="Height" Value="{StaticResource size-button-circular}" />
         <Setter Property="Padding" Value="0" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="20" />
+        <Setter Property="CornerRadius" Value="{StaticResource size-button-circular-radius}" />
         <Setter Property="RenderTransform">
             <Setter.Value>
                 <ScaleTransform ScaleX="1" ScaleY="1" />
@@ -100,134 +101,11 @@
             </Setter>
         </Style>
     </Style>
-    
-    <!-- Circular Play Button (larger, 40x40) -->
-    <Style Selector="Button.circular-play">
-        <Setter Property="Width" Value="40" />
-        <Setter Property="Height" Value="40" />
-        <Setter Property="Padding" Value="0" />
-        <Setter Property="HorizontalContentAlignment" Value="Center" />
-        <Setter Property="VerticalContentAlignment" Value="Center" />
-        <Setter Property="Background" Value="Transparent" />
-        <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="20" />
-        <Setter Property="RenderTransform">
-            <Setter.Value>
-                <ScaleTransform ScaleX="1" ScaleY="1" />
-            </Setter.Value>
-        </Setter>
-        <Setter Property="Transitions">
-            <Transitions>
-                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" />
-            </Transitions>
-        </Setter>
-        <Setter Property="Template">
-            <ControlTemplate TargetType="Button">
-                <Border x:Name="RootBorder"
-                        Background="{TemplateBinding Background}"
-                        CornerRadius="{TemplateBinding CornerRadius}">
-                    <Border.Transitions>
-                        <Transitions>
-                            <BrushTransition Property="Background" Duration="0:0:0.12" />
-                        </Transitions>
-                    </Border.Transitions>
-                    <ContentPresenter x:Name="ContentPresenter"
-                                      Content="{TemplateBinding Content}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}"
-                                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                      Margin="{TemplateBinding Padding}" />
-                </Border>
-            </ControlTemplate>
-        </Setter>
-        <Style Selector="^:pointerover /template/ Border#RootBorder">
-            <Setter Property="Background" Value="{StaticResource ButtonHoverBackground}" />
-        </Style>
-        <Style Selector="^:pressed /template/ Border#RootBorder">
-            <Setter Property="Background" Value="{StaticResource ButtonActiveBackground}" />
-        </Style>
-        <Style Selector="^:disabled /template/ ContentPresenter#ContentPresenter">
-            <Setter Property="Opacity" Value="0.4" />
-        </Style>
-        <Style Selector="^:pointerover">
-            <Setter Property="RenderTransform">
-                <Setter.Value>
-                    <ScaleTransform ScaleX="1.08" ScaleY="1.08" />
-                </Setter.Value>
-            </Setter>
-        </Style>
-        <Style Selector="^:pressed">
-            <Setter Property="RenderTransform">
-                <Setter.Value>
-                    <ScaleTransform ScaleX="0.95" ScaleY="0.95" />
-                </Setter.Value>
-            </Setter>
-        </Style>
-    </Style>
-    
-    <!-- Circular Menu Button (40×40 — MD3 minimum touch target) -->
-    <Style Selector="Button.circular-menu">
-        <Setter Property="Width" Value="40" />
-        <Setter Property="Height" Value="40" />
-        <Setter Property="Padding" Value="0" />
-        <Setter Property="HorizontalContentAlignment" Value="Center" />
-        <Setter Property="VerticalContentAlignment" Value="Center" />
-        <Setter Property="Background" Value="Transparent" />
-        <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="20" />
-        <Setter Property="RenderTransform">
-            <Setter.Value>
-                <ScaleTransform ScaleX="1" ScaleY="1" />
-            </Setter.Value>
-        </Setter>
-        <Setter Property="Transitions">
-            <Transitions>
-                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" />
-            </Transitions>
-        </Setter>
-        <Setter Property="Template">
-            <ControlTemplate TargetType="Button">
-                <Border x:Name="RootBorder"
-                        Background="{TemplateBinding Background}"
-                        CornerRadius="{TemplateBinding CornerRadius}">
-                    <Border.Transitions>
-                        <Transitions>
-                            <BrushTransition Property="Background" Duration="0:0:0.12" />
-                        </Transitions>
-                    </Border.Transitions>
-                    <ContentPresenter x:Name="ContentPresenter"
-                                      Content="{TemplateBinding Content}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}"
-                                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                      Margin="{TemplateBinding Padding}" />
-                </Border>
-            </ControlTemplate>
-        </Setter>
-        <Style Selector="^:pointerover /template/ Border#RootBorder">
-            <Setter Property="Background" Value="{StaticResource ButtonHoverBackground}" />
-        </Style>
-        <Style Selector="^:pressed /template/ Border#RootBorder">
-            <Setter Property="Background" Value="{StaticResource ButtonActiveBackground}" />
-        </Style>
-        <Style Selector="^:disabled /template/ ContentPresenter#ContentPresenter">
-            <Setter Property="Opacity" Value="0.4" />
-        </Style>
-        <Style Selector="^:pointerover">
-            <Setter Property="RenderTransform">
-                <Setter.Value>
-                    <ScaleTransform ScaleX="1.08" ScaleY="1.08" />
-                </Setter.Value>
-            </Setter>
-        </Style>
-        <Style Selector="^:pressed">
-            <Setter Property="RenderTransform">
-                <Setter.Value>
-                    <ScaleTransform ScaleX="0.95" ScaleY="0.95" />
-                </Setter.Value>
-            </Setter>
-        </Style>
-    </Style>
+
+    <!-- Sub-styles: inherit from Button.circular (same size/template/behavior) -->
+    <Style Selector="Button.circular-transport" />
+    <Style Selector="Button.circular-play" />
+    <Style Selector="Button.circular-menu" />
     
     <!-- Circular Menu ToggleButton (40×40) -->
     <Style Selector="ToggleButton.circular-menu">
@@ -254,8 +132,8 @@
     
     <!-- Circular Toggle Button (40×40) -->
     <Style Selector="ToggleButton.circular-toggle">
-        <Setter Property="Width" Value="40" />
-        <Setter Property="Height" Value="40" />
+        <Setter Property="Width" Value="{StaticResource size-button-circular}" />
+        <Setter Property="Height" Value="{StaticResource size-button-circular}" />
         <Setter Property="Padding" Value="0" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
@@ -411,7 +289,7 @@
         <Setter Property="VerticalAlignment" Value="Top" />
         <Setter Property="Margin" Value="12" />
         <Setter Property="Padding" Value="8,4" />
-        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="CornerRadius" Value="{StaticResource radius-xs}" />
         <Setter Property="Background" Value="{StaticResource AppOverlayChrome}" />
     </Style>
     
@@ -570,7 +448,7 @@
         <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
         <Setter Property="BorderBrush" Value="{StaticResource Gray700}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="CornerRadius" Value="{StaticResource radius-xs}" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="FontSize" Value="12" />
         <Setter Property="ButtonSpinnerLocation" Value="Right" />
@@ -646,7 +524,7 @@
         <Setter Property="Padding" Value="4" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
-        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="CornerRadius" Value="{StaticResource radius-xs}" />
     </Style>
     <Style Selector="Button.flat:pointerover">
         <Setter Property="Background" Value="{StaticResource ButtonHoverBackground}" />
@@ -662,20 +540,20 @@
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
         <Setter Property="Padding" Value="8,6" />
-        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="CornerRadius" Value="{StaticResource radius-xs}" />
         <Setter Property="Margin" Value="2,1" />
     </Style>
     <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="rgba(255, 255, 255, 0.08)" />
+        <Setter Property="Background" Value="{StaticResource AppHoverSubtle}" />
         <Setter Property="Foreground" Value="White" />
     </Style>
     <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="rgba(0, 120, 212, 0.25)" />
+        <Setter Property="Background" Value="{StaticResource AppDragAccentDim}" />
         <Setter Property="Foreground" Value="White" />
         <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
     <Style Selector="ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="rgba(0, 120, 212, 0.35)" />
+        <Setter Property="Background" Value="{StaticResource AppAccentDim}" />
         <Setter Property="Foreground" Value="White" />
     </Style>
 
@@ -684,7 +562,7 @@
         <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
         <Setter Property="BorderBrush" Value="{StaticResource Gray700}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="CornerRadius" Value="{StaticResource radius-xs}" />
         <Setter Property="Padding" Value="8,4" />
     </Style>
     <Style Selector="ComboBox:pointerover">
@@ -695,20 +573,20 @@
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
         <Setter Property="Padding" Value="8,6" />
-        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="CornerRadius" Value="{StaticResource radius-xs}" />
         <Setter Property="Margin" Value="2,1" />
     </Style>
     <Style Selector="ComboBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="rgba(255, 255, 255, 0.08)" />
+        <Setter Property="Background" Value="{StaticResource AppHoverSubtle}" />
         <Setter Property="Foreground" Value="White" />
     </Style>
     <Style Selector="ComboBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="rgba(0, 120, 212, 0.25)" />
+        <Setter Property="Background" Value="{StaticResource AppDragAccentDim}" />
         <Setter Property="Foreground" Value="White" />
         <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
     <Style Selector="ComboBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="rgba(0, 120, 212, 0.35)" />
+        <Setter Property="Background" Value="{StaticResource AppAccentDim}" />
         <Setter Property="Foreground" Value="White" />
     </Style>
 

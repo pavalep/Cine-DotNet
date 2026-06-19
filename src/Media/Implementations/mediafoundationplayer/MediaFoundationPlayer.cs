@@ -31,7 +31,6 @@ namespace Cine.Media.Implementations;
 
 public class MediaFoundationPlayer : IMediaPlayer, IDisposable
 {
-    #region debug-point MF0:runtime-reporter
     private static readonly HttpClient DebugHttpClient = new();
     private static readonly object DebugEnvLock = new();
     private static string? _debugServerUrl;
@@ -108,7 +107,6 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
         yield return AppContext.BaseDirectory;
         yield return Environment.CurrentDirectory;
     }
-    #endregion
 
     #region Private Fields
 
@@ -135,7 +133,7 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
     private EventHandler? _mfPlaybackEndedHandler;
     private EventHandler<ErrorEventArgs>? _mfErrorHandler;
 
-    #region debug-point MF1:counters
+    #region MF1:counters
     private long _videoSamplesReceived;
     private long _videoPresentOk;
     private long _videoPresentFail;
@@ -416,7 +414,7 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
         catch (Exception ex)
         {
             Error?.Invoke(this, $"Failed to initialize native renderer: {ex.Message}");
-            #region debug-point MF2
+            #region MF2
             DebugReport("MF", "MediaFoundationPlayer.InitializeRenderer", "InitializeRenderer failed.", new { exception = ex.ToString(), hwnd = hwnd.ToInt64() });
             #endregion
             _nativeRendering = false;
@@ -430,14 +428,14 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
             return;
         }
 
-        #region debug-point MF2
+        #region MF2
         DebugReport("MF", "MediaFoundationPlayer.InitializeRenderer", "InitializeRenderer success.", new { hwnd = hwnd.ToInt64() });
         #endregion
 
         // Store delegates so we can unsubscribe them in Dispose
         _mfMediaOpenedHandler = (s, e) =>
         {
-            #region debug-point MF3
+            #region MF3
             DebugReport("MF", "MediaFoundationPlayer.MfMediaOpened", "MfHelper.MediaOpened received.", new
             {
                 videoW = e.VideoWidth,
@@ -459,7 +457,7 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
                     {
                         w = streamInfo.Value.Width;
                         h = streamInfo.Value.Height;
-                        #region debug-point MF3
+                        #region MF3
                         DebugReport("MF", "MediaFoundationPlayer.MfMediaOpened", "Recovered video size via GetVideoStreamInfo().", new { w, h, subtype = streamInfo.Value.Subtype, fps = streamInfo.Value.FrameRate });
                         #endregion
                     }
@@ -497,7 +495,7 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
             if (_renderer != null && _currentState == PlaybackState.Playing)
             {
                 _lastNativeTimestamp = e.Timestamp;
-                #region debug-point MF4
+                #region MF4
                 var received = System.Threading.Interlocked.Increment(ref _videoSamplesReceived);
                 #endregion
                 try
@@ -509,13 +507,13 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
                             _renderer.SetVideoDimensions(w, h);
                             _videoW = w;
                             _videoH = h;
-                            #region debug-point MF4
+                            #region MF4
                             DebugReport("MF", "MediaFoundationPlayer.SampleReady", "Inferred video size from sample buffer.", new { w, h, fmt });
                             #endregion
                         }
                     }
                     _renderer.Present(e.Sample);
-                    #region debug-point MF4
+                    #region MF4
                     var ok = System.Threading.Interlocked.Increment(ref _videoPresentOk);
                     if (ok == 1 || ok % 60 == 0)
                         DebugReport("MF", "MediaFoundationPlayer.SampleReady", "Presented frame.", new { received, ok, ts = e.Timestamp, state = _currentState.ToString(), videoW = _videoW, videoH = _videoH });
@@ -523,7 +521,7 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
                 }
                 catch (Exception ex)
                 {
-                    #region debug-point MF4
+                    #region MF4
                     var fail = System.Threading.Interlocked.Increment(ref _videoPresentFail);
                     if (fail <= 5)
                         DebugReport("MF", "MediaFoundationPlayer.SampleReady", "Present failed.", new { received, ok = _videoPresentOk, fail, ts = e.Timestamp, exception = ex.ToString() });
@@ -573,7 +571,7 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
         {
             _currentState = PlaybackState.Stopped;
             StopPositionTracking();
-            #region debug-point MF5
+            #region MF5
             DebugReport("MF", "MediaFoundationPlayer.MfError", "MfHelper.Error received.", new { error = e.Error?.ToString() });
             #endregion
             EndFile?.Invoke(this, new MediaEventArgs(_currentFilePath)

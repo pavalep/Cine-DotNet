@@ -2,12 +2,31 @@ using Avalonia;
 
 namespace Cine.Avalonia;
 
+/// <summary>
+/// Shared UI dimension, layout, and behavior constants.
+/// Mirrors values in UI/Resources/Sizes.axaml for code-behind usage.
+/// </summary>
 public static class UiConstants
 {
-    // Layout breakpoints
-    public const double NarrowBreakpoint = 600.0;
-    public const double MediumBreakpoint = 1024.0;
-    public const double NarrowControlsBreakpoint = 495.0;
+    // ── UI Component Sizes ──
+    public const double HeaderBarHeight = 56;
+    public const double FullscreenHeaderHeight = 44;
+    public const double ButtonCircular = 40;
+    public const double ButtonFlat = 28;
+    public const double ButtonWindowControl = 46;
+    public const double ButtonWindowControlHeight = 32;
+    public const double OsdMarginBottom = 110;
+
+    // ── Responsive Breakpoints ──
+    public const double BreakpointNarrow = 495;
+    public const double BreakpointCompact = 600;
+    public const double BreakpointTiny = 400;
+    public const double BreakpointMedium = 1024.0;
+
+    // Layout breakpoints (legacy aliases, prefer the Breakpoint* naming above)
+    public const double NarrowBreakpoint = BreakpointCompact;
+    public const double MediumBreakpoint = BreakpointMedium;
+    public const double NarrowControlsBreakpoint = BreakpointNarrow;
 
     // Auto-hide
     public const double AutoHideDelaySeconds = 3.0;
