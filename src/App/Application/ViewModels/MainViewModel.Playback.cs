@@ -1,3 +1,4 @@
+using Cine.Core;
 using Cine.Media.Interfaces;
 
 namespace Cine.Avalonia.ViewModels;
@@ -14,7 +15,7 @@ public partial class MainViewModel
 
     public void PlayPause()
     {
-        Log($"PlayPause called. _player.IsPlaying={_player.IsPlaying} _state={_state}");
+        Log.ForContext<MainViewModel>().Debug("PlayPause called. IsPlaying={IsPlaying} State={State}", _player.IsPlaying, _state);
         if (_player.IsPlaying)
             _player.Pause();
         else

@@ -12,6 +12,7 @@ using Cine.Avalonia.Views.Dialogs;
 using Cine.Avalonia.Managers;
 using Cine.Avalonia.Builders;
 using Cine.Avalonia.Models;
+using Cine.Avalonia.Services;
 using Cine.Media.Models;
 using AvaloniaLayout = Avalonia.Layout;
 using Button = global::Avalonia.Controls.Button;
@@ -68,11 +69,14 @@ public partial class ControlsBoxControl : AvaloniaUserControl
         };
     }
 
-    private async void OnVolumeAutoDismiss(object? sender, EventArgs e)
+    private void OnVolumeAutoDismiss(object? sender, EventArgs e)
     {
-        await Task.Delay(1500);
-        if (BtnVolumeMenu?.Flyout is Flyout f && f.IsOpen)
-            f.Hide();
+        ErrorBoundary.Run(async () =>
+        {
+            await Task.Delay(1500);
+            if (BtnVolumeMenu?.Flyout is Flyout f && f.IsOpen)
+                f.Hide();
+        });
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)

@@ -8,6 +8,7 @@ using Avalonia.Media;
 using Cine.Avalonia.Builders;
 using Cine.Avalonia.ViewModels;
 using Cine.Avalonia.Views.Dialogs;
+using Cine.Core;
 using Layout = Avalonia.Layout;
 using PointerPressedEventArgs = Avalonia.Input.PointerPressedEventArgs;
 using ToolTip = Avalonia.Controls.ToolTip;
@@ -289,13 +290,16 @@ public partial class HeaderBarControl : AvaloniaUserControl
                 recentBtn.Click += (_, _) =>
                 {
                     if (recentBtn.Tag is string path && _viewModel != null)
-                        _viewModel.OpenFile(path);
+                        _ = _viewModel.OpenFile(path);
                     flyout.Hide();
                 };
                 stack.Children.Add(recentBtn);
             }
         }
-        catch { /* Recent files list is best-effort */ }
+        catch
+        {
+            Log.ForContext<HeaderBarControl>().Debug("Failed to load recent files list");
+        }
     }
 
     public void TrackFlyoutClosed(object? sender, EventArgs e)

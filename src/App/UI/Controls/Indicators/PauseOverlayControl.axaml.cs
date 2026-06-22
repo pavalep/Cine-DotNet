@@ -15,7 +15,7 @@ public partial class PauseOverlayControl : AvaloniaUserControl
         InitializeComponent();
     }
 
-    public async void Show(double fadeDurationMs = 150)
+    public async Task Show(double fadeDurationMs = 150)
     {
         _fadeCts?.Cancel();
         _fadeCts = new CancellationTokenSource();

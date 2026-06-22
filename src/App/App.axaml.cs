@@ -12,6 +12,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using Avalonia.Win32;
 using Cine.Avalonia.Services;
+using Cine.Avalonia.Managers;
 using Cine.Avalonia.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -171,13 +172,18 @@ public class App : global::Avalonia.Application
 
     public static AppBuilder BuildAvaloniaApp()
     {
-        return AppBuilder.Configure<App>()
-            .UsePlatformDetect()
-            .With(new Win32PlatformOptions
-            {
-                RenderingMode = new[] { Win32RenderingMode.AngleEgl, Win32RenderingMode.Software },
-                CompositionMode = new[] { Win32CompositionMode.RedirectionSurface }
-            });
+        var builder = AppBuilder.Configure<App>()
+            .UsePlatformDetect();
+
+#if WINDOWS
+        builder = builder.With(new Win32PlatformOptions
+        {
+            RenderingMode = new[] { Win32RenderingMode.AngleEgl, Win32RenderingMode.Software },
+            CompositionMode = new[] { Win32CompositionMode.RedirectionSurface }
+        });
+#endif
+
+        return builder;
     }
 
     public override void Initialize()
@@ -233,39 +239,29 @@ public class App : global::Avalonia.Application
 
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
-                try
+                // ── First-Launch Detection: download native DLLs if missing ──
+                if (!RuntimeDownloader.IsRuntimeReady())
                 {
-                    var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
-                    DebugReport("A", "App.OnFrameworkInitializationCompleted", "MainWindow resolved from DI.", new
+                    var downloadVm = new ViewModels.Dialogs.FirstLaunchViewModel();
+                    var downloadDialog = new Views.Dialogs.FirstLaunchDialog
                     {
-                        type = mainWindow.GetType().FullName,
-                        background = mainWindow.Background?.ToString(),
-                        extendClientArea = mainWindow.ExtendClientAreaToDecorationsHint,
-                        windowState = mainWindow.WindowState.ToString()
-                    });
-                    desktop.MainWindow = mainWindow;
-                    Log("MainWindow created and assigned successfully.");
+                        DataContext = downloadVm
+                    };
 
-                    // Register file associations for double-click support
-                    try
+                    downloadVm.DownloadComplete += () =>
                     {
-                        var registry = new Cine.Avalonia.Services.WindowsRegistryService();
-                        var fileAssoc = new Cine.Avalonia.Services.FileAssociationService(registry);
-                        fileAssoc.RegisterOnStartup();
-                    }
-                    catch (Exception regEx)
-                    {
-                        Log($"File association registration failed: {regEx.Message}");
-                    }
+                        Dispatcher.UIThread.Post(() =>
+                        {
+                            ShowMainWindow(desktop);
+                            downloadDialog.Close();
+                        });
+                    };
+
+                    downloadDialog.Show();
                 }
-                catch (Exception ex)
+                else
                 {
-                    Log($"MainWindow creation FAILED: {ex}");
-                    DebugReport("A", "App.OnFrameworkInitializationCompleted", "MainWindow creation failed.", new
-                    {
-                        exception = ex.ToString()
-                    });
-                    throw;
+                    ShowMainWindow(desktop);
                 }
             }
             else
@@ -282,12 +278,64 @@ public class App : global::Avalonia.Application
         base.OnFrameworkInitializationCompleted();
     }
 
+    private void ShowMainWindow(IClassicDesktopStyleApplicationLifetime desktop)
+    {
+        try
+        {
+            var mainWindow = _serviceProvider!.GetRequiredService<MainWindow>();
+            DebugReport("A", "App.OnFrameworkInitializationCompleted", "MainWindow resolved from DI.", new
+            {
+                type = mainWindow.GetType().FullName,
+                background = mainWindow.Background?.ToString(),
+                extendClientArea = mainWindow.ExtendClientAreaToDecorationsHint,
+                windowState = mainWindow.WindowState.ToString()
+            });
+            desktop.MainWindow = mainWindow;
+            Log("MainWindow created and assigned successfully.");
+
+            // Register file associations for double-click support
+            try
+            {
+                var registry = new Cine.Avalonia.Services.WindowsRegistryService();
+                var fileAssoc = new Cine.Avalonia.Services.FileAssociationService(registry);
+                fileAssoc.RegisterOnStartup();
+            }
+            catch (Exception regEx)
+            {
+                Log($"File association registration failed: {regEx.Message}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log($"MainWindow creation FAILED: {ex}");
+            DebugReport("A", "App.OnFrameworkInitializationCompleted", "MainWindow creation failed.", new
+            {
+                exception = ex.ToString()
+            });
+            throw;
+        }
+    }
+
     private static IServiceProvider ConfigureServices()
     {
         var services = new ServiceCollection();
+
+        // Core infrastructure — stateless, safe as singletons
+        services.AddSingleton<InputRoutingService>();
+        services.AddSingleton<ThemeService>();
+
+        // Settings stores — single instance shared across the app
+        services.AddSingleton<SubtitleSettingsStore>();
+        services.AddSingleton<AudioSettingsStore>();
+        services.AddSingleton<PlaylistSettingsStore>();
+
+        // Player service — singleton, initialized once
         services.AddSingleton<PlayerService>();
+
+        // ViewModels and Windows — transient (Avalonia manages lifetime)
         services.AddTransient<MainViewModel>();
         services.AddTransient<MainWindow>();
+
         return services.BuildServiceProvider();
     }
 }

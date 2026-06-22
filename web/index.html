@@ -4,12 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Install Cine — Modern Media Player</title>
+    <link rel="icon" href="CineLogo124x124.png" type="image/png">
     <style>
         :root {
             --bg: #1A1A2E;
             --accent: #6C5CE7;
             --text: #E0E0E0;
             --card: #16213E;
+            --success: #00B894;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -27,26 +29,32 @@
             border-radius: 16px;
             padding: 48px 64px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-            max-width: 480px;
+            max-width: 520px;
         }
         .logo {
-            width: 124px;
-            height: 124px;
-            margin-bottom: 24px;
+            width: 100px;
+            height: 100px;
+            margin-bottom: 20px;
             filter: drop-shadow(0 0 20px rgba(108,92,231,0.3));
         }
-        h1 { font-size: 28px; margin-bottom: 8px; }
-        .subtitle { color: #888; margin-bottom: 32px; font-size: 14px; }
+        h1 { font-size: 28px; margin-bottom: 4px; }
+        .subtitle { color: #888; margin-bottom: 28px; font-size: 13px; }
+
         .features {
             text-align: left;
-            margin-bottom: 32px;
+            margin-bottom: 28px;
             font-size: 13px;
             color: #999;
             line-height: 1.8;
         }
         .features span { color: var(--accent); margin-right: 8px; }
-        .install-btn {
-            display: inline-block;
+
+        /* Primary download button — CineSetup.exe */
+        .btn-primary {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
             background: var(--accent);
             color: white;
             padding: 14px 48px;
@@ -57,22 +65,80 @@
             transition: transform 0.15s, box-shadow 0.15s;
             box-shadow: 0 4px 20px rgba(108,92,231,0.4);
         }
-        .install-btn:hover {
+        .btn-primary:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 30px rgba(108,92,231,0.6);
         }
-        .note {
-            margin-top: 24px;
+        .btn-primary .badge {
+            background: rgba(255,255,255,0.2);
+            padding: 2px 8px;
+            border-radius: 4px;
             font-size: 11px;
+            font-weight: 400;
+        }
+
+        /* Secondary download — alternative options */
+        .alt-section {
+            margin-top: 28px;
+            padding-top: 20px;
+            border-top: 1px solid #2A2A4A;
+        }
+        .alt-title {
+            font-size: 12px;
             color: #666;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .alt-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .alt-btn {
+            display: block;
+            background: #2A2A4A;
+            color: #aaa;
+            padding: 10px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 12px;
+            transition: background 0.15s, color 0.15s;
+        }
+        .alt-btn:hover {
+            background: #3A3A5A;
+            color: white;
+        }
+        .alt-btn .desc {
+            display: block;
+            font-size: 10px;
+            color: #666;
+            margin-top: 2px;
+        }
+
+        .note {
+            margin-top: 20px;
+            font-size: 11px;
+            color: #555;
             line-height: 1.6;
         }
-        .alt-download {
-            margin-top: 16px;
-            font-size: 12px;
-            color: #555;
+
+        .version {
+            margin-top: 8px;
+            font-size: 10px;
+            color: #444;
         }
-        .alt-download a { color: var(--accent); }
+
+        /* Meta badges */
+        .meta-row {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 24px;
+            font-size: 11px;
+            color: #777;
+        }
+        .meta-row span { display: flex; align-items: center; gap: 4px; }
     </style>
 </head>
 <body>
@@ -84,26 +150,65 @@
         <div class="features">
             <p><span>▶</span> Hardware-accelerated playback via libmpv + ANGLE</p>
             <p><span>▶</span> Picture-in-Picture with aspect-ratio-locked resize</p>
-            <p><span>▶</span> 50+ keyboard shortcuts. Full playlist management</p>
-            <p><span>▶</span> SRT / ASS / VTT subtitles. Multi-track audio. EQ</p>
-            <p><span>▶</span> Session resume. Silent auto-updates</p>
+            <p><span>▶</span> 50+ keyboard shortcuts &middot; Full playlist management</p>
+            <p><span>▶</span> SRT / ASS / VTT subtitles &middot; Multi-track audio</p>
+            <p><span>▶</span> Session resume &middot; First-launch setup wizard</p>
         </div>
 
-        <!-- ms-appinstaller: protocol triggers Windows App Installer -->
-        <a class="install-btn"
-           href="ms-appinstaller:?source=https://github.com/user/Cine/releases/latest/download/Cine.appinstaller">
-            ⚡ Install Cine
+        <!-- Primary download: CineSetup.exe with setup wizard -->
+        <a class="btn-primary"
+           href="https://github.com/diegopvlk/Cine/releases/latest/download/CineSetup.exe">
+            <span>⬇</span> Download CineSetup.exe
+            <span class="badge">recommended</span>
         </a>
 
-        <p class="alt-download">
-            Or <a href="https://github.com/user/Cine/releases/latest">download the MSIX directly</a>
-        </p>
+        <!-- Alternative downloads -->
+        <div class="alt-section">
+            <p class="alt-title">Other install options</p>
+            <div class="alt-grid">
+                <a class="alt-btn"
+                   href="https://github.com/diegopvlk/Cine/releases/latest/download/Cine.msi">
+                    Cine.msi
+                    <span class="desc">Standalone MSI</span>
+                </a>
+                <a class="alt-btn"
+                   href="ms-appinstaller:?source=https://github.com/diegopvlk/Cine/releases/latest/download/Cine.appinstaller">
+                    Cine.msix
+                    <span class="desc">Store / auto-update</span>
+                </a>
+                <a class="alt-btn"
+                   href="https://github.com/diegopvlk/Cine/releases/latest">
+                    GitHub Releases
+                    <span class="desc">All artifacts</span>
+                </a>
+                <a class="alt-btn"
+                   href="https://github.com/diegopvlk/Cine">
+                    Source Code
+                    <span class="desc">GitHub repo</span>
+                </a>
+            </div>
+        </div>
 
         <p class="note">
-            Requires Windows 10 (19041+) or Windows 11.<br>
-            .NET 10 Desktop Runtime will be downloaded automatically if needed.<br>
-            Package size: ~15 MB (framework-dependent)
+            Requires Windows 10 (19041+) or Windows 11 (64-bit).<br>
+            <strong>CineSetup.exe</strong> downloads .NET 10 + native components automatically on first launch.<br>
+            MSIX requires .NET 10 pre-installed. All packages are SHA256-signed.
         </p>
+        <p class="version" id="version">Latest version</p>
     </div>
+
+    <script>
+        // Fetch latest release version from GitHub API
+        fetch('https://api.github.com/repos/diegopvlk/Cine/releases/latest')
+            .then(r => r.json())
+            .then(data => {
+                const v = data.tag_name || 'v0.0.0';
+                document.getElementById('version').textContent =
+                    `Latest: ${v} — ${data.published_at ? new Date(data.published_at).toLocaleDateString() : ''}`;
+            })
+            .catch(() => {
+                document.getElementById('version').textContent = 'Latest version';
+            });
+    </script>
 </body>
 </html>

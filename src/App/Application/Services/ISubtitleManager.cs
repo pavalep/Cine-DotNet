@@ -39,6 +39,7 @@ public interface ISubtitleManager : INotifyPropertyChanged, IDisposable
 
     // ── External Files ──
     Func<Task<string?>>? RequestSubtitleFileAsync { get; set; }
+    Func<Task>? DismissFlyoutAsync { get; set; }
     void LoadExternalSubtitle(string filePath);
     Task AddSubtitleTrackAsync();
 

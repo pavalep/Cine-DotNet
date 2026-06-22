@@ -45,10 +45,10 @@ public partial class MainWindow
 
         ReportWindowState("MainWindow.OnWindowInitialized.AfterResolve");
 
-        _inputRouter = new InputRoutingService();
+        _inputRouter ??= new InputRoutingService();
         RegisterKeyboardShortcuts();
 
-        _playerService = new PlayerService();
+        _playerService ??= new PlayerService();
         try
         {
             _playerService.Initialize();
@@ -118,7 +118,7 @@ public partial class MainWindow
                     _sessionResumePosition = TimeSpan.Zero;
                     if (_viewModel != null)
                     {
-                        _viewModel.OpenFile(p);
+                        _ = _viewModel.OpenFile(p);
                         _viewModel.ClearSession();
                     }
                     if (resumePos.TotalSeconds > 0)
@@ -354,6 +354,20 @@ public partial class MainWindow
         _controlsBox?.SubtitleOverlayCtrl?.RefreshIcon();
         _controlsBox?.AudioTrackSelectorCtrl?.RefreshIcon();
         _controlsBox?.RefreshVolumeIcon();
+
+        // Wire flyout dismissal before file dialogs open (prevents dialog overlap)
+        if (_viewModel?.Subtitles is { } subMgr)
+            subMgr.DismissFlyoutAsync = () =>
+            {
+                _controlsBox?.SubtitleOverlayCtrl?.HideFlyout();
+                return Task.CompletedTask;
+            };
+        if (_viewModel?.Audio is { } audMgr)
+            audMgr.DismissFlyoutAsync = () =>
+            {
+                _controlsBox?.AudioTrackSelectorCtrl?.HideFlyout();
+                return Task.CompletedTask;
+            };
         ReportWindowState("MainWindow.OnOpened.AfterInitialState");
         Dispatcher.UIThread.OnUiThread(() => ReportWindowState("MainWindow.OnOpened.PostLayout"), DispatcherPriority.Background);
 

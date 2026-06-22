@@ -265,6 +265,6 @@ public partial class MainViewModel
     public void OpenRecentFile(string path)
     {
         if (!string.IsNullOrWhiteSpace(path) && File.Exists(path))
-            OpenFile(path);
+            _ = OpenFile(path);
     }
 }

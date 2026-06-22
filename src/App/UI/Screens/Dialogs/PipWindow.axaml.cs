@@ -8,6 +8,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
+using Cine.Core;
 using Cine.Avalonia.Extensions;
 using Cine.Avalonia.Serialization;
 using Cine.Avalonia.Services;
@@ -162,10 +163,19 @@ public partial class PipWindow : Window, IPipWindow
 
     private double GetNormalizedFromPointer(PointerEventArgs e)
     {
-        if (PipSeekArea == null) return 0;
+        if (PipSeekArea == null || PipSeekThumb == null) return 0;
         var pos = e.GetCurrentPoint(PipSeekArea).Position.X;
         double w = PipSeekArea.Bounds.Width > 0 ? PipSeekArea.Bounds.Width : PipSeekArea.DesiredSize.Width;
-        return w > 0 ? Math.Clamp(pos / w, 0, 1) : 0;
+        if (w <= 0) return 0;
+
+        double thumbWidth = PipSeekThumb.Bounds.Width;
+        if (thumbWidth <= 0) thumbWidth = 12; // fallback
+        double thumbHalf = thumbWidth / 2.0;
+
+        double activeWidth = w - thumbWidth;
+        if (activeWidth <= 0) return 0;
+
+        return Math.Clamp((pos - thumbHalf) / activeWidth, 0.0, 1.0);
     }
 
     private void OnPipSeekPointerPressed(object? sender, PointerPressedEventArgs e)
@@ -197,11 +207,17 @@ public partial class PipWindow : Window, IPipWindow
     private void UpdateSeekVisuals(double normalized)
     {
         if (PipSeekArea == null || PipSeekFill == null || PipSeekThumb == null) return;
-        double areaWidth = PipSeekArea.Bounds.Width > 0 ? PipSeekArea.Bounds.Width : PipSeekArea.DesiredSize.Width;
-        if (areaWidth <= 0) return;
-        double fillWidth = normalized * (areaWidth - 14);
-        PipSeekFill.Width = Math.Max(0, fillWidth);
-        PipSeekThumb.Margin = new Thickness(fillWidth, 0, 0, 0);
+        double w = PipSeekArea.Bounds.Width > 0 ? PipSeekArea.Bounds.Width : PipSeekArea.DesiredSize.Width;
+        if (w <= 0) return;
+
+        double thumbWidth = PipSeekThumb.Bounds.Width;
+        if (thumbWidth <= 0) thumbWidth = 12; // fallback
+        double thumbHalf = thumbWidth / 2.0;
+
+        double thumbLeft = normalized * (w - thumbWidth);
+        PipSeekThumb.Margin = new Thickness(thumbLeft, 0, 0, 0);
+
+        PipSeekFill.Width = thumbLeft + thumbHalf;
         PipSeekThumb.IsVisible = _isSeeking || HoverOverlay?.Opacity > 0.5;
     }
 
@@ -385,7 +401,10 @@ public partial class PipWindow : Window, IPipWindow
             Position = new PixelPoint(state.X, state.Y); Width = state.W; Height = state.H;
             _isPinned = state.Pinned; Topmost = _isPinned;
         }
-        catch { }
+        catch
+        {
+            Log.ForContext<PipWindow>().Warning("Failed to restore PiP window state");
+        }
     }
 
     public void SnapToEdge()

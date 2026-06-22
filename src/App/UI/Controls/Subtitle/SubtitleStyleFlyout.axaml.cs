@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Cine.Avalonia.Services;
+using Cine.Core;
 
 namespace Cine.Avalonia.Controls.Subtitle;
 
@@ -271,7 +272,10 @@ public partial class SubtitleStyleFlyout : UserControl
                     UpdateColorPreview(text);
                 }
             }
-            catch { }
+            catch
+            {
+                Log.ForContext<SubtitleStyleFlyout>().Debug("Failed to update color preview");
+            }
         }
     }
 

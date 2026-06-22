@@ -76,6 +76,10 @@ public partial class MainWindow
     // Session save
     private DispatcherTimer? _sessionSaveTimer;
 
+    // ── Volume OSD debounce ──
+    private DispatcherTimer? _volumeOsdTimer;
+    private double _pendingVolumeLevel;
+
     // Startup error guard
     private bool _isDisposed;
 

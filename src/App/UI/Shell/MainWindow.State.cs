@@ -102,6 +102,25 @@ public partial class MainWindow
     private void ShowOsdNotificationWithProgress(MaterialIconKind icon, string text, double value, double durationMs = 1500)
         => OsdNotificationControl.ShowWithProgress(icon, text, value, durationMs);
 
+    /// <summary>
+    /// Debounced volume OSD: accumulates rapid volume changes from scroll/wheel
+    /// and only shows the OSD after 80ms of inactivity. Prevents flicker.
+    /// </summary>
+    private void ShowVolumeOsdDebounced(string text, double progress)
+    {
+        _volumeOsdTimer ??= new DispatcherTimer(TimeSpan.FromMilliseconds(80), DispatcherPriority.Normal,
+            (_, _) =>
+            {
+                _volumeOsdTimer?.Stop();
+                ShowOsdNotificationWithProgress(MaterialIconKind.VolumeHigh,
+                    _volumeOsdTimer?.Tag?.ToString() ?? text, _pendingVolumeLevel);
+            });
+
+        _volumeOsdTimer.Stop();
+        _volumeOsdTimer.Tag = text;
+        _volumeOsdTimer.Start();
+    }
+
     // =========================================================================
     // P8.3: Typed property watchers — replaces string-based PropertyChanged switch
     // =========================================================================
@@ -124,7 +143,7 @@ public partial class MainWindow
                     // Only show loader if StartPage is already hidden (switching files).
                     // On landing page, StartPage IS the loading indicator.
                     if (StartPage?.IsVisible == false)
-                        _spinnerOverlay.Start();
+                        _ = _spinnerOverlay.Start();
                     // Don't hide StartPage here — OnMediaOpened handles fade-out
                     // once the player actually opens the file. This avoids a race
                     // where the watcher hides StartPage before the video is ready.
@@ -157,15 +176,18 @@ public partial class MainWindow
                 _controlsBox.RefreshVolumeIcon();
                 if (_viewModel.IsMuted || _viewModel.VolumeValue == 0)
                     ShowOsdNotification(MaterialIconKind.VolumeOff, "Muted");
-                else
-                    ShowOsdNotification(MaterialIconKind.VolumeHigh, $"Volume: {_viewModel.VolumeValue}%");
+                // Unmute volume is handled by the debounced VolumeValue watcher
             })
             .Watch(() => _viewModel.VolumeValue, vol =>
             {
                 _controlsBox.RefreshVolumeIcon();
-                // Show volume notification only if not muted (mute toggle handles its own notification)
+                // Debounce rapid volume changes: only show OSD after scrolling settles
                 if (vol > 0 && !_viewModel.IsMuted)
-                    ShowOsdNotification(MaterialIconKind.VolumeHigh, $"Volume: {vol}%");
+                {
+                    var pct = (vol / _viewModel.VolumeMax) * 100.0;
+                    _pendingVolumeLevel = pct;
+                    ShowVolumeOsdDebounced($"Volume: {vol:F0}%", pct);
+                }
             })
             .Watch(() => _viewModel.SpeedValue, speed =>
                 ShowOsdNotification(MaterialIconKind.Speedometer, $"Speed: {speed:F1}x", 3000))

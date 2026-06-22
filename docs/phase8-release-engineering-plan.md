@@ -1,6 +1,6 @@
-# Phase 8 — Release Engineering: MSIX Packaging & Distribution
+# Phase 8 — Release Engineering: Setup Wizard, Runtime Download & Distribution
 
-> **Goal**: Ship Cine as a lightweight, self-updating MSIX package with a gorgeous custom installer UI, framework-dependent deployment (no bundled runtime), and fully automated CI/CD pipeline.
+> **Goal**: Ship Cine as a polished setup experience with a proper wizard (Next/Back/Install/Finish), automatic .NET runtime download with progress, and in-app native DLL download with progress bar on first launch.
 
 ---
 
@@ -8,831 +8,768 @@
 
 | Item | Status | Problem |
 |------|--------|---------|
-| MSIX packaging | ❌ None | No package identity → no clean install/uninstall, no Store option |
-| WiX MSI | ✅ Exists (`installer/`) | Legacy; heavier, no differential updates, manual .NET dependency |
-| `.appinstaller` auto-update | ❌ None | Users must manually download new versions |
-| Code signing | ⚠️ None | MSI unsigned; MSIX requires signing |
-| CI/CD pipeline | ❌ None | All builds are local; no automated releases |
-| Custom installer UX | ❌ None | Default Windows installer dialog |
-| App icon branding | ⚠️ Partial | Icons exist but unoptimized for MSIX tile sizes |
-| File association | ⚠️ WiX only | MSIX offers superior file association (declarative in manifest) |
-| Package size | ⚠️ ~100MB (self-contained) | Currently bundles .NET runtime in folder; MSIX should be ~8MB |
+| WiX Bootstrapper (`CineSetup.exe`) | ✅ Exists | Only checks .NET — doesn't **download** it |
+| Custom bootstrapper theme | ✅ Dark theme | ✅ Adequate but wizard flow is flat (no Next/Back) |
+| .NET Runtime detection | ✅ Registry search | ❌ Just shows link — user must manually download |
+| .NET Runtime download | ❌ None | Must automate this with progress bar |
+| In-app native DLL download | ✅ `RuntimeDownloader.cs` | ❌ No UI wired — no progress bar visible to user |
+| MSI/package | ✅ WiX MSI | Functional but heavy |
+| MSIX packaging | ⚠️ Partial | `Package.appxmanifest` exists, not built in CI |
+| CI/CD pipeline | ❌ None | All builds manual |
 
 ---
 
-## 8A — Framework-Dependent MSIX Strategy (No Bundled Runtime)
-
-### Why Framework-Dependent?
+## Overall Architecture
 
 ```
-Self-Contained MSIX           Framework-Dependent MSIX
-┌─────────────────────┐       ┌─────────────────────┐
-│ App.dll              │       │ App.dll              │
-│ Core.dll             │       │ Core.dll             │
-│ Media.dll            │       │ Media.dll            │
-│ libmpv-2.dll          │       │ libmpv-2.dll          │
-│ libEGL.dll            │       │ libEGL.dll            │
-│ libGLESv2.dll         │       │ libGLESv2.dll         │
-│ .NET Runtime (60MB)  │       │ ── NOT INCLUDED ──  │
-│ Avalonia DLLs (15MB) │       │ Avalonia DLLs (15MB) │
-└─────────────────────┘       └─────────────────────┘
-        ~100 MB                       ~15 MB
+┌─────────────────────────────────────────────────────────────┐
+│                    DEPLOYMENT PIPELINE                       │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌──────────────────┐    ┌────────────────────────────────┐  │
+│  │ CineSetup.exe     │    │ Cine.Avalonia (first launch)   │  │
+│  │ (WiX Bootstrapper)│    │                                │  │
+│  │                   │    │  ┌──────────────────────────┐  │  │
+│  │ 1. Welcome page   │    │  │ RuntimeDownloader         │  │  │
+│  │ 2. License agree  │    │  │ • libmpv-2.dll (~45MB)   │  │  │
+│  │ 3. Install opts   │    │  │ • libEGL.dll (~0.5MB)    │  │  │
+│  │ 4. Download .NET  │───▶│  │ • libGLESv2.dll (~8MB)   │  │  │
+│  │    ★ progress bar │    │  │ ★ Progress bar in UI     │  │  │
+│  │ 5. Install MSI    │    │  └──────────────────────────┘  │  │
+│  │ 6. Finish         │    │                                │  │
+│  └──────────────────┘    └────────────────────────────────┘  │
+│                                                              │
+│  User sees: [Next →] [Next →] [Downloading...] [Install]     │
+│             [Finish ✓]                                       │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-The `.NET 10 Desktop Runtime` is declared as a **framework package dependency** in `Package.appxmanifest`. Windows downloads it automatically on first install from Microsoft's CDN. This is analogous to how a web browser downloads video codecs on demand.
+---
 
-### Dependency Declaration
+## 8A — Setup Wizard Flow (Bootstrapper Enhancement)
+
+The current bootstrapper has a single-step "Install" page. We need a **multi-page wizard**:
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                     SETUP WIZARD FLOW                         │
+│                                                              │
+│  ┌─────────┐    ┌─────────┐    ┌──────────────┐             │
+│  │ PAGE 1  │    │ PAGE 2  │    │ PAGE 3       │             │
+│  │ Welcome │───▶│ License │───▶│ Install      │             │
+│  │         │    │ Agree   │    │ Options      │             │
+│  │ [Next]  │    │ [Back]  │    │ [Back]       │             │
+│  │         │    │ [Next]  │    │ [Install]    │             │
+│  └─────────┘    └─────────┘    └──────┬───────┘             │
+│                                       │                      │
+│                                       ▼                      │
+│  ┌──────────────────┐    ┌──────────────────────┐           │
+│  │ PAGE 5           │    │ PAGE 4               │           │
+│  │ Complete ✓       │◀───│ Download + Install   │           │
+│  │                  │    │ ★ Progress bar       │           │
+│  │ [Finish]         │    │ ★ Status text        │           │
+│  │ [✓ Launch Cine]  │    │ [Cancel]             │           │
+│  └──────────────────┘    └──────────────────────┘           │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Implementation: Enhanced Theme.xml Pages
+
+The existing `Theme.xml` already has Install/Progress/Success/Failure pages. Key changes needed:
+
+#### 8A.1 — Add License Page
 
 ```xml
-<!-- Package.appxmanifest -->
-<Dependencies>
-    <!-- Windows downloads these from Microsoft CDN automatically -->
-    <TargetDeviceFamily Name="Windows.Desktop"
-        MinVersion="10.0.19041.0"
-        MaxVersionTested="10.0.26100.0" />
+<Page Name="LicenseAgreement">
+    <!-- Background image -->
+    <Image Control="BackgroundImage" X="0" Y="0" Width="520" Height="440"
+           ImageFile="Background.bmp" ScaleMode="uniformToFill" />
 
-    <!-- .NET 10 Desktop Runtime → ~60MB download, ONCE per machine -->
-    <PackageDependency Name="Microsoft.NET.Runtime.10.0"
-        MinVersion="10.0.100.46302"
-        Publisher="CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US" />
+    <Rectangle X="0" Y="0" Width="220" Height="440" Fill="1A1A2E" />
 
-    <!-- VCLibs → already on most machines -->
-    <PackageDependency Name="Microsoft.VCLibs.140.00"
-        MinVersion="14.0.32530.0"
-        Publisher="CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US" />
-</Dependencies>
+    <Text X="0" Y="60" Width="220" Height="40"
+          FontId="2" DisablePrefix="yes" Center="yes">Cine</Text>
+    <Image Control="LogoControl" X="70" Y="120" Width="80" Height="80"
+           ImageFile="Logo.png" ScaleMode="uniform" />
+
+    <Text X="250" Y="30" Width="240" Height="30"
+          FontId="1" DisablePrefix="yes">License Agreement</Text>
+
+    <!-- Scrollable license text -->
+    <ScrollableText Control="LicenseText"
+                     X="250" Y="70" Width="240" Height="200"
+                     FontId="0" TabStop="yes"
+                     Hex="yes" />
+
+    <!-- Accept checkbox -->
+    <Checkbox Control="AcceptCheckbox"
+              X="250" Y="290" Width="240" Height="18"
+              FontId="0" TabStop="yes"
+              Hex="yes">I accept the terms in the License Agreement</Checkbox>
+
+    <!-- Bottom bar -->
+    <Rectangle X="0" Y="390" Width="520" Height="50" Fill="141428" />
+
+    <Button Control="BackButton"   X="220" Y="400" Width="85" Height="30"
+            FontId="1" TabStop="yes" Hex="yes">Back</Button>
+    <Button Control="NextButton"   X="320" Y="400" Width="85" Height="30"
+            FontId="1" TabStop="yes" Hex="yes" Default="yes">Next</Button>
+    <Button Control="CancelButton" X="415" Y="400" Width="85" Height="30"
+            FontId="1" TabStop="yes" Hex="yes">Cancel</Button>
+</Page>
 ```
 
-### Package Size Breakdown
+#### 8A.2 — Enhance Install Options Page
 
-| Component | Framework-Dependent | Self-Contained |
-|---|---|---|
-| App binaries (Cine.*.dll) | ~2 MB | ~2 MB |
-| Avalonia NuGet DLLs | ~15 MB | ~15 MB |
-| Native DLLs (mpv, ANGLE) | ~45 MB | ~45 MB |
-| .NET Runtime | **NOT INCLUDED** | ~60 MB |
-| **Total MSIX** | **~15 MB** | **~125 MB** |
-
-> **Critical**: Native mpv DLLs (45MB) cannot be excluded — they have no framework package equivalent. Investigate compression via MSIX's built-in block-level compression. If still too large, consider a post-install download step for mpv DLLs similar to how VS Code downloads its C++ tools.
-
-### What Windows Downloads On Demand
-
-| Framework Package | Size | Source | Downloaded When |
-|---|---|---|---|
-| .NET 10 Desktop Runtime | ~60 MB | Microsoft CDN | First app install that requires it |
-| VCLibs 140 | ~5 MB | Microsoft CDN | Already on 95% of Windows 10/11 machines |
-| Windows App SDK Runtime | ~35 MB | Microsoft CDN | First WinAppSDK app install |
-
-**User experience**: First install shows "Downloading required framework..." with a progress bar. Subsequent installs (or other apps using the same framework) are instant.
-
----
-
-## 8B — Custom App Installer UX (Funky/Cool Design)
-
-### The Default vs. Custom Experience
-
-```
-┌─ DEFAULT (boring) ─────────────────────┐   ┌─ CUSTOM (what we want) ───────────────┐
-│  [small gray icon]                      │   │  [Large Cine logo, 124x124, centered]  │
-│  Cine                                    │   │                                        │
-│  Publisher: Unknown                      │   │         █▀▀▀▀▀▀█                      │
-│  Version: 1.0.0                         │   │         █ CINE █                      │
-│                                          │   │         █▄▄▄▄▄▄█                      │
-│  ┌──────────┐                           │   │                                        │
-│  │  Install │  ← gray, boring            │   │   A modern media player                │
-│  └──────────┘                           │   │   Powered by libmpv + Avalonia          │
-│                                          │   │                                        │
-│  ────────────────────────               │   │   ┌──────────────────────────────────┐ │
-│  Terms & Conditions                     │   │   │  ⚡ Install Cine  ──▶            │ │
-│                                          │   │   └──────────────────────────────────┘ │
-│                                          │   │                                        │
-│                                          │   │   ☑ Launch when ready                  │
-│                                          │   │   ── Terms · Privacy · GitHub ──      │
-└──────────────────────────────────────────┘   └────────────────────────────────────────┘
-```
-
-### Implementation: `MSIXAppInstallerData.xml`
-
-Customize via the [MSIX App Installer UX API](https://learn.microsoft.com/en-us/windows/msix/app-installer/how-to-create-custom-app-installer-ux). This file is placed in a `Msix.AppInstaller.Data` folder inside the MSIX package.
+The current `Install` page already has folder selection + checkboxes. Add:
 
 ```xml
-<?xml version="1.0" encoding="utf-8"?>
-<AppInstallerUX xmlns="http://schemas.microsoft.com/msix/appinstallerux"
-                xmlns:ux="http://schemas.microsoft.com/msix/appinstallerux"
-                xmlns:ux2="http://schemas.microsoft.com/msix/appinstallerux/2"
-                IgnorableNamespaces="ux ux2"
-                Version="1.0.0">
-  <UX
-    AccentColor="#6C5CE7"           <!-- Cine purple accent -->
-    FontFamily="Segoe UI Variable"
-    AllowUserInteraction="true"
-    BackgroundColor="#1A1A2E"        <!-- Dark cinematic background -->
-    AppNameInTitle="true"
-    HyperLinkFontSize="12">
+<!-- .NET Runtime status with download progress -->
+<Text Control="DotNetStatus"
+      X="250" Y="295" Width="240" Height="16"
+      FontId="3" DisablePrefix="yes">Checking .NET Runtime...</Text>
 
-    <!-- Large, centered app icon -->
-    <Icon
-      HorizontalAlignment="center"
-      Logo="Images\CineLogo124x124.png"
-      TopMargin="60"/>
+<!-- Runtime download progress bar (hidden until needed) -->
+<Progressbar Control="DotNetProgressBar"
+             X="250" Y="315" Width="200" Height="6"
+             TabStop="yes" Visible="no" />
 
-    <!-- Stylish install button with extra text -->
-    <Buttons
-      HorizontalAlignment="center"
-      Text="Light up your screen"
-      IsSecondaryButtonAccent="true"/>
-
-    <!-- "Launch when ready" checkbox -->
-    <LaunchWhenReady HorizontalAlignment="center"/>
-
-    <!-- Additional info shown as a flyout -->
-    <AppInformation Mode="flyout" />
-
-    <!-- Links row -->
-    <HyperLinks TopMargin="24">
-      <HyperLink
-        Text="Terms &amp; conditions"
-        Url="https://cine.app/terms"
-        HorizontalAlignment="center"/>
-      <HyperLink
-        Text="Privacy policy"
-        Url="https://cine.app/privacy"
-        HorizontalAlignment="center"/>
-      <HyperLink
-        Text="GitHub"
-        Url="https://github.com/user/cine"
-        HorizontalAlignment="center"/>
-    </HyperLinks>
-  </UX>
-</AppInstallerUX>
+<Text Control="DotNetProgressText"
+      X="250" Y="325" Width="240" Height="14"
+      FontId="3" DisablePrefix="yes" Visible="no" />
 ```
 
-### Design Token Reference
+### 8A.3 — Bundle.wxs: Add .NET Download Step
 
-| Token | Value | Effect |
-|---|---|---|
-| `AccentColor` | `#6C5CE7` | Purple install button, progress bar, highlights |
-| `BackgroundColor` | `#1A1A2E` | Dark background (matches app's dark theme) |
-| `FontFamily` | `Segoe UI Variable` | Windows 11 native font with optical sizing |
-| `Icon::Logo` | `Images\CineLogo124x124.png` | 124x124 PNG inside MSIX package |
-| `Icon::TopMargin` | `60` | Pushes logo down from top for breathing room |
-
-### Visual Assets (Required Icons)
-
-| Asset | Size | File | Purpose |
-|---|---|---|---|
-| App Icon | 44x44 | `CineLogo44x44.png` | Start menu tile (small) |
-| App Icon | 71x71 | `CineLogo71x71.png` | Start menu tile (medium) |
-| App Icon | 150x150 | `CineLogo150x150.png` | Start menu tile (wide) |
-| App Icon | 310x150 | `CineLogo310x150.png` | Start menu tile (large/hero) |
-| Store Logo | 75x75 | `CineLogo75x75.png` | Package manifest visual elements |
-| Splash Screen | 620x300 | `CineSplash.png` | Launch splash screen |
-| Badge Logo | 24x24 | `CineBadge24x24.png` | Taskbar / notification area |
-| Installer UX Logo | 124x124 | `CineLogo124x124.png` | Custom App Installer dialog |
-
-> **Recommendation**: Generate all sizes from a single 1024x1024 source PNG via a script. Use the existing Cine iconography with the purple accent (#6C5CE7) on a gradient background.
-
----
-
-## 8C — Web Hosting with `.appinstaller` Auto-Update
-
-### Architecture
-
-```
-┌──────────────────────────────────────────────────────────┐
-│              https://releases.cine.app/                    │
-│                                                            │
-│  Cine.appinstaller   ← XML points to latest MSIX          │
-│  Cine_1.2.0_x64.msix                                      │
-│  Cine_1.2.0_x64.msixbundle                                │
-│  Cine_1.1.0_x64.msix    ← kept for rollback               │
-│  index.html                                                │
-└──────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌──────────────────────────────────────────────────────────┐
-│                      User's PC                             │
-│                                                            │
-│  1. User clicks "Install" on website                      │
-│  2. App Installer downloads Cine.appinstaller              │
-│  3. Resolves latest MSIX URL from .appinstaller            │
-│  4. Downloads MSIX (differential, ~15 MB)                  │
-│  5. Resolves framework deps, downloads .NET if needed      │
-│  6. Installs → registers package identity                  │
-│                                                            │
-│  Subsequent launches:                                       │
-│  → Checks .appinstaller on launch                          │
-│  → If newer version exists, downloads diff blocks only     │
-│  → Updates silently (ShowPrompt="false")                   │
-└──────────────────────────────────────────────────────────┘
-```
-
-### `.appinstaller` File
+The current `Bundle.wxs` only has a `Condition` that blocks install with a URL. Replace with an **actual download step**:
 
 ```xml
-<?xml version="1.0" encoding="utf-8"?>
-<AppInstaller
-    xmlns="http://schemas.microsoft.com/appx/appinstaller/2021"
-    Version="1.2.0.0"
-    Uri="https://releases.cine.app/Cine.appinstaller">
+<Bundle Name="Cine Media Player"
+        Version="!(bind.packageVersion.CineMsi)"
+        Manufacturer="Cine"
+        UpgradeCode="B5A1C2D3-E4F5-6789-ABCD-EF0123456789">
 
-    <MainPackage
-        Name="Cine.CineMediaPlayer"
-        Publisher="CN=CineApp"
-        Version="1.2.0.0"
-        ProcessorArchitecture="x64"
-        Uri="https://releases.cine.app/Cine_1.2.0.0_x64.msix" />
+    <BootstrapperApplication>
+        <bal:WixStandardBootstrapperApplication
+            ThemeFile="Theme\Theme.xml"
+            LocalizationFile="Theme\Theme.wxl" />
+    </BootstrapperApplication>
 
-    <UpdateSettings>
-        <OnLaunch
-            HoursBetweenUpdateChecks="12"
-            ShowPrompt="false"
-            UpdateBlocksActivation="false" />
-    </UpdateSettings>
+    <!-- =========================================================================
+         .NET 10 Runtime Detection
+         ========================================================================= -->
+    <util:RegistrySearch Id="DotNet10DesktopSearch"
+                         Root="HKLM"
+                         Key="SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.WindowsDesktop.App\10.0.0"
+                         Value="Version"
+                         Variable="DotNet10DesktopVersion"
+                         Result="value" />
 
-    <ForceUpdateFromAnyVersion>true</ForceUpdateFromAnyVersion>
-</AppInstaller>
+    <!-- =========================================================================
+         .NET Runtime Download (when missing)
+         Uses WiX built-in http download via ExePackage
+         ========================================================================= -->
+    <Chain>
+        <!-- Step 1: Download .NET Runtime if missing -->
+        <ExePackage Id="DotNetRuntime"
+                    Name="Microsoft .NET 10 Desktop Runtime"
+                    DisplayName=".NET 10 Desktop Runtime"
+                    Description="Required by Cine Media Player"
+                    Cache="no"
+                    Compressed="no"
+                    Permanent="yes"
+                    Vital="yes"
+                    InstallCommand="/install /quiet /norestart"
+                    RepairCommand="/repair /quiet /norestart"
+                    DetectCondition="DotNet10DesktopVersion"
+                    DownloadUrl="https://download.visualstudio.microsoft.com/download/.../dotnet-desktop-runtime-10.0.0-win-x64.exe"
+                    PrereqPackage="yes"
+                    Protocol="netfx4">
+
+            <!-- Progress is reported to the bootstrapper UI automatically -->
+            <ExitCode Behavior="forceReboot" />
+
+        </ExePackage>
+
+        <!-- Step 2: Install the MSI -->
+        <MsiPackage Id="CineMsi"
+                    SourceFile="..\CineMsi\bin\Release\Cine.msi"
+                    DisplayInternalUI="no"
+                    Vital="yes"
+                    Compressed="yes"
+                    After="DotNetRuntime" />
+    </Chain>
+
+    <!-- Variables -->
+    <Variable Name="InstallFolder"
+              Type="string"
+              Value="[ProgramFiles64Folder]Cine" />
+
+    <Log PathVariable="%TEMP%\CineSetup.log" Prefix="CineSetup_" Extension=".log" />
+</Bundle>
 ```
 
-### Update Behavior
+**How the download progress appears to the user**:
 
-| Setting | Value | Effect |
-|---|---|---|
-| `HoursBetweenUpdateChecks` | `12` | Checks every 12 hours (not on every launch) |
-| `ShowPrompt` | `false` | Silent background download — no popup |
-| `UpdateBlocksActivation` | `false` | App launches immediately, update applies next launch |
-| `ForceUpdateFromAnyVersion` | `true` | Allows downgrading if needed (rollback support) |
-
-### Hosting Options
-
-| Option | Cost | Best For |
-|---|---|---|
-| **GitHub Releases** | Free | Open source; built-in CDN, no server needed |
-| **Azure Static Web Apps** | Free tier | Custom domain + CDN + auto-SSL |
-| **Cloudflare R2** | Free (10GB) | S3-compatible, global CDN, very fast |
-| **Netlify** | Free | One-click deploy, custom domain |
-| **S3 + CloudFront** | ~$1/mo | Full control, enterprise-grade |
-
-**Recommendation**: Start with **GitHub Releases** (free, no infra). Promote to **Cloudflare R2** when you want `releases.cine.app` custom domain with global CDN.
+| Bootstrapper Page | What User Sees |
+|---|---|
+| Install options | "Checking .NET Runtime..." → "Downloading .NET Runtime... (45 MB / 60 MB)" |
+| Progress page | Two progress bars: top = overall install, bottom = .NET download progress |
+| Completion | "✔ .NET Runtime installed" + "✔ Cine installed" |
 
 ---
 
-## 8D — CI/CD Pipeline (GitHub Actions)
+## 8B — In-App Native DLL Download (RuntimeDownloader + Progress UI)
 
-### Build Matrix
+The [`RuntimeDownloader.cs`](file:///x:/Development/Cine_CSharp_DotNet/src/App/Application/Services/RuntimeDownloader.cs) already exists and downloads native DLLs with `IProgress<string>` — but **no UI is wired to it**. On first launch, the app should show a download screen.
+
+### 8B.1 — First-Launch Detection Dialog
+
+```xml
+<!-- UI/Screens/Dialogs/FirstLaunchDialog.axaml -->
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        Title="Cine — First-Time Setup"
+        Width="480" Height="320"
+        WindowStartupLocation="CenterScreen"
+        CanResize="False"
+        ExtendClientAreaToDecorationsHint="True"
+        Background="{StaticResource AppDialogSurface}">
+
+    <Grid RowDefinitions="*,Auto,Auto,Auto,Auto" Margin="32">
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <materialIcons:MaterialIcon Kind="Download" Width="48" Height="48"
+                Foreground="{StaticResource AppAccent}" />
+            <TextBlock Text="Setting up Cine for first use"
+                       FontSize="20" FontWeight="SemiBold"
+                       Foreground="{StaticResource AppTextPrimary}"
+                       HorizontalAlignment="Center" Margin="0,12,0,4" />
+            <TextBlock Text="Cine needs to download native media components (~54 MB total)"
+                       FontSize="13"
+                       Foreground="{StaticResource AppTextOnDarkSecondary}"
+                       HorizontalAlignment="Center"
+                       TextWrapping="Wrap" />
+        </StackPanel>
+
+        <!-- File progress list -->
+        <ItemsControl Grid.Row="1" ItemsSource="{Binding Downloads}" Margin="0,16,0,0">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,2">
+                        <TextBlock Text="{Binding FileName}" FontSize="12"
+                                   Foreground="{StaticResource AppTextOnDarkSecondary}" />
+                        <TextBlock Grid.Column="1" Text="{Binding Status}" FontSize="12"
+                                   Foreground="{Binding StatusColor}" />
+                    </Grid>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- Overall progress bar -->
+        <ProgressBar Grid.Row="2" Value="{Binding OverallProgress}"
+                     Maximum="100" Height="6" Margin="0,12,0,4"
+                     Foreground="{StaticResource AppAccent}"
+                     Background="{StaticResource AppHoverSubtle}" />
+        <TextBlock Grid.Row="3" Text="{Binding StatusText}" FontSize="11"
+                   Foreground="{StaticResource AppTextOnDarkHint}"
+                   HorizontalAlignment="Center" />
+
+        <!-- Download / Launch button -->
+        <Button Grid.Row="4" Content="{Binding ButtonText}"
+                Command="{Binding DownloadCommand}"
+                HorizontalAlignment="Center" Margin="0,16,0,0"
+                Width="160" Height="36"
+                Classes="start-page-suggested-action" />
+    </Grid>
+</Window>
+```
+
+### 8B.2 — FirstLaunchViewModel
+
+```csharp
+public class FirstLaunchViewModel : ViewModelBase
+{
+    private readonly IProgress<(string FileName, string Status, double Percent)> _progress;
+
+    public FirstLaunchViewModel()
+    {
+        _progress = new Progress<(string FileName, string Status, double Percent)>(UpdateProgress);
+    }
+
+    public ObservableCollection<DownloadItem> Downloads { get; } = new();
+    public double OverallProgress { get; set; }
+    public string StatusText { get; set; } = "Preparing download...";
+    public string ButtonText { get; set; } = "Download";
+
+    private async Task ExecuteDownloadAsync()
+    {
+        ButtonText = "Downloading...";
+
+        // RuntimeDownloader.EnsureRuntimeAsync uses IProgress<string>
+        var runtimeProgress = new Progress<string>(msg =>
+        {
+            StatusText = msg;
+            // Parse messages like "Downloading libmpv-2.dll..."
+            // and "  libmpv-2.dll: 50% (22 / 45 MB)"
+        });
+
+        var runtimeDir = await RuntimeDownloader.EnsureRuntimeAsync(
+            runtimeProgress, CancellationToken.None);
+
+        // Store the runtime path for the player service
+        PlayerService.ConfigureNativeLibraryPath(runtimeDir);
+
+        ButtonText = "Launch Cine";
+        // Close dialog → proceed to MainWindow
+    }
+}
+```
+
+### 8B.3 — Wire in App.axaml.cs
+
+```csharp
+public override void OnFrameworkInitializationCompleted()
+{
+    // ... existing initialization ...
+
+    if (!RuntimeDownloader.IsRuntimeReady())
+    {
+        // Show first-launch download dialog instead of main window
+        var downloadVm = new FirstLaunchViewModel();
+        var downloadDialog = new FirstLaunchDialog { DataContext = downloadVm };
+        downloadDialog.Show();
+        downloadDialog.Closed += async (_, _) =>
+        {
+            // After download completes, show MainWindow
+            ShowMainWindow();
+        };
+    }
+    else
+    {
+        ShowMainWindow();
+    }
+}
+```
+
+### 8B.4 — User Experience Flow
+
+```
+First Launch                          Subsequent Launches
+─────────────────                    ────────────────────
+
+┌─ Cine Setup ─────────────────┐     ┌─ Cine ─────────────────┐
+│                              │     │                        │
+│  🔽 Downloading Components  │     │  Main Window loads     │
+│                              │     │  instantly             │
+│  □ libmpv-2.dll   ████░░ 45%│     │                        │
+│  □ libEGL.dll     ██████ 100%│     │                        │
+│  □ libGLESv2.dll  ███░░░ 30%│     │                        │
+│                              │     │                        │
+│  ════════════════════ 48%   │     │                        │
+│  Downloading: 26 / 54 MB    │     │                        │
+│                              │     │                        │
+│  [     Cancel    ]           │     │                        │
+└──────────────────────────────┘     └────────────────────────┘
+```
+
+---
+
+## 8C — Full Installer Build Pipeline (CiCd)
+
+### Build Script (installer/build.bat)
+
+```bat
+@echo off
+setlocal enabledelayedexpansion
+
+echo ════════════════════════════════════════════
+echo   Cine Installer Build
+echo ════════════════════════════════════════════
+
+:: 1. Determine version from Git tag
+for /f %%a in ('git describe --tags --abbrev=0 2^>nul') do set VERSION=%%a
+if "%VERSION%"=="" set VERSION=0.0.1
+set VERSION=%VERSION:v=%
+echo Version: %VERSION%
+
+:: 2. Publish framework-dependent
+echo.
+echo [1/5] Publishing application (framework-dependent)...
+dotnet publish ..\src\App\App.csproj
+    --configuration Release
+    --runtime win-x64
+    --self-contained false
+    -p:Version=%VERSION%
+    -o ..\src\App\bin\Release\net10.0-windows\win-x64\publish
+
+:: 3. Harvest files for MSI
+echo [2/5] Harvesting files...
+wix harvest ..\src\App\bin\Release\net10.0-windows\win-x64\publish
+    -o CineMsi\Package.wxs
+    -ag "-src:..\src\App\bin\Release\net10.0-windows\win-x64\publish"
+    -culture en-US
+    -t:CineMsi
+
+:: 4. Build MSI
+echo [3/5] Building MSI package...
+wix build CineMsi\CineMsi.wixproj
+    -configuration Release
+    -p:Version=%VERSION%
+
+:: 5. Build Bootstrapper (CineSetup.exe)
+echo [4/5] Building bootstrapper...
+wix build CineBootstrapper\CineBootstrapper.wixproj
+    -configuration Release
+    -p:Version=%VERSION%
+
+:: 6. Sign if certificate available
+if exist signing.pfx (
+    echo [5/5] Signing installer...
+    signtool sign /fd SHA256
+        /f signing.pfx
+        /tr http://timestamp.digicert.com
+        /td SHA256
+        CineBootstrapper\bin\Release\CineSetup.exe
+) else (
+    echo [5/5] Skipping signing — no signing.pfx found
+)
+
+echo.
+echo ════════════════════════════════════════════
+echo   Build Complete!
+echo   Output: CineBootstrapper\bin\Release\CineSetup.exe
+echo ════════════════════════════════════════════
+```
+
+### Build Outputs
+
+| Output | Size | Purpose |
+|--------|------|---------|
+| `CineSetup.exe` | ~12 MB | **Primary deliverable** — self-extracting bundle w/ .NET check + download |
+| `Cine.msi` | ~10 MB | MSI package (embedded in bootstrapper) |
+| `Cine_1.0.0.0_x64.msix` | ~15 MB | MSIX for Store / enterprise (optional) |
+
+---
+
+## 8D — GitHub Actions CI/CD, With Installer
+
+### Workflow Stages
+
+```
+  Commit/Tag Push
+       │
+       ▼
+┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+│ STAGE 1      │    │ STAGE 2      │    │ STAGE 3      │
+│ Build & Test │───▶│ Package      │───▶│ Release      │
+│ • dotnet     │    │ • MSI        │    │ • GitHub     │
+│   restore    │    │ • CineSetup  │    │   Release    │
+│ • dotnet     │    │   .exe       │    │ • Upload     │
+│   build      │    │ • MSIX       │    │   assets     │
+│ • dotnet     │    │ • Sign       │    │ • MS App     │
+│   test       │    │              │    │   Installer  │
+└──────────────┘    └──────────────┘    │   URL        │
+       ~2 min            ~3 min         └──────────────┘
+                                              ~1 min
+```
+
+### Full release.yml
 
 ```yaml
-strategy:
-  matrix:
-    architecture: [x64]
-    configuration: [Release]
-```
-
-### Pipeline Stages
-
-```
-┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐
-│  RESTORE  │───▶│  BUILD   │───▶│  TEST    │───▶│  PACKAGE │───▶│  DEPLOY  │
-│  dotnet   │    │  dotnet  │    │  dotnet  │    │  dotnet  │    │  upload  │
-│  restore  │    │  build   │    │  test    │    │  publish │    │  release │
-│           │    │  --no-   │    │  270+    │    │  + MSIX  │    │          │
-│           │    │  restore │    │  tests   │    │  signing │    │          │
-└──────────┘    └──────────┘    └──────────┘    └──────────┘    └──────────┘
-     ~30s            ~45s           ~5s            ~120s           ~10s
-
-                                    Total: ~3.5 minutes
-```
-
-### Full Workflow YAML
-
-```yaml
-name: CI/CD — Build, Test, Package, Release
+name: Release — Build, Sign, Deploy
 
 on:
   push:
-    branches: [main, develop]
     tags: ['v*']
-  pull_request:
-    branches: [main, develop]
 
 env:
+  DOTNET_VERSION: 10.0.x
   SOLUTION: Cine.sln
   APP_PROJECT: src/App/App.csproj
-  DOTNET_VERSION: '10.0.x'
-  MSIX_NAME: Cine.CineMediaPlayer
-  MSIX_VERSION: 1.0.0.0
+  CONFIG: Release
 
 jobs:
   build:
     runs-on: windows-latest
-    strategy:
-      matrix:
-        arch: [x64]
-
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0  # required for GitVersion
+      - uses: actions/checkout@v4
 
-    # -----------------------------------------------
-    # Stage 1: Setup
-    # -----------------------------------------------
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
-    - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v2
+      - name: Setup WiX
+        run: dotnet tool install --global wix
 
-    # -----------------------------------------------
-    # Stage 2: Restore
-    # -----------------------------------------------
-    - name: Restore dependencies
-      run: dotnet restore ${{ env.SOLUTION }}
+      # ── Stage 1: Build ──
+      - name: Restore
+        run: dotnet restore ${{ env.SOLUTION }}
 
-    # Cache: NuGet packages + obj folders
-    - uses: actions/cache@v4
-      with:
-        path: |
-          ~/.nuget/packages
-          **/obj
-        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+      - name: Build
+        run: dotnet build ${{ env.SOLUTION }}
+          --configuration ${{ env.CONFIG }}
+          --no-restore
 
-    # -----------------------------------------------
-    # Stage 3: Build
-    # -----------------------------------------------
-    - name: Build
-      run: >
-        dotnet build ${{ env.SOLUTION }}
-        --configuration Release
-        --no-restore
-        -p:Platform=x64
+      - name: Test
+        run: dotnet test tests/Cine.Tests/Cine.Tests.csproj
+          --configuration ${{ env.CONFIG }}
+          --no-build
+          --logger trx
 
-    # -----------------------------------------------
-    # Stage 4: Test
-    # -----------------------------------------------
-    - name: Run tests
-      run: dotnet test tests/Cine.Tests/Cine.Tests.csproj
-        --configuration Release
-        --no-build
-        --logger "trx;LogFileName=test-results.trx"
+      # ── Stage 2: Package ──
+      - name: Publish (framework-dependent)
+        run: >
+          dotnet publish ${{ env.APP_PROJECT }}
+          --configuration ${{ env.CONFIG }}
+          --runtime win-x64
+          --self-contained false
+          -p:Version=${{ github.ref_name }}
+          -o publish/
 
-    - name: Upload test results
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-results-${{ matrix.arch }}
-        path: tests/Cine.Tests/TestResults/
+      - name: Import signing certificate
+        run: |
+          $cert = [Convert]::FromBase64String('${{ secrets.BASE64_ENCODED_PFX }}')
+          [IO.File]::WriteAllBytes('${{ runner.temp }}\cine.pfx', $cert)
 
-    # -----------------------------------------------
-    # Stage 5: Package (MSIX) — only on tag push
-    # -----------------------------------------------
-    - name: Publish framework-dependent
-      if: startsWith(github.ref, 'refs/tags/v')
-      run: >
-        dotnet publish ${{ env.APP_PROJECT }}
-        --configuration Release
-        --runtime win-${{ matrix.arch }}
-        --no-build
-        -p:PublishSingleFile=false
-        -p:SelfContained=false
-        -p:WindowsPackageType=None
-        -o publish/win-${{ matrix.arch }}
+      - name: Build MSI
+        run: |
+          cd installer
+          wix harvest ..\publish -o CineMsi\Package.wxs -ag -culture en-US
+          wix build CineMsi\CineMsi.wixproj -${{ env.CONFIG }}
 
-    - name: Import signing certificate
-      if: startsWith(github.ref, 'refs/tags/v')
-      run: |
-        $certBytes = [Convert]::FromBase64String('${{ secrets.BASE64_ENCODED_PFX }}')
-        [IO.File]::WriteAllBytes('${{ runner.temp }}\cine.pfx', $certBytes)
+      - name: Build Bootstrapper (CineSetup.exe)
+        run: |
+          cd installer
+          wix build CineBootstrapper\CineBootstrapper.wixproj -${{ env.CONFIG }}
 
-    - name: Create MSIX package
-      if: startsWith(github.ref, 'refs/tags/v')
-      run: >
-        dotnet run --project tools/Cine.Packager/Cine.Packager.csproj
-        -- --source publish/win-${{ matrix.arch }}
-           --output dist/
-           --version ${{ github.ref_name | replace 'v' '' }}
-           --cert '${{ runner.temp }}\cine.pfx'
-           --arch ${{ matrix.arch }}
+      - name: Sign Installer
+        run: |
+          & 'C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\signtool.exe' sign
+            /fd SHA256
+            /f '${{ runner.temp }}\cine.pfx'
+            /p '${{ secrets.PFX_PASSWORD }}'
+            /tr http://timestamp.digicert.com
+            /td SHA256
+            installer/CineBootstrapper/bin/${{ env.CONFIG }}/CineSetup.exe
 
-    - name: Sign MSIX
-      if: startsWith(github.ref, 'refs/tags/v')
-      run: |
-        signtool sign /fd SHA256
-          /f '${{ runner.temp }}\cine.pfx'
-          /p '${{ secrets.PFX_PASSWORD }}'
-          /tr http://timestamp.digicert.com
-          /td SHA256
-          dist/Cine_${{ github.ref_name }}_${{ matrix.arch }}.msix
+      # ── Stage 3: Release ──
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            installer/CineBootstrapper/bin/${{ env.CONFIG }}/CineSetup.exe
+            installer/CineMsi/bin/${{ env.CONFIG }}/Cine.msi
+          body: |
+            ## Cine ${{ github.ref_name }}
 
-    # -----------------------------------------------
-    # Stage 6: Deploy
-    # -----------------------------------------------
-    - name: Upload MSIX to GitHub Release
-      if: startsWith(github.ref, 'refs/tags/v')
-      uses: softprops/action-gh-release@v2
-      with:
-        files: |
-          dist/Cine_*.msix
-          dist/Cine.appinstaller
-        body: |
-          ## Cine ${{ github.ref_name }}
+            ### 📥 Downloads
+            - **CineSetup.exe** — Recommended. Self-extracting installer with .NET runtime auto-download.
+            - **Cine.msi** — Standalone MSI (requires .NET 10 pre-installed).
 
-          ### Installation
-          1. Download `Cine_${{ github.ref_name }}_x64.msix`
-          2. Double-click to install
-          3. Windows will automatically download .NET 10 Runtime if needed
+            ### 🔧 Installation
+            1. Download `CineSetup.exe`
+            2. Run it — the wizard will guide you through setup
+            3. .NET 10 Runtime is downloaded automatically if missing
+            4. On first launch, native video components are downloaded (~54 MB)
 
-          ### What's New
-          - *(automated release — see commit history)*
-
-          [Full changelog](https://github.com/user/Cine/compare/...)
-        draft: false
-        prerelease: ${{ contains(github.ref_name, 'preview') || contains(github.ref_name, 'rc') }}
+            ### ✨ What's New
+            *See commit history for details*
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'preview') }}
 ```
-
-### Secrets Required
-
-| Secret Name | Description | How to Get |
-|---|---|---|
-| `BASE64_ENCODED_PFX` | Base64 of code signing `.pfx` | `[Convert]::ToBase64String((Get-Content cert.pfx -AsByteStream))` |
-| `PFX_PASSWORD` | Password for the `.pfx` (empty for dev cert) | Self-signed dev cert: empty; production: CA-provided password |
-
-### When Triggers Fire
-
-| Trigger | What Happens |
-|---|---|
-| `push` to `main`/`develop` | Full build + test (no packaging) |
-| `pull_request` to `main`/`develop` | Full build + test (no packaging) |
-| Tag push `v1.0.0` | Full build + test + package + sign + create GitHub Release |
-| Tag push `v1.0.0-preview1` | Same as above but marked as prerelease |
 
 ---
 
-## 8E — Code Signing Strategy
+## 8E — Developer Install Experience
 
-### Development (Self-Signed)
+### Building Locally
 
 ```powershell
-# Generate a self-signed certificate (valid 1 year)
-New-SelfSignedCertificate `
-  -Type Custom `
-  -Subject "CN=CineApp" `
-  -KeyUsage DigitalSignature `
-  -FriendlyName "Cine Dev Certificate" `
-  -CertStoreLocation "Cert:\CurrentUser\My" `
-  -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3")
+# Quick: publish + run
+dotnet run --project src\App\App.csproj
 
-# Export as PFX (no password for CI)
-$cert = Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Subject -eq "CN=CineApp" }
-Export-PfxCertificate -Cert $cert -FilePath cine-dev.pfx -Password (ConvertTo-SecureString -String "" -AsPlainText -Force)
-
-# Install on dev machine
-Import-PfxCertificate -FilePath cine-dev.pfx -CertStoreLocation Cert:\LocalMachine\TrustedPeople
+# Full: build installer
+cd installer
+.\build.bat
+.\CineBootstrapper\bin\Release\CineSetup.exe
 ```
 
-**Limitation**: Self-signed MSIX only installs on dev machines. Users see "Windows protected your PC" SmartScreen warning.
+### Testing the Runtime Download UI
 
-### Production (Trusted CA)
+```powershell
+# Clear cached runtime → forces download on next launch
+Remove-Item "$env:LOCALAPPDATA\Cine\runtime" -Recurse -Force
 
-For public distribution, obtain a code signing certificate from:
-
-| Provider | Type | Price | Notes |
-|---|---|---|---|
-| [DigiCert](https://www.digicert.com/code-signing/) | EV Code Signing | ~$300/yr | SmartScreen reputation instantly |
-| [Sectigo](https://sectigo.com/code-signing) | OV Code Signing | ~$200/yr | Builds reputation over time |
-| [SSL.com](https://www.ssl.com/certificates/code-signing/) | OV Code Signing | ~$150/yr | Budget option |
-| [Azure Key Vault](https://azure.microsoft.com/services/key-vault/) | Managed HSM signing | ~$3/mo + cert | Best for CI/CD; cert never leaves Azure |
-
-**Recommendation**: Start with **Azure Key Vault** managed signing. Cert never touches CI runners — extremely secure. For Phase 8 launch, use self-signed with a clear install instructions page.
-
-### Signing in the Pipeline
-
-```yaml
-# Option A: PFX file (simpler, less secure)
-- name: Sign MSIX
-  run: |
-    signtool sign /fd SHA256
-      /f '${{ runner.temp }}\cine.pfx'
-      /p '${{ secrets.PFX_PASSWORD }}'
-      /tr http://timestamp.digicert.com
-      /td SHA256
-      dist/Cine_*.msix
-
-# Option B: Azure Key Vault (production)
-- name: Sign MSIX (Azure Key Vault)
-  uses: azure/signtool-action@v1
-  with:
-    key-vault-name: cine-codesign
-    certificate-name: CineCodeSign
-    files: dist/Cine_*.msix
-    timestamp-server: http://timestamp.digicert.com
+# Launch app — should show download dialog
+dotnet run --project src\App\App.csproj
 ```
 
 ---
 
-## 8F — File Associations via MSIX Manifest
+## 8F — Complete Implementation Checklist
 
-MSIX file associations are **declarative** — no registry writes, clean uninstall, no leftovers:
+### Phase 8.1 — Setup Wizard (Bootstrapper)
+- [ ] **8.1.1** Add License Agreement page to `Theme.xml`
+- [ ] **8.1.2** Add .NET download progress bar + status text to Install page
+- [ ] **8.1.3** Update `Bundle.wxs`: add `ExePackage` for .NET runtime download with `DownloadUrl`
+- [ ] **8.1.4** Wire Next/Back navigation between Welcome → License → Install pages
+- [ ] **8.1.5** Test on clean VM: no .NET → download with progress → MSI install → launch
 
-```xml
-<!-- Package.appxmanifest -->
-<Extensions>
-  <uap3:Extension Category="windows.fileTypeAssociation">
-    <uap3:FileTypeAssociation Name="cine-media"
-                              Parameters=""%1"">
-      <uap:SupportedFileTypes>
-        <uap:FileType ContentType="video/mp4">.mp4</uap:FileType>
-        <uap:FileType ContentType="video/x-matroska">.mkv</uap:FileType>
-        <uap:FileType ContentType="video/x-msvideo">.avi</uap:FileType>
-        <uap:FileType ContentType="video/quicktime">.mov</uap:FileType>
-        <uap:FileType ContentType="video/webm">.webm</uap:FileType>
-        <uap:FileType ContentType="video/MP2T">.ts</uap:FileType>
-        <uap:FileType ContentType="video/mpeg">.mpg</uap:FileType>
-        <uap:FileType ContentType="video/mpeg">.mpeg</uap:FileType>
-        <uap:FileType ContentType="video/x-ms-wmv">.wmv</uap:FileType>
-        <uap:FileType ContentType="video/mp4">.m4v</uap:FileType>
+### Phase 8.2 — In-App Runtime Download (First Launch)
+- [ ] **8.2.1** Create [`FirstLaunchDialog.axaml`](file:///x:/Development/Cine_CSharp_DotNet/src/App/UI/Screens/Dialogs/FirstLaunchDialog.axaml) — download progress UI
+- [ ] **8.2.2** Create `FirstLaunchViewModel` — drives download + progress binding
+- [ ] **8.2.3** Wire `RuntimeDownloader.EnsureRuntimeAsync()` to the ViewModel
+- [ ] **8.2.4** Update `App.axaml.cs` — detect first launch, show download dialog before main window
+- [ ] **8.2.5** After download, configure `PlayerService` to use the runtime directory
+- [ ] **8.2.6** Test: delete runtime dir, launch app, verify progress bar + completion
 
-        <!-- Audio formats -->
-        <uap:FileType ContentType="audio/mpeg">.mp3</uap:FileType>
-        <uap:FileType ContentType="audio/flac">.flac</uap:FileType>
-        <uap:FileType ContentType="audio/x-wav">.wav</uap:FileType>
-        <uap:FileType ContentType="audio/ogg">.ogg</uap:FileType>
-        <uap:FileType ContentType="audio/aac">.aac</uap:FileType>
-        <uap:FileType ContentType="audio/wma">.wma</uap:FileType>
-        <uap:FileType ContentType="audio/x-ms-wma">.wma</uap:FileType>
-        <uap:FileType ContentType="audio/m4a">.m4a</uap:FileType>
-        <uap:FileType ContentType="audio/opus">.opus</uap:FileType>
+### Phase 8.3 — Packaging & CI
+- [ ] **8.3.1** Verify `installer/build.bat` produces working `CineSetup.exe`
+- [ ] **8.3.2** Create `.github/workflows/release.yml`
+- [ ] **8.3.3** Add `BASE64_ENCODED_PFX` + `PFX_PASSWORD` secrets to GitHub
+- [ ] **8.3.4** Test CI pipeline: push tag `v1.0.0`, verify Release artifact
 
-        <!-- Subtitle formats -->
-        <uap:FileType ContentType="text/plain">.srt</uap:FileType>
-        <uap:FileType ContentType="text/plain">.ass</uap:FileType>
-        <uap:FileType ContentType="text/plain">.ssa</uap:FileType>
-        <uap:FileType ContentType="text/plain">.vtt</uap:FileType>
-        <uap:FileType ContentType="text/plain">.sub</uap:FileType>
+### Phase 8.4 — MSIX (Optional / Store)
+- [ ] **8.4.1** Verify `Package.appxmanifest` references `.NET 10` framework dependency
+- [ ] **8.4.2** Generate `Build-MSIX.ps1` script
+- [ ] **8.4.3** Test MSIX install: `Add-AppxPackage -Path Cine.msix`
 
-        <!-- Playlist formats -->
-        <uap:FileType ContentType="text/plain">.m3u</uap:FileType>
-        <uap:FileType ContentType="text/plain">.m3u8</uap:FileType>
-      </uap:SupportedFileTypes>
-    </uap3:FileTypeAssociation>
-  </uap3:Extension>
-</Extensions>
-```
-
-**Benefits over registry-based file association**:
-- No admin rights needed for file association
-- Clean uninstall removes all associations
-- Windows manages the "Open With" menu automatically
-- Works with Windows 10/11 default app settings
+### Phase 8.5 — Web & Distribution
+- [ ] **8.5.1** Create web install page (`web/index.html`) with `CineSetup.exe` download button
+- [ ] **8.5.2** Test: download → run → wizard flow complete
+- [ ] **8.5.3** Update `README.md` with install instructions
 
 ---
 
-## 8G — Project Structure Changes
+## 8G — Premium Visual Design Language
 
-### New Files to Create
+The bootstrapper theme ([`Theme.xml`](file:///x:/Development/Cine_CSharp_DotNet/installer/CineBootstrapper/Theme/Theme.xml)) implements an **Apple-level aesthetic** with these design principles:
+
+### Visual Identity
 
 ```
-src/
-├── App/
-│   ├── Package.appxmanifest        ← NEW: MSIX identity + file associations + deps
-│   ├── Package.StoreAssociation.xml │ NEW: Microsoft Store (optional, later)
-│   ├── Assets/                      ← NEW: App icons (8 sizes) + splash screen
-│   │   ├── CineLogo44x44.png
-│   │   ├── CineLogo71x71.png
-│   │   ├── CineLogo150x150.png
-│   │   ├── CineLogo310x150.png
-│   │   ├── CineLogo75x75.png
-│   │   ├── CineSplash.png
-│   │   ├── CineBadge24x24.png
-│   │   └── CineLogo124x124.png
-│   ├── Msix.AppInstaller.Data/     ← NEW: Custom installer UX
-│   │   └── MSIXAppInstallerData.xml
-│   └── App.csproj                  ← MODIFY: add WindowsPackageType=MSIX + signing config
-
-tools/
-└── Cine.Packager/                  ← NEW: dotnet tool wrapping MakeAppx + signtool
-    ├── Cine.Packager.csproj
-    └── Program.cs
-
-docs/
-└── phase8-release-engineering-plan.md ← THIS FILE
-
-.github/
-└── workflows/
-    └── release.yml                 ← NEW: CI/CD workflow (from Section 8D)
-
-web/                                ← NEW: Landing page for web install
-├── index.html                      ← "Install Cine" button with ms-appinstaller URI
-└── Cine.appinstaller               ← Template (version injected by CI)
+┌──────────────────────────────────────────────────────────────────┐
+│                         DESIGN LANGUAGE                           │
+│                                                                  │
+│  Background:  Deep navy (#0A0A1A) with gradient overlay         │
+│  Cards:       Elevated glass panel (#141430) with alpha glow    │
+│  Accent:      Vibrant purple (#8866FF / #4422AA alpha)          │
+│  Success:     Emerald green (#00BB88)                           │
+│  Error:       Warm coral (#DD6644)                              │
+│  Text:        White (#FFFFFF) → silver (#AAAAAA) → hint (#888888)│
+│  Dividers:    Subtle (#2A2A50)                                  │
+│  Controls:    Flat minimal, no heavy borders                    │
+│  Progress:    Ultra-thin (2-4px) bars, accent colored           │
+│  Typography:  SF Pro scale (Bold 20px → Semibold 15px →        │
+│               Regular 11px → Caption 9px)                      │
+│  Window:      560×480 — wider, more breathing room              │
+│  Decorations: macOS traffic-light dots (top-left)               │
+│  Animations:  None (WiX limitation) — compensated by            │
+│               clean layout transitions via page structure        │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
-### `.csproj` Changes
+### UX Flow — What the user sees at each step
 
-```xml
-<!-- src/App/App.csproj additions -->
-<PropertyGroup>
-  <!-- Enable MSIX packaging -->
-  <WindowsPackageType>MSIX</WindowsPackageType>
+```
+  ┌─ Welcome ─────────────────────────────────────────────────┐
+  │                                                            │
+  │              ● (glow)                                      │
+  │              [LOGO]                                        │
+  │              Cine                                          │
+  │          Media Player                                      │
+  │          [ v1.0.0 ]                                        │
+  │                                                            │
+  │  A modern, high-performance media player for Windows       │
+  │  ─────────────────────────────────────────────────────     │
+  │         [Cancel]         [Next →]                          │
+  └────────────────────────────────────────────────────────────┘
 
-  <!-- Framework-dependent = no bundled runtime -->
-  <SelfContained>false</SelfContained>
-  <PublishSingleFile>false</PublishSingleFile>
+  ┌─ License ─────────────────────────────────────────────────┐
+  │  License Agreement                                        │
+  │  ─────────────────────────────────────────────────────     │
+  │  ┌──────────────────────────────────────────────────────┐  │
+  │  │  MIT License                                         │  │
+  │  │  Copyright (c) 2025 Cine                             │  │
+  │  │  Permission is hereby granted...                     │  │
+  │  │  (scrollable)                                        │  │
+  │  └──────────────────────────────────────────────────────┘  │
+  │  ☐ I accept the terms of the agreement                    │
+  │  ─────────────────────────────────────────────────────     │
+  │  [Cancel]    [Back]    [Next →]                            │
+  └────────────────────────────────────────────────────────────┘
 
-  <!-- Package identity -->
-  <AppxPackageDir>$(SolutionDir)dist\</AppxPackageDir>
-  <GenerateAppxPackageOnBuild>false</GenerateAppxPackageOnBuild>
-  <AppxPackageSigningEnabled>false</AppxPackageSigningEnabled>
+  ┌─ Install Options ────────────────────────────────────────┐
+  │  Install Options                                         │
+  │  ─────────────────────────────────────────────────────     │
+  │  INSTALL LOCATION                                         │
+  │  [C:\Program Files\Cine________________________] [Browse] │
+  │                                                           │
+  │  OPTIONS                                                  │
+  │  ☑ Create desktop shortcut                                │
+  │  ☑ Associate video files (.mp4, .mkv, .avi)               │
+  │                                                           │
+  │  REQUIREMENTS                                             │
+  │  ●  Checking .NET Runtime...                              │
+  │  [████████░░░░░░░░░░] 52%  (when downloading)             │
+  │  ─────────────────────────────────────────────────────     │
+  │  [Cancel]    [Back]    [Install ✓]                        │
+  └────────────────────────────────────────────────────────────┘
 
-  <!-- Branding -->
-  <ApplicationTitle>Cine</ApplicationTitle>
-  <ApplicationIcon>Assets\CineLogo44x44.png</ApplicationIcon>
-  <AssemblyName>Cine.Avalonia</AssemblyName>
+  ┌─ Progress ───────────────────────────────────────────────┐
+  │                    ●                                      │
+  │               Setting up Cine                             │
+  │               Installing...                               │
+  │               ████████████░░░░░░ 68%                      │
+  │               ██████████████████  (dotnet)                │
+  │               Downloading .NET Runtime...                 │
+  │               ─────────────────────                      │
+  │                     [Cancel]                              │
+  └────────────────────────────────────────────────────────────┘
 
-  <!-- Version from Git tag -->
-  <Version>1.0.0.0</Version>
-</PropertyGroup>
-
-<!-- App icons as content (included in MSIX) -->
-<ItemGroup>
-  <Content Include="Assets\**\*">
-    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-  </Content>
-  <Content Include="Msix.AppInstaller.Data\MSIXAppInstallerData.xml">
-    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-  </Content>
-</ItemGroup>
+  ┌─ Success ────────────────────────────────────────────────┐
+  │                    ✓ (green glow)                         │
+  │              Installation Complete                        │
+  │              Cine has been installed on your computer.    │
+  │              ────────────────────────────────             │
+  │              ● Hardware-accelerated ● Keyboards ● Subs   │
+  │              ☑ Launch Cine                                │
+  │              ─────────────────────                        │
+  │                          [Close]  [Finish ✓]             │
+  └────────────────────────────────────────────────────────────┘
 ```
 
----
+### Asset Requirements
 
-## 8H — Web Install Page
+For the premium look to render correctly, these asset files must be updated:
 
-A simple HTML page at `cine.app` that triggers MSIX web install with a single click:
+| Asset | Current | Recommended | Purpose |
+|-------|---------|-------------|---------|
+| `Background.bmp` | 560×480 flat color | **Dark premium gradient** (navy → deep purple vignette, centered glow) | Full-window backdrop |
+| `Logo.png` | Current logo | **High-res vector export** (PNG with transparency, 80×80+) | Brand icon on Welcome page |
+| `Banner.bmp` | 560×120 | **Dark gradient banner** matching the theme | Optional bundle banner |
 
-```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Install Cine — Modern Media Player</title>
-    <style>
-        :root {
-            --bg: #1A1A2E;
-            --accent: #6C5CE7;
-            --text: #E0E0E0;
-            --card: #16213E;
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI Variable', 'Segoe UI', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            text-align: center;
-        }
-        .card {
-            background: var(--card);
-            border-radius: 16px;
-            padding: 48px 64px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-            max-width: 480px;
-        }
-        .logo {
-            width: 124px;
-            height: 124px;
-            margin-bottom: 24px;
-            filter: drop-shadow(0 0 20px rgba(108,92,231,0.3));
-        }
-        h1 { font-size: 28px; margin-bottom: 8px; }
-        .subtitle { color: #888; margin-bottom: 32px; font-size: 14px; }
-        .features {
-            text-align: left;
-            margin-bottom: 32px;
-            font-size: 13px;
-            color: #999;
-            line-height: 1.8;
-        }
-        .features span { color: var(--accent); margin-right: 8px; }
-        .install-btn {
-            display: inline-block;
-            background: var(--accent);
-            color: white;
-            padding: 14px 48px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-size: 16px;
-            font-weight: 600;
-            transition: transform 0.15s, box-shadow 0.15s;
-            box-shadow: 0 4px 20px rgba(108,92,231,0.4);
-        }
-        .install-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 30px rgba(108,92,231,0.6);
-        }
-        .note {
-            margin-top: 24px;
-            font-size: 11px;
-            color: #666;
-        }
-    </style>
-</head>
-<body>
-    <div class="card">
-        <img class="logo" src="CineLogo124x124.png" alt="Cine Logo">
-        <h1>Cine Media Player</h1>
-        <p class="subtitle">A modern, high-performance media player for Windows</p>
-
-        <div class="features">
-            <p><span>▶</span> Hardware-accelerated playback via libmpv + ANGLE</p>
-            <p><span>▶</span> Picture-in-Picture with aspect-ratio-locked resize</p>
-            <p><span>▶</span> 50+ keyboard shortcuts. Full playlist management</p>
-            <p><span>▶</span> SRT/ASS/VTT subtitles. Multi-track audio. EQ</p>
-            <p><span>▶</span> Session resume. Auto-updates via App Installer</p>
-        </div>
-
-        <!-- ms-appinstaller: protocol triggers Windows App Installer -->
-        <a class="install-btn"
-           href="ms-appinstaller:?source=https://releases.cine.app/Cine.appinstaller">
-            ⚡ Install Cine
-        </a>
-
-        <p class="note">
-            Requires Windows 10 (19041+) or Windows 11.
-            .NET 10 Desktop Runtime will be downloaded automatically if needed.
-        </p>
-    </div>
-</body>
-</html>
-```
-
-The `ms-appinstaller:` URI protocol is **built into Windows 10 1809+**. No extra software needed — clicking the link opens the App Installer dialog with the custom UX from Section 8B.
-
----
-
-## 8I — Implementation Checklist
-
-### Phase 8a — Foundation (Setup)
-- [ ] **8.1** Create `Package.appxmanifest` with identity, file associations, framework deps
-- [ ] **8.2** Generate app icon assets (8 sizes) from source SVG/PNG
-- [ ] **8.3** Create `MSIXAppInstallerData.xml` with custom UX
-- [ ] **8.4** Update `App.csproj` with MSIX properties (`WindowsPackageType=MSIX`, `SelfContained=false`)
-- [ ] **8.5** Configure framework-dependent publish: `dotnet publish -p:SelfContained=false`
-
-### Phase 8b — Packaging Tooling
-- [ ] **8.6** Create `tools/Cine.Packager/` dotnet tool wrapping MSIX creation
-- [ ] **8.7** Generate `.appinstaller` file with auto-update URL and update settings
-- [ ] **8.8** Test local MSIX install: `Add-AppxPackage -Path Cine.msix`
-- [ ] **8.9** Verify framework download works on clean VM (no .NET 10 preinstalled)
-
-### Phase 8c — CI/CD
-- [ ] **8.10** Create `.github/workflows/release.yml` (build + test + package + sign + release)
-- [ ] **8.11** Generate self-signed certificate for CI
-- [ ] **8.12** Add `BASE64_ENCODED_PFX` + `PFX_PASSWORD` GitHub secrets
-- [ ] **8.13** Test CI pipeline: push tag, verify MSIX artifact uploaded to GitHub Release
-- [ ] **8.14** Test web install flow: `ms-appinstaller:` URI → App Installer → launch
-
-### Phase 8d — Polish
-- [ ] **8.15** Create web install page (`web/index.html`) with proper branding
-- [ ] **8.16** Test auto-update: install v1.0.0, push v1.1.0 to CDN, verify silent update
-- [ ] **8.17** Test file association: double-click .mp4 → Cine opens as default
-- [ ] **8.18** Test clean uninstall: `Remove-AppxPackage`, verify no files/registry left
-- [ ] **8.19** Document install instructions on README and website
-
-### Phase 8e — Production (Future)
-- [ ] **8.20** Obtain trusted CA code signing certificate
-- [ ] **8.21** Migrate signing to Azure Key Vault
-- [ ] **8.22** Submit to Microsoft Store (optional — reaches more users)
-- [ ] **8.23** Submit to `winget` package repository
-- [ ] **8.24** Set up custom domain `releases.cine.app` with CDN
-
----
-
-## Risks & Mitigations
-
-| Risk | Probability | Impact | Mitigation |
-|---|---|---|---|
-| mpv native DLLs too large (~45MB) | High | Medium | Block-level compression in MSIX; post-install download as fallback |
-| .NET 10 Runtime not yet in Microsoft framework repo | Low | High | Fall back to self-contained package (larger) until CDN available; add bootstrapper |
-| Self-signed cert causes SmartScreen warning | High | Medium | Clear install instructions; "Run anyway" link; migrate to EV cert after validation |
-| MSIX incompatible with Windows 10 LTSC | Low | Low | Keep WiX MSI as fallback for enterprise; document limitation |
-| `ms-appinstaller:` protocol blocked by IT policy | Low | Medium | Provide direct `.msix` download link as alternative |
+For the absolute best visual quality, generate `Background.bmp` with:
+- Center radial gradient: `#1A1050` (vibrant purple) at center
+- Outer edge: `#0A0A1A` (deep navy black)
+- Subtle noise/grain texture overlay (reduces banding)
+- Color stops: `#1A1050` @ 30% → `#0D0D22` @ 70% → `#0A0A1A` @ 100%
 
 ---
 
 ## Success Metrics
 
-| Metric | Target | Measurement |
-|---|---|---|
-| MSIX package size | &lt; 25 MB | Check `.msix` file size after build |
-| Install time (cold, no .NET) | &lt; 2 minutes | Stopwatch on clean Windows VM |
-| Install time (warm, .NET cached) | &lt; 10 seconds | Stopwatch on second install |
-| Auto-update success rate | &gt; 95% | Telemetry / app-insights |
-| CI pipeline duration | &lt; 5 minutes | GitHub Actions run log |
-| 0 uninstall leftovers | Verified | `Get-AppxPackage` + registry scan |
-| File association works | 30+ formats | Manual testing with each format |
+| Metric | Target | How to Measure |
+|--------|--------|---------------|
+| Installer size | < 15 MB | Check file size of `CineSetup.exe` |
+| .NET download progress | Real-time % | Visual inspection on clean VM |
+| DLL download progress | Real-time per-file | Visual inspection on first launch |
+| First-run to usable | < 2 minutes (54 MB @ 5 MB/s) | Stopwatch |
+| CI pipeline time | < 8 minutes | GitHub Actions run log |
+| SmartScreen warnings | None (signed) | Test on clean Windows VM |
+| File association | 20+ formats | Double-click .mp4 → opens in Cine |
+| Clean uninstall | No leftovers | Registry + file scan after uninstall |

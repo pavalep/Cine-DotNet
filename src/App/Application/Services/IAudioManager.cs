@@ -49,6 +49,7 @@ public interface IAudioManager : INotifyPropertyChanged, IDisposable
 
     // ── File Dialog ──
     Func<Task<string?>>? RequestAudioFileAsync { get; set; }
+    Func<Task>? DismissFlyoutAsync { get; set; }
 
     // ── Reset ──
     void ResetAllAudio();

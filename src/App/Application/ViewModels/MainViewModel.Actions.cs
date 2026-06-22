@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using Cine.Avalonia.Extensions;
+using Cine.Core;
 using Cine.Media.Events;
 using Cine.Media.Interfaces;
 using Cine.Media.Models;
@@ -25,7 +26,7 @@ public partial class MainViewModel
         if (_fileDialog == null) return;
         var paths = await _fileDialog.OpenFilesAsync();
         if (paths != null && paths.Length > 0)
-            OpenFiles(paths);
+            await OpenFiles(paths);
     }
 
     private async Task OnOpenFolder()
@@ -33,7 +34,7 @@ public partial class MainViewModel
         if (_fileDialog == null) return;
         var path = await _fileDialog.OpenFolderAsync();
         if (!string.IsNullOrEmpty(path))
-            OpenFile(path);
+            await OpenFile(path);
     }
 
     private async Task OnAddFiles()
@@ -56,7 +57,8 @@ public partial class MainViewModel
             var path = await _fileDialog.OpenAudioAsync();
             if (!string.IsNullOrWhiteSpace(path))
             {
-                _player?.AddAudio(path);
+                var player = _player;
+                await Task.Run(() => player?.AddAudio(path));
                 global::Cine.Core.Log.ForContext<MainViewModel>().Info("Audio track added: {Path}", Path.GetFileName(path));
             }
         }
@@ -72,14 +74,17 @@ public partial class MainViewModel
         if (string.IsNullOrWhiteSpace(filePath) || _player == null) return;
         try
         {
-            _player.AddSubtitle(filePath);
-            global::Cine.Core.Log.ForContext<MainViewModel>().Info("External subtitle loaded: {Path}", Path.GetFileName(filePath));
+            var player = _player;
+            _ = Task.Run(() =>
+            {
+                player.AddSubtitle(filePath);
+                Log.ForContext<MainViewModel>().Info("External subtitle loaded: {Path}", Path.GetFileName(filePath));
+            });
         }
         catch (Exception ex)
         {
             global::Cine.Core.Log.ForContext<MainViewModel>().Error(ex, "LoadExternalSubtitle failed");
             OnError?.Invoke(this, $"Failed to load subtitle: {ex.Message}");
-            throw;
         }
     }
 
@@ -89,14 +94,17 @@ public partial class MainViewModel
         if (string.IsNullOrWhiteSpace(filePath) || _player == null) return;
         try
         {
-            _player.AddAudio(filePath);
-            global::Cine.Core.Log.ForContext<MainViewModel>().Info("External audio loaded: {Path}", Path.GetFileName(filePath));
+            var player = _player;
+            _ = Task.Run(() =>
+            {
+                player.AddAudio(filePath);
+                Log.ForContext<MainViewModel>().Info("External audio loaded: {Path}", Path.GetFileName(filePath));
+            });
         }
         catch (Exception ex)
         {
             global::Cine.Core.Log.ForContext<MainViewModel>().Error(ex, "LoadExternalAudio failed");
             OnError?.Invoke(this, $"Failed to load audio track: {ex.Message}");
-            throw;
         }
     }
 
@@ -105,7 +113,7 @@ public partial class MainViewModel
     /// to a thread-pool thread so neither the UI nor mpv's own render/event
     /// threads are starved.
     /// </summary>
-    public async void OpenFile(string path)
+    public async Task OpenFile(string path)
     {
         if (string.IsNullOrWhiteSpace(path)) return;
 
@@ -123,7 +131,7 @@ public partial class MainViewModel
         }
         catch
         {
-            Log($"Open failed for '{path}'.");
+            Log.ForContext<MainViewModel>().Warning("Open failed for {Path}", path);
             FilePath = string.Empty;
         }
         finally
@@ -136,7 +144,7 @@ public partial class MainViewModel
     /// Open a batch of files: updates playlist (Avalonia), then delegates to
     /// <see cref="OpenFile"/> for the mpv hand-off.
     /// </summary>
-    public void OpenFiles(string[] paths)
+    public async Task OpenFiles(string[] paths)
     {
         if (paths == null || paths.Length == 0) return;
 
@@ -147,7 +155,7 @@ public partial class MainViewModel
         foreach (var path in paths)
             Playlist.Add(path);
 
-        OpenFile(paths[0]);
+        await OpenFile(paths[0]);
         SavePlaylist();
     }
 
@@ -207,7 +215,7 @@ public partial class MainViewModel
     {
         Dispatcher.UIThread.OnUiThread(() =>
         {
-            Log($"VM.OnPlaybackStateChanged: oldState={_state} newState={e.State}");
+            Log.ForContext<MainViewModel>().Debug("OnPlaybackStateChanged: oldState={Old} newState={New}", _state, e.State);
             State = e.State;
         });
     }

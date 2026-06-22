@@ -71,6 +71,7 @@
                     <Button x:Name="BtnVolumeMenu"
                             Classes="circular-menu"
                             ToolTip.Tip="Volume (M)"
+                            AutomationProperties.Name="Volume"
                             PointerWheelChanged="OnVolumeButtonScroll">
                         <Panel Width="22" Height="22">
                             <materialIcons:MaterialIcon x:Name="VolumeIconPath" Kind="VolumeHigh" Width="22" Height="22"
@@ -104,7 +105,7 @@
                                                 Minimum="0" Maximum="150"
                                                 Value="{Binding VolumeValue}"
                                                 Orientation="Horizontal"
-                                                Height="24"
+                                                Height="{StaticResource size-seek-slider-height}"
                                                 HorizontalAlignment="Stretch"
                                                 PointerPressed="OnVolumeSliderPointerPressed">
                                             <Slider.Resources>

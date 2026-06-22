@@ -1,4 +1,4 @@
-name: Release — MSIX Package & Deploy
+name: Release — Installer & Deploy
 
 on:
   workflow_dispatch:
@@ -11,9 +11,10 @@ env:
   TEST_PROJECT: tests/Cine.Tests/Cine.Tests.csproj
   DOTNET_VERSION: '10.0.x'
   MSIX_NAME: Cine.CineMediaPlayer
+  CONFIG: Release
 
 jobs:
-  build-and-release:
+  build:
     runs-on: windows-latest
     strategy:
       matrix:
@@ -34,6 +35,9 @@ jobs:
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v2
 
+    - name: Setup WiX
+      run: dotnet tool install --global wix
+
     # ── Restore & Build ────────────────────────────────
     - name: Restore
       run: dotnet restore ${{ env.SOLUTION }}
@@ -41,7 +45,7 @@ jobs:
     - name: Build
       run: >
         dotnet build ${{ env.SOLUTION }}
-        --configuration Release
+        --configuration ${{ env.CONFIG }}
         --no-restore
         -p:Platform=${{ matrix.arch }}
 
@@ -49,7 +53,7 @@ jobs:
     - name: Test
       run: >
         dotnet test ${{ env.TEST_PROJECT }}
-        --configuration Release
+        --configuration ${{ env.CONFIG }}
         --no-build
         --logger "trx;LogFileName=test-results-${{ matrix.arch }}.trx"
 
@@ -60,7 +64,7 @@ jobs:
         name: test-results-${{ matrix.arch }}
         path: '**/*.trx'
 
-    # ── Extract version from tag ───────────────────────
+    # ── Version from tag ───────────────────────────────
     - name: Set version
       id: version
       run: |
@@ -71,32 +75,63 @@ jobs:
     - name: Publish
       run: >
         dotnet publish ${{ env.APP_PROJECT }}
-        --configuration Release
+        --configuration ${{ env.CONFIG }}
         --runtime win-${{ matrix.arch }}
-        --no-build
+        --self-contained false
         -p:PublishSingleFile=false
-        -p:SelfContained=false
-        -p:WindowsPackageType=None
+        -p:Version=${{ steps.version.outputs.VERSION }}
         -o publish/win-${{ matrix.arch }}
 
     # ── Import signing certificate ─────────────────────
     - name: Import signing cert
+      id: sign
       env:
         PFX_BASE64: ${{ secrets.BASE64_ENCODED_PFX }}
         PFX_PASSWORD: ${{ secrets.PFX_PASSWORD }}
       run: |
         if (-not $env:PFX_BASE64) {
-          Write-Host "No signing cert secret found — skipping MSIX creation"
-          echo "SKIP_MSIX=true" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "No signing cert secret found — skipping signing"
+          echo "SKIP_SIGN=true" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           exit 0
         }
         $bytes = [Convert]::FromBase64String($env:PFX_BASE64)
         [IO.File]::WriteAllBytes("${{ runner.temp }}\cine.pfx", $bytes)
-        echo "SKIP_MSIX=false" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        echo "SKIP_SIGN=false" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-    # ── Generate .appinstaller ─────────────────────────
+    # ── Build WiX Installers ───────────────────────────
+    - name: Build MSI
+      run: |
+        cd installer
+        wix harvest ..\publish\win-${{ matrix.arch }} `
+          -o CineMsi\Package.wxs `
+          -ag "-src:..\publish\win-${{ matrix.arch }}" `
+          -culture en-US
+
+    - name: Build CineSetup.exe (Bootstrapper)
+      run: |
+        cd installer
+        wix build CineBootstrapper\CineBootstrapper.wixproj `
+          -configuration ${{ env.CONFIG }}
+
+    - name: Sign Installer
+      if: env.SKIP_SIGN != 'true'
+      run: |
+        & "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe" sign /fd SHA256 `
+          /f "${{ runner.temp }}\cine.pfx" `
+          /p "${{ secrets.PFX_PASSWORD }}" `
+          /tr http://timestamp.digicert.com `
+          /td SHA256 `
+          installer/CineBootstrapper/bin/${{ env.CONFIG }}/CineSetup.exe
+
+        & "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe" sign /fd SHA256 `
+          /f "${{ runner.temp }}\cine.pfx" `
+          /p "${{ secrets.PFX_PASSWORD }}" `
+          /tr http://timestamp.digicert.com `
+          /td SHA256 `
+          installer/CineMsi/bin/${{ env.CONFIG }}/Cine.msi
+
+    # ── MSIX Package ───────────────────────────────────
     - name: Generate .appinstaller
-      if: env.SKIP_MSIX != 'true'
       run: |
         $version = '${{ steps.version.outputs.VERSION }}'
         $xml = @"
@@ -105,63 +140,23 @@ jobs:
             xmlns="http://schemas.microsoft.com/appx/appinstaller/2021"
             Version="$version"
             Uri="https://github.com/${{ github.repository }}/releases/latest/download/Cine.appinstaller">
-
             <MainPackage
                 Name="${{ env.MSIX_NAME }}"
                 Publisher="CN=CineApp"
                 Version="$version"
                 ProcessorArchitecture="${{ matrix.arch }}"
                 Uri="https://github.com/${{ github.repository }}/releases/latest/download/Cine_$($version)_${{ matrix.arch }}.msix" />
-
             <UpdateSettings>
-                <OnLaunch
-                    HoursBetweenUpdateChecks="12"
-                    ShowPrompt="false"
-                    UpdateBlocksActivation="false" />
+                <OnLaunch HoursBetweenUpdateChecks="12" ShowPrompt="false" UpdateBlocksActivation="false" />
             </UpdateSettings>
-
             <ForceUpdateFromAnyVersion>true</ForceUpdateFromAnyVersion>
         </AppInstaller>
         "@
+        New-Item -Type Directory -Force dist | Out-Null
         [IO.File]::WriteAllText("dist\Cine.appinstaller", $xml)
 
-    # ── Create MSIX with MakeAppx ──────────────────────
-    - name: Create MSIX
-      if: env.SKIP_MSIX != 'true'
-      shell: pwsh
-      run: |
-        $makeappx = "${env:ProgramFiles(x86)}\Windows Kits\10\bin\10.0.20348.0\x64\MakeAppx.exe"
-        if (-not (Test-Path $makeappx)) {
-          # Try to find latest Windows SDK
-          $kitsDir = "${env:ProgramFiles(x86)}\Windows Kits\10\bin"
-          $latest = Get-ChildItem $kitsDir -Directory |
-            Where-Object { $_.Name -match '^\d+\.\d+\.\d+\.\d+$' } |
-            Sort-Object Name -Descending |
-            Select-Object -First 1
-          $makeappx = Join-Path $latest.FullName "x64\MakeAppx.exe"
-        }
-
-        if (-not (Test-Path $makeappx)) {
-          Write-Warning "MakeAppx.exe not found — skipping MSIX creation. Install Windows SDK."
-          exit 0
-        }
-
-        # Create mapping file
-        $mapping = @"
-        [Files]
-        "publish\win-${{ matrix.arch }}\Cine.Avalonia.exe" "Cine.Avalonia.exe"
-        "publish\win-${{ matrix.arch }}\*.dll" "*.dll"
-        "publish\win-${{ matrix.arch }}\*.json" "*.json"
-        "@
-        [IO.File]::WriteAllText("dist\mapping.txt", $mapping)
-
-        $outFile = "dist\Cine_${{ steps.version.outputs.VERSION }}_${{ matrix.arch }}.msix"
-        & $makeappx pack /m src\App\Package.appxmanifest /f dist\mapping.txt /p $outFile /o
-        Write-Host "MSIX created: $outFile"
-
-    # ── Sign MSIX ──────────────────────────────────────
     - name: Sign MSIX
-      if: env.SKIP_MSIX != 'true'
+      if: env.SKIP_SIGN != 'true'
       run: |
         & "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe" sign /fd SHA256 `
           /f "${{ runner.temp }}\cine.pfx" `
@@ -170,28 +165,45 @@ jobs:
           /td SHA256 `
           dist\Cine_*.msix
 
+    # ── Collect artifacts ─────────────────────────────
+    - name: Gather outputs
+      run: |
+        New-Item -Type Directory -Force dist | Out-Null
+        Copy-Item "installer/CineBootstrapper/bin/${{ env.CONFIG }}/CineSetup.exe" "dist/" -ErrorAction SilentlyContinue
+        Copy-Item "installer/CineMsi/bin/${{ env.CONFIG }}/Cine.msi" "dist/" -ErrorAction SilentlyContinue
+
+    - name: List artifacts
+      run: Get-ChildItem -Recurse dist | Select-Object Name, Length
+
     # ── GitHub Release ─────────────────────────────────
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
         files: |
+          dist/CineSetup.exe
+          dist/Cine.msi
           dist/Cine_*.msix
           dist/Cine.appinstaller
         body: |
           ## Cine ${{ steps.version.outputs.VERSION }}
 
-          ### Install
-          1. Download `Cine_${{ steps.version.outputs.VERSION }}_x64.msix`
-          2. Double-click to install
-          3. Windows will download .NET 10 Runtime automatically if needed
+          ### 📥 Downloads
 
-          ### Auto-update
-          Run the `.appinstaller` file once and Cine will auto-update silently.
+          | Package | Description |
+          |---------|-------------|
+          | **CineSetup.exe** | ✅ **Recommended** — Wizard installer with auto .NET download + first-launch setup |
+          | Cine.msi | Standalone MSI (requires .NET 10 Desktop Runtime pre-installed) |
+          | Cine.msix | Store package with silent auto-updates |
 
-          ---
-          **SHA256 checksums** (verify integrity):
-          ```
-          $(Get-FileHash dist\*.msix -Algorithm SHA256 | ForEach-Object { "$($_.Hash) $($_.Name)" })
-          ```
+          ### 🔧 CineSetup.exe Installation Flow
+          1. **Welcome** — System requirements check
+          2. **License** — Review and accept
+          3. **Options** — Choose install location, shortcuts, file associations
+          4. **Download** (if needed) — .NET 10 Runtime progress bar
+          5. **Install** — Files deployed to Program Files
+          6. **Finish** — Launch Cine checkbox + first-launch setup
+
+          ### ✨ What's New
+          See [commit history](https://github.com/${{ github.repository }}/commits/${{ github.ref_name }})
         draft: false
         prerelease: ${{ contains(steps.version.outputs.VERSION, 'preview') || contains(steps.version.outputs.VERSION, 'rc') }}

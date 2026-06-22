@@ -52,6 +52,9 @@ public sealed class SubtitleManager : ISubtitleManager
     // ── Callback ──
     public Func<Task<string?>>? RequestSubtitleFileAsync { get; set; }
 
+    // ── Flyout dismissal — called before file dialog opens ──
+    public Func<Task>? DismissFlyoutAsync { get; set; }
+
     // ── Events from player ──
     private EventHandler<TrackListChangedEventArgs>? _trackListHandler;
     private EventHandler<SubtitlePropertyChangedEventArgs>? _subPropHandler;
@@ -380,11 +383,15 @@ public sealed class SubtitleManager : ISubtitleManager
             var externalFiles = AutoDetectExternalSubtitles(mediaPath);
             foreach (var subFile in externalFiles)
             {
-                try { _player.AddSubtitle(subFile); }
-                catch (Exception ex)
+                var player = _player;
+                Task.Run(() =>
                 {
-                    global::Cine.Core.Log.ForContext<SubtitleManager>().Warning("Failed to load external sub {Path}: {Error}", subFile, ex.Message);
-                }
+                    try { player.AddSubtitle(subFile); }
+                    catch (Exception ex)
+                    {
+                        global::Cine.Core.Log.ForContext<SubtitleManager>().Warning("Failed to load external sub {Path}: {Error}", subFile, ex.Message);
+                    }
+                });
             }
         }
     }
@@ -532,9 +539,16 @@ public sealed class SubtitleManager : ISubtitleManager
         if (RequestSubtitleFileAsync == null) return;
         try
         {
+            // Close the flyout before opening file dialog
+            if (DismissFlyoutAsync != null)
+                await DismissFlyoutAsync();
+
             var path = await RequestSubtitleFileAsync();
             if (!string.IsNullOrWhiteSpace(path))
-                _player.AddSubtitle(path);
+            {
+                var player = _player;
+                await Task.Run(() => player.AddSubtitle(path));
+            }
         }
         catch (OperationCanceledException) { /* user cancelled */ }
         catch (Exception ex)
@@ -549,7 +563,8 @@ public sealed class SubtitleManager : ISubtitleManager
     {
         if (string.IsNullOrWhiteSpace(filePath)) return;
         _sessionOverride = true;
-        _player.AddSubtitle(filePath);
+        var player = _player;
+        Task.Run(() => player.AddSubtitle(filePath));
         MarkDirty();
     }
 

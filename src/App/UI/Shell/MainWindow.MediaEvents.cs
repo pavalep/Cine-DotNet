@@ -132,7 +132,7 @@ public partial class MainWindow
             }
 
             if (e.IsPaused)
-                _pauseOverlay.Show();
+                _ = _pauseOverlay.Show();
             else
                 _pauseOverlay.Hide();
 
@@ -197,7 +197,7 @@ public partial class MainWindow
             var pos = _sessionResumePosition;
             _queuedOpenPath = null;
             _sessionResumePosition = TimeSpan.Zero;
-            _viewModel?.OpenFile(path);
+            _ = _viewModel?.OpenFile(path);
             _viewModel?.ClearSession();
             if (pos.TotalSeconds > 0)
             {

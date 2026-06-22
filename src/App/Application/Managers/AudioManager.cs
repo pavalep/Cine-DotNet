@@ -46,6 +46,9 @@ public sealed class AudioManager : IAudioManager
     // ── File dialog callback for "Add Audio Track…" ──
     public Func<Task<string?>>? RequestAudioFileAsync { get; set; }
 
+    // ── Flyout dismissal — called before file dialog opens ──
+    public Func<Task>? DismissFlyoutAsync { get; set; }
+
     // ── Persistence ──
     private readonly AudioSettingsStore _audioStore = new();
     private string? _currentMediaPath;
@@ -308,7 +311,10 @@ public sealed class AudioManager : IAudioManager
         {
             var path = await RequestAudioFileAsync();
             if (!string.IsNullOrWhiteSpace(path))
-                _player.AddAudio(path);
+            {
+                var player = _player;
+                await Task.Run(() => player.AddAudio(path));
+            }
         }
         catch (Exception ex)
         {

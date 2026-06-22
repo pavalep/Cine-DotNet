@@ -220,8 +220,23 @@ public partial class MainWindow
             return;
         }
 
-        // Route through InputRoutingService
-        if (_inputRouter != null && _inputRouter.TryHandle(e))
+        // Detect if any modal dialog is open → switch scope to DialogOpen
+        var scope = InputRoutingService.InputScope.Normal;
+        if (OwnedWindows.Count > 0)
+        {
+            // Check if any owned window is modal (visible dialog)
+            foreach (var owned in OwnedWindows)
+            {
+                if (owned.IsVisible)
+                {
+                    scope = InputRoutingService.InputScope.DialogOpen;
+                    break;
+                }
+            }
+        }
+
+        // Route through InputRoutingService with detected scope
+        if (_inputRouter != null && _inputRouter.TryHandle(e, scope))
         {
             e.Handled = true;
         }

@@ -43,7 +43,10 @@ public class PlayerService : IDisposable
         {
             File.AppendAllText(DebugLogFile, $"[{DateTime.Now:HH:mm:ss.fff}] [PlayerService] {message}{Environment.NewLine}");
         }
-        catch { /* best-effort */ }
+        catch
+        {
+            Log.ForContext<PlayerService>().Trace("Debug log append failed (best-effort)");
+        }
     }
 
     public PlayerService(IPlayerFactory? factory = null)

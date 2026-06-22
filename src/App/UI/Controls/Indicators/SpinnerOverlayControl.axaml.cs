@@ -17,7 +17,7 @@ public partial class SpinnerOverlayControl : AvaloniaUserControl
         InitializeComponent();
     }
 
-    public async void Start()
+    public async Task Start()
     {
         SpinnerTrack.IsVisible = true;
         LoadingSpinner.IsVisible = true;

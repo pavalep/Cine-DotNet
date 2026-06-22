@@ -2,19 +2,40 @@
 <WixLocalization xmlns="http://wixtoolset.org/schemas/v4/wxl"
                  Culture="en-US"
                  Codepage="1252">
-    <String Id="WelcomeMessage">Welcome to Cine Media Player Setup</String>
-    <String Id="InstallMessage">This will install Cine Media Player on your computer.</String>
+    <!-- Welcome / License pages -->
+    <String Id="WelcomeTitle">Welcome to Cine Media Player Setup</String>
+    <String Id="WelcomeMessage">This wizard will guide you through installing Cine Media Player on your computer.</String>
+    <String Id="LicenseTitle">License Agreement</String>
+    <String Id="LicenseAcceptLabel">I accept the terms in the License Agreement</String>
+    <String Id="LicenseDeclineLabel">I do not accept the terms</String>
+
+    <!-- Install options page -->
     <String Id="InstallFolderLabel">Install location:</String>
     <String Id="DesktopShortcutLabel">Create desktop shortcut</String>
     <String Id="AssociateFilesLabel">Associate video files (.mp4, .mkv, .avi)</String>
     <String Id="CheckingDotNetLabel">Checking .NET Runtime...</String>
+    <String Id="DotNetFoundLabel">.NET Runtime is installed ✓</String>
+    <String Id="DotNetDownloadingLabel">Downloading .NET Runtime...</String>
+    <String Id="DotNetProgressFormat">{0}% ({1} MB / {2} MB)</String>
+
+    <!-- Buttons -->
+    <String Id="BackButtonLabel">Back</String>
+    <String Id="NextButtonLabel">Next</String>
     <String Id="InstallButtonLabel">Install</String>
     <String Id="CancelButtonLabel">Cancel</String>
     <String Id="FinishButtonLabel">Finish</String>
     <String Id="CloseButtonLabel">Close</String>
-    <String Id="LaunchLabel">Launch Cine</String>
+
+    <!-- Progress page -->
+    <String Id="ProgressTitle">Installing Cine...</String>
+    <String Id="DotNetProgressTitle">Downloading .NET Runtime...</String>
+
+    <!-- Success page -->
     <String Id="SuccessTitle">Installation Complete</String>
     <String Id="SuccessMessage">Cine Media Player has been installed successfully.</String>
+    <String Id="LaunchLabel">Launch Cine</String>
+
+    <!-- Failure page -->
     <String Id="FailureTitle">Installation Failed</String>
-    <String Id="ProgressTitle">Installing Cine...</String>
+    <String Id="FailureMessage">An error occurred during installation.</String>
 </WixLocalization>

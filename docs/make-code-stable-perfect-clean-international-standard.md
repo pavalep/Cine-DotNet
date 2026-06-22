@@ -617,6 +617,388 @@ Effort      │ 5.2      │ 2.3      │ 0.4      │
 7. Phase 5 (2-3 hrs) — Code standards
 8. Phase 7 (2-3 hrs) — Documentation
 9. Phase 8 (3-4 hrs) — Release engineering
+10. Phase 9 (2-3 hrs) — Missed Gaps & Polish (Post-Implementation Audits)
+
+---
+
+## Phase 9 — Missed Gaps & Polish (Post-Implementation Audits)
+
+**Estimated effort: 2-3 hours**.
+
+These are minor UI/UX bugs and interaction gaps identified after implementing the previous phases.
+
+### 9.1 Live Volume OSD Precision & Frequency
+When volume is adjusted using keys or the mouse scroll wheel, mpv reports changes as floating-point values (e.g. `71.12345`). The UI displays these raw double values with high precision (e.g. `Volume: 71.12345%`). Additionally, rapid changes enqueue dozens of separate volume notifications in the OSD queue, causing the OSD to refresh and display outdated volume values sequentially for several seconds after user interaction has stopped.
+
+- **Files affected**:
+  - [`src/App/UI/Shell/MainWindow.State.cs`](file:///x:/Development/Cine_CSharp_DotNet/src/App/UI/Shell/MainWindow.State.cs)
+  - [`src/App/UI/Controls/Indicators/OsdNotificationControl.axaml.cs`](file:///x:/Development/Cine_CSharp_DotNet/src/App/UI/Controls/Indicators/OsdNotificationControl.axaml.cs)
+- **Action**:
+  - Format the volume output using `F0` (integer percentage) in `MainWindow.State.cs`.
+  - Modify `OsdNotificationControl` to detect volume update notifications, clear any other pending volume messages from the queue, and update the active volume OSD directly on the UI thread *in-place* (resetting the delay timer) without queueing or flickering.
+
+### 9.2 Clipped Slider Drag Thumbs
+Several standard horizontal sliders (volume slider in the controls box, and font size, position, delay, border, and shadow sliders in the subtitle style flyout) have their `Height` set to `24`. This overrides the default Fluent theme `MinHeight` of `32`, causing the 20px-wide drag thumb to be clipped/partially cut off vertically inside the layout template.
+
+- **Files affected**:
+  - [`src/App/UI/Screens/Shell/ControlsBoxControl.axaml`](file:///x:/Development/Cine_CSharp_DotNet/src/App/UI/Screens/Shell/ControlsBoxControl.axaml)
+  - [`src/App/UI/Controls/Subtitle/SubtitleStyleFlyout.axaml`](file:///x:/Development/Cine_CSharp_DotNet/src/App/UI/Controls/Subtitle/SubtitleStyleFlyout.axaml)
+- **Action**:
+  - Increase the slider heights from `24` to `{StaticResource size-seek-slider-height}` (32) to match standard slider sizing and prevent vertical thumb clipping.
+
+### 9.3 Custom Seek Bar Thumb Math & Edge Clipping
+The custom seek bar thumbs in `SeekBarControl` and `PipWindow` are positioned by directly multiplying the normalized seek percentage by the track width and subtracting a fixed half-width. This causes the thumb to be clipped at 0% (extending outside the left edge) and to exceed/overlap adjacent controls at 100%. In `PipWindow`, this also causes a mouse cursor alignment offset since the drag position does not account for the thumb's width boundaries.
+
+- **Files affected**:
+  - [`src/App/UI/Controls/SeekBar/SeekBarControl.axaml.cs`](file:///x:/Development/Cine_CSharp_DotNet/src/App/UI/Controls/SeekBar/SeekBarControl.axaml.cs)
+  - [`src/App/UI/Screens/Dialogs/PipWindow.axaml.cs`](file:///x:/Development/Cine_CSharp_DotNet/src/App/UI/Screens/Dialogs/PipWindow.axaml.cs)
+- **Action**:
+  - Use the track-active-width positioning math: `thumbLeft = seekValue * (w - thumbWidth)`.
+  - Adjust the pointer-to-normalized value conversion: `seekValue = (pos - thumbHalf) / (w - thumbWidth)` so that the center of the thumb tracks the mouse cursor exactly and never goes outside boundaries.
+
+---
+
+## Phase 10 — Infrastructure & Standards Gaps (Post-Review Additions)
+
+**Estimated effort: 8-12 hours**.
+
+These are critical gaps identified in a follow-up review of the codebase. They span infrastructure, safety, cross-platform readiness, and internationalization — areas the original plan scoped too narrowly.
+
+> **Detailed plans for each sub-phase**:
+> - [10.1 — Logging Infrastructure](file:///x:/Development/Cine_CSharp_DotNet/docs/phase10-logging-plan.md)
+> - [10.2 — Dependency Injection Audit](file:///x:/Development/Cine_CSharp_DotNet/docs/phase10-di-audit-plan.md)
+> - [10.3 — async void Safety](file:///x:/Development/Cine_CSharp_DotNet/docs/phase10-async-void-safety-plan.md)
+> - [10.4 — Cross-Platform Readiness](file:///x:/Development/Cine_CSharp_DotNet/docs/phase10-cross-platform-plan.md)
+> - [10.5 — Localization (i18n)](file:///x:/Development/Cine_CSharp_DotNet/docs/phase10-i18n-plan.md)
+> - [10.6 — Theme System](file:///x:/Development/Cine_CSharp_DotNet/docs/phase10-theme-plan.md)
+> - [10.7 — Settings Management](file:///x:/Development/Cine_CSharp_DotNet/docs/phase10-settings-management-plan.md)
+> - [10.8 — Memory Leak Audit](file:///x:/Development/Cine_CSharp_DotNet/docs/phase10-memory-leak-audit-plan.md)
+> - [10.9 — Accessibility](file:///x:/Development/Cine_CSharp_DotNet/docs/phase10-accessibility-plan.md)
+> - [10.10 — Drag-and-Drop](file:///x:/Development/Cine_CSharp_DotNet/docs/phase10-drag-drop-plan.md)
+
+### 10.1 Logging Infrastructure Formalization
+
+**Current state**: The codebase has a [`FileLogger`](file:///x:/Development/Cine_CSharp_DotNet/src/Core/Services/FileLogger.cs) in Core and uses ad-hoc `Log.ForContext<T>()` calls, but there is no formal logging pipeline configuration. The [`MainViewModel`](file:///x:/Development/Cine_CSharp_DotNet/src/App/Application/ViewModels/MainViewModel.cs#L32-L45) has a private `Log()` method that writes to a `cine_startup.log` file — a completely separate path from `FileLogger`. Error handling uses `CrashReporter.Log()` and `CrashReporter.Dump()` in parallel, creating multiple log entry points with no unified format.
+
+**Issues**:
+- Two log paths (`LocalApplicationData\Cine\cine_startup.log` vs `LocalApplicationData\Cine\logs\Cine_*.log`)
+- No log level configuration (can't change verbosity at runtime)
+- No log rotation or retention policy
+- `CrashReporter`, `FileLogger`, and manual `Log()` calls are three separate conventions
+
+**Action**:
+```csharp
+// 10.1a — Unified ILogger interface at Core level
+// Core/Services/ILogger.cs (already exists as FileLogger : ILogger)
+// Move to interface-based usage everywhere
+
+// 10.1b — Bootstrap logging in Program.cs / App.axaml.cs
+var logDir = Path.Combine(
+    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+    "Cine", "logs");
+var logger = new FileLogger("Cine", logDir);
+logger.Info("Application starting — version {Version}", typeof(App).Assembly.GetName().Version);
+
+// 10.1c — Remove ad-hoc MainViewModel.Log() and redirect to FileLogger
+```
+
+| Action | Files | Effort |
+|--------|-------|--------|
+| Remove `MainViewModel.Log()` method | [`MainViewModel.cs:32-45`](file:///x:/Development/Cine_CSharp_DotNet/src/App/Application/ViewModels/MainViewModel.cs#L32-L45) | 15 min |
+| Remove duplicate `App.Log()` method | [`App.axaml.cs:82-85`](file:///x:/Development/Cine_CSharp_DotNet/src/App/App.axaml.cs#L82-L85) | 5 min |
+| Unify all logging through `FileLogger` | Entire codebase | 1 hr |
+| Add log rotation (archive files >7 days old) | `FileLogger.cs` | 30 min |
+
+### 10.2 Dependency Injection Audit & Expansion
+
+**Current state**: DI is configured in [`App.axaml.cs:285-290`](file:///x:/Development/Cine_CSharp_DotNet/src/App/App.axaml.cs#L285-L290) with only **3 registrations**:
+
+```csharp
+private static IServiceProvider ConfigureServices()
+{
+    var services = new ServiceCollection();
+    services.AddSingleton<PlayerService>();
+    services.AddTransient<MainViewModel>();
+    services.AddTransient<MainWindow>();
+    return services.BuildServiceProvider();
+}
+```
+
+Meanwhile, the codebase creates many services with `new` directly:
+
+| Service | Instantiation | Problem |
+|---------|--------------|---------|
+| `SubtitleSettingsStore` | `new()` in PreferencesDialog | Hard-coded dependency |
+| `AudioSettingsStore` | `new()` in PreferencesDialog | Hard-coded dependency |
+| `PlaylistCoordinator` | `new()` inside MainViewModel | Hidden dependency |
+| `InputRoutingService` | `new()` in MainWindow | Hidden dependency |
+| Various Manager classes | `new()` directly | Not testable |
+
+**Action**:
+1. Register all services with explicit lifetimes in `ConfigureServices()`
+2. Remove `new Service()` patterns — inject via constructor
+3. Define lifetime conventions:
+
+| Lifetime | When to use | Examples |
+|----------|-------------|---------|
+| `Singleton` | Stateless services, single instance | `PlayerService`, `InputRoutingService`, `ILogger` |
+| `Transient` | ViewModels, Windows (Avalonia manages lifetime) | `MainViewModel`, `MainWindow`, dialogs |
+| `Scoped` | Request-scoped (not commonly needed in desktop) | — |
+
+### 10.3 async void Safety Audit
+
+**Current state**: 11 async void methods across 8 files. While some are event handlers (acceptable), several are `public async void` — methods callable from non-event code paths.
+
+```csharp
+// ❌ DANGEROUS — public async void can crash the process
+public async void OpenFile(string path)     // MainViewModel.Actions.cs:108
+public async void Show(double fadeMs = 150)  // PauseOverlayControl.axaml.cs:18
+public async void Start()                    // SpinnerOverlayControl.axaml.cs:20
+
+// ⚠️ Event handlers — acceptable but should use ErrorBoundary
+private async void OnAddTrack(...)          // SubtitleStyleFlyout.axaml.cs:306
+private async void OnSavePlaylistClick(...)  // PlaylistDialog.axaml.cs:178
+```
+
+The [`ErrorBoundary`](file:///x:/Development/Cine_CSharp_DotNet/src/App/Application/Services/ErrorBoundary.cs) class exists precisely for this purpose but is used sporadically.
+
+**Action**:
+
+| Method | Fix |
+|--------|-----|
+| `public async void OpenFile(string)` | Change to `public async Task OpenFile(string)` — update callers |
+| `public async void Show(double)` | Change to `public async Task Show(double)` — update callers |
+| `public async void Start()` | Change to `public async Task Start()` — update callers |
+| All `private async void` event handlers | Wrap body in `ErrorBoundary.Run(...)` |
+
+**Rule**: No `public async void` methods allowed. Only event handlers (`object sender, RoutedEventArgs e`) may use `async void`, and even those must be wrapped with `ErrorBoundary.Run()`.
+
+### 10.4 Cross-Platform Readiness
+
+**Current state**: The `.csproj` targets `net10.0-windows` exclusively — meaning it cannot compile for macOS or Linux at all.
+
+```xml
+<TargetFramework>net10.0-windows</TargetFramework>
+```
+
+This is the single biggest architectural limitation. Avalonia's main value proposition is cross-platform UI, but the project is Windows-locked.
+
+**Issues found in codebase**:
+- [`MainWindow.Input.cs`](file:///x:/Development/Cine_CSharp_DotNet/src/App/UI/Shell/MainWindow.Input.cs) — hardcoded `Ctrl` key checks, no `Cmd` (macOS) handling
+- Hardcoded `\` path separators in string literals
+- `UseWindowsForms=true` in csproj — locks to Windows, blocks Linux/macOS
+- `Win32PlatformOptions` in `App.axaml.cs` — Windows-specific rendering config
+
+**Action**:
+
+| Priority | Action | Effort |
+|----------|--------|--------|
+| 🔴 P0 | Change to multi-target: `net10.0-windows;net10.0-macos;net10.0` (Linux target as `net10.0`) | 30 min |
+| 🔴 P0 | Remove `UseWindowsForms=true` (blocks non-Windows builds) | 5 min |
+| 🔴 P0 | Guard `Win32PlatformOptions` with `#if WINDOWS` | 15 min |
+| 🟡 P1 | Create `KeyboardHelper` that maps `Ctrl` → `Cmd` on macOS | 30 min |
+| 🟡 P1 | Audit all file paths for cross-platform compatibility | 1 hr |
+| 🟢 P2 | Test build on macOS and Linux | 2 hr |
+
+### 10.5 Localization & Internationalization (i18n)
+
+**Current state**: Zero localization infrastructure. All user-facing strings are hardcoded in English. The document title mentions "international standard" but no strategy exists.
+
+**Files checked**: All 32 `.axaml` files — every `Text`, `ToolTip.Tip`, `Title`, `Watermark` is a hardcoded English string.
+
+**Action**:
+
+```xml
+<!-- 10.5a — Set up .resx resource files -->
+<!-- UI/Resources/Strings.resx (default/English) -->
+<!-- UI/Resources/Strings.zh-CN.resx (Chinese, etc.) -->
+
+<!-- 10.5b — XAML usage pattern -->
+<TextBlock Text="{x:Static p:Resources.MainWindow_Title}" />
+
+<!-- 10.5c — Code-behind usage -->
+var title = Cine.Avalonia.Resources.Strings.PreferencesDialog_Title;
+```
+
+| Action | Effort |
+|--------|--------|
+| Create `Strings.resx` with all current English strings (~200 strings) | 2 hr |
+| Implement `CultureService` that detects & switches UI culture | 30 min |
+| Replace all hardcoded strings in XAML with `{x:Static}` bindings | 2 hr |
+| Replace all hardcoded strings in .cs files with resource lookups | 1 hr |
+| Add culture-aware number/date formatting in converters | 30 min |
+
+### 10.6 Theme & Appearance System Formalization
+
+**Current state**: The app has resource dictionaries (`Colors.axaml`, `Typography.axaml`, `Spacing.axaml`, `Sizes.axaml`, `Elevation.axaml`, `Radius.axaml`, `Icons.axaml`) but no theme switching mechanism. The theme is hardcoded to dark. Users cannot switch to a light theme.
+
+**Issues**:
+- No `LightTheme.axaml` / `DarkTheme.axaml` separation
+- No `ThemeService` or theme toggle in Preferences
+- Color keys like `AppBackground`, `OsdForeground`, `PopoverBackground` exist but only have dark values
+- No high-contrast mode detection or support
+
+**Action**:
+
+| Action | Effort |
+|--------|--------|
+| Split `Colors.axaml` into `Colors.Dark.axaml` + `Colors.Light.axaml` | 1 hr |
+| Create `ThemeService` (singleton) that switches merged dictionaries at runtime | 30 min |
+| Add theme toggle to Preferences dialog | 30 min |
+| Detect Windows high-contrast mode via `SystemParameters.HighContrast` | 15 min |
+| Verify all color keys have both dark and light values | 30 min |
+
+### 10.7 Settings Management Consolidation
+
+**Current state**: Settings are fragmented across multiple stores:
+
+| Store | File format | Location |
+|-------|------------|----------|
+| `PlaylistSettingsStore` | JSON | `%LOCALAPPDATA%\Cine\...` |
+| `AudioSettingsStore` | JSON | `%LOCALAPPDATA%\Cine\...` |
+| `SubtitleSettingsStore` | JSON | `%LOCALAPPDATA%\Cine\...` |
+| `MainViewModel` (recent files, session) | JSON | `%LOCALAPPDATA%\Cine\...` |
+| `ResumeService` | JSON | `%LOCALAPPDATA%\Cine\...` |
+
+Each store has its own save/load/init logic, error handling, and file path construction. There is no centralized settings directory management, no versioning, and no migration strategy.
+
+**Action**:
+
+```csharp
+// 10.7a — Unified settings service contract
+public interface ISettingsService
+{
+    T? Load<T>(string key) where T : class;
+    void Save<T>(string key, T value) where T : class;
+    string SettingsDirectory { get; }
+}
+
+// 10.7b — Settings schema versioning
+public class SettingsManifest
+{
+    public int Version { get; set; } = 1;
+    public DateTime LastSaved { get; set; }
+    // Migration: if stored version < current version, run upgrade
+}
+```
+
+| Action | Effort |
+|--------|--------|
+| Create `ISettingsService` + `JsonSettingsService` | 30 min |
+| Migrate all `*Store` classes to use the unified service | 1 hr |
+| Add versioned schema with migration support | 30 min |
+| Centralize `ApplicationData\Cine` directory creation | 15 min |
+
+### 10.8 Memory Leak & Event Handler Audit
+
+**Current state**: [`MainViewModel`](file:///x:/Development/Cine_CSharp_DotNet/src/App/Application/ViewModels/MainViewModel.cs#L28) implements `IDisposable` and has a [`Dispose()`](file:///x:/Development/Cine_CSharp_DotNet/src/App/Application/ViewModels/MainViewModel.cs#L434) method, but it's unclear whether all event handlers are unsubscribed. Several patterns in the codebase subscribe to events without corresponding unsubscribe:
+
+```csharp
+// ❌ Potential leak — anonymous handler, never unsubscribed
+_player.MediaOpened += (_, _) => OnMediaOpened();
+
+// ❌ Static event subscription — will never be GC'd if not unsubscribed
+AppDomain.CurrentDomain.UnhandledException += OnUnhandled;
+
+// ⚠️ CollectionChanged subscription — ViewModel lives longer than View
+vm.RecentFiles.CollectionChanged += OnRecentFilesChanged;  // StartPage.axaml.cs:26
+```
+
+**Action**:
+
+| Pattern | Fix | Risk |
+|---------|-----|------|
+| Lambda event handlers on `_player` (long-lived) | Convert to method handlers + unsubscribe in `Dispose()` | 🔴 High |
+| `CollectionChanged` on ViewModel from View | Unsubscribe in `DataContextChanged` (already done in `StartPage` ✅) | 🟡 Medium |
+| Static event handlers | Keep (process lifetime) but wrap in try-catch | 🟢 Low |
+| `DispatcherTimer` subscriptions | Verify `Stop()` + `null` in Dispose | 🟡 Medium |
+
+**Audit checklist**: Every `+=` in the codebase must have a matching `-=` or a documented reason why it doesn't need one (e.g., process lifetime).
+
+### 10.9 Accessibility (Beyond Phase 3.2)
+
+**Current state**: Phase 3.2 only addresses `AutomationProperties.Name` on tooltip buttons. Full accessibility requires much more.
+
+**Issues**:
+- No `Focusable`/`TabIndex` configuration on interactive elements
+- No keyboard navigation for sliders (seek bar, volume) beyond basic arrow keys
+- OSD notifications are not announced to screen readers via `AutomationProperties.LiveSetting`
+- Dialog focus is not captured (no `FocusManager` initial focus)
+- No high-contrast variant of resource colors
+
+**Action**:
+
+```xml
+<!-- 10.9a — Live region for OSD announcements -->
+<Border AutomationProperties.LiveSetting="Polite"
+        AutomationProperties.Name="{Binding CurrentOsdMessage}" />
+
+<!-- 10.9b — Proper focus management -->
+<Dialog AutomationProperties.Name="Open File"
+        FocusManager.FocusedElement="{Binding #FileNameTextBox}" />
+```
+
+| Requirement | Action | Effort |
+|-------------|--------|--------|
+| W3C WCAG 2.1 Level AA compliance | Audit all controls for keyboard accessibility | 2 hr |
+| Screen reader announcements | Add `AutomationProperties` to dynamic content areas | 1 hr |
+| Focus order | Verify tab order follows visual layout in all dialogs | 1 hr |
+| High-contrast support | Test with Windows High-Contrast theme; fix color keys that don't adapt | 1 hr |
+
+### 10.10 Drag-and-Drop Robustness
+
+**Current state**: A [`DragDropOverlayControl`](file:///x:/Development/Cine_CSharp_DotNet/src/App/UI/Controls/Indicators/DragDropOverlayControl.axaml.cs) exists and [`MainWindow.Core.cs`](file:///x:/Development/Cine_CSharp_DotNet/src/App/UI/Shell/MainWindow.Core.cs) sets up drag-drop on the main window. However, the [`PlaylistDialog.axaml.cs`](file:///x:/Development/Cine_CSharp_DotNet/src/App/UI/Screens/Dialogs/PlaylistDialog.axaml.cs) has empty catch blocks for drag-drop operations (Phase 0.4 noted this).
+
+**Full audit needed**:
+
+| Entry point | File | Status |
+|-------------|------|--------|
+| Window-level drag-drop | `MainWindow.Core.cs` | ✅ Implemented |
+| Drag-drop overlay | `DragDropOverlayControl.axaml.cs` | ✅ Implemented |
+| Playlist dialog drag-drop | `PlaylistDialog.axaml.cs:233` | ❌ Empty catch blocks |
+| Start page drag-drop | `StartPage.axaml` | ❌ Not implemented (but may not need it) |
+| File type validation | All entry points | ⚠️ Only extension check, no magic-byte validation |
+
+**Action**:
+1. Fix empty catch blocks in `PlaylistDialog.axaml.cs` 
+2. Add magic-byte validation to complement extension-based filtering
+3. Ensure visual feedback consistency across all drag-drop targets
+
+---
+
+## Implementation Priority Matrix (Updated)
+
+```
+                        Impact
+                 Low       Medium     High
+            ┌──────────┬──────────┬──────────┐
+    Low     │ 0.3      │ 3.2      │ 0.1      │
+            │ Hidden   │ Tooltips │ Debug    │
+            │ buttons  │          │ regions  │
+            ├──────────┼──────────┼──────────┤
+Effort      │ 5.2      │ 2.3      │ 0.4      │
+    Medium  │ Naming   │ Unhandled│ Empty    │
+            │          │ handler  │ catches  │
+            ├──────────┼──────────┼──────────┤
+    High    │ 1.1      │ 4.1      │ 6.1      │
+            │ Split VM │ JSON src │ Test     │
+            │          │ gen      │ infra    │
+            └──────────┴──────────┴──────────┘
+
+**Phase 10 priority within the overall plan**:
+
+| Phase 10 Item | Recommended Insertion Point | Why |
+|---------------|---------------------------|-----|
+| 10.1 Logging | Before Phase 2 (error handling needs logs) | Prerequisite |
+| 10.3 async void | Before Phase 2 (critical safety) | Prerequisite |
+| 10.7 Settings | After Phase 1 (architecture first) | Depends on DI |
+| 10.2 DI Audit | Part of Phase 1 (architecture refactoring) | |
+| 10.9 Accessibility | Alongside Phase 3 (UI polish) | |
+| 10.8 Memory Leaks | Alongside Phase 4 (performance) | |
+| 10.4 Cross-Platform | Phase 8 (release engineering) | Lower urgency |
+| 10.5 i18n | Phase 7 (documentation) or later | Nice-to-have |
+| 10.6 Theme | After Phase 3 (UI polish) | |
+| 10.10 Drag-Drop | Part of Phase 0 (immediate cleanup) | Quick fix |
 
 ---
 

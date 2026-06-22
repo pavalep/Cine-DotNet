@@ -45,8 +45,6 @@ public partial class SeekBarControl : AvaloniaUserControl
     private DateTime _lastSeekMove = DateTime.MinValue;
     private const int SeekMoveDebounceMs = 16; // ~60fps
 
-    private const double SeekThumbHalf = 8.0;
-
     private bool _showRemaining;
     private string _lastPositionText = "00:00:00";
     private string _lastDurationText = "00:00:00";
@@ -178,6 +176,20 @@ public partial class SeekBarControl : AvaloniaUserControl
         return Math.Clamp(_lastPosition.TotalSeconds / _lastDuration.TotalSeconds, 0.0, 1.0);
     }
 
+    private double GetNormalizedFromPointer(global::Avalonia.Point p)
+    {
+        var w = SeekArea.Bounds.Width;
+        if (w <= 0) return 0;
+        var thumbWidth = SeekThumb.Bounds.Width;
+        if (thumbWidth <= 0) thumbWidth = 20;
+        var thumbHalf = thumbWidth / 2.0;
+
+        var trackActiveWidth = w - thumbWidth;
+        if (trackActiveWidth <= 0) return 0;
+
+        return Math.Clamp((p.X - thumbHalf) / trackActiveWidth, 0.0, 1.0);
+    }
+
     private void UpdateSeekBar()
     {
         if (_lastDuration.TotalSeconds <= 0) return;
@@ -189,11 +201,14 @@ public partial class SeekBarControl : AvaloniaUserControl
             ? _lastSeekNormalized
             : Math.Clamp(_lastPosition.TotalSeconds / _lastDuration.TotalSeconds, 0.0, 1.0);
 
-        var fillWidth = seekValue * w;
-        SeekFill.Width = fillWidth;
+        var thumbWidth = SeekThumb.Bounds.Width;
+        if (thumbWidth <= 0) thumbWidth = 20;
+        var thumbHalf = thumbWidth / 2.0;
 
-        var thumbLeft = seekValue * w - SeekThumbHalf;
+        var thumbLeft = seekValue * (w - thumbWidth);
         SeekThumb.Margin = new Thickness(thumbLeft, 0, 0, 0);
+
+        SeekFill.Width = thumbLeft + thumbHalf;
     }
 
     public void UpdateChapterMarkers()
@@ -231,8 +246,7 @@ public partial class SeekBarControl : AvaloniaUserControl
         if (_viewModel == null || _viewModel.Duration.TotalSeconds <= 0) return;
 
         var p = e.GetPosition(SeekArea);
-        var trackWidth = Math.Max(1.0, SeekArea.Bounds.Width);
-        _lastSeekNormalized = Math.Clamp(p.X / trackWidth, 0, 1);
+        _lastSeekNormalized = GetNormalizedFromPointer(p);
 
         _isSeeking = true;
         _awaitingSeekSettle = false;
@@ -281,8 +295,7 @@ public partial class SeekBarControl : AvaloniaUserControl
         _lastSeekMove = now;
 
         var p = e.GetPosition(SeekArea);
-        var trackWidth = Math.Max(1.0, SeekArea.Bounds.Width);
-        var normalized = Math.Clamp(p.X / trackWidth, 0, 1);
+        var normalized = GetNormalizedFromPointer(p);
 
         if (_isSeeking)
         {
@@ -309,9 +322,15 @@ public partial class SeekBarControl : AvaloniaUserControl
 
             ChapterPreviewPopover.IsVisible = true;
             ChapterPreviewPopover.Measure(new AvaloniaSize(double.PositiveInfinity, double.PositiveInfinity));
+            var trackWidth = SeekArea.Bounds.Width;
+            var thumbWidth = SeekThumb.Bounds.Width;
+            if (thumbWidth <= 0) thumbWidth = 20;
+            var thumbHalf = thumbWidth / 2.0;
+            var thumbCenter = normalized * (trackWidth - thumbWidth) + thumbHalf;
+
             var popoverWidth = ChapterPreviewPopover.DesiredSize.Width;
-            var xPos = (normalized * trackWidth) - (popoverWidth / 2);
-            xPos = Math.Clamp(xPos, 4, Math.Max(4, SeekArea.Bounds.Width - popoverWidth - 4));
+            var xPos = thumbCenter - (popoverWidth / 2);
+            xPos = Math.Clamp(xPos, 4, Math.Max(4, trackWidth - popoverWidth - 4));
             ChapterPreviewPopover.Margin = new Thickness(xPos, -34, 0, 0);
         }
     }

@@ -1,200 +1,278 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Theme xmlns="http://wixtoolset.org/schemas/v4/thmutil"
-       Name="CineDark"
-       ThemeVersion="1.0"
-       WindowWidth="520"
-       WindowHeight="440"
+       Name="CinePremium"
+       ThemeVersion="2.0"
+       WindowWidth="560"
+       WindowHeight="480"
        FontId="0">
 
-    <!-- === Font Definitions === -->
-    <Font Id="0" Dpi="96" Height="-11" Weight="400" Foreground="FFFFFF" Background="1A1A2E">Segoe UI</Font>
-    <Font Id="1" Dpi="96" Height="-16" Weight="600" Foreground="FFFFFF">Segoe UI Semibold</Font>
-    <Font Id="2" Dpi="96" Height="-24" Weight="700" Foreground="FFFFFF">Segoe UI Bold</Font>
-    <Font Id="3" Dpi="96" Height="-10" Weight="400" Foreground="A0A0B0">Segoe UI</Font>
-    <Font Id="4" Dpi="96" Height="-12" Weight="500" Foreground="6CB4FF">Segoe UI</Font>
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         FONT DEFINITIONS
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <Font Id="0" Dpi="96" Height="-11" Weight="400" Foreground="FFFFFF" Background="000000">Segoe UI</Font>
+    <Font Id="1" Dpi="96" Height="-15" Weight="600" Foreground="FFFFFF">Segoe UI</Font>
+    <Font Id="2" Dpi="96" Height="-13" Weight="500" Foreground="FFFFFF">Segoe UI</Font>
+    <Font Id="3" Dpi="96" Height="-10" Weight="400" Foreground="AAAAAA">Segoe UI</Font>
+    <Font Id="4" Dpi="96" Height="-9"  Weight="400" Foreground="888888">Segoe UI</Font>
+    <Font Id="5" Dpi="96" Height="-11" Weight="600" Foreground="8866FF">Segoe UI</Font>
+    <Font Id="6" Dpi="96" Height="-9"  Weight="400" Foreground="8866FF">Segoe UI</Font>
+    <Font Id="7" Dpi="96" Height="-20" Weight="700" Foreground="FFFFFF">Segoe UI</Font>
+    <Font Id="8" Dpi="96" Height="-9"  Weight="400" Foreground="00BB88">Segoe UI</Font>
 
-    <!-- === Page: Welcome / Install === -->
-    <Page Name="Install">
-        <!-- Background image (full window) -->
-        <Image Control="BackgroundImage"
-               X="0" Y="0"
-               Width="520" Height="440"
-               ImageFile="Background.bmp"
-               ScaleMode="uniformToFill"
-               Visible="yes" />
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         COMMON LAYER: Deep dark background with glass card
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <Image Control="BackgroundImage"
+           X="0" Y="0" Width="560" Height="480"
+           ImageFile="Background.bmp"
+           ScaleMode="uniformToFill" />
 
-        <!-- Left panel: decorative gradient overlay + app name -->
-        <Rectangle X="0" Y="0" Width="220" Height="440" Fill="1A1A2E" Visible="yes" />
+    <Rectangle X="0" Y="0" Width="560" Height="480" Fill="0A0A1A" />
 
-        <Text X="0" Y="60" Width="220" Height="40"
-              FontId="2" DisablePrefix="yes"
-              HideWhenDisabled="yes"
-              Center="yes">Cine</Text>
+    <!-- macOS-style traffic light dots -->
+    <Rectangle X="16" Y="12" Width="10" Height="10" Fill="3A3A4A" />
+    <Rectangle X="32" Y="12" Width="10" Height="10" Fill="3A3A4A" />
+    <Rectangle X="48" Y="12" Width="10" Height="10" Fill="3A3A4A" />
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         PAGE: Welcome
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <Page Name="Welcome">
+        <Rectangle X="60" Y="60" Width="440" Height="370" Fill="141430" />
+
+        <!-- Decorative accent glow behind logo -->
+        <Rectangle X="225" Y="90" Width="110" Height="110" Fill="4422AA" Alpha="40" />
 
         <Image Control="LogoControl"
-               X="70" Y="120"
-               Width="80" Height="80"
+               X="240" Y="105" Width="80" Height="80"
                ImageFile="Logo.png"
-               ScaleMode="uniform"
-               Visible="yes" />
+               ScaleMode="uniform" />
 
-        <Text X="0" Y="220" Width="220" Height="20"
-              FontId="3" DisablePrefix="yes"
-              Center="yes">Media Player</Text>
-        <Text X="0" Y="240" Width="220" Height="20"
-              FontId="3" DisablePrefix="yes"
-              Center="yes">v!(bind.packageVersion.CineMsi)</Text>
+        <Text X="60" Y="200" Width="440" Height="36"
+              FontId="7" DisablePrefix="yes" Center="yes">Cine</Text>
 
-        <!-- Right panel: main content -->
-        <Text X="250" Y="40" Width="240" Height="30"
-              FontId="1" DisablePrefix="yes">Welcome to Cine Setup</Text>
+        <Text X="60" Y="236" Width="440" Height="20"
+              FontId="3" DisablePrefix="yes" Center="yes">Media Player</Text>
 
-        <Text X="250" Y="80" Width="240" Height="80"
-              FontId="0" DisablePrefix="yes"
-              HideWhenDisabled="yes">This will install Cine Media Player on your computer.
+        <Rectangle X="240" Y="268" Width="80" Height="22" Fill="242250" />
+        <Text X="240" Y="270" Width="80" Height="20"
+              FontId="3" DisablePrefix="yes" Center="yes">v!(bind.packageVersion.CineMsi)</Text>
 
-Choose the installation options and click Install to begin.</Text>
+        <Text X="80" Y="300" Width="400" Height="36"
+              FontId="3" DisablePrefix="yes" Center="yes">A modern, high-performance media player for Windows</Text>
 
-        <!-- Install folder -->
-        <Text X="250" Y="175" Width="240" Height="16"
-              FontId="0" DisablePrefix="yes">Install location:</Text>
-
-        <EditBox Control="InstallFolderEdit"
-                 X="250" Y="195" Width="200" Height="22"
-                 FontId="0" TabStop="yes"
-                 Hex="yes" />
-        <Button Control="BrowseButton"
-                X="455" Y="195" Width="35" Height="22"
-                FontId="0" TabStop="yes">...</Button>
-
-        <!-- Options -->
-        <Checkbox Control="DesktopShortcutCheckbox"
-                  X="250" Y="235" Width="240" Height="18"
-                  FontId="0" TabStop="yes"
-                  Hex="yes">Create desktop shortcut</Checkbox>
-
-        <Checkbox Control="AssociateFilesCheckbox"
-                  X="250" Y="258" Width="240" Height="18"
-                  FontId="0" TabStop="yes"
-                  Hex="yes">Associate video files (.mp4, .mkv, .avi)</Checkbox>
-
-        <!-- .NET Runtime status -->
-        <Text Control="DotNetStatus"
-              X="250" Y="295" Width="240" Height="16"
-              FontId="3" DisablePrefix="yes">Checking .NET Runtime...</Text>
-
-        <!-- Bottom bar -->
-        <Rectangle X="0" Y="390" Width="520" Height="50" Fill="141428" Visible="yes" />
-
-        <Button Control="InstallButton"
-                X="320" Y="400" Width="85" Height="30"
-                FontId="1" TabStop="yes"
-                Hex="yes"
-                Default="yes">Install</Button>
+        <Rectangle X="100" Y="346" Width="360" Height="1" Fill="2A2A50" />
 
         <Button Control="CancelButton"
-                X="415" Y="400" Width="85" Height="30"
-                FontId="1" TabStop="yes"
-                Hex="yes">Cancel</Button>
+                X="190" Y="365" Width="80" Height="24"
+                FontId="0" TabStop="yes">Cancel</Button>
+        <Button Control="NextButton"
+                X="290" Y="365" Width="80" Height="24"
+                FontId="0" TabStop="yes" Default="yes">Next</Button>
     </Page>
 
-    <!-- === Page: Progress === -->
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         PAGE: License Agreement
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <Page Name="LicenseAgreement">
+        <Rectangle X="40" Y="26" Width="480" Height="410" Fill="141430" />
+
+        <Text X="60" Y="50" Width="440" Height="28"
+              FontId="1" DisablePrefix="yes">License Agreement</Text>
+
+        <Rectangle X="60" Y="84" Width="440" Height="1" Fill="2A2A50" />
+
+        <RichText Control="LicenseText"
+                  X="60" Y="96" Width="440" Height="240"
+                  FontId="0" TabStop="yes"
+                  Hex="yes" />
+
+        <Checkbox Control="AcceptCheckbox"
+                  X="60" Y="352" Width="300" Height="18"
+                  FontId="3" TabStop="yes"
+                  Hex="yes">I accept the terms of the agreement</Checkbox>
+
+        <Rectangle X="60" Y="380" Width="440" Height="1" Fill="2A2A50" />
+
+        <Button Control="CancelButton"
+                X="170" Y="394" Width="80" Height="26"
+                FontId="0" TabStop="yes">Cancel</Button>
+        <Button Control="BackButton"
+                X="260" Y="394" Width="80" Height="26"
+                FontId="0" TabStop="yes">Back</Button>
+        <Button Control="NextButton"
+                X="350" Y="394" Width="80" Height="26"
+                FontId="0" TabStop="yes" Default="yes">Next</Button>
+    </Page>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         PAGE: Install Options
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <Page Name="Install">
+        <Rectangle X="40" Y="26" Width="480" Height="410" Fill="141430" />
+
+        <Text X="60" Y="46" Width="440" Height="28"
+              FontId="1" DisablePrefix="yes">Install Options</Text>
+
+        <Rectangle X="60" Y="80" Width="440" Height="1" Fill="2A2A50" />
+
+        <!-- Section: Location -->
+        <Text X="60" Y="96" Width="440" Height="14"
+              FontId="4" DisablePrefix="yes">INSTALL LOCATION</Text>
+
+        <EditBox Control="InstallFolderEdit"
+                 X="60" Y="116" Width="350" Height="26"
+                 FontId="0" TabStop="yes" Hex="yes" />
+
+        <Button Control="BrowseButton"
+                X="420" Y="116" Width="50" Height="26"
+                FontId="0" TabStop="yes">Browse</Button>
+
+        <!-- Section: Options -->
+        <Text X="60" Y="164" Width="440" Height="14"
+              FontId="4" DisablePrefix="yes">OPTIONS</Text>
+
+        <Checkbox Control="DesktopShortcutCheckbox"
+                  X="60" Y="188" Width="300" Height="20"
+                  FontId="0" TabStop="yes" Hex="yes">Create desktop shortcut</Checkbox>
+
+        <Checkbox Control="AssociateFilesCheckbox"
+                  X="60" Y="216" Width="300" Height="20"
+                  FontId="0" TabStop="yes" Hex="yes">Associate video files (.mp4, .mkv, .avi)</Checkbox>
+
+        <!-- Section: Runtime -->
+        <Text X="60" Y="264" Width="440" Height="14"
+              FontId="4" DisablePrefix="yes">REQUIREMENTS</Text>
+
+        <Rectangle X="60" Y="288" Width="6" Height="6" Fill="00BB88" />
+        <Text Control="DotNetStatusLabel"
+              X="76" Y="284" Width="200" Height="16"
+              FontId="3" DisablePrefix="yes">Checking .NET Runtime...</Text>
+
+        <Progressbar Control="DotNetProgressBar"
+                     X="60" Y="312" Width="350" Height="4"
+                     TabStop="yes" Visible="no" />
+        <Text Control="DotNetProgressText"
+              X="60" Y="322" Width="440" Height="14"
+              FontId="4" DisablePrefix="yes" Visible="no" />
+
+        <Rectangle X="60" Y="380" Width="440" Height="1" Fill="2A2A50" />
+
+        <Button Control="CancelButton"
+                X="170" Y="394" Width="80" Height="26"
+                FontId="0" TabStop="yes">Cancel</Button>
+        <Button Control="BackButton"
+                X="260" Y="394" Width="80" Height="26"
+                FontId="0" TabStop="yes">Back</Button>
+        <Button Control="InstallButton"
+                X="350" Y="394" Width="80" Height="28"
+                FontId="1" TabStop="yes" Default="yes">Install</Button>
+    </Page>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         PAGE: Progress
+         ═══════════════════════════════════════════════════════════════════════ -->
     <Page Name="Progress">
-        <Image Control="BackgroundImage"
-               X="0" Y="0"
-               Width="520" Height="440"
-               ImageFile="Background.bmp"
-               ScaleMode="uniformToFill" />
+        <Rectangle X="80" Y="80" Width="400" Height="310" Fill="141430" />
 
-        <Rectangle X="0" Y="0" Width="520" Height="440" Fill="1A1A2E" Opacity="180" />
+        <Rectangle X="235" Y="115" Width="90" Height="90" Fill="4422AA" Alpha="30" />
+        <Text X="260" Y="140" Width="40" Height="36"
+              FontId="7" DisablePrefix="yes" Center="yes">&#x25CF;</Text>
 
-        <!-- Spinning / progress indicator -->
-        <Text X="40" Y="150" Width="440" Height="30"
-              FontId="2" DisablePrefix="yes" Center="yes">Installing Cine...</Text>
+        <Text X="80" Y="210" Width="400" Height="28"
+              FontId="2" DisablePrefix="yes" Center="yes">Setting up Cine</Text>
 
         <Text Control="OverallProgressText"
-              X="40" Y="195" Width="440" Height="16"
+              X="80" Y="242" Width="400" Height="16"
               FontId="3" DisablePrefix="yes" Center="yes">Preparing...</Text>
 
         <Progressbar Control="OverallProgressBar"
-                     X="60" Y="225" Width="400" Height="8"
+                     X="130" Y="268" Width="300" Height="4"
                      TabStop="yes" />
 
+        <Progressbar Control="DotNetProgressBar2"
+                     X="130" Y="280" Width="300" Height="2"
+                     TabStop="yes" Visible="no" />
+
         <Text Control="CurrentActionText"
-              X="40" Y="250" Width="440" Height="14"
-              FontId="3" DisablePrefix="yes" Center="yes" />
+              X="80" Y="296" Width="400" Height="14"
+              FontId="4" DisablePrefix="yes" Center="yes" />
+
+        <Rectangle X="100" Y="340" Width="360" Height="1" Fill="2A2A50" />
 
         <Button Control="CancelButton"
-                X="220" Y="300" Width="80" Height="26"
+                X="240" Y="352" Width="80" Height="26"
                 FontId="0" TabStop="yes">Cancel</Button>
     </Page>
 
-    <!-- === Page: Success === -->
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         PAGE: Success
+         ═══════════════════════════════════════════════════════════════════════ -->
     <Page Name="Success">
-        <Image Control="BackgroundImage"
-               X="0" Y="0"
-               Width="520" Height="440"
-               ImageFile="Background.bmp"
-               ScaleMode="uniformToFill" />
+        <Rectangle X="60" Y="60" Width="440" Height="370" Fill="141430" />
 
-        <Rectangle X="0" Y="0" Width="520" Height="440" Fill="1A1A2E" Opacity="180" />
+        <Rectangle X="230" Y="100" Width="100" Height="100" Fill="00BB88" Alpha="25" />
+        <Text X="260" Y="130" Width="40" Height="36"
+              FontId="7" DisablePrefix="yes" Center="yes">&#x2713;</Text>
 
-        <Text X="40" Y="140" Width="440" Height="36"
-              FontId="2" DisablePrefix="yes" Center="yes">✓ Installation Complete</Text>
+        <Text X="60" Y="210" Width="440" Height="28"
+              FontId="2" DisablePrefix="yes" Center="yes">Installation Complete</Text>
 
-        <Text X="40" Y="190" Width="440" Height="40"
-              FontId="0" DisablePrefix="yes" Center="yes"
-              HideWhenDisabled="yes">Cine Media Player has been installed successfully.
-Thank you for choosing Cine!</Text>
+        <Text X="60" Y="242" Width="440" Height="36"
+              FontId="3" DisablePrefix="yes" Center="yes"
+              HideWhenDisabled="yes">Cine has been installed on your computer.</Text>
+
+        <Rectangle X="130" Y="292" Width="300" Height="1" Fill="2A2A50" />
+
+        <Text X="60" Y="302" Width="440" Height="14"
+              FontId="4" DisablePrefix="yes" Center="yes">&#x25CF;  Hardware-accelerated  &#x25CF;  Full keyboard control  &#x25CF;  Subtitles</Text>
 
         <Checkbox Control="LaunchCheckbox"
-                  X="180" Y="260" Width="200" Height="18"
-                  FontId="0" TabStop="yes"
-                  Hex="yes">Launch Cine</Checkbox>
+                  X="180" Y="335" Width="200" Height="18"
+                  FontId="0" TabStop="yes" Hex="yes">Launch Cine</Checkbox>
 
-        <Rectangle X="0" Y="390" Width="520" Height="50" Fill="141428" />
-
-        <Button Control="FinishButton"
-                X="320" Y="400" Width="85" Height="30"
-                FontId="1" TabStop="yes"
-                Hex="yes"
-                Default="yes">Finish</Button>
+        <Rectangle X="60" Y="380" Width="440" Height="1" Fill="2A2A50" />
 
         <Button Control="CancelButton"
-                X="415" Y="400" Width="85" Height="30"
-                FontId="1" TabStop="yes"
-                Hex="yes">Close</Button>
+                X="310" Y="394" Width="80" Height="26"
+                FontId="0" TabStop="yes">Close</Button>
+        <Button Control="FinishButton"
+                X="230" Y="394" Width="80" Height="26"
+                FontId="0" TabStop="yes" Default="yes">Finish</Button>
     </Page>
 
-    <!-- === Page: Failure === -->
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         PAGE: Failure
+         ═══════════════════════════════════════════════════════════════════════ -->
     <Page Name="Failure">
-        <Image Control="BackgroundImage"
-               X="0" Y="0"
-               Width="520" Height="440"
-               ImageFile="Background.bmp"
-               ScaleMode="uniformToFill" />
+        <Rectangle X="60" Y="60" Width="440" Height="370" Fill="141430" />
 
-        <Rectangle X="0" Y="0" Width="520" Height="440" Fill="1A1A2E" Opacity="180" />
+        <Rectangle X="230" Y="100" Width="100" Height="100" Fill="DD6644" Alpha="25" />
+        <Text X="260" Y="130" Width="40" Height="36"
+              FontId="7" DisablePrefix="yes" Center="yes">&#x2717;</Text>
 
-        <Text X="40" Y="130" Width="440" Height="36"
-              FontId="2" DisablePrefix="yes" Center="yes">✗ Installation Failed</Text>
+        <Text X="60" Y="210" Width="440" Height="28"
+              FontId="2" DisablePrefix="yes" Center="yes">Installation Failed</Text>
 
         <Text Control="FailureText"
-              X="40" Y="180" Width="440" Height="60"
-              FontId="0" DisablePrefix="yes"
+              X="60" Y="242" Width="440" Height="36"
+              FontId="3" DisablePrefix="yes"
               HideWhenDisabled="yes" Center="yes" />
 
-        <Hypertext Control="HyperlinkControl"
-                   X="40" Y="260" Width="440" Height="30"
-                   FontId="4" DisablePrefix="yes"
-                   Center="yes"
-                   TabStop="yes">https://github.com/diegopvlk/Cine/issues</Hypertext>
+        <Rectangle X="130" Y="296" Width="300" Height="1" Fill="2A2A50" />
 
-        <Rectangle X="0" Y="390" Width="520" Height="50" Fill="141428" />
+        <Text X="60" Y="306" Width="440" Height="16"
+              FontId="4" DisablePrefix="yes" Center="yes">Need help?</Text>
+
+        <Hypertext Control="HyperlinkControl"
+                   X="60" Y="326" Width="440" Height="22"
+                   FontId="5" DisablePrefix="yes"
+                   Center="yes" TabStop="yes">Report issue on GitHub</Hypertext>
+
+        <Rectangle X="60" Y="380" Width="440" Height="1" Fill="2A2A50" />
 
         <Button Control="CancelButton"
-                X="320" Y="400" Width="85" Height="30"
-                FontId="1" TabStop="yes"
-                Hex="yes">Close</Button>
+                X="240" Y="394" Width="80" Height="26"
+                FontId="0" TabStop="yes" Default="yes">Close</Button>
     </Page>
 </Theme>

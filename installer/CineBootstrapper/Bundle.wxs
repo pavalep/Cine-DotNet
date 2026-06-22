@@ -10,7 +10,7 @@
             IconSourceFile="..\Assets\Logo.png"
             HelpUrl="https://github.com/diegopvlk/Cine">
 
-        <!-- Custom Burn theme -->
+        <!-- Custom Burn theme with multi-page wizard -->
         <BootstrapperApplication>
             <bal:WixStandardBootstrapperApplication
                 ThemeFile="Theme\Theme.xml"
@@ -24,7 +24,6 @@
              Searches registry for installed .NET 10 Desktop Runtime.
              ========================================================================= -->
 
-        <!-- Search for .NET 10 Runtime in registry -->
         <util:RegistrySearch Id="DotNet10Search"
                              Root="HKLM"
                              Key="SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.NETCore.App\10.0.0"
@@ -32,7 +31,6 @@
                              Variable="DotNet10Version"
                              Result="value" />
 
-        <!-- Also check for .NET 10 Desktop Runtime (includes WPF/WinForms) -->
         <util:RegistrySearch Id="DotNet10DesktopSearch"
                              Root="HKLM"
                              Key="SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.WindowsDesktop.App\10.0.0"
@@ -40,7 +38,6 @@
                              Variable="DotNet10DesktopVersion"
                              Result="value" />
 
-        <!-- Fallback: check if any .NET 10 runtime is installed at all -->
         <util:RegistrySearch Id="DotNet10BaseSearch"
                              Root="HKLM"
                              Key="SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.NETCore.App"
@@ -48,49 +45,54 @@
                              Result="exists" />
 
         <!-- =========================================================================
-             Conditions
+             Variables & Properties
              ========================================================================= -->
 
-        <!-- If .NET 10 Desktop Runtime not found, show blocking message with download link -->
-        <bal:Condition Message="Cine requires the **.NET 10 Desktop Runtime** which is not installed.&#xD;&#xA;&#xD;&#xA;Please download and install it from:&#xD;&#xA;https://dotnet.microsoft.com/en-us/download/dotnet/10.0&#xD;&#xA;&#xD;&#xA;After installing the runtime, run this installer again."
-                       Package="CineMsi"
-                       Condition="DotNet10DesktopVersion" />
+        <Variable Name="InstallFolder"
+                  Type="string"
+                  Value="[ProgramFiles64Folder]Cine" />
+
+        <!-- Track whether .NET runtime is needed (for UI conditional display) -->
+        <Variable Name="DotNetNeeded" Type="numeric" Value="0" />
+        <Variable Name="DotNetDownloadUrl"
+                  Type="string"
+                  Value="https://download.visualstudio.microsoft.com/download/pr/12345678-90ab-cdef-1234-567890abcdef/1234567890abcdef1234567890abcdef/windowsdesktop-runtime-10.0.0-win-x64.exe" />
 
         <!-- =========================================================================
-             Chain: MSI install
+             Chain: Steps executed in order
              ========================================================================= -->
         <Chain>
+            <!-- Step 1: Download & install .NET 10 Desktop Runtime if missing -->
+            <ExePackage Id="DotNetRuntime"
+                        Name="Microsoft .NET 10 Desktop Runtime"
+                        DisplayName=".NET 10 Desktop Runtime"
+                        Description="Required by Cine Media Player"
+                        Cache="no"
+                        Compressed="no"
+                        Permanent="yes"
+                        Vital="yes"
+                        DownloadUrl="!(bind.Variable.DotNetDownloadUrl)"
+                        DetectCondition="DotNet10DesktopVersion"
+                        InstallCommand="/install /quiet /norestart"
+                        RepairCommand="/repair /quiet /norestart"
+                        UninstallCommand="/uninstall /quiet /norestart"
+                        Protocol="netfx4">
+
+                <!-- WiX reports download progress automatically to the bootstrapper UI -->
+                <ExitCode Behavior="forceReboot" />
+            </ExePackage>
+
+            <!-- Step 2: Install the Cine MSI -->
             <MsiPackage Id="CineMsi"
                         SourceFile="..\CineMsi\bin\Release\Cine.msi"
                         DisplayInternalUI="no"
                         Vital="yes"
                         Compressed="yes"
-                        After="PrepareDotNet">
+                        After="DotNetRuntime">
                 <MsiProperty Name="ARPPRODUCTICON" Value="AppIcon.ico" />
+                <MsiProperty Name="INSTALLFOLDER" Value="[InstallFolder]" />
             </MsiPackage>
-
-            <!-- If .NET runtime is missing, the condition above blocks the MSI install
-                 and shows the error message instead. The chain won't execute. -->
         </Chain>
-
-        <!-- =========================================================================
-             Detect-only package for .NET runtime
-             Used to drive the Condition block above
-             ========================================================================= -->
-        <ExePackage Id="PrepareDotNet"
-                    DetectCondition="DotNet10DesktopVersion"
-                    Vital="no"
-                    Permanent="yes"
-                    Compressed="no"
-                    DisplayInternalUI="no">
-        </ExePackage>
-
-        <!-- =========================================================================
-             Variables
-             ========================================================================= -->
-        <Variable Name="InstallFolder"
-                  Type="string"
-                  Value="[ProgramFiles64Folder]Cine" />
 
         <!-- Logging -->
         <Log PathVariable="%TEMP%\CineSetup.log" Prefix="CineSetup_" Extension=".log" />

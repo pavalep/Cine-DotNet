@@ -19,8 +19,10 @@ public partial class OsdNotificationControl : AvaloniaUserControl
     private CancellationTokenSource? _osdCts;
     private readonly Queue<OsdMessage> _queue = new();
     private bool _isShowing;
+    private OsdMessage? _activeMessage;
+    private DateTime _dismissTime = DateTime.MinValue;
 
-    private record OsdMessage(string Text, MaterialIconKind? Icon, double DurationMs);
+    private record OsdMessage(string Text, MaterialIconKind? Icon, double DurationMs, double? Progress = null, string? Category = null);
 
     public event EventHandler? NotificationClicked;
 
@@ -39,24 +41,89 @@ public partial class OsdNotificationControl : AvaloniaUserControl
 
     public void Show(string text, double durationMs = 2000)
     {
-        Enqueue(new OsdMessage(text, null, durationMs));
+        var category = Categorize(text);
+        Enqueue(new OsdMessage(text, null, durationMs, null, category));
     }
 
     public void ShowWithIcon(MaterialIconKind iconKind, string text, double durationMs = 2000)
     {
-        Enqueue(new OsdMessage(text, iconKind, durationMs));
+        var category = Categorize(text);
+        Enqueue(new OsdMessage(text, iconKind, durationMs, null, category));
     }
 
     /// <summary>Show OSD with a progress bar for a value (0-100).</summary>
     public void ShowWithProgress(MaterialIconKind iconKind, string text, double value, double durationMs = 1500)
     {
-        OsdProgressBar.Value = Math.Clamp(value, 0, 100);
-        OsdProgressBar.IsVisible = true;
-        ShowWithIcon(iconKind, text, durationMs);
+        var category = Categorize(text);
+        Enqueue(new OsdMessage(text, iconKind, durationMs, value, category));
+    }
+
+    private static string Categorize(string text)
+    {
+        if (text.Contains("Volume", StringComparison.OrdinalIgnoreCase) || text.Equals("Muted", StringComparison.OrdinalIgnoreCase))
+            return "volume";
+        if (text.Contains("Speed", StringComparison.OrdinalIgnoreCase))
+            return "speed";
+        if (text.Contains("Subtitle", StringComparison.OrdinalIgnoreCase) || text.Contains("Track", StringComparison.OrdinalIgnoreCase))
+            return "subtitle";
+        if (text.Contains("Audio", StringComparison.OrdinalIgnoreCase))
+            return "audio";
+        if (text.Contains("Error", StringComparison.OrdinalIgnoreCase))
+            return "error";
+        return "default";
     }
 
     private void Enqueue(OsdMessage msg)
     {
+        // If the same category is already showing, update in-place and extend duration
+        if (_isShowing && _activeMessage != null && _activeMessage.Category == msg.Category)
+        {
+            _activeMessage = msg;
+            OsdNotificationText.Text = msg.Text;
+            if (msg.Icon.HasValue)
+            {
+                OsdIcon.Opacity = 1;
+                OsdIcon.Kind = msg.Icon.Value;
+            }
+            else
+            {
+                OsdIcon.Opacity = 0;
+            }
+
+            if (msg.Progress.HasValue)
+            {
+                OsdProgressBar.Value = Math.Clamp(msg.Progress.Value, 0, 100);
+                OsdProgressBar.IsVisible = true;
+            }
+            else
+            {
+                OsdProgressBar.IsVisible = false;
+            }
+
+            // Extend display time — the running ShowInternal while-loop will see this
+            _dismissTime = DateTime.UtcNow.AddMilliseconds(msg.DurationMs);
+
+            // If ShowInternal has already progressed past the while-loop into fade-out,
+            // cancel it so a fresh ShowInternal picks up this updated message.
+            // The re-enqueued message will be picked up by the existing ProcessQueueAsync loop.
+            if (_osdCts?.IsCancellationRequested == false)
+            {
+                _osdCts.Cancel();
+                _osdCts = new CancellationTokenSource();
+                _queue.Enqueue(msg);
+            }
+            return;
+        }
+
+        // Remove any pending messages of the same category from the queue
+        var temp = _queue.ToArray();
+        _queue.Clear();
+        foreach (var item in temp)
+        {
+            if (item.Category != msg.Category)
+                _queue.Enqueue(item);
+        }
+
         _queue.Enqueue(msg);
         _ = ProcessQueueAsync();
     }
@@ -81,6 +148,9 @@ public partial class OsdNotificationControl : AvaloniaUserControl
         _osdCts = new CancellationTokenSource();
         var ct = _osdCts.Token;
 
+        _activeMessage = msg;
+        _dismissTime = DateTime.UtcNow.AddMilliseconds(msg.DurationMs);
+
         if (msg.Icon.HasValue)
         {
             OsdIcon.Opacity = 1;
@@ -89,6 +159,16 @@ public partial class OsdNotificationControl : AvaloniaUserControl
         else
         {
             OsdIcon.Opacity = 0;
+        }
+
+        if (msg.Progress.HasValue)
+        {
+            OsdProgressBar.Value = Math.Clamp(msg.Progress.Value, 0, 100);
+            OsdProgressBar.IsVisible = true;
+        }
+        else
+        {
+            OsdProgressBar.IsVisible = false;
         }
 
         if (IsControlsBoxVisible)
@@ -115,7 +195,13 @@ public partial class OsdNotificationControl : AvaloniaUserControl
             await FadeTo(1, 150, ct, slideUp: true);
             if (ct.IsCancellationRequested) return;
 
-            await Task.Delay((int)msg.DurationMs, ct);
+            // Wait until dismiss time (this can be extended dynamically by new volume events)
+            while (DateTime.UtcNow < _dismissTime)
+            {
+                var remaining = (_dismissTime - DateTime.UtcNow).TotalMilliseconds;
+                if (remaining <= 0) break;
+                await Task.Delay(Math.Min(100, (int)remaining), ct);
+            }
             if (ct.IsCancellationRequested) return;
 
             // Fade out + slide down
@@ -124,6 +210,7 @@ public partial class OsdNotificationControl : AvaloniaUserControl
             {
                 OsdProgressBar.IsVisible = false;
                 OsdNotificationBorder.IsVisible = false;
+                _activeMessage = null;
             }
         }
         catch (TaskCanceledException) { }
@@ -135,6 +222,7 @@ public partial class OsdNotificationControl : AvaloniaUserControl
         _queue.Clear();
         OsdProgressBar.IsVisible = false;
         OsdNotificationBorder.IsVisible = false;
+        _activeMessage = null;
     }
 
     private async Task FadeTo(double targetOpacity, double durationMs, CancellationToken ct, bool slideUp = false)

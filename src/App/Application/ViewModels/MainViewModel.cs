@@ -27,34 +27,6 @@ namespace Cine.Avalonia.ViewModels;
 /// </summary>
 public partial class MainViewModel : INotifyPropertyChanged, IDisposable
 {
-    private static string GetLogPath()
-    {
-        try
-        {
-            var dir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Cine");
-            Directory.CreateDirectory(dir);
-            return Path.Combine(dir, "cine_startup.log");
-        }
-        catch
-        {
-            return Path.Combine(Path.GetTempPath(), "cine_startup.log");
-        }
-    }
-
-    [Conditional("DEBUG")]
-    private static void Log(string msg)
-    {
-        try
-        {
-            File.AppendAllText(GetLogPath(), $"[{DateTime.Now:HH:mm:ss.fff}] [MainViewModel] {msg}{Environment.NewLine}");
-        }
-        catch
-        {
-        }
-    }
-
     private readonly IMediaPlayer _player;
     private readonly ISessionService _session;
     private readonly IPlaylistService _playlistCoordinator;

@@ -36,6 +36,41 @@ public partial class PlaylistDialog : Window
     // Queue mode toggle
     private bool _queueMode;
 
+    private const string QueueModeSettingKey = "PlaylistDialog_QueueMode";
+
+    private bool LoadQueueMode()
+    {
+        try
+        {
+            var path = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Cine", "Settings", "playlist-queue-mode.json");
+            if (File.Exists(path))
+            {
+                var text = File.ReadAllText(path);
+                return text.Trim() == "true";
+            }
+        }
+        catch { }
+        return false; // default: sequential mode
+    }
+
+    private void SaveQueueMode()
+    {
+        try
+        {
+            var dir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Cine", "Settings");
+            Directory.CreateDirectory(dir);
+            var path = Path.Combine(dir, "playlist-queue-mode.json");
+            var tempPath = path + ".tmp";
+            File.WriteAllText(tempPath, _queueMode.ToString().ToLower());
+            File.Move(tempPath, path, overwrite: true);
+        }
+        catch { }
+    }
+
     // Centralized file-dialog handler
     private FileDialogHandler? _dialogHandler;
 
@@ -91,6 +126,11 @@ public partial class PlaylistDialog : Window
         vm.Playlist.CollectionChanged += _listChanged;
         vm.PropertyChanged += _vmPropChanged;
         UpdateEmptyState();
+
+        // Load persisted queue mode
+        _queueMode = LoadQueueMode();
+        if (QueueBtn != null)
+            QueueBtn.Opacity = _queueMode ? 1.0 : 0.5;
     }
 
     private void OnVmPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -210,6 +250,7 @@ public partial class PlaylistDialog : Window
     private void OnQueueModeClick(object? sender, RoutedEventArgs e)
     {
         _queueMode = !_queueMode;
+        SaveQueueMode();
         if (QueueBtn != null)
         {
             QueueBtn.Opacity = _queueMode ? 1.0 : 0.5;
@@ -373,11 +414,14 @@ public partial class PlaylistDialog : Window
         vm.AddFilesCommand.Execute(null);
     }
 
-    private async void AddFilesToQueue(MainViewModel vm)
+    private void AddFilesToQueue(MainViewModel vm)
     {
-        var files = await GetOpenFilePathsAsync();
-        if (files != null && files.Length > 0)
-            vm.InsertAfterCurrent(files);
+        ErrorBoundary.Run(async () =>
+        {
+            var files = await GetOpenFilePathsAsync();
+            if (files != null && files.Length > 0)
+                vm.InsertAfterCurrent(files);
+        });
     }
 
     private async Task<string[]?> GetOpenFilePathsAsync()
@@ -435,7 +479,7 @@ public partial class PlaylistDialog : Window
         if (_queueMode && vm.PlaylistPosition >= 0)
             vm.InsertAfterCurrent(paths);
         else
-            vm.OpenFiles(paths);
+            _ = vm.OpenFiles(paths);
     }
 
     private void ShowToast(string message)
