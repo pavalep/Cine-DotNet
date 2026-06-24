@@ -113,7 +113,16 @@ public static class MpvConfig
             ["gamma"] = "10",
 
             // ── Hardware decoding (disabled until ANGLE interop verified) ──
-            ["hwdec"] = "no"
+            ["hwdec"] = "no",
+
+            // ── Subtitle styling ──
+            // sub-ass-override=force ensures SRT subtitles use mpv styling rather
+            // than the internal libass defaults which can be too small/dim to see.
+            ["sub-font-size"] = "24",
+            ["sub-color"] = "#FFFFFF",
+            ["sub-border-size"] = "2",
+            ["sub-shadow-offset"] = "1",
+            ["sub-ass-override"] = "force"
         };
     }
 

@@ -227,7 +227,7 @@ public class MpvVideoView : Decorator
                         _angleContext!.BindFbo();
 
                         // 3. Tell mpv to render into our FBO
-                        _player.RenderFrame(
+                        _player!.RenderFrame(
                             _angleContext.FboHandle,
                             _angleContext.Width,
                             _angleContext.Height);

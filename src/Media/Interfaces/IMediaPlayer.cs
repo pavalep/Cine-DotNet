@@ -73,6 +73,9 @@ public interface IMediaPlayer
     void SetSubtitleBorderSize(double size);
     void SetSubtitleShadowOffset(double offset);
     void SetSubtitleColor(string colorHex);
+    void SetSubtitleOpacity(double opacity);
+    void SetSubtitleBlur(double blur);
+    void SetSubtitleBold(bool bold);
 
     // === Audio / Video Track Enumeration ===
     AudioTrackInfo[] AudioSources { get; }

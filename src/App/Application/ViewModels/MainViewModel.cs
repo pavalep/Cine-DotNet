@@ -237,29 +237,6 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public float SubtitleDelayValue
-    {
-        get => Subtitles?.SubtitleDelay ?? _player.SubtitleDelay;
-        set
-        {
-            if (Subtitles != null) Subtitles.SubtitleDelay = value;
-            else _player.SubtitleDelay = value;
-            OnPropertyChanged();
-        }
-    }
-
-    private double _subtitleFontSize = 24;
-    public double SubtitleFontSize
-    {
-        get => _subtitleFontSize;
-        set
-        {
-            _subtitleFontSize = value;
-            _player.SetSubtitleFontSize(value);
-            OnPropertyChanged();
-        }
-    }
-
     public float AudioDelayValue
     {
         get => Audio?.AudioDelay ?? _player.AudioDelay;
@@ -271,7 +248,6 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public void ResetSubtitleDelay() => SubtitleDelayValue = 0;
     public void ResetAudioDelay() => AudioDelayValue = 0;
     public void ResetAllOptions()
     {
@@ -280,7 +256,6 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
         ResetGamma();
         ResetSaturation();
         ResetHue();
-        ResetSubtitleDelay();
         ResetAudioDelay();
         ResetSpeed();
         ResetZoom();

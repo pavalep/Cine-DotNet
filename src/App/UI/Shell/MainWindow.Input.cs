@@ -27,9 +27,6 @@ namespace Cine.Avalonia;
 
 public partial class MainWindow
 {
-    // ── Drag-drop state ──
-    private static bool _isDragOver;
-
     // ─────────────────────────────────────────────────────────────
     //  Keyboard Shortcut Registration
     // ─────────────────────────────────────────────────────────────
@@ -277,7 +274,6 @@ public partial class MainWindow
 
     private void OnWindowDragEnter(object? sender, DragEventArgs e)
     {
-        _isDragOver = true;
         _dropIndicator?.Show();
         e.DragEffects = DragDropEffects.Link;
         e.Handled = true;
@@ -285,13 +281,11 @@ public partial class MainWindow
 
     private void OnWindowDragLeave(object? sender, DragEventArgs e)
     {
-        _isDragOver = false;
         _dropIndicator?.Hide();
     }
 
     private void OnWindowDrop(object? sender, DragEventArgs e)
     {
-        _isDragOver = false;
         _dropIndicator?.Hide();
         // Handled by StartOverlayHandler
     }

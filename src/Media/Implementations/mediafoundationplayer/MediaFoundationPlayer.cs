@@ -899,6 +899,9 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
     public void SetSubtitleBorderSize(double size) { }
     public void SetSubtitleShadowOffset(double offset) { }
     void IMediaPlayer.SetSubtitleColor(string colorHex) { }
+    void IMediaPlayer.SetSubtitleOpacity(double opacity) { }
+    void IMediaPlayer.SetSubtitleBlur(double blur) { }
+    void IMediaPlayer.SetSubtitleBold(bool bold) { }
 
     public void SelectAudioTrack(int trackIndex)
     {

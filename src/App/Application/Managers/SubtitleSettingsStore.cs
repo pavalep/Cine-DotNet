@@ -14,13 +14,16 @@ namespace Cine.Avalonia.Managers;
 public sealed class SubtitleSettingsStore
 {
     private readonly string _storeDir;
+    private readonly ILogger _log;
 
     public SubtitleSettingsStore()
     {
         _storeDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Cine", "subtitles");
+        _log = global::Cine.Core.Log.ForContext<SubtitleSettingsStore>();
         Directory.CreateDirectory(_storeDir);
+        _log.Debug("Constructor: store dir={StoreDir}", _storeDir);
     }
 
     // ═══════════════════════════════════════════════
@@ -44,6 +47,9 @@ public sealed class SubtitleSettingsStore
         public double Delay { get; init; } = 0.0;
         public double BorderSize { get; init; } = 2.0;
         public double ShadowOffset { get; init; } = 1.0;
+        public double Opacity { get; init; } = 1.0;
+        public double Blur { get; init; } = 0.0;
+        public bool Bold { get; init; }
         public string Font { get; init; } = "Arial";
         public string Color { get; init; } = "#FFFFFF";
     }
@@ -73,15 +79,20 @@ public sealed class SubtitleSettingsStore
         {
             var json = File.ReadAllText(DefaultsPath);
             var result = JsonSerializer.Deserialize<SubtitleDefaults>(json);
-            if (result != null) return result;
+            if (result != null)
+            {
+                _log.Trace("LoadDefaults: loaded defaults (version={Version})", result.Version);
+                return result;
+            }
         }
         catch (Exception ex) when (ex is IOException or JsonException)
         {
-            // Corrupted — regenerate
+            _log.Warning("LoadDefaults: corrupt defaults file, regenerating — {Error}", ex.Message);
             try { File.Delete(DefaultsPath); }
-            catch (Exception innerEx) { global::Cine.Core.Log.ForContext<SubtitleSettingsStore>().Error(innerEx, "Failed to delete corrupted defaults"); }
+            catch (Exception innerEx) { _log.Error(innerEx, "LoadDefaults: failed to delete corrupted defaults"); }
         }
 
+        _log.Debug("LoadDefaults: using built-in defaults");
         SaveDefaults(BuiltInDefaults);
         return BuiltInDefaults;
     }
@@ -98,10 +109,11 @@ public sealed class SubtitleSettingsStore
         {
             var json = JsonSerializer.Serialize(defaults, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(DefaultsPath, json);
+            _log.Debug("SaveDefaults: saved (version={Version})", defaults.Version);
         }
         catch (Exception ex)
         {
-            global::Cine.Core.Log.ForContext<SubtitleSettingsStore>().Error(ex, "SaveDefaults failed");
+            _log.Error(ex, "SaveDefaults failed");
         }
     }
 
@@ -120,21 +132,33 @@ public sealed class SubtitleSettingsStore
 
     public PerFileSettings? LoadPerFile(string filePath)
     {
-        if (string.IsNullOrWhiteSpace(filePath)) return null;
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            _log.Trace("LoadPerFile: empty path, returning null");
+            return null;
+        }
+
         try
         {
             var hash = ComputeHash(filePath);
             var path = PerFilePath(hash);
-            if (!File.Exists(path)) return null;
+            if (!File.Exists(path))
+            {
+                _log.Trace("LoadPerFile: no settings file for hash={Hash}", hash);
+                return null;
+            }
 
             var json = File.ReadAllText(path);
-            return JsonSerializer.Deserialize<PerFileSettings>(json);
+            var result = JsonSerializer.Deserialize<PerFileSettings>(json);
+            _log.Debug("LoadPerFile: loaded for {MediaPath} (hash={Hash}, trackId={TrackId})",
+                filePath, hash, result?.SelectedTrackId);
+            return result;
         }
         catch (Exception ex) when (ex is IOException or JsonException)
         {
-            // Corrupted — delete and return null
+            _log.Warning("LoadPerFile: corrupt file for {MediaPath}, deleting — {Error}", filePath, ex.Message);
             try { File.Delete(PerFilePath(ComputeHash(filePath))); }
-            catch (Exception innerEx) { global::Cine.Core.Log.ForContext<SubtitleSettingsStore>().Error(innerEx, "Failed to delete corrupted per-file settings"); }
+            catch (Exception innerEx) { _log.Error(innerEx, "LoadPerFile: failed to delete corrupted per-file"); }
             return null;
         }
     }
@@ -156,10 +180,12 @@ public sealed class SubtitleSettingsStore
             };
             var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(PerFilePath(hash), json);
+            _log.Debug("SavePerFile: saved for {MediaPath} — trackId={TrackId}, visible={Visible}",
+                filePath, trackId, visible);
         }
         catch (Exception ex)
         {
-            global::Cine.Core.Log.ForContext<SubtitleSettingsStore>().Error(ex, "SavePerFile failed");
+            _log.Error(ex, "SavePerFile failed for {MediaPath}", filePath);
         }
     }
 
@@ -168,12 +194,74 @@ public sealed class SubtitleSettingsStore
         if (string.IsNullOrWhiteSpace(filePath)) return;
         try
         {
-            var path = PerFilePath(ComputeHash(filePath));
-            if (File.Exists(path)) File.Delete(path);
+            var hash = ComputeHash(filePath);
+            var path = PerFilePath(hash);
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+                _log.Trace("DeletePerFile: deleted per-file settings for hash={Hash}", hash);
+            }
         }
         catch (Exception ex)
         {
-            global::Cine.Core.Log.ForContext<SubtitleSettingsStore>().Error(ex, "DeletePerFile failed");
+            _log.Error(ex, "DeletePerFile failed for {MediaPath}", filePath);
         }
+    }
+
+    /// <summary>
+    /// Remove orphaned per-file settings entries whose original media files no longer exist.
+    /// Returns the number of entries cleaned up. Call periodically or on app startup.
+    /// </summary>
+    public int CleanupOrphaned()
+    {
+        int cleaned = 0;
+        try
+        {
+            if (!Directory.Exists(_storeDir))
+            {
+                _log.Trace("CleanupOrphaned: store directory does not exist");
+                return 0;
+            }
+
+            foreach (var file in Directory.EnumerateFiles(_storeDir, "*.json"))
+            {
+                // Skip defaults.json — that's always valid
+                var fileName = Path.GetFileName(file);
+                if (string.Equals(fileName, "defaults.json", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                try
+                {
+                    var json = File.ReadAllText(file);
+                    var perFile = JsonSerializer.Deserialize<PerFileSettings>(json);
+                    if (perFile == null || string.IsNullOrWhiteSpace(perFile.MediaPath))
+                    {
+                        // Corrupted — delete
+                        File.Delete(file);
+                        cleaned++;
+                        _log.Debug("CleanupOrphaned: deleted corrupted file {FileName}", fileName);
+                        continue;
+                    }
+
+                    // Check if the original media file still exists
+                    if (!File.Exists(perFile.MediaPath))
+                    {
+                        File.Delete(file);
+                        cleaned++;
+                    }
+                }
+                catch
+                {
+                    // Unreadable — delete orphan
+                    try { File.Delete(file); cleaned++; }
+                    catch { /* best-effort */ }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            global::Cine.Core.Log.ForContext<SubtitleSettingsStore>().Error(ex, "CleanupOrphaned failed");
+        }
+        return cleaned;
     }
 }

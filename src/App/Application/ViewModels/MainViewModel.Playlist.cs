@@ -197,7 +197,7 @@ public partial class MainViewModel
             SessionResumeRequested?.Invoke(data.FilePath, TimeSpan.FromTicks(data.PositionTicks));
 
         if (data.SubtitleTrackId >= 0)
-            Subtitles?.SelectTrackById(data.SubtitleTrackId);
+            Subtitles?.SelectSubtitleTrackById(data.SubtitleTrackId);
         if (data.AudioTrackId >= 0)
             _pendingAudioTrackId = data.AudioTrackId;
         if (Math.Abs(data.SubtitleDelay) > 0.001f)

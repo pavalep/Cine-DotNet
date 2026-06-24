@@ -391,9 +391,22 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
         }
 
         if (encodingArg != null)
-            CommandInternal("sub-add", path, "select", "auto", "--sub-codepage=" + encodingArg);
+        {
+            var previousCodepage = GetString("sub-codepage");
+            try
+            {
+                SetString("sub-codepage", encodingArg);
+                CommandInternal("sub-add", path, "select");
+            }
+            finally
+            {
+                SetString("sub-codepage", string.IsNullOrWhiteSpace(previousCodepage) ? "auto" : previousCodepage);
+            }
+        }
         else
+        {
             CommandInternal("sub-add", path, "select");
+        }
     }
 
     /// <summary>Detect subtitle file encoding by checking BOM and falling back to heuristics.</summary>
@@ -439,7 +452,7 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
     }
     public void SelectSubtitleTrack(int trackIndex)
     {
-        if (trackIndex > 0)
+        if (trackIndex >= 0)
         {
             SetFlag("sub-visibility", true);
             SetInt64("sid", trackIndex);
@@ -449,6 +462,13 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
             SetFlag("sub-visibility", false);
             SetInt64("sid", -1);
         }
+        // Fire event manually — mpv may not deliver observe_property callbacks
+        // when properties are set from outside the event-loop thread (mpv render
+        // API requirement).  Without this, SubtitleManager never learns about
+        // the sid/sub-visibility change and the UI subtitle track list stays
+        // inconsistent.
+        SubtitlePropertyChanged?.Invoke(this, new SubtitlePropertyChangedEventArgs("sid", trackIndex >= 0 ? trackIndex : -1));
+        SubtitlePropertyChanged?.Invoke(this, new SubtitlePropertyChangedEventArgs("sub-visibility", trackIndex >= 0));
     }
     public void SelectAudioTrack(int trackIndex) => SetInt64("aid", trackIndex);
 
@@ -564,8 +584,19 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
         }
     }
 
-    public void IncreaseSubtitleDelay() => SubtitleDelay += 0.05f;
-    public void DecreaseSubtitleDelay() => SubtitleDelay -= 0.05f;
+    public void IncreaseSubtitleDelay()
+    {
+        _subtitleDelay += 0.05f;
+        if (_initialized)
+            SetDouble("sub-delay", _subtitleDelay);
+    }
+
+    public void DecreaseSubtitleDelay()
+    {
+        _subtitleDelay -= 0.05f;
+        if (_initialized)
+            SetDouble("sub-delay", _subtitleDelay);
+    }
 
     private int _subtitlePosition = 100;
 
@@ -585,36 +616,65 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
     {
         if (_initialized)
             SetDouble("sub-font-size", size);
+        
     }
 
     public void SetSubtitleVisibility(bool visible)
     {
         if (_initialized)
             SetFlag("sub-visibility", visible);
+        // SetSubtitleVisibility logged
     }
 
     public void SetSubtitleFont(string fontFamily)
     {
         if (_initialized && !string.IsNullOrWhiteSpace(fontFamily))
             SetString("sub-font", fontFamily);
+
     }
 
     public void SetSubtitleBorderSize(double size)
     {
+        var clamped = Math.Clamp(size, 0, 10);
         if (_initialized)
-            SetDouble("sub-border-size", Math.Clamp(size, 0, 10));
+            SetDouble("sub-border-size", clamped);
+
     }
 
     public void SetSubtitleShadowOffset(double offset)
     {
+        var clamped = Math.Clamp(offset, 0, 10);
         if (_initialized)
-            SetDouble("sub-shadow-offset", Math.Clamp(offset, 0, 10));
+            SetDouble("sub-shadow-offset", clamped);
+
     }
 
     public void SetSubtitleColor(string colorHex)
     {
         if (_initialized && !string.IsNullOrWhiteSpace(colorHex))
             SetString("sub-color", colorHex);
+
+    }
+
+    public void SetSubtitleOpacity(double opacity)
+    {
+        if (_initialized)
+            SetDouble("sub-opacity", Math.Clamp(opacity, 0.0, 1.0));
+
+    }
+
+    public void SetSubtitleBlur(double blur)
+    {
+        if (_initialized)
+            SetDouble("sub-blur", Math.Clamp(blur, 0.0, 20.0));
+
+    }
+
+    public void SetSubtitleBold(bool bold)
+    {
+        if (_initialized)
+            SetFlag("sub-bold", bold);
+
     }
 
     public double Zoom
@@ -1313,6 +1373,10 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
                         case MpvNative.mpv_event_id.MPV_EVENT_PROPERTY_CHANGE:
                             HandlePropertyChange(ev);
                             break;
+                        default:
+                            if (ev.event_id != 0) // skip NONE (idle timeout)
+                                DebugLog($"EventLoop: unhandled event id={ev.event_id}");
+                            break;
                     }
                 }
 
@@ -1373,20 +1437,30 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
 
         var prop = Marshal.PtrToStructure<MpvNative.mpv_event_property>(ev.data);
         var propName = Marshal.PtrToStringUTF8(prop.name) ?? "";
+        DebugLog($"HandlePropertyChange: name='{propName}' format={prop.format}");
 
         switch (propName)
         {
             case "track-list":
                 {
                     var json = GetString("track-list");
+                    DebugLog($"track-list: raw='{json?.Substring(0, Math.Min(json.Length, 3000))}'");
                     if (string.IsNullOrWhiteSpace(json) || json == "null")
+                    {
+                        DebugLog("track-list: null/empty, skipping");
                         break;
+                    }
 
                     try
                     {
                         var tracks = JsonSerializer.Deserialize<JsonElement>(json);
                         if (tracks.ValueKind != JsonValueKind.Array)
+                        {
+                            DebugLog($"track-list: not an array (kind={tracks.ValueKind}), skipping");
                             break;
+                        }
+
+                        DebugLog($"track-list: parsed {tracks.GetArrayLength()} tracks");
 
                         var audioTracks = new List<SubtitleSource>();
                         var videoTracks = new List<SubtitleSource>();
@@ -1425,7 +1499,7 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
                             videoTracks.ToArray(),
                             subtitleTracks.ToArray()));
                     }
-                    catch { /* JSON parse failed — skip */ }
+                    catch (Exception ex) { DebugLog($"track-list: parse error: {ex.Message}"); }
                 }
                 break;
             case "chapter-list":
@@ -1684,13 +1758,15 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
             var title = t.TryGetProperty("title", out var titleProp) ? titleProp.GetString() ?? "" : "";
             var selected = t.TryGetProperty("selected", out var selProp) && selProp.GetBoolean();
             var id = t.TryGetProperty("id", out var idProp) ? idProp.GetInt32() : -1;
+            var forced = t.TryGetProperty("forced", out var forcedProp) && forcedProp.GetBoolean();
 
             var src = new SubtitleSource
             {
                 PathOrId = id.ToString(),
                 Language = lang,
                 Type = kind,
-                IsEnabled = selected
+                IsEnabled = selected,
+                IsForced = forced
             };
             // Store title in Language if no language, so it's displayed
             if (string.IsNullOrWhiteSpace(lang) && !string.IsNullOrWhiteSpace(title))
@@ -1829,8 +1905,11 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
         if (!_initialized || _mpv == IntPtr.Zero)
             return string.Empty;
 
-        var err = MpvNative.mpv_get_property_string(_mpv, name, out var ptr);
-        if (err < 0 || ptr == IntPtr.Zero)
+        // mpv_get_property_string returns a char* that must be freed via mpv_free.
+        // P/Invoke return type is IntPtr because the C function returns char*,
+        // NOT int (the previous signature was wrong and always returned empty).
+        var ptr = MpvNative.mpv_get_property_string(_mpv, name);
+        if (ptr == IntPtr.Zero)
             return string.Empty;
 
         try
@@ -1851,12 +1930,22 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
             MPV_EVENT_NONE = 0,
             MPV_EVENT_SHUTDOWN = 1,
             MPV_EVENT_LOG_MESSAGE = 2,
+            MPV_EVENT_GET_PROPERTY_REPLY = 3,
+            MPV_EVENT_SET_PROPERTY_REPLY = 4,
+            MPV_EVENT_COMMAND_REPLY = 5,
             MPV_EVENT_START_FILE = 6,
             MPV_EVENT_END_FILE = 7,
             MPV_EVENT_FILE_LOADED = 8,
-            MPV_EVENT_PAUSE = 18,
-            MPV_EVENT_UNPAUSE = 19,
-            MPV_EVENT_PROPERTY_CHANGE = 24,
+            /// <summary>track-list was updated (subs added/removed)</summary>
+            MPV_EVENT_TRACKS_CHANGED = 9,
+            MPV_EVENT_FILE_IDLE = 11,
+            MPV_EVENT_PAUSE = 13,
+            MPV_EVENT_UNPAUSE = 14,
+            MPV_EVENT_AUDIO_RECONFIG = 18,
+            MPV_EVENT_SEEK = 20,
+            MPV_EVENT_PLAYBACK_RESTART = 21,
+            MPV_EVENT_PROPERTY_CHANGE = 22,
+            MPV_EVENT_QUEUE_OVERFLOW = 24,
         }
 
         internal enum mpv_format
@@ -1924,7 +2013,7 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
         internal static extern int mpv_get_property(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string name, mpv_format format, ref double data);
 
         [DllImport("libmpv-2.dll", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int mpv_get_property_string(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string name, out IntPtr data);
+        internal static extern IntPtr mpv_get_property_string(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string name);
 
         [DllImport("libmpv-2.dll", CallingConvention = CallingConvention.Cdecl)]
         internal static extern void mpv_free(IntPtr data);

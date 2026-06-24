@@ -17,7 +17,7 @@ public interface ISubtitleManager : INotifyPropertyChanged, IDisposable
     bool IsSubtitleEnabled { get; set; }
     int CurrentSubtitleTrackId { get; }
     bool HasTextSubtitles { get; }
-    void SelectTrackById(int trackId);
+    void SelectSubtitleTrackById(int trackId);
     void CycleSubtitleTrackForward();
     void CycleSubtitleTrackBackward();
 
@@ -31,6 +31,9 @@ public interface ISubtitleManager : INotifyPropertyChanged, IDisposable
     double SubtitleFontScale { get; set; }
     double SubtitleBorderSize { get; set; }
     double SubtitleShadowOffset { get; set; }
+    double SubtitleOpacity { get; set; }
+    double SubtitleBlur { get; set; }
+    bool SubtitleBold { get; set; }
     string SubtitleFont { get; set; }
     string SubtitleColor { get; set; }
 
@@ -40,7 +43,7 @@ public interface ISubtitleManager : INotifyPropertyChanged, IDisposable
     // ── External Files ──
     Func<Task<string?>>? RequestSubtitleFileAsync { get; set; }
     Func<Task>? DismissFlyoutAsync { get; set; }
-    void LoadExternalSubtitle(string filePath);
+    Task LoadExternalSubtitleAsync(string filePath);
     Task AddSubtitleTrackAsync();
 
     // ── Lifecycle ──

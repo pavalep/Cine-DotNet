@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
 using Cine.Avalonia.Models;
+using Cine.Core.Services;
 using AvaloniaLayout = Avalonia.Layout;
 using Button = global::Avalonia.Controls.Button;
 using Cursor = Avalonia.Input.Cursor;
@@ -24,6 +25,8 @@ namespace Cine.Avalonia.Builders;
 /// </summary>
 public static class TrackFlyoutBuilder
 {
+    private static readonly ILogger _log = global::Cine.Core.Log.ForContext("TrackFlyoutBuilder");
+
     /// <summary>
     /// Build a complete track-selection flyout.
     /// </summary>
@@ -43,17 +46,19 @@ public static class TrackFlyoutBuilder
         ObservableCollection<TrackMenuItem> tracks,
         string emptyMessage,
         string delayLabel,
-        Func<float> getDelay,
-        Action<float> setDelay,
+        Func<double> getDelay,
+        Action<double> setDelay,
         Action resetDelay,
         int searchThreshold = 5,
-        string searchPlaceholder = "Search tracks\u2026")
+        string searchPlaceholder = "Search…",
+        Action<StackPanel>? appendExtra = null)
     {
+        _log.Debug("Build: {Count} tracks, threshold={Threshold}, extra={HasExtra}",
+            tracks.Count, searchThreshold, appendExtra != null);
         var rootPanel = new global::Avalonia.Controls.StackPanel();
 
         // Count real (non-pseudo) tracks
         var realTracks = tracks.Where(t => !t.IsPseudoEntry).ToList();
-        var pseudoTracks = tracks.Where(t => t.IsPseudoEntry).ToList();
         var showSearch = searchThreshold >= 0 && realTracks.Count > searchThreshold;
 
         // ── Search text box ─────────────────────────────────────────
@@ -77,9 +82,8 @@ public static class TrackFlyoutBuilder
             rootPanel.Children.Add(searchBox);
         }
 
-        // ── Track list panel (inside scroll viewer) ─────────────────
+        // ── Track list panel (direct child of root — outer ScrollViewer handles overflow) ─
         var trackListPanel = new global::Avalonia.Controls.StackPanel();
-        var scrollViewer = new ScrollViewer { MaxHeight = 340, Content = trackListPanel };
 
         // Helper to rebuild the track list applying a search filter
         void RebuildTrackList(string? filter)
@@ -141,7 +145,7 @@ public static class TrackFlyoutBuilder
             };
         }
 
-        rootPanel.Children.Add(scrollViewer);
+        rootPanel.Children.Add(trackListPanel);
 
         // ── Separator ──────────────────────────────────────────────
         rootPanel.Children.Add(new Separator
@@ -179,6 +183,7 @@ public static class TrackFlyoutBuilder
             var current = getDelay();
             setDelay((float)Math.Clamp(current + delta, -10, 10));
             delayText.Text = $"{getDelay():F1}s";
+            _log.Trace("NudgeDelay: delta={Delta}, from={From}s, to={To}s", delta, current, getDelay());
         }
 
         void ResetDelay()
@@ -244,7 +249,16 @@ public static class TrackFlyoutBuilder
         delayRow.Children.Add(btnReset);
         rootPanel.Children.Add(delayRow);
 
+        // ── Extra content (e.g., appearance submenu button) ─────────
+        appendExtra?.Invoke(rootPanel);
+
         // ── Wrap in scroll + popover border ─────────────────────────
+        var scrollRoot = new ScrollViewer
+        {
+            MaxHeight = 600,
+            Content = rootPanel
+        };
+
         var border = new Border
         {
             Background = (IBrush?)global::Avalonia.Application.Current?.FindResource("PopoverBackground"),
@@ -253,7 +267,7 @@ public static class TrackFlyoutBuilder
             CornerRadius = new CornerRadius(8),
             Padding = new Thickness(4),
             MinWidth = 220,
-            Child = rootPanel
+            Child = scrollRoot
         };
 
         return new Flyout { Content = border, Placement = PlacementMode.Top };

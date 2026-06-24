@@ -88,12 +88,15 @@ public partial class MainWindow
         // Init centralized file-dialog handler (Avalonia #21433 workaround applied)
         _dialogHandler = new FileDialogHandler(this);
 
-        // Avalonia #18969: close the Open menu Flyout before any native
-        // file dialog opens, or the Windows message pump will deadlock.
+        // Avalonia #18969: close any open Flyout before a native file dialog
+        // opens, or the Windows message pump will deadlock on the still-open
+        // flyout's COM modality loop.
         _dialogHandler.OnBeforeOpen = () =>
         {
             var header = this.Find<HeaderBarControl>("HeaderBarControl");
             header?.CloseFlyout();
+            // Also dismiss the subtitle flyout if open (e.g. "Add Subtitle Track…")
+            _controlsBox?.SubtitleOverlayCtrl?.HideFlyout();
         };
 
         var fileDialogService = new FileDialogService(_dialogHandler);

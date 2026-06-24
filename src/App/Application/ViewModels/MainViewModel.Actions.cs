@@ -69,17 +69,12 @@ public partial class MainViewModel
     }
 
     /// <summary>Load an external subtitle file directly (bypasses file dialog).</summary>
-    public void LoadExternalSubtitle(string filePath)
+    public async Task LoadExternalSubtitleAsync(string filePath)
     {
-        if (string.IsNullOrWhiteSpace(filePath) || _player == null) return;
+        if (string.IsNullOrWhiteSpace(filePath) || Subtitles == null) return;
         try
         {
-            var player = _player;
-            _ = Task.Run(() =>
-            {
-                player.AddSubtitle(filePath);
-                Log.ForContext<MainViewModel>().Info("External subtitle loaded: {Path}", Path.GetFileName(filePath));
-            });
+            await Subtitles.LoadExternalSubtitleAsync(filePath);
         }
         catch (Exception ex)
         {

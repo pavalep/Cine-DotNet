@@ -16,9 +16,16 @@ public class SubtitleSource
     public string Language { get; set; } = string.Empty;
 
     /// <summary>
-    /// Whether subtitle is currently enabled
+    /// Whether subtitle track is currently enabled
     /// </summary>
     public bool IsEnabled { get; set; } = true;
+
+    /// <summary>
+    /// True if this track is marked as "forced" by mpv.
+    /// Forced subtitles (e.g., foreign dialogue in an otherwise-dubbed track)
+    /// should be auto-enabled even when subtitles are globally disabled.
+    /// </summary>
+    public bool IsForced { get; set; }
 
     /// <summary>
     /// Subtitle type (file, embedded, external)
