@@ -191,14 +191,6 @@ public partial class MainWindow
             })
             .Watch(() => _viewModel.SpeedValue, speed =>
                 ShowOsdNotification(MaterialIconKind.Speedometer, $"Speed: {speed:F1}x", 3000))
-            // ── Subtitle OSD feedback ──
-            .Watch(nameof(MainViewModel.IsSubtitleEnabled), () =>
-            {
-                var subs = _viewModel?.Subtitles;
-                if (subs == null) return;
-                ShowOsdNotification(MaterialIconKind.ClosedCaption,
-                    subs.IsSubtitleEnabled ? "Subtitles: On" : "Subtitles: Off");
-            })
             .Watch(() => _viewModel.SeekValue, _ =>
             {
                 if (_viewModel is { IsSeeking: false })

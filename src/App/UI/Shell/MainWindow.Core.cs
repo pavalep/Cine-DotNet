@@ -96,6 +96,9 @@ public partial class MainWindow
     // File-dialog handler
     private FileDialogHandler? _dialogHandler;
 
+    // Flyout ecosystem manager
+    private FlyoutManager _flyoutManager = null!;
+
     // ─────────────────────────────────────────────────────
     //  Debug Logging
     // ─────────────────────────────────────────────────────

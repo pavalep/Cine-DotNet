@@ -103,7 +103,7 @@
                 Margin="{StaticResource space-h-2}"
                 CornerRadius="2"
                 Background="{StaticResource TimeSeparatorBackground}"
-                Opacity="0.4"
+                Opacity="0.5"
                 VerticalAlignment="Center" />
 
         <TextBlock Grid.Column="3"

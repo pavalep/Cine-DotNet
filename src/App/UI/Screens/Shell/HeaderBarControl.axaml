@@ -32,7 +32,7 @@
                     Background="{StaticResource AppHover}"
                     CornerRadius="99"
                     BorderThickness="0"
-                    Padding="14,6">
+                    Padding="12,6">
                 <Button.Styles>
                     <Style Selector="Button#BtnOpenMenu /template/ ContentPresenter">
                         <Setter Property="Background" Value="Transparent" />
@@ -137,7 +137,7 @@
                               Click="OnTogglePip"
                               ToolTip.Tip="Picture-in-Picture"
                               AutomationProperties.Name="Picture in Picture">
-                    <materialIcons:MaterialIcon Kind="PictureInPictureBottomRight" Width="18" Height="18"
+                    <materialIcons:MaterialIcon Kind="PictureInPictureBottomRight" Width="16" Height="16"
                         Foreground="{StaticResource OsdForeground}" />
                 </ToggleButton>
 
@@ -147,7 +147,7 @@
                         ToolTip.Tip="Main Menu"
                         Margin="{StaticResource space-right-1}"
                         AutomationProperties.Name="Main menu">
-                    <materialIcons:MaterialIcon Kind="DotsHorizontal" Width="18" Height="18"
+                    <materialIcons:MaterialIcon Kind="DotsHorizontal" Width="16" Height="16"
                         Foreground="{StaticResource OsdForeground}" />
                     <Button.Flyout>
                         <Flyout Placement="Bottom"
@@ -159,6 +159,7 @@
                 <Button x:Name="BtnFullscreenClose"
                         Classes="circular-menu"
                         ToolTip.Tip="Close"
+                        AutomationProperties.Name="Close"
                         Click="OnFullscreenCloseClick"
                         IsVisible="False"
                         Margin="{StaticResource space-right-1}">
@@ -174,7 +175,7 @@
                             Classes="window-control"
                             ToolTip.Tip="Minimize"
                             AutomationProperties.Name="Minimize window">
-                        <materialIcons:MaterialIcon Kind="WindowMinimize" Width="14" Height="14"
+                        <materialIcons:MaterialIcon Kind="WindowMinimize" Width="12" Height="12"
                             Foreground="{StaticResource OsdForeground}" />
                     </Button>
                     <Button x:Name="BtnMaximizeRestore" Click="OnMaximizeRestoreClick"

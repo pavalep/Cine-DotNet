@@ -11,13 +11,13 @@
         ShowInTaskbar="False"
         Topmost="True"
         WindowDecorations="None"
-        Background="#FF0D0D0D"
+        Background="{StaticResource AppBackground}"
         PointerMoved="OnPipWindowPointerMoved">
 
     <Window.Styles>
         <Style Selector="Border.pip-container">
             <Setter Property="CornerRadius" Value="12" />
-            <Setter Property="Background" Value="#FF0D0D0D" />
+            <Setter Property="Background" Value="{StaticResource AppBackground}" />
             <Setter Property="BoxShadow" Value="0 6 32 0 #AA000000, 0 0 0 1 #25FFFFFF" />
             <Setter Property="ClipToBounds" Value="True" />
         </Style>
@@ -87,7 +87,7 @@
             <Grid>
                 <!-- Video container for child HWND (render API path - frame delivered via UpdateFrame) -->
                 <Border x:Name="VideoArea"
-                        Background="#FF0D0D0D"
+                        Background="{StaticResource AppBackground}"
                         ClipToBounds="True"
                         CornerRadius="12">
                     <Image x:Name="PipVideoFrame"
@@ -125,7 +125,7 @@
                             <TextBlock Grid.Column="0" x:Name="PipFileName"
                                        FontSize="13" FontWeight="SemiBold"
                                        Foreground="White"
-                                       Opacity="0.87"
+                                       Opacity="0.7"
                                        VerticalAlignment="Center"
                                        Margin="12,0,0,0"
                                        TextTrimming="CharacterEllipsis"

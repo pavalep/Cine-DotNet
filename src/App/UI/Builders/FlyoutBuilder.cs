@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Media;
+using Cine.Avalonia.Services;
 using AvaloniaLayout = Avalonia.Layout;
 
 namespace Cine.Avalonia.Builders;
@@ -63,10 +64,10 @@ public class FlyoutBuilder
         var tb = new TextBlock
         {
             Text = text,
-            FontSize = 12,
+            FontSize = Token.Size("font-size-body2"),
             FontWeight = isBold ? FontWeight.SemiBold : FontWeight.Normal,
             Foreground = Resource("OsdForeground"),
-            Padding = new Thickness(10, 6),
+            Padding = new Thickness(12, 9),
             VerticalAlignment = AvaloniaLayout.VerticalAlignment.Center
         };
         var btn = MakeButton(tb);
@@ -92,18 +93,18 @@ public class FlyoutBuilder
         var left = new TextBlock
         {
             Text = leftText,
-            FontSize = 12,
+            FontSize = Token.Size("font-size-body2"),
             Foreground = Resource("OsdForeground"),
             VerticalAlignment = AvaloniaLayout.VerticalAlignment.Center,
-            Padding = new Thickness(10, 6, 4, 6)
+            Padding = new Thickness(12, 9, 4, 9)
         };
         var right = new TextBlock
         {
             Text = rightText,
-            FontSize = 11,
+            FontSize = Token.Size("font-size-caption"),
             Foreground = AppColors.TextOnDarkHint,
             VerticalAlignment = AvaloniaLayout.VerticalAlignment.Center,
-            Padding = new Thickness(4, 6, 10, 6)
+            Padding = new Thickness(4, 9, 12, 9)
         };
         Grid.SetColumn(left, 0);
         Grid.SetColumn(right, 1);

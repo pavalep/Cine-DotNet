@@ -1,0 +1,127 @@
+using System;
+using System.Collections.Generic;
+
+namespace Cine.Avalonia.Services;
+
+/// <summary>
+/// Ensures only ONE flyout is open at a time across the entire application.
+///
+/// Usage: Each flyout source registers itself with a unique key and a close action.
+/// Before showing a flyout, the click handler calls DismissOthers(key) —
+/// this auto-closes any other currently-open flyout, creating the
+/// professional "one surface at a time" UX contract.
+///
+/// For the file-dialog deadlock workaround (Avalonia #18969), call
+/// CloseAll() before opening a native dialog. Returns a reopen action
+/// if any flyout was active.
+/// </summary>
+public class FlyoutManager
+{
+    private readonly Dictionary<string, FlyoutEntry> _entries = new();
+    private readonly object _lock = new();
+    private string? _openKey;
+
+    /// <summary>
+    /// Register a flyout source with a close action.
+    /// </summary>
+    public void Register(string key, Action? closeAction = null)
+    {
+        lock (_lock)
+            _entries[key] = new FlyoutEntry(key, closeAction);
+    }
+
+    /// <summary>
+    /// Close any other open flyout, then mark this key as open.
+    /// Call BEFORE ShowAt() to ensure only this flyout is visible.
+    /// </summary>
+    public void DismissOthers(string key)
+    {
+        lock (_lock)
+        {
+            if (_openKey != null && _openKey != key && _entries.TryGetValue(_openKey, out var entry))
+            {
+                entry.TryClose();
+                entry.IsOpen = false;
+            }
+            if (_entries.TryGetValue(key, out var thisEntry))
+                thisEntry.IsOpen = true;
+            _openKey = key;
+        }
+    }
+
+    /// <summary>
+    /// Mark a flyout as closed (call from Flyout.Closed event).
+    /// </summary>
+    public void MarkClosed(string key)
+    {
+        lock (_lock)
+        {
+            if (_openKey == key) _openKey = null;
+            if (_entries.TryGetValue(key, out var entry)) entry.IsOpen = false;
+        }
+    }
+
+    /// <summary>
+    /// Close all open flyouts. Returns null if nothing was open,
+    /// otherwise returns a reopen action to be called after the
+    /// operation (file dialog, etc.) completes.
+    /// </summary>
+    public Action? CloseAll()
+    {
+        string? toReopen;
+        lock (_lock)
+        {
+            toReopen = _openKey;
+            if (toReopen != null && _entries.TryGetValue(toReopen, out var entry))
+            {
+                entry.TryClose();
+                entry.IsOpen = false;
+            }
+            _openKey = null;
+        }
+
+        if (toReopen == null) return null;
+
+        var keyToReopen = toReopen;
+        return () =>
+        {
+            lock (_lock)
+            {
+                if (_entries.TryGetValue(keyToReopen, out var entry) && entry.ReopenAction != null)
+                {
+                    entry.ReopenAction();
+                    entry.IsOpen = true;
+                    _openKey = keyToReopen;
+                }
+            }
+        };
+    }
+
+    /// <summary>
+    /// Set a reopen action for a registered flyout (for "close → dialog → reopen" cycle).
+    /// </summary>
+    public void SetReopen(string key, Action reopen)
+    {
+        lock (_lock)
+        {
+            if (_entries.TryGetValue(key, out var entry))
+                entry.ReopenAction = reopen;
+        }
+    }
+
+    private class FlyoutEntry
+    {
+        public string Key { get; }
+        public bool IsOpen;
+        public Action? ReopenAction;
+        private readonly Action? _closeAction;
+
+        public FlyoutEntry(string key, Action? closeAction)
+        {
+            Key = key;
+            _closeAction = closeAction;
+        }
+
+        public void TryClose() => _closeAction?.Invoke();
+    }
+}

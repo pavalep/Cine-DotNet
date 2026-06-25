@@ -20,7 +20,7 @@
                         Classes="circular-menu"
                         ToolTip.Tip="Menu"
                         AutomationProperties.Name="Fullscreen menu">
-                    <materialIcons:MaterialIcon Kind="DotsHorizontal" Width="18" Height="18"
+                    <materialIcons:MaterialIcon Kind="DotsHorizontal" Width="16" Height="16"
                         Foreground="{StaticResource OsdForeground}" />
                     <Button.Flyout>
                         <Flyout Placement="Bottom"

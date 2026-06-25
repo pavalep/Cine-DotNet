@@ -5,7 +5,7 @@
              x:CompileBindings="False">
     <UserControl.Styles>
         <Style Selector="Button.eq-preset">
-            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontSize" Value="12" />
             <Setter Property="Padding" Value="8,4" />
             <Setter Property="Margin" Value="2" />
             <Setter Property="BorderThickness" Value="1" />
@@ -43,20 +43,20 @@
         <StackPanel Spacing="10">
             <!-- Header with close -->
             <Grid ColumnDefinitions="Auto,*,Auto,Auto">
-                <TextBlock Grid.Column="0" Text="Equalizer" FontSize="15" FontWeight="SemiBold"
+                <TextBlock Grid.Column="0" Text="Equalizer" Classes="md3-subtitle1"
                            Foreground="{DynamicResource OsdForeground}" VerticalAlignment="Center" />
                 <Button Grid.Column="2" x:Name="ResetBtn"
-                        Classes="flat" FontSize="11"
+                        Classes="flat" FontSize="12" Padding="8,4"
                         Click="OnResetClick"
                         Foreground="{DynamicResource AccentColor}"
-                        Content="Reset All"
+                        Content="Reset"
                         VerticalAlignment="Center" />
                 <Button Grid.Column="3" x:Name="CloseBtn"
                         Classes="eq-close"
                         ToolTip.Tip="Close"
                         VerticalAlignment="Center"
                         Margin="8,0,0,0">
-                    <materialIcons:MaterialIcon Kind="Close" Width="14" Height="14"
+                    <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource size-dialog-close-icon}" Height="{StaticResource size-dialog-close-icon}"
                         Foreground="{DynamicResource OsdForeground}" />
                 </Button>
             </Grid>
@@ -82,13 +82,13 @@
                            HorizontalAlignment="Left" />
             </ScrollViewer>
 
-            <Separator Background="{DynamicResource PopoverBorder}" Height="1" Opacity="0.3" />
+            <Separator Background="{DynamicResource PopoverBorder}" Height="1" Opacity="0.5" />
 
             <!-- Toggles -->
             <Grid ColumnDefinitions="*,*" RowDefinitions="Auto">
                 <StackPanel Grid.Column="0" Spacing="4">
-                    <TextBlock Text="Normalization (DRC)" FontSize="11" FontWeight="SemiBold"
-                               Foreground="{DynamicResource OsdForeground}" Opacity="0.6" />
+                    <TextBlock Text="Normalization (DRC)" FontSize="12" FontWeight="SemiBold"
+                               Foreground="{DynamicResource OsdForeground}" Opacity="0.7" />
                     <ToggleSwitch x:Name="NormToggle"
                                   IsChecked="{Binding IsAudioNormalizationEnabled}"
                                   OnContent="" OffContent=""
@@ -106,10 +106,11 @@
 
             <!-- Audio Delay -->
             <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto">
-                <TextBlock Grid.Column="0" Text="Audio Delay" FontSize="11" FontWeight="SemiBold"
-                           Foreground="{DynamicResource OsdForeground}" Opacity="0.6"
+                <TextBlock Grid.Column="0" Text="Audio Delay" FontSize="12" FontWeight="SemiBold"
+                           Foreground="{DynamicResource OsdForeground}" Opacity="0.7"
                            VerticalAlignment="Center" Margin="0,0,8,0" />
                 <Slider Grid.Column="1" x:Name="DelaySlider"
+                        Classes="compact"
                         Minimum="-10" Maximum="10" TickFrequency="0.5"
                         Value="{Binding AudioDelay}"
                         Foreground="{DynamicResource AccentColor}" />

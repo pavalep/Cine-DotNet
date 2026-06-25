@@ -88,16 +88,20 @@ public partial class MainWindow
         // Init centralized file-dialog handler (Avalonia #21433 workaround applied)
         _dialogHandler = new FileDialogHandler(this);
 
-        // Avalonia #18969: close any open Flyout before a native file dialog
-        // opens, or the Windows message pump will deadlock on the still-open
-        // flyout's COM modality loop.
-        _dialogHandler.OnBeforeOpen = () =>
-        {
-            var header = this.Find<HeaderBarControl>("HeaderBarControl");
-            header?.CloseFlyout();
-            // Also dismiss the subtitle flyout if open (e.g. "Add Subtitle Track…")
-            _controlsBox?.SubtitleOverlayCtrl?.HideFlyout();
-        };
+        // Flyout ecosystem manager — ensures only ONE flyout is open at a time,
+        // creating the professional "close previous → open next" UX contract.
+        _flyoutManager = new FlyoutManager();
+        _controlsBox.FlyoutManager = _flyoutManager;
+        _headerBar.FlyoutManager = _flyoutManager;
+
+        // Wire reopen actions for flyouts that trigger native dialogs (Avalonia #18969):
+        // after the dialog completes, the flyout is shown again automatically.
+        _flyoutManager.SetReopen("open-menu", () => _headerBar.ReopenFlyout());
+        _flyoutManager.SetReopen("subtitle", () => _controlsBox.SubtitleOverlayCtrl?.ReopenFlyout());
+        _flyoutManager.SetReopen("audio", () => _controlsBox.AudioTrackSelectorCtrl?.ReopenFlyout());
+
+        // Update OnBeforeOpen to use the centralized manager
+        _dialogHandler.OnBeforeOpen = () => _flyoutManager.CloseAll();
 
         var fileDialogService = new FileDialogService(_dialogHandler);
 
@@ -232,31 +236,8 @@ public partial class MainWindow
                 ShowOsdNotification(MaterialIconKind.ClosedCaption,
                     $"Subtitle loaded: {Path.GetFileName(path)}");
 
-        // SubtitleManager OSD feedback (font size, position, delay changes)
-        if (_viewModel?.Subtitles != null)
-        {
-            _viewModel.Subtitles.PropertyChanged += (_, e) =>
-            {
-                switch (e.PropertyName)
-                {
-                    case nameof(Managers.SubtitleManager.SubtitleFontScale):
-                        var fs = _viewModel.Subtitles.SubtitleFontScale;
-                        ShowOsdNotificationWithProgress(MaterialIconKind.Subtitles,
-                            $"Subtitle Size: {fs:F1}×", fs / 3.0 * 100, 1500);
-                        break;
-                    case nameof(Managers.SubtitleManager.SubtitlePosition):
-                        var pos = _viewModel.Subtitles.SubtitlePosition;
-                        ShowOsdNotificationWithProgress(MaterialIconKind.Subtitles,
-                            $"Subtitle Position: {pos}%", pos, 1500);
-                        break;
-                    case nameof(Managers.SubtitleManager.SubtitleDelay):
-                        var delay = _viewModel.Subtitles.SubtitleDelay;
-                        ShowOsdNotificationWithProgress(MaterialIconKind.Subtitles,
-                            $"Subtitle Delay: {delay:F1}s", (delay + 10) / 20.0 * 100, 1500);
-                        break;
-                }
-            };
-        }
+        // SubtitleManager OSD feedback (font size, position, delay changes) — REMOVED
+        // Settings changes are now handled via the SubtitleSettingsDialog.
         if (_controlsBox.AudioTrackSelectorCtrl != null)
             _controlsBox.AudioTrackSelectorCtrl.ExternalFileDropped += (_, path) =>
                 ShowOsdNotification(MaterialIconKind.Music,

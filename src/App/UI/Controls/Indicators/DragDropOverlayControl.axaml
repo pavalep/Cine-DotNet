@@ -6,12 +6,14 @@
             IsVisible="False"
             IsHitTestVisible="False"
             Background="{StaticResource AppOverlay}"
-            CornerRadius="8"
+            CornerRadius="{StaticResource radius-sm}"
             Margin="12"
             BorderThickness="2"
             BorderBrush="{StaticResource AppAccentDim}"
+            BoxShadow="{StaticResource depth-overlay}"
             VerticalAlignment="Stretch"
-            HorizontalAlignment="Stretch">
+            HorizontalAlignment="Stretch"
+            AutomationProperties.Name="Drop files overlay">
         <Border.Transitions>
             <Transitions>
                 <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
@@ -20,7 +22,7 @@
         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="8">
             <materialIcons:MaterialIcon Kind="Play" Width="48" Height="48"
                 Foreground="#4aa3ff" />
-            <TextBlock Text="Drop to Play" FontSize="24" FontWeight="SemiBold"
+            <TextBlock Text="Drop to Play" Classes="md3-headline4" FontWeight="SemiBold"
                        Foreground="#4aa3ff" HorizontalAlignment="Center" />
         </StackPanel>
     </Border>

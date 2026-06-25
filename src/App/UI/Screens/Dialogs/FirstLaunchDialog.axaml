@@ -18,7 +18,7 @@
             <materialIcons:MaterialIcon x:Name="DownloadIcon" Kind="Download" Width="48" Height="48"
                 Foreground="{StaticResource AppAccent}" />
             <TextBlock Text="Setting up Cine for first use"
-                       FontSize="20" FontWeight="SemiBold"
+                       Classes="md3-headline6" FontWeight="SemiBold"
                        Foreground="{StaticResource AppTextPrimary}"
                        HorizontalAlignment="Center" Margin="0,12,0,4" />
             <TextBlock Text="Cine needs to download native media components (~54 MB total)"
@@ -35,7 +35,7 @@
                       Margin="0,16,0,0">
             <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="dialogs:DownloadItem">
-                    <Grid ColumnDefinitions="*,Auto" Margin="0,3">
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,4">
                         <TextBlock Text="{Binding FileName}" FontSize="12"
                                    Foreground="{StaticResource AppTextOnDarkSecondary}" />
                         <TextBlock Grid.Column="1" Text="{Binding Status}" FontSize="12"
@@ -49,7 +49,7 @@
         <ProgressBar Grid.Row="2" x:Name="OverallProgressBar"
                      Value="{Binding OverallProgress}"
                      Minimum="0" Maximum="100"
-                     Height="6" Margin="0,16,0,4"
+                     Height="4" Margin="0,16,0,4"
                      Foreground="{StaticResource AppAccent}"
                      Background="{StaticResource AppHoverSubtle}" />
 

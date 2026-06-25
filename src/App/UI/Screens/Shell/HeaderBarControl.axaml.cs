@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Cine.Avalonia.Services;
 using Cine.Avalonia.Builders;
 using Cine.Avalonia.ViewModels;
 using Cine.Avalonia.Views.Dialogs;
@@ -20,6 +21,7 @@ public partial class HeaderBarControl : AvaloniaUserControl
     public event EventHandler? PipToggled;
 
     private MainViewModel? _viewModel;
+    private FlyoutManager? _flyoutManager;
     private int _activeFlyouts;
     private PrimaryMenuBuilder? _primaryMenuBuilder;
 
@@ -182,6 +184,25 @@ public partial class HeaderBarControl : AvaloniaUserControl
     }
 
     /// <summary>
+    /// Flyout ecosystem manager. Registers the Open menu for mutual exclusion.
+    /// </summary>
+    public FlyoutManager? FlyoutManager
+    {
+        get => _flyoutManager;
+        set
+        {
+            _flyoutManager = value;
+            value?.Register("open-menu", () => BtnOpenMenu.Flyout?.Hide());
+
+            // Wire Opened/Closed to dismiss others and track state
+            if (BtnOpenMenu.Flyout != null)
+            {
+                BtnOpenMenu.Flyout.Opened += (_, _) => value?.DismissOthers("open-menu");
+                BtnOpenMenu.Flyout.Closed += (_, _) => value?.MarkClosed("open-menu");
+            }
+        }
+    }
+
     /// Force-close the Open menu Flyout. Required by Avalonia #18969:
     /// StorageProvider native dialogs freeze Windows if a Flyout is still open.
     /// Must be called BEFORE any StorageProvider dialog (OpenFilePicker etc.).
@@ -189,6 +210,15 @@ public partial class HeaderBarControl : AvaloniaUserControl
     public void CloseFlyout()
     {
         BtnOpenMenu.Flyout?.Hide();
+    }
+
+    /// <summary>
+    /// Reopens the Open menu Flyout (call after dialog completes).
+    /// Part of the close → dialog → reopen cycle for Avalonia #18969.
+    /// </summary>
+    public void ReopenFlyout()
+    {
+        BtnOpenMenu.Flyout?.ShowAt(BtnOpenMenu);
     }
 
     public void TrackFlyoutOpened(object? sender, EventArgs e)
@@ -234,17 +264,17 @@ public partial class HeaderBarControl : AvaloniaUserControl
             stack.Children.Add(new Separator
             {
                 Background = (IBrush?)app?.FindResource("PopoverBorder"),
-                Margin = new Thickness(4, 2)
+                Margin = new Thickness(8, 4)
             });
 
             var header = new TextBlock
             {
                 Text = "Recent Files",
-                FontSize = 11,
+                FontSize = Token.Size("font-size-caption"),
                 FontWeight = FontWeight.SemiBold,
                 Foreground = (IBrush?)app?.FindResource("OsdForeground"),
                 Opacity = 0.5,
-                Margin = new Thickness(12, 5, 0, 2)
+                Margin = new Thickness(12, 4, 0, 4)
             };
             stack.Children.Add(header);
 
@@ -268,16 +298,16 @@ public partial class HeaderBarControl : AvaloniaUserControl
                             new TextBlock
                             {
                                 Text = "📄",
-                                FontSize = 12,
+                                FontSize = Token.Size("font-size-body2"),
                                 VerticalAlignment = Layout.VerticalAlignment.Center
                             },
                             new TextBlock
                             {
                                 Text = fileName,
                                 TextTrimming = TextTrimming.CharacterEllipsis,
-                                FontSize = 12,
+                                FontSize = Token.Size("font-size-body2"),
                                 Foreground = (IBrush?)app?.FindResource("OsdForeground"),
-                                Margin = new Thickness(10, 0, 0, 0),
+                                Margin = new Thickness(12, 0, 0, 0),
                                 VerticalAlignment = Layout.VerticalAlignment.Center
                             }
                         }

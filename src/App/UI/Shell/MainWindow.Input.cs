@@ -259,8 +259,21 @@ public partial class MainWindow
     {
         if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
         {
+            // If any flyout is open, the click was just dismissing the flyout —
+            // don't toggle play/pause.
+            if (_controlsBox.HasActiveFlyouts ||
+                _headerBar.HasActiveFlyouts ||
+                _fullscreenHeader.HasActiveFlyouts)
+                return;
+
             _viewModel?.PlayPause();
         }
+    }
+
+    private void OnVideoDoubleTapped(object? sender, TappedEventArgs e)
+    {
+        _viewModel?.ToggleFullscreen();
+        e.Handled = true;
     }
 
     private void OnStartPagePointerPressed(object? sender, PointerPressedEventArgs e)

@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Cine.Avalonia.Builders;
+using Cine.Avalonia.Services;
 using Cine.Avalonia.ViewModels;
 using DragEventArgs = Avalonia.Input.DragEventArgs;
 using DragDropEffects = Avalonia.Input.DragDropEffects;
@@ -21,6 +22,7 @@ public partial class AudioTrackSelectorControl : AvaloniaUserControl
 {
     private MainViewModel? _viewModel;
     private Flyout? _currentFlyout;
+    private FlyoutManager? _flyoutManager;
 
     private static readonly string[] AudioExtensions = { ".mp3", ".aac", ".flac", ".ogg", ".wav", ".m4a", ".opus" };
 
@@ -65,10 +67,32 @@ public partial class AudioTrackSelectorControl : AvaloniaUserControl
             _currentFlyout.Hide();
     }
 
+    /// <summary>Reopens the flyout (for file dialog reopen cycle).</summary>
+    public void ReopenFlyout()
+    {
+        if (_currentFlyout != null && BtnAudio != null)
+            _currentFlyout.ShowAt(BtnAudio);
+    }
+
+    /// <summary>
+    /// Flyout ecosystem manager. Registers this control for mutual exclusion.
+    /// </summary>
+    public FlyoutManager? FlyoutManager
+    {
+        get => _flyoutManager;
+        set
+        {
+            _flyoutManager = value;
+            value?.Register("audio", () => _currentFlyout?.Hide());
+        }
+    }
+
     private void OnAudioClick(object? sender, RoutedEventArgs e)
     {
         if (_viewModel == null) return;
+        _flyoutManager?.DismissOthers("audio");
         _currentFlyout = BuildAudioFlyout();
+        _currentFlyout.Closed += (_, _) => _flyoutManager?.MarkClosed("audio");
         _currentFlyout.ShowAt(BtnAudio);
     }
 

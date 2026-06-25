@@ -60,21 +60,21 @@ public partial class AudioEqualizerFlyout : UserControl
                 Orientation = global::Avalonia.Layout.Orientation.Vertical,
                 HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Center,
                 VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Stretch,
-                Margin = new Thickness(3, 0),
+                Margin = new Thickness(4, 0),
                 Width = 36
             };
 
             var freqLabel = new TextBlock
             {
                 Text = FreqLabels[i],
-                FontSize = 9,
+                FontSize = Token.Size("font-size-caption"),
                 Foreground = SafeResource("OsdForeground", global::Avalonia.Media.Brushes.White),
                 HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Center,
                 Opacity = 0.5,
-                Margin = new Thickness(0, 0, 0, 2)
+                Margin = new Thickness(0, 0, 0, 4)
             };
 
-            var slider = new Slider
+            var slider = new global::Avalonia.Controls.Slider
             {
                 Minimum = -20,
                 Maximum = 20,
@@ -85,14 +85,16 @@ public partial class AudioEqualizerFlyout : UserControl
                 Foreground = SafeResource("AccentColor", global::Avalonia.Media.Brushes.White),
                 Value = 0
             };
+            slider.SetValue(global::Avalonia.Automation.AutomationProperties.HelpTextProperty, FreqLabels[i] + " equalizer band");
+            slider.Classes.Add("compact");
 
             var valueLabel = new TextBlock
             {
                 Text = "0",
-                FontSize = 10,
+                FontSize = Token.Size("font-size-caption"),
                 Foreground = SafeResource("OsdForeground", global::Avalonia.Media.Brushes.White),
                 HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Center,
-                Opacity = 0.8,
+                Opacity = 0.7,
                 Margin = new Thickness(0, 4, 0, 0)
             };
 

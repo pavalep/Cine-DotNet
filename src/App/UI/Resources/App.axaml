@@ -21,7 +21,7 @@
     
     <!-- Window Base Style -->
     <Style Selector="Window">
-        <Setter Property="Background" Value="#FF0C0C0E" />
+        <Setter Property="Background" Value="{StaticResource AppBackground}" />
         <Setter Property="FontSize" Value="14" />
         <Setter Property="FontFamily" Value="{StaticResource font-family-default}" />
         <Setter Property="ExtendClientAreaToDecorationsHint" Value="True" />
@@ -194,10 +194,20 @@
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="CornerRadius" Value="8" />
         <Setter Property="Padding" Value="0" />
+        <Style.Animations>
+            <Animation Duration="0:0:0.2" FillMode="Both" Easing="QuadraticEaseOut">
+                <KeyFrame Cue="0%">
+                    <Setter Property="Opacity" Value="0" />
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="Opacity" Value="1" />
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
     </Style>
 
     <Style Selector="FlyoutPresenter /template/ Border#PART_LayoutRoot">
-        <Setter Property="BoxShadow" Value="0 4 16 0 #80000000" />
+        <Setter Property="BoxShadow" Value="{StaticResource depth-floating}" />
     </Style>
 
     <Style Selector="MenuFlyoutPresenter">
@@ -211,7 +221,7 @@
     <Style Selector="MenuFlyoutPresenter /template/ Border#PART_LayoutRoot">
         <Setter Property="BoxShadow" Value="0 4 16 0 #80000000" />
     </Style>
-    
+
     <!-- ======================== -->
     <!--  START PAGE BUTTONS      -->
     <!-- ======================== -->
@@ -301,7 +311,7 @@
     <Style Selector="Border.OsdNotificationStyle">
         <Setter Property="HorizontalAlignment" Value="Center" />
         <Setter Property="VerticalAlignment" Value="Bottom" />
-        <Setter Property="Margin" Value="0,0,0,80" />
+        <Setter Property="Margin" Value="0,0,0,0" />
         <Setter Property="CornerRadius" Value="6" />
         <Setter Property="Padding" Value="16,10" />
         <Setter Property="Background" Value="#CC000000" />
@@ -321,6 +331,118 @@
     <!-- OSD Text & Icon Shadows — matches reference: text-shadow 0 1 6 rgba(0,0,0,0.6), icon-shadow same -->
     <Style Selector="Border.header-bar Path, Border.header-bar TextBlock, Border.controls-box Path, Border.controls-box TextBlock, Border.header-and-controls Path, Border.header-and-controls TextBlock">
         <Setter Property="Effect" Value="drop-shadow(0 1 6 #99000000)" />
+    </Style>
+
+    <!-- ======================== -->
+    <!--  PHASE 12: FOCUS RING    -->
+    <!-- ======================== -->
+    <Style Selector="Button:focus-visible /template/ ContentPresenter">
+        <Setter Property="BorderBrush" Value="{StaticResource AppAccent}" />
+        <Setter Property="BorderThickness" Value="2" />
+        <Setter Property="CornerRadius" Value="{StaticResource radius-xs}" />
+    </Style>
+    <Style Selector="TextBox:focus-within /template/ Border#border">
+        <Setter Property="BorderBrush" Value="{StaticResource AppAccent}" />
+        <Setter Property="BorderThickness" Value="1.5" />
+    </Style>
+
+    <!-- ======================== -->
+    <!--  PHASE 13: SCROLLBAR     -->
+    <!-- ======================== -->
+    <Style Selector="ScrollBar">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="ScrollBar Thumb">
+        <Setter Property="Background" Value="#33FFFFFF" />
+        <Setter Property="MinHeight" Value="32" />
+    </Style>
+    <Style Selector="ScrollBar:pointerover Thumb">
+        <Setter Property="Background" Value="#55FFFFFF" />
+    </Style>
+
+    <!-- ======================== -->
+    <!--  PHASE 13: TOOLTIP       -->
+    <!-- ======================== -->
+    <Style Selector="ToolTip">
+        <Setter Property="Background" Value="#E6282828" />
+        <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
+        <Setter Property="CornerRadius" Value="{StaticResource radius-xs}" />
+        <Setter Property="Padding" Value="8,4" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Placement" Value="Bottom" />
+        <Setter Property="VerticalOffset" Value="4" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <!-- ======================== -->
+    <!--  PHASE 13: FORM CONTROLS -->
+    <!-- ======================== -->
+    <Style Selector="CheckBox /template/ Border#border">
+        <Setter Property="CornerRadius" Value="2" />
+        <Setter Property="BorderThickness" Value="1.5" />
+        <Setter Property="BorderBrush" Value="{StaticResource TextTertiary}" />
+    </Style>
+    <Style Selector="CheckBox:checked /template/ Border#border">
+        <Setter Property="Background" Value="{StaticResource AppAccent}" />
+        <Setter Property="BorderBrush" Value="{StaticResource AppAccent}" />
+    </Style>
+    <Style Selector="TextBox /template/ Border#border">
+        <Setter Property="CornerRadius" Value="{StaticResource radius-xs}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="BorderBrush" Value="{StaticResource PopoverBorder}" />
+        <Setter Property="Background" Value="{StaticResource AppBackground}" />
+    </Style>
+    <Style Selector="TextBox:focus-within /template/ Border#border">
+        <Setter Property="BorderBrush" Value="{StaticResource AppAccent}" />
+        <Setter Property="BorderThickness" Value="1.5" />
+    </Style>
+    <Style Selector="ComboBox /template/ Border#border">
+        <Setter Property="CornerRadius" Value="{StaticResource radius-xs}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="BorderBrush" Value="{StaticResource PopoverBorder}" />
+        <Setter Property="Background" Value="{StaticResource AppBackground}" />
+    </Style>
+    <Style Selector="ComboBox:focus-within /template/ Border#border">
+        <Setter Property="BorderBrush" Value="{StaticResource AppAccent}" />
+        <Setter Property="BorderThickness" Value="1.5" />
+    </Style>
+    <Style Selector="ContextMenu">
+        <Setter Property="Background" Value="{StaticResource PopoverBackground}" />
+        <Setter Property="BorderBrush" Value="{StaticResource PopoverBorder}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="4" />
+    </Style>
+
+    <!-- ======================== -->
+    <!--  PHASE 13: SELECTION     -->
+    <!-- ======================== -->
+    <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource AppHoverSubtle}" />
+        <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
+    </Style>
+
+    <!-- ======================== -->
+    <!--  PHASE 16: BUTTON PRESS  -->
+    <!-- ======================== -->
+    <Style Selector="Button:pressed /template/ ContentPresenter">
+        <Setter Property="RenderTransform" Value="scale(0.97)" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.08" />
+            </Transitions>
+        </Setter>
+    </Style>
+    <Style Selector="Button">
+        <Setter Property="Transitions">
+            <Transitions>
+                <BrushTransition Property="Background" Duration="0:0:0.12" />
+            </Transitions>
+        </Setter>
     </Style>
 
     <!-- UI Controls Overlay -->
@@ -419,6 +541,49 @@
             <SolidColorBrush x:Key="SliderThumbBackgroundPressed">#D6D6D6</SolidColorBrush>
         </Style.Resources>
     </Style>
+    <Style Selector="Slider.volume-slider /template/ Thumb#thumb">
+        <Setter Property="Width" Value="10" />
+        <Setter Property="Height" Value="10" />
+        <Setter Property="MinWidth" Value="10" />
+        <Setter Property="MinHeight" Value="10" />
+    </Style>
+
+    <!-- Compact slider: 10px thumb for all secondary sliders (volume, EQ, subtitle settings) -->
+    <Style Selector="Slider.compact /template/ Thumb#thumb">
+        <Setter Property="Width" Value="10" />
+        <Setter Property="Height" Value="10" />
+        <Setter Property="MinWidth" Value="10" />
+        <Setter Property="MinHeight" Value="10" />
+    </Style>
+
+    <!-- ======================== -->
+    <!--  STANDARD DIALOG HEADER  -->
+    <!-- ======================== -->
+    <Style Selector="Grid.dialog-header">
+        <Setter Property="Height" Value="{StaticResource size-dialog-header}" />
+        <Setter Property="Background" Value="{StaticResource PopoverBackground}" />
+    </Style>
+    <Style Selector="TextBlock.dialog-title">
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
+        <Setter Property="Margin" Value="12,0" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.dialog-close">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Width" Value="{StaticResource size-button-sm}" />
+        <Setter Property="Height" Value="{StaticResource size-button-sm}" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Margin" Value="0,0,4,0" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.dialog-close:pointerover">
+        <Setter Property="Background" Value="{StaticResource ButtonHoverBackground}" />
+    </Style>
 
     <!-- ======================== -->
     <!--  TRACK MENU ITEMS        -->
@@ -503,14 +668,63 @@
     </Style>
 
     <!-- ======================== -->
-    <!--  BUTTON DROP-SHADOW      -->
+    <!--  PHASE 14: SKELETON      -->
     <!-- ======================== -->
-    <Style Selector="Button.circular-transport, Button.circular-menu, ToggleButton.circular-toggle, ToggleButton.circular-menu">
-        <Setter Property="Effect">
-            <Setter.Value>
-                <DropShadowEffect BlurRadius="5" OffsetY="1" Color="#99000000" />
-            </Setter.Value>
-        </Setter>
+    <Style Selector="Border.skeleton">
+        <Setter Property="CornerRadius" Value="{StaticResource radius-xs}" />
+        <Setter Property="Background" Value="#1AFFFFFF" />
+        <Style.Animations>
+            <Animation Duration="0:0:1.5" IterationCount="Infinite">
+                <KeyFrame Cue="0%">
+                    <Setter Property="Opacity" Value="0.3" />
+                </KeyFrame>
+                <KeyFrame Cue="50%">
+                    <Setter Property="Opacity" Value="0.6" />
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="Opacity" Value="0.3" />
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
+
+    <!-- ======================== -->
+    <!--  PHASE 14: ERROR OSD     -->
+    <!-- ======================== -->
+    <Style Selector="Border.osd-error">
+        <Setter Property="BorderBrush" Value="#FF5252" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="6" />
+    </Style>
+
+    <!-- ======================== -->
+    <!--  PHASE 5: OSD SLIDE-UP   -->
+    <!-- ======================== -->
+    <Style Selector="Border.OsdNotificationStyle">
+        <Style.Animations>
+            <Animation Duration="0:0:0.25" FillMode="Both" Easing="QuadraticEaseOut">
+                <KeyFrame Cue="0%">
+                    <Setter Property="Opacity" Value="0" />
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="Opacity" Value="1" />
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
+
+    <!-- ======================== -->
+    <!--  PHASE 6: OPACITY LAYERS -->
+    <!--  Standard: 1.0 primary, 0.7 secondary, 0.5 tertiary -->
+    <!-- ======================== -->
+    <Style Selector="TextBlock.text-primary">
+        <Setter Property="Opacity" Value="1.0" />
+    </Style>
+    <Style Selector="TextBlock.text-secondary">
+        <Setter Property="Opacity" Value="0.7" />
+    </Style>
+    <Style Selector="TextBlock.text-tertiary">
+        <Setter Property="Opacity" Value="0.5" />
     </Style>
 
     <!-- ======================== -->

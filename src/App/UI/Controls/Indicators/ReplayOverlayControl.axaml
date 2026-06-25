@@ -18,7 +18,7 @@
                     Foreground="{StaticResource OsdForeground}" />
             </Button>
             <TextBlock Text="Replay" Foreground="White"
-                       FontSize="14" HorizontalAlignment="Center" />
+                       Classes="md3-body2" HorizontalAlignment="Center" />
         </StackPanel>
     </Border>
 </UserControl>

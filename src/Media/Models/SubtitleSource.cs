@@ -46,6 +46,29 @@ public class SubtitleSource
         (Codec.Contains("pgs") || Codec.Contains("hdmv") || Codec.Contains("dvd_sub") || Codec.Contains("vobsub") || Codec.Contains("dvb"));
 
     /// <summary>
+    /// True if this track is an externally loaded subtitle file (not embedded in the media).
+    /// Derived from mpv's track-list "external" field.
+    /// </summary>
+    public bool IsExternal { get; set; }
+
+    /// <summary>
+    /// Full file path for external subtitles (from mpv's track-list "external-filename" field).
+    /// Empty for embedded tracks.
+    /// </summary>
+    public string ExternalFilename { get; set; } = string.Empty;
+
+    /// <summary>
+    /// True if this track is marked as hearing-impaired (SDH) by mpv.
+    /// </summary>
+    public bool IsHearingImpaired { get; set; }
+
+    /// <summary>
+    /// Detected text encoding for external subtitles (e.g., "UTF-8", "cp1252").
+    /// Empty for embedded tracks or when undetected.
+    /// </summary>
+    public string Encoding { get; set; } = string.Empty;
+
+    /// <summary>
     /// Returns subtitle info as formatted string
     /// </summary>
     /// <returns>Formatted subtitle string</returns>

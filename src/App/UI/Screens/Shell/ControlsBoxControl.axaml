@@ -102,6 +102,7 @@
                                         </Grid>
                                         <!-- Horizontal slider -->
                                         <Slider x:Name="VolumeSlider"
+                                                Classes="compact"
                                                 Minimum="0" Maximum="150"
                                                 Value="{Binding VolumeValue}"
                                                 Orientation="Horizontal"
@@ -126,14 +127,14 @@
                                                     ToolTip.Tip="Mute" 
                                                     Click="OnToggleMute"
                                                     HorizontalAlignment="Stretch"
-                                                    Padding="2">
+                                                    Padding="4">
                                                 <materialIcons:MaterialIcon x:Name="MuteToggleIcon" Kind="VolumeOff" Width="14" Height="14"
                                                     Foreground="{StaticResource OsdForeground}" />
                                             </Button>
                                             <Button Grid.Column="1" Classes="circular-sm"
                                                     Click="OnPresetVolume25"
                                                     HorizontalAlignment="Stretch"
-                                                    Padding="2">
+                                                    Padding="4">
                                                 <TextBlock Text="25%" FontSize="11"
                                                     Foreground="{StaticResource OsdForeground}"
                                                     HorizontalAlignment="Center" />
@@ -141,7 +142,7 @@
                                             <Button Grid.Column="2" Classes="circular-sm"
                                                     Click="OnPresetVolume50"
                                                     HorizontalAlignment="Stretch"
-                                                    Padding="2">
+                                                    Padding="4">
                                                 <TextBlock Text="50%" FontSize="11"
                                                     Foreground="{StaticResource OsdForeground}"
                                                     HorizontalAlignment="Center" />
@@ -149,7 +150,7 @@
                                             <Button Grid.Column="3" Classes="circular-sm"
                                                     Click="OnPresetVolume100"
                                                     HorizontalAlignment="Stretch"
-                                                    Padding="2">
+                                                    Padding="4">
                                                 <TextBlock Text="100%" FontSize="11"
                                                     Foreground="{StaticResource OsdForeground}"
                                                     HorizontalAlignment="Center" />
@@ -174,7 +175,7 @@
                             AutomationProperties.Name="Video track menu"
                             IsVisible="{Binding HasMultipleVideoTracks}"
                             Click="OnVideoMenuClick">
-                        <materialIcons:MaterialIcon Kind="Video" Width="20" Height="20"
+                        <materialIcons:MaterialIcon Kind="Video" Width="18" Height="18"
                             Foreground="{StaticResource OsdForeground}" />
                     </Button>
                 </StackPanel>
@@ -201,7 +202,7 @@
                                   Click="OnToggleLoopFile"
                                   ToolTip.Tip="Loop File (L)"
                                   AutomationProperties.Name="Loop current file">
-                        <materialIcons:MaterialIcon Kind="RepeatOnce" Width="18" Height="18"
+                        <materialIcons:MaterialIcon Kind="RepeatOnce" Width="16" Height="16"
                             Foreground="{StaticResource OsdForeground}" />
                     </ToggleButton>
                     <Button x:Name="BtnPlaylistDialog"
@@ -209,7 +210,7 @@
                             Click="OnOpenPlaylistDialog"
                             ToolTip.Tip="Playlist"
                             AutomationProperties.Name="Playlist dialog">
-                        <materialIcons:MaterialIcon Kind="PlaylistMusic" Width="18" Height="18"
+                        <materialIcons:MaterialIcon Kind="PlaylistMusic" Width="16" Height="16"
                             Foreground="{StaticResource OsdForeground}" />
                     </Button>
                 </StackPanel>
@@ -225,7 +226,7 @@
                             IsVisible="{Binding HasChapters}"
                             ToolTip.Tip="Chapters"
                             Click="OnChaptersMenuClick">
-                        <materialIcons:MaterialIcon Kind="BookmarkOutline" Width="18" Height="18"
+                        <materialIcons:MaterialIcon Kind="BookmarkOutline" Width="16" Height="16"
                             Foreground="{StaticResource OsdForeground}" />
                     </Button>
                     <controls:SubtitleOverlayControl x:Name="SubOverlayCtrl"
@@ -241,7 +242,7 @@
                                   Click="OnToggleFullscreen"
                                   ToolTip.Tip="Fullscreen (F)"
                                   AutomationProperties.Name="Toggle fullscreen">
-                        <materialIcons:MaterialIcon x:Name="FullscreenIconPath" Kind="Fullscreen" Width="18" Height="18"
+                        <materialIcons:MaterialIcon x:Name="FullscreenIconPath" Kind="Fullscreen" Width="16" Height="16"
                             Foreground="{StaticResource OsdForeground}" />
                     </ToggleButton>
                 </StackPanel>

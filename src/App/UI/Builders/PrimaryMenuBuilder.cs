@@ -19,7 +19,7 @@ public class PrimaryMenuBuilder
     private readonly List<global::Avalonia.Controls.Control> _items = new();
     private readonly List<(MaterialIcon Icon, Func<bool> IsChecked)> _toggleItems = new();
 
-    private static readonly global::Avalonia.Media.Color AccentColor = global::Avalonia.Media.Color.FromArgb(255, 0, 120, 212);
+    private static readonly global::Avalonia.Media.Color AccentColor = AppColors.Parse("#0078D4").Color;
 
     private static MaterialIcon MakeIcon(global::Material.Icons.MaterialIconKind kind, double size = 16, IBrush? brush = null)
         => new() { Kind = kind, Width = size, Height = size, Foreground = brush ?? AppColors.TextOnDarkHint };

@@ -487,7 +487,7 @@ public partial class PlaylistDialog : Window
         var notification = new TextBlock
         {
             Text = message,
-            FontSize = 13,
+            FontSize = Token.Size("font-size-subtitle1"),
             Foreground = global::Avalonia.Media.Brush.Parse("#FFE5E5E5"),
             Padding = new Thickness(16, 8)
         };

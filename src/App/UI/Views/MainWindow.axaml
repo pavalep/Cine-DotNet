@@ -14,7 +14,7 @@
         Width="800" Height="600"
         MinWidth="600"
         MinHeight="337"
-        Background="#FF0C0C0E"
+        Background="{StaticResource AppBackground}"
         TransparencyLevelHint="None"
         WindowStartupLocation="CenterScreen"
         WindowDecorations="BorderOnly"
@@ -70,7 +70,8 @@
                 Background="Transparent"
                 HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                 IsTabStop="False"
-                PointerPressed="OnVideoPointerPressed" />
+                PointerPressed="OnVideoPointerPressed"
+                DoubleTapped="OnVideoDoubleTapped" />
 
         <!-- Start Page — full viewport, opaque background.
              TOPMOST layer in this section. Always clickable. Fades out when media

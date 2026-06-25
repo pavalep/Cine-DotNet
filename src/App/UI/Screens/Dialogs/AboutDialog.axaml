@@ -18,9 +18,9 @@
                 <Path Data="M 25 20 L 45 32 L 25 44 Z"
                       Fill="{StaticResource OsdForeground}" />
             </Panel>
-            <TextBlock Text="Cine Media Player" FontSize="20" FontWeight="Bold" Foreground="{StaticResource OsdForeground}" HorizontalAlignment="Center" />
-            <TextBlock Text="Version 1.0.0" FontSize="13" Opacity="0.7" Foreground="{StaticResource OsdForeground}" HorizontalAlignment="Center" />
-            <TextBlock Text="Built with Avalonia UI &amp; libmpv" FontSize="12" Opacity="0.5" Foreground="{StaticResource OsdForeground}" HorizontalAlignment="Center" />
+            <TextBlock Text="Cine Media Player" Classes="md3-headline6" FontWeight="Bold" Foreground="{StaticResource OsdForeground}" HorizontalAlignment="Center" />
+            <TextBlock Text="Version 1.0.0" Classes="md3-body2" Opacity="0.7" Foreground="{StaticResource OsdForeground}" HorizontalAlignment="Center" />
+            <TextBlock Text="Built with Avalonia UI &amp; libmpv" Classes="md3-caption" Opacity="0.5" Foreground="{StaticResource OsdForeground}" HorizontalAlignment="Center" />
         </StackPanel>
 
         <Button Grid.Row="1" Content="Close" HorizontalAlignment="Center" Padding="32,8"

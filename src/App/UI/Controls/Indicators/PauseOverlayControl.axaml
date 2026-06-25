@@ -6,7 +6,7 @@
             HorizontalAlignment="Center" VerticalAlignment="Center"
             Opacity="0" IsVisible="False"
             IsHitTestVisible="False"
-            CornerRadius="16" Padding="20"
+            CornerRadius="{StaticResource radius-lg}" Padding="24"
             Background="{StaticResource AppOverlayLight}">
         <Border.Effect>
             <DropShadowEffect BlurRadius="16" OffsetY="4" Color="#40000000" />

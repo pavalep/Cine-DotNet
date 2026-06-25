@@ -7,12 +7,12 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Cine.Avalonia.Services;
 using Cine.Avalonia.ViewModels;
 using Cine.Avalonia.Views.Dialogs;
 using Cine.Avalonia.Managers;
 using Cine.Avalonia.Builders;
 using Cine.Avalonia.Models;
-using Cine.Avalonia.Services;
 using Cine.Media.Models;
 using AvaloniaLayout = Avalonia.Layout;
 using Button = global::Avalonia.Controls.Button;
@@ -30,6 +30,7 @@ public partial class ControlsBoxControl : AvaloniaUserControl
     private bool _replayMode;
     private int _activeFlyouts;
     private PlaylistDialog? _playlistDialog;
+    private FlyoutManager? _flyoutManager;
 
     private static void PauseLog(string msg)
     {
@@ -59,11 +60,13 @@ public partial class ControlsBoxControl : AvaloniaUserControl
         // Volume flyout auto-dismiss: close after 1.5s of inactivity on slider
         BtnVolumeMenu.Flyout!.Opened += (_, _) =>
         {
+            _flyoutManager?.DismissOthers("volume");
             VolumeSlider.PointerWheelChanged += OnVolumeAutoDismiss;
             VolumeSlider.PointerReleased += OnVolumeAutoDismiss;
         };
         BtnVolumeMenu.Flyout.Closed += (_, _) =>
         {
+            _flyoutManager?.MarkClosed("volume");
             VolumeSlider.PointerWheelChanged -= OnVolumeAutoDismiss;
             VolumeSlider.PointerReleased -= OnVolumeAutoDismiss;
         };
@@ -87,6 +90,31 @@ public partial class ControlsBoxControl : AvaloniaUserControl
     // --- Public API for MainWindow ---
 
     public bool HasActiveFlyouts => _activeFlyouts > 0;
+
+    /// <summary>
+    /// Flyout ecosystem manager. When set, all flyouts controlled by this control
+    /// are registered for mutual exclusion — opening one auto-closes all others.
+    /// Also forwarded to SubtitleOverlayCtrl and AudioTrackSelectorCtrl.
+    /// </summary>
+    public FlyoutManager? FlyoutManager
+    {
+        get => _flyoutManager;
+        set
+        {
+            _flyoutManager = value;
+            if (value == null) return;
+
+            // Register this control's flyouts with close actions
+            value.Register("equalizer",   () => _equalizerFlyout?.Hide());
+            value.Register("volume",      () => BtnVolumeMenu?.Flyout?.Hide());
+            value.Register("video-menu",  () => { /* ContextMenu — click outside closes it */ });
+            value.Register("chapters",    () => { /* ContextMenu — click outside closes it */ });
+
+            // Pass to child controls
+            if (SubOverlayCtrl != null) SubOverlayCtrl.FlyoutManager = value;
+            if (AudioOverlayCtrl != null) AudioOverlayCtrl.FlyoutManager = value;
+        }
+    }
 
     /// <summary>
     /// SINGLE authoritative method for updating the play/pause icon.
@@ -142,19 +170,19 @@ public partial class ControlsBoxControl : AvaloniaUserControl
     public void RefreshVolumeIcon()
     {
         if (_viewModel == null) return;
-        bool isMuted = _viewModel.IsMuted;
-        VolumeIconPath.Kind = isMuted
+        var vol = _viewModel.VolumeValue;
+        var muted = _viewModel.IsMuted && vol <= 0;
+        var icon = muted
             ? Material.Icons.MaterialIconKind.VolumeOff
-            : _viewModel.VolumeValue switch
+            : vol switch
             {
-                <= 0 => Material.Icons.MaterialIconKind.VolumeOff,
+                <= 0 => Material.Icons.MaterialIconKind.VolumeLow,
                 <= 33 => Material.Icons.MaterialIconKind.VolumeLow,
                 <= 66 => Material.Icons.MaterialIconKind.VolumeMedium,
                 _ => Material.Icons.MaterialIconKind.VolumeHigh
             };
-        MuteToggleIcon.Kind = isMuted
-            ? Material.Icons.MaterialIconKind.VolumeOff
-            : Material.Icons.MaterialIconKind.VolumeHigh;
+        VolumeIconPath.Kind = icon;
+        MuteToggleIcon.Kind = icon;
     }
 
     public void SetControlsVisibility(bool visible)
@@ -200,8 +228,8 @@ public partial class ControlsBoxControl : AvaloniaUserControl
         if (isNarrow)
         {
             SetVis(BtnVideoMenu, false);
-            SetFont(SeekBar.PositionTimeLabel, 11);
-            SetFont(SeekBar.DurationTimeLabel, 11);
+            SetFont(SeekBar.PositionTimeLabel, Token.Size("font-size-caption"));
+            SetFont(SeekBar.DurationTimeLabel, Token.Size("font-size-caption"));
         }
         else
         {
@@ -305,10 +333,17 @@ public partial class ControlsBoxControl : AvaloniaUserControl
             ShowMode = FlyoutShowMode.Standard,
             OverlayDismissEventPassThrough = true
         };
+        TrackFlyout(_equalizerFlyout);
         if (BtnEqualizer != null)
+        {
+            _flyoutManager?.DismissOthers("equalizer");
             _equalizerFlyout.ShowAt(BtnEqualizer);
+        }
         else if (BtnFullscreen != null)
+        {
+            _flyoutManager?.DismissOthers("equalizer");
             _equalizerFlyout.ShowAt(BtnFullscreen);
+        }
     }
 
     private void OnEqualizerClick(object? sender, RoutedEventArgs e)
@@ -321,6 +356,7 @@ public partial class ControlsBoxControl : AvaloniaUserControl
         if (_viewModel == null) return;
         var flyout = BuildTrackMenuFlyout(_viewModel.VideoTracks);
         TrackFlyout(flyout);
+        _flyoutManager?.DismissOthers("video-menu");
         flyout.ShowAt(BtnVideoMenu);
     }
 
@@ -331,6 +367,7 @@ public partial class ControlsBoxControl : AvaloniaUserControl
         if (_viewModel == null || _viewModel.Chapters.Count == 0) return;
         var flyout = BuildChaptersFlyout(_viewModel.Chapters);
         TrackFlyout(flyout);
+        _flyoutManager?.DismissOthers("chapters");
         flyout.ShowAt(BtnChaptersMenu);
     }
 
@@ -368,9 +405,9 @@ public partial class ControlsBoxControl : AvaloniaUserControl
             var text = new TextBlock
             {
                 Text = "No tracks available",
-                FontSize = 12,
+                FontSize = Token.Size("font-size-body1"),
                 Foreground = AppColors.TextTertiary,
-                Padding = new Thickness(10, 7)
+                Padding = new Thickness(12, 8)
             };
             stackPanel.Children.Add(text);
         }
@@ -392,7 +429,7 @@ public partial class ControlsBoxControl : AvaloniaUserControl
             {
                 Text = track.DisplayName,
                 FontWeight = track.IsSelected ? FontWeight.SemiBold : FontWeight.Normal,
-                FontSize = 12,
+                FontSize = Token.Size("font-size-body1"),
                 Foreground = AppColors.TextPrimary
             };
 
@@ -413,7 +450,7 @@ public partial class ControlsBoxControl : AvaloniaUserControl
                 Content = grid,
                 Background = AppColors.Transparent,
                 BorderThickness = new Thickness(0),
-                Padding = new Thickness(10, 7),
+                Padding = new Thickness(12, 9),
                 HorizontalContentAlignment = AvaloniaLayout.HorizontalAlignment.Stretch,
                 Cursor = new Cursor(StandardCursorType.Arrow),
                 Opacity = track.DisplayOpacity,

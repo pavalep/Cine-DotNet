@@ -108,7 +108,7 @@ public partial class MainWindow
                 textPanel.Children.Add(new TextBlock
                 {
                     Text = "⚠️ " + message,
-                    FontSize = 16,
+                    FontSize = Token.Size("font-size-subtitle2"),
                     FontWeight = FontWeight.SemiBold,
                     Foreground = global::Avalonia.Media.Brushes.White,
                     TextWrapping = TextWrapping.Wrap
@@ -119,8 +119,8 @@ public partial class MainWindow
                     textPanel.Children.Add(new TextBlock
                     {
                         Text = details,
-                        FontSize = 13,
-                        Foreground = new SolidColorBrush(global::Avalonia.Media.Color.FromArgb(180, 255, 255, 255)),
+                        FontSize = Token.Size("font-size-body1"),
+                        Foreground = AppColors.TextSecondary,
                         TextWrapping = TextWrapping.Wrap
                     });
                 }
@@ -130,7 +130,7 @@ public partial class MainWindow
                     Content = "Close",
                     HorizontalAlignment = AvaloniaLayout.HorizontalAlignment.Right,
                     Margin = new Thickness(0, 8, 0, 0),
-                    Padding = new Thickness(16, 6),
+                    Padding = new Thickness(16, 8),
                     Classes = { "circular-sm" }
                 };
                 closeButton.Click += (_, _) => dialog.Close();

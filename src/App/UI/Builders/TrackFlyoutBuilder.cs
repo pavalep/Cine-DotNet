@@ -1,11 +1,13 @@
 using System;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
 using Cine.Avalonia.Models;
+using Cine.Avalonia.Services;
 using Cine.Core.Services;
 using AvaloniaLayout = Avalonia.Layout;
 using Button = global::Avalonia.Controls.Button;
@@ -68,9 +70,9 @@ public static class TrackFlyoutBuilder
             searchBox = new TextBox
             {
                 PlaceholderText = searchPlaceholder,
-                Margin = new Thickness(4, 4, 4, 0),
+                Margin = new Thickness(8, 4, 8, 0),
                 Padding = new Thickness(8, 4),
-                FontSize = 12,
+                FontSize = Token.Size("font-size-body2"),
                 Height = 28,
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(4),
@@ -101,9 +103,9 @@ public static class TrackFlyoutBuilder
                 trackListPanel.Children.Add(new TextBlock
                 {
                     Text = string.IsNullOrWhiteSpace(filter) ? emptyMessage : "No matching tracks",
-                    FontSize = 12,
+                    FontSize = Token.Size("font-size-body2"),
                     Foreground = AppColors.TextTertiary,
-                    Padding = new Thickness(10, 7)
+                    Padding = new Thickness(12, 9)
                 });
                 return;
             }
@@ -120,9 +122,9 @@ public static class TrackFlyoutBuilder
             trackListPanel.Children.Add(new TextBlock
             {
                 Text = emptyMessage,
-                FontSize = 12,
+                FontSize = Token.Size("font-size-body2"),
                 Foreground = AppColors.TextTertiary,
-                Padding = new Thickness(10, 7)
+                Padding = new Thickness(12, 9)
             });
         }
         else
@@ -151,26 +153,26 @@ public static class TrackFlyoutBuilder
         rootPanel.Children.Add(new Separator
         {
             Background = (IBrush?)global::Avalonia.Application.Current?.FindResource("PopoverBorder"),
-            Margin = new Thickness(4, 2)
+            Margin = new Thickness(8, 4)
         });
 
         // ── Delay section label ─────────────────────────────────────
         rootPanel.Children.Add(new TextBlock
         {
             Text = delayLabel,
-            FontSize = 9,
+            FontSize = Token.Size("font-size-caption"),
             FontWeight = FontWeight.Bold,
             Foreground = (IBrush?)global::Avalonia.Application.Current?.FindResource("OsdForeground"),
-            Opacity = 0.4,
+            Opacity = 0.5,
             LetterSpacing = 0.8,
-            Margin = new Thickness(8, 6, 8, 4)
+            Margin = new Thickness(12, 8, 12, 4)
         });
 
         // ── Delay controls ──────────────────────────────────────────
         var delayText = new TextBlock
         {
             Text = $"{getDelay():F1}s",
-            FontSize = 13,
+            FontSize = Token.Size("font-size-body1"),
             FontWeight = FontWeight.SemiBold,
             Foreground = AppColors.TextPrimary,
             MinWidth = 40,
@@ -194,7 +196,7 @@ public static class TrackFlyoutBuilder
 
         var btnMinus = new Button
         {
-            Content = new TextBlock { Text = "\u2212", FontSize = 16, FontWeight = FontWeight.Bold, Foreground = AppColors.TextPrimary },
+            Content = new TextBlock { Text = "\u2212", FontSize = Token.Size("font-size-subtitle2"), FontWeight = FontWeight.Bold, Foreground = AppColors.TextPrimary },
             Width = 28, Height = 28, CornerRadius = new CornerRadius(14),
             Background = AppColors.Transparent, BorderThickness = new Thickness(0), Padding = new Thickness(0),
             HorizontalContentAlignment = AvaloniaLayout.HorizontalAlignment.Center,
@@ -207,7 +209,7 @@ public static class TrackFlyoutBuilder
 
         var btnPlus = new Button
         {
-            Content = new TextBlock { Text = "+", FontSize = 16, FontWeight = FontWeight.Bold, Foreground = AppColors.TextPrimary },
+            Content = new TextBlock { Text = "+", FontSize = Token.Size("font-size-subtitle2"), FontWeight = FontWeight.Bold, Foreground = AppColors.TextPrimary },
             Width = 28, Height = 28, CornerRadius = new CornerRadius(14),
             Background = AppColors.Transparent, BorderThickness = new Thickness(0), Padding = new Thickness(0),
             HorizontalContentAlignment = AvaloniaLayout.HorizontalAlignment.Center,
@@ -220,7 +222,7 @@ public static class TrackFlyoutBuilder
 
         var btnReset = new Button
         {
-            Content = new TextBlock { Text = "Reset", FontSize = 11, Foreground = AppColors.TextTertiary },
+            Content = new TextBlock { Text = "Reset", FontSize = Token.Size("font-size-caption"), Foreground = AppColors.TextTertiary },
             Background = AppColors.Transparent, BorderThickness = new Thickness(0), Padding = new Thickness(6, 2),
             Cursor = new Cursor(StandardCursorType.Arrow)
         };
@@ -276,6 +278,53 @@ public static class TrackFlyoutBuilder
     /// <summary>Builds a single track row with selection dot + text label.</summary>
     private static Button BuildTrackRow(TrackMenuItem track)
     {
+        // "Add Subtitle Track…" pseudo-entry → render as a secondary action button
+        if (track.IsPseudoEntry && track.TrackIndex == -1)
+        {
+            var addGrid = new Grid
+            {
+                ColumnDefinitions = new ColumnDefinitions
+                {
+                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(GridLength.Star)
+                }
+            };
+            var plusIcon = new TextBlock
+            {
+                Text = "+",
+                FontSize = Token.Size("font-size-subtitle1"),
+                FontWeight = FontWeight.Bold,
+                Foreground = AppColors.Accent,
+                VerticalAlignment = AvaloniaLayout.VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 6, 0)
+            };
+            var addText = new TextBlock
+            {
+                Text = track.DisplayName,
+                FontSize = Token.Size("font-size-body2"),
+                Foreground = AppColors.Accent
+            };
+            addGrid.Children.Add(plusIcon);
+            addGrid.Children.Add(addText);
+            Grid.SetColumn(addText, 1);
+
+            // Thin separator above the add button (via parent, but we add a subtle top border here)
+            var addBtn = new Button
+            {
+                Content = addGrid,
+                Background = AppColors.Transparent,
+                BorderThickness = new Thickness(0),
+                Padding = new Thickness(8, 4),
+                MinHeight = 36,
+                HorizontalContentAlignment = AvaloniaLayout.HorizontalAlignment.Stretch,
+                Cursor = new Cursor(StandardCursorType.Arrow),
+                Command = track.SelectCommand
+            };
+            addBtn.PointerEntered += (_, _) => addBtn.Background = AppColors.HoverSubtle;
+            addBtn.PointerExited += (_, _) => addBtn.Background = AppColors.Transparent;
+            return addBtn;
+        }
+
         var dot = new Border
         {
             Width = 6, Height = 6,
@@ -291,7 +340,7 @@ public static class TrackFlyoutBuilder
         {
             Text = track.DisplayName,
             FontWeight = track.IsSelected ? FontWeight.SemiBold : FontWeight.Normal,
-            FontSize = 12,
+            FontSize = Token.Size("font-size-body2"),
             Foreground = AppColors.TextPrimary
         };
 
@@ -321,6 +370,31 @@ public static class TrackFlyoutBuilder
         };
         button.PointerEntered += (_, _) => button.Background = AppColors.HoverSubtle;
         button.PointerExited += (_, _) => button.Background = AppColors.Transparent;
+
+        // ── Tooltip: show filename + path for external subtitles ──
+        if (!track.IsPseudoEntry && track.Source != null)
+        {
+            var src = track.Source;
+            string tip;
+            if (src.IsExternal && !string.IsNullOrWhiteSpace(src.ExternalFilename))
+            {
+                var fileName = Path.GetFileName(src.ExternalFilename);
+                var codec = string.IsNullOrWhiteSpace(src.Codec) ? "" : src.Codec;
+                tip = $"{track.DisplayName}\n\n"
+                    + $"File: {fileName}\n"
+                    + $"Path: {src.ExternalFilename}\n"
+                    + $"Format: {(string.IsNullOrWhiteSpace(codec) ? "SRT" : codec)}";
+            }
+            else
+            {
+                var codec = string.IsNullOrWhiteSpace(src.Codec) ? "" : src.Codec;
+                tip = $"{track.DisplayName}\n"
+                    + $"Track {track.TrackIndex}\n"
+                    + (string.IsNullOrWhiteSpace(codec) ? "" : $"Codec: {codec}");
+            }
+            button.SetValue(global::Avalonia.Controls.ToolTip.TipProperty, tip);
+        }
+
         return button;
     }
 }

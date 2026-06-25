@@ -3,6 +3,7 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using Avalonia.Controls;
+using Cine.Avalonia.Services;
 using Cine.Avalonia.ViewModels;
 
 namespace Cine.Avalonia.Controls;
@@ -48,7 +49,7 @@ public partial class StartPage : global::Avalonia.Controls.UserControl
                 Tag = path,
                 Background = AppColors.Transparent,
                 Foreground = AppColors.TextOnDarkPrimary,
-                FontSize = 12,
+                FontSize = Token.Size("font-size-body2"),
                 HorizontalContentAlignment = global::Avalonia.Layout.HorizontalAlignment.Left,
                 Padding = new global::Avalonia.Thickness(40, 4),
                 BorderThickness = new global::Avalonia.Thickness(0),

@@ -658,9 +658,12 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
 
     public void SetSubtitleOpacity(double opacity)
     {
-        if (_initialized)
-            SetDouble("sub-opacity", Math.Clamp(opacity, 0.0, 1.0));
-
+        if (!_initialized) return;
+        // mpv has no "sub-opacity" property. Apply alpha via sub-color + sub-border-color.
+        var alpha = Math.Clamp(opacity, 0.0, 1.0);
+        var alphaHex = ((int)(alpha * 255)).ToString("X2");
+        SetString("sub-color", $"#{alphaHex}FFFFFF");
+        SetString("sub-border-color", $"#{alphaHex}000000");
     }
 
     public void SetSubtitleBlur(double blur)
@@ -1486,6 +1489,14 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
                             if (t.TryGetProperty("codec", out var codecProp))
                                 src.Codec = codecProp.GetString() ?? "";
 
+                            // External / hearing-impaired / filename
+                            if (t.TryGetProperty("external", out var extProp))
+                                src.IsExternal = extProp.GetBoolean();
+                            if (t.TryGetProperty("external-filename", out var extFileProp))
+                                src.ExternalFilename = extFileProp.GetString() ?? "";
+                            if (t.TryGetProperty("hearing-impaired", out var hiProp))
+                                src.IsHearingImpaired = hiProp.GetBoolean();
+
                             switch (kind)
                             {
                                 case "audio": audioTracks.Add(src); break;
@@ -1775,6 +1786,14 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
             // Read codec for bitmap detection
             if (t.TryGetProperty("codec", out var codecProp))
                 src.Codec = codecProp.GetString() ?? "";
+
+            // External / hearing-impaired / filename
+            if (t.TryGetProperty("external", out var extProp))
+                src.IsExternal = extProp.GetBoolean();
+            if (t.TryGetProperty("external-filename", out var extFileProp))
+                src.ExternalFilename = extFileProp.GetString() ?? "";
+            if (t.TryGetProperty("hearing-impaired", out var hiProp))
+                src.IsHearingImpaired = hiProp.GetBoolean();
 
             result.Add(src);
         }

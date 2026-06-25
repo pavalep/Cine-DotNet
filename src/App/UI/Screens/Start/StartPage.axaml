@@ -39,7 +39,7 @@
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
                     <materialIcons:MaterialIcon Kind="PlayCircle" Width="48" Height="48"
                         Foreground="{StaticResource AppAccent}" HorizontalAlignment="Center" />
-                    <TextBlock Text="Drop to Play" FontSize="24" FontWeight="Bold"
+                    <TextBlock Text="Drop to Play" Classes="md3-headline4" FontWeight="Bold"
                         Foreground="{StaticResource AppAccent}" HorizontalAlignment="Center" />
                 </StackPanel>
             </Border>
@@ -87,7 +87,7 @@
                 <!-- Recent files section -->
                 <StackPanel Spacing="{StaticResource space-spacing-1}" Margin="0,16,0,0"
                             IsVisible="{Binding HasRecentFiles}">
-                    <TextBlock Text="Recent" FontSize="12" FontWeight="SemiBold"
+                    <TextBlock Text="Recent" Classes="md3-caption" FontWeight="SemiBold"
                                Foreground="{StaticResource AppTextOnDarkTertiary}" Margin="40,0,40,4" />
                     <ScrollViewer MaxHeight="160" HorizontalScrollBarVisibility="Disabled">
                         <StackPanel x:Name="RecentFilesList" Spacing="0" />

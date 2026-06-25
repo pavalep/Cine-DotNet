@@ -15,14 +15,11 @@
 
     <Grid RowDefinitions="Auto,*,Auto" Margin="0">
         <!-- Header -->
-        <Grid Grid.Row="0" Height="40" ColumnDefinitions="*,Auto"
-              Background="{StaticResource PopoverBackground}">
-            <TextBlock Grid.Column="0" Text="Go to Time" FontWeight="Bold" FontSize="16"
-                       Foreground="{StaticResource OsdForeground}"
-                       Margin="16,0" VerticalAlignment="Center" />
-            <Button Grid.Column="1" Classes="flat" Margin="0,0,8,0"
-                    Click="OnCloseClick" ToolTip.Tip="Close">
-                <materialIcons:MaterialIcon Kind="Close" Width="14" Height="14"
+        <Grid Grid.Row="0" Classes="dialog-header" ColumnDefinitions="*,Auto">
+            <TextBlock Grid.Column="0" Text="Go to Time" Classes="dialog-title" />
+            <Button Grid.Column="1" Classes="dialog-close"
+                    Click="OnCloseClick" ToolTip.Tip="Close" AutomationProperties.Name="Close dialog">
+                <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource size-dialog-close-icon}" Height="{StaticResource size-dialog-close-icon}"
                     Foreground="{StaticResource OsdForeground}" />
             </Button>
         </Grid>
@@ -30,8 +27,8 @@
         <!-- Body -->
         <StackPanel Grid.Row="1" Spacing="12" Margin="16,12,16,0"
                     VerticalAlignment="Top">
-            <TextBlock Text="Enter time (HH:MM:SS or MM:SS)" FontSize="12"
-                       Foreground="{StaticResource OsdForeground}" Opacity="0.6" />
+            <TextBlock Text="Enter time (HH:MM:SS or MM:SS)" Classes="md3-caption"
+                       Opacity="0.5" />
             <TextBox x:Name="TimeTextBox"
                      Text=""
                      PlaceholderText="e.g. 1:23:45 or 3:30"

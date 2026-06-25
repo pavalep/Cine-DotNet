@@ -55,10 +55,12 @@ public sealed class FileDialogHandler
 
     /// <summary>
     /// Optional callback invoked before any file dialog opens.
-    /// Wire to Flyout.Hide() or similar to prevent the Avalonia #18969
-    /// deadlock: "Windows Freeze when StorageProvider called while Flyout is open."
+    /// Should close any open Flyout to prevent the Avalonia #18969 deadlock
+    /// ("Windows Freeze when StorageProvider called while Flyout is open").
+    /// Returns an optional action to reopen the Flyout after the dialog closes,
+    /// giving the user the illusion the flyout was never closed.
     /// </summary>
-    public Action? OnBeforeOpen { get; set; }
+    public Func<Action?>? OnBeforeOpen { get; set; }
 
     public FileDialogHandler(TopLevel topLevel)
     {
@@ -72,12 +74,42 @@ public sealed class FileDialogHandler
     // ════════════════════════════════════════════════════════════════════
 
     /// <summary>
-    /// Per Avalonia #18969, any open Flyout must be closed BEFORE a
-    /// StorageProvider dialog opens, or the Windows message pump deadlocks.
+    /// Closes any open Flyout before a native dialog, per Avalonia #18969.
+    /// Returns a reopen action if a flyout was closed (null otherwise).
+    /// After the dialog completes, the reopen action is invoked to restore
+    /// the flyout — so the user sees only a brief flicker, not a permanent close.
     /// </summary>
-    private void CloseAnyFlyout()
+    private Action? CloseAnyFlyout()
     {
-        OnBeforeOpen?.Invoke();
+        return OnBeforeOpen?.Invoke();
+    }
+
+    /// <summary>
+    /// Wraps a dialog operation with close-flyout → delay → dialog → reopen-flyout.
+    /// The 50ms delay lets Win32 release popup hooks before the COM dialog opens.
+    /// </summary>
+    private async Task<T?> WithFlyoutGuard<T>(Func<Task<T?>> dialogOp)
+    {
+        var reopen = CloseAnyFlyout();
+        // Small delay to let popup's Win32 hooks fully release before COM dialog
+        if (reopen != null)
+            await Task.Delay(50);
+        try
+        {
+            return await Dispatcher.UIThread.InvokeAsync(dialogOp, DispatcherPriority.Background);
+        }
+        catch (Exception ex)
+        {
+            global::Cine.Core.Log.ForContext<FileDialogHandler>()
+                .Warning("File dialog failed: {Error}", ex.Message);
+            return default;
+        }
+        finally
+        {
+            // Reopen flyout on UI thread after dialog closes
+            if (reopen != null)
+                Dispatcher.UIThread.Post(reopen, DispatcherPriority.Normal);
+        }
     }
 
     // ════════════════════════════════════════════════════════════════════
@@ -91,26 +123,16 @@ public sealed class FileDialogHandler
     public async Task<string[]?> OpenFilesAsync()
     {
         if (Storage is null) return null;
-        try
+        return await WithFlyoutGuard(async () =>
         {
-            CloseAnyFlyout(); // Avalonia #18969: must close Flyout before native dialog
-            return await Dispatcher.UIThread.InvokeAsync(async () =>
+            var result = await Storage.OpenFilePickerAsync(new FilePickerOpenOptions
             {
-                var result = await Storage.OpenFilePickerAsync(new FilePickerOpenOptions
-                {
-                    Title = "Open Files",
-                    AllowMultiple = true,
-                    FileTypeFilter = new[] { VideoFilter }
-                });
-                return result?.Select(f => f.Path.LocalPath).ToArray();
-            }, DispatcherPriority.Background);
-        }
-        catch (Exception ex)
-        {
-            global::Cine.Core.Log.ForContext<FileDialogHandler>()
-                .Warning("OpenFiles dialog failed: {Error}", ex.Message);
-            return null;
-        }
+                Title = "Open Files",
+                AllowMultiple = true,
+                FileTypeFilter = new[] { VideoFilter }
+            });
+            return result?.Select(f => f.Path.LocalPath).ToArray();
+        });
     }
 
     // ── Open Folder ─────────────────────────────────────────────────────
@@ -120,24 +142,14 @@ public sealed class FileDialogHandler
     public async Task<string?> OpenFolderAsync()
     {
         if (Storage is null) return null;
-        try
+        return await WithFlyoutGuard(async () =>
         {
-            CloseAnyFlyout(); // Avalonia #18969
-            return await Dispatcher.UIThread.InvokeAsync(async () =>
+            var result = await Storage.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
-                var result = await Storage.OpenFolderPickerAsync(new FolderPickerOpenOptions
-                {
-                    Title = "Open Folder"
-                });
-                return result?.FirstOrDefault()?.Path.LocalPath;
-            }, DispatcherPriority.Background);
-        }
-        catch (Exception ex)
-        {
-            global::Cine.Core.Log.ForContext<FileDialogHandler>()
-                .Warning("OpenFolder dialog failed: {Error}", ex.Message);
-            return null;
-        }
+                Title = "Open Folder"
+            });
+            return result?.FirstOrDefault()?.Path.LocalPath;
+        });
     }
 
     // ── Add Files ───────────────────────────────────────────────────────
@@ -147,26 +159,16 @@ public sealed class FileDialogHandler
     public async Task<string[]?> AddFilesAsync()
     {
         if (Storage is null) return null;
-        try
+        return await WithFlyoutGuard(async () =>
         {
-            CloseAnyFlyout(); // Avalonia #18969
-            return await Dispatcher.UIThread.InvokeAsync(async () =>
+            var result = await Storage.OpenFilePickerAsync(new FilePickerOpenOptions
             {
-                var result = await Storage.OpenFilePickerAsync(new FilePickerOpenOptions
-                {
-                    Title = "Add Files",
-                    AllowMultiple = true,
-                    FileTypeFilter = new[] { VideoFilter }
-                });
-                return result?.Select(f => f.Path.LocalPath).ToArray();
-            }, DispatcherPriority.Background);
-        }
-        catch (Exception ex)
-        {
-            global::Cine.Core.Log.ForContext<FileDialogHandler>()
-                .Warning("AddFiles dialog failed: {Error}", ex.Message);
-            return null;
-        }
+                Title = "Add Files",
+                AllowMultiple = true,
+                FileTypeFilter = new[] { VideoFilter }
+            });
+            return result?.Select(f => f.Path.LocalPath).ToArray();
+        });
     }
 
     // ── Add Audio Track ─────────────────────────────────────────────────
@@ -176,26 +178,16 @@ public sealed class FileDialogHandler
     public async Task<string?> OpenAudioAsync()
     {
         if (Storage is null) return null;
-        try
+        return await WithFlyoutGuard(async () =>
         {
-            CloseAnyFlyout(); // Avalonia #18969
-            return await Dispatcher.UIThread.InvokeAsync(async () =>
+            var result = await Storage.OpenFilePickerAsync(new FilePickerOpenOptions
             {
-                var result = await Storage.OpenFilePickerAsync(new FilePickerOpenOptions
-                {
-                    Title = "Add Audio Track",
-                    AllowMultiple = false,
-                    FileTypeFilter = new[] { AudioFilter }
-                });
-                return result?.FirstOrDefault()?.Path.LocalPath;
-            }, DispatcherPriority.Background);
-        }
-        catch (Exception ex)
-        {
-            global::Cine.Core.Log.ForContext<FileDialogHandler>()
-                .Warning("OpenAudio dialog failed: {Error}", ex.Message);
-            return null;
-        }
+                Title = "Add Audio Track",
+                AllowMultiple = false,
+                FileTypeFilter = new[] { AudioFilter }
+            });
+            return result?.FirstOrDefault()?.Path.LocalPath;
+        });
     }
 
     // ── Add Subtitle Track ──────────────────────────────────────────────
@@ -205,26 +197,16 @@ public sealed class FileDialogHandler
     public async Task<string?> OpenSubtitleAsync()
     {
         if (Storage is null) return null;
-        try
+        return await WithFlyoutGuard(async () =>
         {
-            CloseAnyFlyout(); // Avalonia #18969
-            return await Dispatcher.UIThread.InvokeAsync(async () =>
+            var result = await Storage.OpenFilePickerAsync(new FilePickerOpenOptions
             {
-                var result = await Storage.OpenFilePickerAsync(new FilePickerOpenOptions
-                {
-                    Title = "Add Subtitle Track",
-                    AllowMultiple = false,
-                    FileTypeFilter = new[] { SubtitleFilter }
-                });
-                return result?.FirstOrDefault()?.Path.LocalPath;
-            }, DispatcherPriority.Background);
-        }
-        catch (Exception ex)
-        {
-            global::Cine.Core.Log.ForContext<FileDialogHandler>()
-                .Warning("OpenSubtitle dialog failed: {Error}", ex.Message);
-            return null;
-        }
+                Title = "Add Subtitle Track",
+                AllowMultiple = false,
+                FileTypeFilter = new[] { SubtitleFilter }
+            });
+            return result?.FirstOrDefault()?.Path.LocalPath;
+        });
     }
 
     // ── Playlist: Save ───────────────────────────────────────────────────
@@ -234,32 +216,22 @@ public sealed class FileDialogHandler
     public async Task<string?> SavePlaylistAsync()
     {
         if (Storage is null) return null;
-        try
+        return await WithFlyoutGuard(async () =>
         {
-            CloseAnyFlyout(); // Avalonia #18969
-            return await Dispatcher.UIThread.InvokeAsync(async () =>
+            var file = await Storage.SaveFilePickerAsync(new FilePickerSaveOptions
             {
-                var file = await Storage.SaveFilePickerAsync(new FilePickerSaveOptions
+                Title = "Save Playlist",
+                DefaultExtension = ".m3u8",
+                FileTypeChoices = new[]
                 {
-                    Title = "Save Playlist",
-                    DefaultExtension = ".m3u8",
-                    FileTypeChoices = new[]
+                    new FilePickerFileType("Playlist Files")
                     {
-                        new FilePickerFileType("Playlist Files")
-                        {
-                            Patterns = new[] { "*.m3u8", "*.m3u" }
-                        }
+                        Patterns = new[] { "*.m3u8", "*.m3u" }
                     }
-                });
-                return file?.Path.LocalPath;
-            }, DispatcherPriority.Background);
-        }
-        catch (Exception ex)
-        {
-            global::Cine.Core.Log.ForContext<FileDialogHandler>()
-                .Warning("SavePlaylist dialog failed: {Error}", ex.Message);
-            return null;
-        }
+                }
+            });
+            return file?.Path.LocalPath;
+        });
     }
 
     // ── Playlist: Load Files ─────────────────────────────────────────────
@@ -269,35 +241,25 @@ public sealed class FileDialogHandler
     public async Task<string[]?> OpenPlaylistFilesAsync()
     {
         if (Storage is null) return null;
-        try
+        return await WithFlyoutGuard(async () =>
         {
-            CloseAnyFlyout(); // Avalonia #18969
-            return await Dispatcher.UIThread.InvokeAsync(async () =>
+            var result = await Storage.OpenFilePickerAsync(new FilePickerOpenOptions
             {
-                var result = await Storage.OpenFilePickerAsync(new FilePickerOpenOptions
+                Title = "Select files to add to queue",
+                AllowMultiple = true,
+                FileTypeFilter = new[]
                 {
-                    Title = "Select files to add to queue",
-                    AllowMultiple = true,
-                    FileTypeFilter = new[]
+                    new FilePickerFileType("Media Files")
                     {
-                        new FilePickerFileType("Media Files")
-                        {
-                            Patterns = new[] { "*.mkv", "*.mp4", "*.avi", "*.mov", "*.wmv", "*.flv", "*.webm", "*.m4v" }
-                        },
-                        new FilePickerFileType("All Files")
-                        {
-                            Patterns = new[] { "*" }
-                        }
+                        Patterns = new[] { "*.mkv", "*.mp4", "*.avi", "*.mov", "*.wmv", "*.flv", "*.webm", "*.m4v" }
+                    },
+                    new FilePickerFileType("All Files")
+                    {
+                        Patterns = new[] { "*" }
                     }
-                });
-                return result?.Select(f => f.Path.LocalPath).ToArray();
-            }, DispatcherPriority.Background);
-        }
-        catch (Exception ex)
-        {
-            global::Cine.Core.Log.ForContext<FileDialogHandler>()
-                .Warning("OpenPlaylistFiles dialog failed: {Error}", ex.Message);
-            return null;
-        }
+                }
+            });
+            return result?.Select(f => f.Path.LocalPath).ToArray();
+        });
     }
 }

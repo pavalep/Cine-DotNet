@@ -2,14 +2,20 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Cine.Avalonia.Controls.OsdNotificationControl">
+    <UserControl.Resources>
+        <Thickness x:Key="osd-bottom-margin">0,0,0,110</Thickness>
+    </UserControl.Resources>
     <Border x:Name="OsdNotificationBorder"
             IsVisible="False"
             HorizontalAlignment="Center"
             VerticalAlignment="Bottom"
-            Padding="16,10,16,10"
+            Margin="{StaticResource osd-bottom-margin}"
+            Padding="16,12"
             CornerRadius="{StaticResource radius-full}"
             Background="{StaticResource OsdBackground}"
-            AutomationProperties.LiveSetting="Polite">
+            BoxShadow="{StaticResource depth-surface}"
+            AutomationProperties.LiveSetting="Polite"
+            AutomationProperties.Name="Notification">
         <Border.RenderTransform>
             <TranslateTransform X="0" Y="20" />
         </Border.RenderTransform>
@@ -27,7 +33,7 @@
                                         Opacity="0" />
             <TextBlock x:Name="OsdNotificationText"
                        Text=""
-                       FontSize="14"
+                       Classes="md3-body2"
                        FontWeight="SemiBold"
                        Foreground="{StaticResource OsdForeground}"
                        VerticalAlignment="Center" />

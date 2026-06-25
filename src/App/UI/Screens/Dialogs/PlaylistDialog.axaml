@@ -17,17 +17,16 @@
 
     <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="0">
         <!-- Header -->
-        <Grid Grid.Row="0" Height="40" ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto,Auto,Auto"
-              Background="{StaticResource PopoverBackground}">
-            <Button Grid.Column="0" 
-                    Classes="flat" 
-                    Margin="8,0"
+        <Grid Grid.Row="0" Classes="dialog-header" ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto,Auto,Auto">
+            <Button Grid.Column="0"
+                    Classes="flat"
+                    Margin="4,0"
                     Click="OnAddFilesClick"
-                    ToolTip.Tip="Add Files">
-                <materialIcons:MaterialIcon Kind="PlaylistPlus" Width="16" Height="16"
+                    ToolTip.Tip="Add Files" AutomationProperties.Name="Add files to playlist">
+                <materialIcons:MaterialIcon Kind="PlaylistPlus" Width="14" Height="14"
                     Foreground="{StaticResource OsdForeground}" />
             </Button>
-            <TextBlock Grid.Column="1" Text="Playlist" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" HorizontalAlignment="Center" />
+            <TextBlock Grid.Column="1" Text="Playlist" Classes="dialog-title" />
             <Button Grid.Column="3"
                     Classes="flat"
                     Margin="0,0,2,0"
@@ -58,7 +57,7 @@
                     Classes="flat"
                     Margin="0,0,2,0"
                     Click="OnSavePlaylistClick"
-                    ToolTip.Tip="Save Playlist (.m3u8)">
+                    ToolTip.Tip="Save Playlist (.m3u8)" AutomationProperties.Name="Save playlist">
                 <materialIcons:MaterialIcon Kind="ContentSave" Width="14" Height="14"
                     Foreground="{StaticResource OsdForeground}" />
             </Button>
@@ -89,7 +88,7 @@
                          Foreground="{StaticResource OsdForeground}"
                          PlaceholderText="Search playlist..."
                          FontSize="13"
-                         Margin="6,0,0,0"
+                         Margin="8,0,0,0"
                          VerticalAlignment="Center"
                          TextChanged="OnSearchTextChanged" />
                 <Button Grid.Column="2"
@@ -154,7 +153,7 @@
                                 Click="OnItemRemoveClick"
                                 Width="32" Height="32"
                                 ToolTip.Tip="Remove">
-                            <materialIcons:MaterialIcon Kind="Close" Width="10" Height="10"
+                            <materialIcons:MaterialIcon Kind="Close" Width="12" Height="12"
                                 Foreground="{StaticResource OsdForeground}" />
                         </Button>
                     </Grid>
@@ -177,13 +176,12 @@
                 Background="Transparent" IsVisible="False" ZIndex="2">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
                 <materialIcons:MaterialIcon Kind="MagnifyClose" Width="48" Height="48"
-                    Foreground="{StaticResource OsdForeground}" Opacity="0.6" />
+                    Foreground="{StaticResource OsdForeground}" Opacity="0.7" />
                 <TextBlock Text="No matching items" FontSize="18" FontWeight="Medium"
+                           Foreground="{StaticResource OsdForeground}" Opacity="0.7" HorizontalAlignment="Center" />
+                <TextBlock Text="Try a different search term" Classes="md3-caption"
                            HorizontalAlignment="Center"
-                           Foreground="{StaticResource OsdForeground}" Opacity="0.6" />
-                <TextBlock Text="Try a different search term" FontSize="13"
-                           HorizontalAlignment="Center"
-                           Foreground="{StaticResource OsdForeground}" Opacity="0.4" />
+                           Foreground="{StaticResource OsdForeground}" Opacity="0.5" />
             </StackPanel>
         </Border>
     </Grid>

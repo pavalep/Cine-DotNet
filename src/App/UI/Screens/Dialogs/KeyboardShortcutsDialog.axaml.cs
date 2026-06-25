@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Cine.Avalonia.Services;
 using Layout = Avalonia.Layout;
 
 namespace Cine.Avalonia.Views.Dialogs;
@@ -85,9 +86,9 @@ public partial class KeyboardShortcutsDialog : Window
         {
             Text = title,
             FontWeight = FontWeight.Bold,
-            FontSize = 13,
+            FontSize = Token.Size("font-size-subtitle1"),
             Foreground = (IBrush?)global::Avalonia.Application.Current?.FindResource("OsdForeground"),
-            Margin = new Thickness(0, 12, 0, 4)
+            Margin = new Thickness(0, 12, 0, 8)
         });
     }
 
@@ -107,7 +108,7 @@ public partial class KeyboardShortcutsDialog : Window
         var keyText = new TextBlock
         {
             Text = key,
-            FontSize = 12,
+            FontSize = Token.Size("font-size-body2"),
             FontWeight = FontWeight.Medium,
             Foreground = (IBrush?)global::Avalonia.Application.Current?.FindResource("OsdForeground"),
             VerticalAlignment = Layout.VerticalAlignment.Center
@@ -118,7 +119,7 @@ public partial class KeyboardShortcutsDialog : Window
         var actionText = new TextBlock
         {
             Text = action,
-            FontSize = 12,
+            FontSize = Token.Size("font-size-body2"),
             Foreground = AppColors.TextOnDarkHint,
             VerticalAlignment = Layout.VerticalAlignment.Center,
             HorizontalAlignment = Layout.HorizontalAlignment.Right
