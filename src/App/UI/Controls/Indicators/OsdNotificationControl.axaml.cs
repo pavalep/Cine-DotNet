@@ -75,7 +75,9 @@ public partial class OsdNotificationControl : AvaloniaUserControl
 
     private void Enqueue(OsdMessage msg)
     {
-        // If the same category is already showing, update in-place and extend duration
+        // If the same category is already showing, update in-place and extend duration.
+        // Do NOT cancel/restart ShowInternal — that causes a visible flicker as the
+        // OSD fades out and back in. Just extending _dismissTime is sufficient.
         if (_isShowing && _activeMessage != null && _activeMessage.Category == msg.Category)
         {
             _activeMessage = msg;
@@ -102,16 +104,6 @@ public partial class OsdNotificationControl : AvaloniaUserControl
 
             // Extend display time — the running ShowInternal while-loop will see this
             _dismissTime = DateTime.UtcNow.AddMilliseconds(msg.DurationMs);
-
-            // If ShowInternal has already progressed past the while-loop into fade-out,
-            // cancel it so a fresh ShowInternal picks up this updated message.
-            // The re-enqueued message will be picked up by the existing ProcessQueueAsync loop.
-            if (_osdCts?.IsCancellationRequested == false)
-            {
-                _osdCts.Cancel();
-                _osdCts = new CancellationTokenSource();
-                _queue.Enqueue(msg);
-            }
             return;
         }
 

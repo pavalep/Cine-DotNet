@@ -56,6 +56,8 @@ public partial class MainWindow
 
     // Loading guard
     private bool _isLoading;
+    // Suppress first volume OSD after file load (player fires VolumeChanged during init)
+    private bool _suppressFirstVolumeOsd;
 
     // Keyboard repeat guard
     private DateTime _lastSeekRepeat = DateTime.MinValue;

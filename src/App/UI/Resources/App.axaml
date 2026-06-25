@@ -548,7 +548,21 @@
         <Setter Property="MinHeight" Value="10" />
     </Style>
 
-    <!-- Compact slider: 10px thumb for all secondary sliders (volume, EQ, subtitle settings) -->
+    <!-- Compact slider: 10px thumb + light track for all secondary sliders (volume, EQ, subtitle settings) -->
+    <Style Selector="Slider.compact">
+        <Setter Property="MinHeight" Value="10" />
+        <Style.Resources>
+            <SolidColorBrush x:Key="SliderTrackFill">#39FFFFFF</SolidColorBrush>
+            <SolidColorBrush x:Key="SliderTrackFillPointerOver">#50FFFFFF</SolidColorBrush>
+            <SolidColorBrush x:Key="SliderTrackFillPressed">#50FFFFFF</SolidColorBrush>
+            <SolidColorBrush x:Key="SliderTrackValueFill">White</SolidColorBrush>
+            <SolidColorBrush x:Key="SliderTrackValueFillPointerOver">White</SolidColorBrush>
+            <SolidColorBrush x:Key="SliderTrackValueFillPressed">White</SolidColorBrush>
+            <SolidColorBrush x:Key="SliderThumbBackground">White</SolidColorBrush>
+            <SolidColorBrush x:Key="SliderThumbBackgroundPointerOver">#E5E5E5</SolidColorBrush>
+            <SolidColorBrush x:Key="SliderThumbBackgroundPressed">#D6D6D6</SolidColorBrush>
+        </Style.Resources>
+    </Style>
     <Style Selector="Slider.compact /template/ Thumb#thumb">
         <Setter Property="Width" Value="10" />
         <Setter Property="Height" Value="10" />

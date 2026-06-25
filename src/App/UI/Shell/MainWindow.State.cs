@@ -140,6 +140,7 @@ public partial class MainWindow
                 {
                     if (_isLoading) return;
                     _isLoading = true;
+                    _suppressFirstVolumeOsd = true;
                     // Only show loader if StartPage is already hidden (switching files).
                     // On landing page, StartPage IS the loading indicator.
                     if (StartPage?.IsVisible == false)
@@ -181,6 +182,15 @@ public partial class MainWindow
             .Watch(() => _viewModel.VolumeValue, vol =>
             {
                 _controlsBox.RefreshVolumeIcon();
+                // Suppress volume OSD during initial file load: the player fires
+                // VolumeChanged during init which can trigger duplicate OSDs.
+                // The flag is set true when FilePath changes and cleared after
+                // the first VolumeValue change post-load.
+                if (_suppressFirstVolumeOsd)
+                {
+                    _suppressFirstVolumeOsd = false;
+                    return;
+                }
                 // Debounce rapid volume changes: only show OSD after scrolling settles
                 if (vol > 0 && !_viewModel.IsMuted)
                 {

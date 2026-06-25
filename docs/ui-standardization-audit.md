@@ -1474,6 +1474,10 @@ This section tracks gaps identified during the review that aren't covered by ear
 | 2026-06-25 | 2 | **Bug: Open menu flyout never reopens after file dialog** → wired `SetReopen("open-menu", ...)` in MainWindow.Initialization.cs | ✅ |
 | 2026-06-25 | 2 | **Bug: Subtitle/Audio flyouts never reopen after file dialog** → added `ReopenFlyout()` to AudioTrackSelectorControl, wired `SetReopen` for both subtitle and audio | ✅ |
 | 2026-06-25 | 2 | **Bug: Clicking outside flyout pauses video** — `OnVideoPointerPressed` now checks `HasActiveFlyouts` before toggling play/pause | ✅ |
+| 2026-06-25 | 2 | **Bug: Volume OSD shows 2x on file load** — added `_suppressFirstVolumeOsd` flag, cleared after first VolumeValue post-load | ✅ |
+| 2026-06-25 | 2 | **Bug: OSD refresh flicker (same-category update cancels/restarts animation)** — removed CTS cancel + re-enqueue in `Enqueue`, just extend `_dismissTime` in-place | ✅ |
+| 2026-06-25 | 0 | **Unified compact slider styling**: Moved track fill/thumb resources from local `VolumeSlider.Resources` → global `Slider.compact` style in App.axaml. EQ sliders, subtitle settings sliders, and audio delay slider all now share white track fill + 10px white thumb | ✅ |
+| 2026-06-25 | 2 | Removed redundant local `Slider.Resources` from `ControlsBoxControl.axaml` (now inherited from global `Slider.compact` style) | ✅ |
 | 2026-06-25 | 17 | Standardized 16 icon sizes: PiP 18→16, DotsHorizontal 18→16, WindowMinimize 14→12, Tune 20→18, Video 20→18, Shuffle/Repeat/Playlist/Bookmark/Fullscreen 18→16 | ✅ |
 | 2026-06-25 | 17 | Equalizer close button → uses `size-dialog-close-icon` token; PlaylistDialog remove item 10→12px | ✅ |
 | 2026-06-25 | 17 | Added `AutomationProperties.Name` to OSD notification + DragDrop overlay | ✅ |
