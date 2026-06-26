@@ -16,7 +16,9 @@ using PointerPressedEventArgs = Avalonia.Input.PointerPressedEventArgs;
 using RoutedEventArgs = Avalonia.Interactivity.RoutedEventArgs;
 using Cine.Avalonia.Controls;
 using Cine.Avalonia.Services;
+using Cine.Avalonia.ViewModels;
 using Cine.Avalonia.Views.Dialogs;
+using Cine.Avalonia.Builders;
 using MaterialIcon = global::Material.Icons.Avalonia.MaterialIcon;
 using App = global::Avalonia.Application;
 using SizeChangedEventArgs = Avalonia.Controls.SizeChangedEventArgs;
@@ -273,6 +275,13 @@ public partial class MainWindow
     private void OnVideoDoubleTapped(object? sender, TappedEventArgs e)
     {
         _viewModel?.ToggleFullscreen();
+        e.Handled = true;
+    }
+
+    private void OnVideoRightTapped(object? sender, TappedEventArgs e)
+    {
+        var menu = new VideoContextMenuBuilder(this, _viewModel!, _playerService?.Player).Build();
+        menu.ShowAt(this);
         e.Handled = true;
     }
 

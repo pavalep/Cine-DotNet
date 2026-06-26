@@ -63,15 +63,15 @@
                                IsHitTestVisible="False"
                                IsVisible="False" />
 
-        <!-- Video click overlay — fills window, captures hover/click for auto-hide
-             and play/pause toggle. Declared BEFORE StartPage so StartPage receives
-             clicks when visible. -->
+        <!-- Video click overlay — fills window, captures hover/click for auto-hide,
+             play/pause toggle, and right-click context menu. -->
         <Border x:Name="VideoClickOverlay"
                 Background="Transparent"
                 HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                 IsTabStop="False"
                 PointerPressed="OnVideoPointerPressed"
-                DoubleTapped="OnVideoDoubleTapped" />
+                DoubleTapped="OnVideoDoubleTapped"
+                RightTapped="OnVideoRightTapped" />
 
         <!-- Start Page — full viewport, opaque background.
              TOPMOST layer in this section. Always clickable. Fades out when media

@@ -351,6 +351,15 @@
     <!-- ======================== -->
     <Style Selector="ScrollBar">
         <Setter Property="Background" Value="Transparent" />
+        <Style.Resources>
+            <!-- Override Fluent theme DynamicResource keys to keep scrollbar thumb slim even when focused -->
+            <x:Double x:Key="ScrollBarThumbHeight">32</x:Double>
+            <x:Double x:Key="ScrollBarThumbWidth">4</x:Double>
+            <x:Double x:Key="ScrollBarThumbHeightPointerOver">32</x:Double>
+            <x:Double x:Key="ScrollBarThumbWidthPointerOver">6</x:Double>
+            <x:Double x:Key="ScrollBarThumbHeightPressed">32</x:Double>
+            <x:Double x:Key="ScrollBarThumbWidthPressed">6</x:Double>
+        </Style.Resources>
     </Style>
     <Style Selector="ScrollBar Thumb">
         <Setter Property="Background" Value="#33FFFFFF" />
@@ -549,6 +558,7 @@
     </Style>
 
     <!-- Compact slider: 10px thumb + light track for all secondary sliders (volume, EQ, subtitle settings) -->
+    <!-- Override Fluent theme DynamicResource keys so the thumb stays 10px even in vertical orientation -->
     <Style Selector="Slider.compact">
         <Setter Property="MinHeight" Value="10" />
         <Style.Resources>
@@ -561,9 +571,26 @@
             <SolidColorBrush x:Key="SliderThumbBackground">White</SolidColorBrush>
             <SolidColorBrush x:Key="SliderThumbBackgroundPointerOver">#E5E5E5</SolidColorBrush>
             <SolidColorBrush x:Key="SliderThumbBackgroundPressed">#D6D6D6</SolidColorBrush>
+            <!-- Override Fluent theme DynamicResource keys so the thumb stays 10px even in vertical orientation -->
+            <x:Double x:Key="SliderVerticalThumbWidth">10</x:Double>
+            <x:Double x:Key="SliderVerticalThumbHeight">10</x:Double>
         </Style.Resources>
     </Style>
     <Style Selector="Slider.compact /template/ Thumb#thumb">
+        <Setter Property="Width" Value="10" />
+        <Setter Property="Height" Value="10" />
+        <Setter Property="MinWidth" Value="10" />
+        <Setter Property="MinHeight" Value="10" />
+    </Style>
+
+    <!-- Volume slider: 10px thumb (same principle) -->
+    <Style Selector="Slider.volume-slider">
+        <Style.Resources>
+            <x:Double x:Key="SliderVerticalThumbWidth">10</x:Double>
+            <x:Double x:Key="SliderVerticalThumbHeight">10</x:Double>
+        </Style.Resources>
+    </Style>
+    <Style Selector="Slider.volume-slider /template/ Thumb#thumb">
         <Setter Property="Width" Value="10" />
         <Setter Property="Height" Value="10" />
         <Setter Property="MinWidth" Value="10" />
