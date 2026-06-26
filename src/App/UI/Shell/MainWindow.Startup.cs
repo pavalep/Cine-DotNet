@@ -1,0 +1,50 @@
+using System;
+using System.Diagnostics;
+using System.IO;
+using Avalonia.Threading;
+using Cine.Avalonia.Controls;
+using Cine.Media.Implementations;
+
+namespace Cine.Avalonia;
+
+/// <summary>
+/// Startup, player initialization, and renderer setup.
+/// Extracted from MainWindow.Initialization.cs (~444 lines → ~80 lines here).
+/// </summary>
+public partial class MainWindow
+{
+    /// <summary>
+    /// Initializes the ANGLE/OpenGL video renderer attached to the mpv player.
+    /// MpvVideoView creates its own ANGLE context and runs a dedicated render thread.
+    /// </summary>
+    private void InitVideoRenderer()
+    {
+        var player = _playerService?.Player as MpvPlayer;
+        if (player == null || _viewModel == null)
+        {
+            DebugLog("InitVideoRenderer: player or viewModel is null");
+            return;
+        }
+
+        DebugLog("InitVideoRenderer: initializing MpvVideoView (ANGLE + render API)");
+
+        // Main window uses ANGLE/OpenGL render API.
+        // MpvVideoView creates its own ANGLE context, initializes mpv render API,
+        // and runs a dedicated render thread that updates a WriteableBitmap Image.
+        // This bypasses Avalonia's OpenGlControlBase which can fail silently in v12.
+        MpvVideoView.Initialize(player);
+    }
+
+    /// <summary>
+    /// Sets up a 15-second interval timer that persists playback session state.
+    /// </summary>
+    private void InitializeSessionSave()
+    {
+        _sessionSaveTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(15)
+        };
+        _sessionSaveTimer.Tick += (_, _) => _viewModel?.SaveSession();
+        _sessionSaveTimer.Start();
+    }
+}

@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -79,6 +80,8 @@ public partial class PlaylistDialog : Window
     private System.ComponentModel.PropertyChangedEventHandler? _vmPropChanged;
     private MainViewModel? _subscribedVm;
 
+    private CancellationTokenSource? _exportCts;
+
     public PlaylistDialog()
     {
         InitializeComponent();
@@ -149,15 +152,20 @@ public partial class PlaylistDialog : Window
     {
         SearchClearButton.IsVisible = !string.IsNullOrEmpty(SearchTextBox.Text);
 
-        _searchDebounceTimer?.Stop();
-        _searchDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
-        _searchDebounceTimer.Tick += (s, args) =>
-        {
-            _searchDebounceTimer?.Stop();
-            _searchFilter = SearchTextBox.Text ?? string.Empty;
-            ApplySearchFilter();
-        };
+        // Reuse the same timer instance — avoid creating new one each keystroke
+        _searchDebounceTimer ??= new DispatcherTimer();
+        _searchDebounceTimer.Interval = TimeSpan.FromMilliseconds(100);
+        _searchDebounceTimer.Tick -= OnSearchDebounceTick;
+        _searchDebounceTimer.Tick += OnSearchDebounceTick;
+        _searchDebounceTimer.Stop();
         _searchDebounceTimer.Start();
+    }
+
+    private void OnSearchDebounceTick(object? sender, EventArgs args)
+    {
+        _searchDebounceTimer?.Stop();
+        _searchFilter = SearchTextBox.Text ?? string.Empty;
+        ApplySearchFilter();
     }
 
     private void OnSearchClearClick(object? sender, RoutedEventArgs e)
@@ -223,9 +231,17 @@ public partial class PlaylistDialog : Window
         var path = await _dialogHandler.SavePlaylistAsync();
         if (string.IsNullOrEmpty(path)) return;
 
+        // Cancel any previous export still in progress
+        _exportCts?.Cancel();
+        _exportCts = new CancellationTokenSource();
+
         try
         {
-            await PlaylistDialogHelpers.ExportToM3UAsync(vm.PlaylistItems, path);
+            await PlaylistDialogHelpers.ExportToM3UAsync(vm.PlaylistItems, path, _exportCts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            ShowToast("Export cancelled.");
         }
         catch (Exception ex)
         {

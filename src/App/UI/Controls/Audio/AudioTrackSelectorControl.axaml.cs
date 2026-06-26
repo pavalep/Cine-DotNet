@@ -106,7 +106,8 @@ public partial class AudioTrackSelectorControl : AvaloniaUserControl
             "Audio Delay",
             () => vm.AudioDelayValue,
             v => vm.AudioDelayValue = (float)Math.Clamp(v, -10, 10),
-            () => vm.ResetAudioDelay()
+            () => vm.ResetAudioDelay(),
+            emptyIcon: global::Material.Icons.MaterialIconKind.MusicOff
         );
     }
 

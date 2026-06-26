@@ -78,7 +78,7 @@ public partial class KeyboardShortcutsDialog : Window
             {
                 Height = 1,
                 Fill = (IBrush?)global::Avalonia.Application.Current?.FindResource("PopoverBorder"),
-                Margin = new Thickness(0, 6, 0, 6)
+                Margin = new Thickness(0, 8, 0, 8)
             });
         }
 
@@ -101,7 +101,7 @@ public partial class KeyboardShortcutsDialog : Window
                 new ColumnDefinition(new GridLength(1, GridUnitType.Star)),
                 new ColumnDefinition(new GridLength(1, GridUnitType.Star))
             },
-            Margin = new Thickness(0, 2),
+            Margin = new Thickness(0, 4),
             Height = 26
         };
 

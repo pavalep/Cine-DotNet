@@ -1,6 +1,16 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="Cine.Avalonia.Controls.SpinnerOverlayControl">
+
+    <UserControl.Resources>
+        <!-- Spinner active arc gradient — accent on left → lighter accent on right -->
+        <LinearGradientBrush x:Key="SpinnerArcGradient" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Offset="0" Color="{StaticResource Accent}" />
+            <GradientStop Offset="0.5" Color="{StaticResource AccentHover}" />
+            <GradientStop Offset="1" Color="#FF7FB8FF" />
+        </LinearGradientBrush>
+    </UserControl.Resources>
+
     <Grid Width="48" Height="48"
           HorizontalAlignment="Center" VerticalAlignment="Center"
           IsHitTestVisible="False">
@@ -8,7 +18,7 @@
                 Width="48" Height="48"
                 CornerRadius="24"
                 BorderThickness="3"
-                BorderBrush="#30FFFFFF"
+                BorderBrush="{StaticResource AppHover}"
                 Background="Transparent"
                 IsVisible="False" />
         <Border x:Name="LoadingSpinner"
@@ -16,7 +26,7 @@
                 Width="48" Height="48"
                 CornerRadius="24"
                 BorderThickness="3"
-                BorderBrush="{StaticResource AppAccent}"
+                BorderBrush="{StaticResource SpinnerArcGradient}"
                 Background="Transparent"
                 IsVisible="False"
                 Opacity="0"
@@ -25,7 +35,7 @@
                 <RotateTransform Angle="0" />
             </Border.RenderTransform>
             <Border.Effect>
-                <DropShadowEffect BlurRadius="12" OffsetY="0" Color="#400078D4" />
+                <DropShadowEffect BlurRadius="16" OffsetY="0" Color="#4D5B9BD5" />
             </Border.Effect>
         </Border>
     </Grid>

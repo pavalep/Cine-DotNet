@@ -8,12 +8,13 @@
     <!--  RESOURCE DICTIONARIES   -->
     <!-- ======================== -->
     <StyleInclude Source="avares://App/UI/Resources/Colors.axaml" />
+    <StyleInclude Source="avares://App/UI/Resources/Sizes.axaml" />
     <StyleInclude Source="avares://App/UI/Resources/Typography.axaml" />
     <StyleInclude Source="avares://App/UI/Resources/Icons.axaml" />
     <StyleInclude Source="avares://App/UI/Resources/Spacing.axaml" />
     <StyleInclude Source="avares://App/UI/Resources/Elevation.axaml" />
     <StyleInclude Source="avares://App/UI/Resources/Radius.axaml" />
-    <StyleInclude Source="avares://App/UI/Resources/Sizes.axaml" />
+    <StyleInclude Source="avares://App/UI/Resources/Motion.axaml" />
     
     <!-- ======================== -->
     <!--  GLOBAL STYLES           -->
@@ -64,9 +65,7 @@
                         Background="{TemplateBinding Background}"
                         CornerRadius="{TemplateBinding CornerRadius}">
                     <Border.Transitions>
-                        <Transitions>
-                            <BrushTransition Property="Background" Duration="0:0:0.12" />
-                        </Transitions>
+                        <Transitions>                        </Transitions>
                     </Border.Transitions>
                     <ContentPresenter x:Name="ContentPresenter"
                                       Content="{TemplateBinding Content}"
@@ -106,6 +105,117 @@
     <Style Selector="Button.circular-transport" />
     <Style Selector="Button.circular-play" />
     <Style Selector="Button.circular-menu" />
+
+    <!-- ── Button Variants ──────────────────────────────────────── -->
+
+    <!-- Primary Button — accent fill, for main actions -->
+    <Style Selector="Button.primary">
+        <Setter Property="Background" Value="{StaticResource AppAccent}" />
+        <Setter Property="Foreground" Value="{StaticResource Black}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="{StaticResource radius-sm}" />
+        <Setter Property="Padding" Value="16,8" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Effect">
+            <Setter.Value>
+                <DropShadowEffect BlurRadius="12" OffsetY="0" Color="#4D5B9BD5" />
+            </Setter.Value>
+        </Setter>
+        <Style Selector="^:pointerover">
+            <Setter Property="Background" Value="{StaticResource AppAccentLight}" />
+        </Style>
+        <Style Selector="^:pressed">
+            <Setter Property="Background" Value="{StaticResource AppAccentDim}" />
+        </Style>
+        <Style Selector="^:disabled">
+            <Setter Property="Opacity" Value="0.4" />
+        </Style>
+    </Style>
+
+    <!-- Secondary Button — subtle surface background, for secondary actions -->
+    <Style Selector="Button.secondary">
+        <Setter Property="Background" Value="{StaticResource AppSurfaceLight}" />
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="BorderBrush" Value="{StaticResource PopoverBorder}" />
+        <Setter Property="CornerRadius" Value="{StaticResource radius-sm}" />
+        <Setter Property="Padding" Value="16,8" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontWeight" Value="Medium" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Transitions">
+            <Transitions>            </Transitions>
+        </Setter>
+        <Style Selector="^:pointerover">
+            <Setter Property="Background" Value="{StaticResource AppHover}" />
+            <Setter Property="BorderBrush" Value="{StaticResource AppBorderLight}" />
+        </Style>
+        <Style Selector="^:pressed">
+            <Setter Property="Background" Value="{StaticResource AppHoverStrong}" />
+        </Style>
+        <Style Selector="^:disabled">
+            <Setter Property="Opacity" Value="0.4" />
+        </Style>
+    </Style>
+
+    <!-- Ghost Button — transparent, for tertiary/inline actions -->
+    <Style Selector="Button.ghost">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="8,6" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="Normal" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Transitions">
+            <Transitions>            </Transitions>
+        </Setter>
+        <Style Selector="^:pointerover">
+            <Setter Property="Background" Value="{StaticResource AppHoverSubtle}" />
+        </Style>
+        <Style Selector="^:pressed">
+            <Setter Property="Background" Value="{StaticResource AppHover}" />
+        </Style>
+        <Style Selector="^:disabled">
+            <Setter Property="Opacity" Value="0.4" />
+        </Style>
+    </Style>
+
+    <!-- ── Flyout Item Button ──────────────────────────────────── -->
+    <Style Selector="Button.flyout-item">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="12,9" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="Cursor" Value="Arrow" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="Medium" />
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+        <Setter Property="Transitions">
+            <Transitions>            </Transitions>
+        </Setter>
+        <Style Selector="^:pointerover">
+            <Setter Property="Background" Value="{StaticResource AppHoverSubtle}" />
+        </Style>
+        <Style Selector="^:pressed">
+            <Setter Property="Background" Value="{StaticResource AppHover}" />
+        </Style>
+    </Style>
+    
+    <!-- ── Subtle Hover Button (for code-behind dynamic buttons) ── -->
+    <Style Selector="Button.hover-subtle">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Style Selector="^:pointerover">
+            <Setter Property="Background" Value="{StaticResource AppHoverSubtle}" />
+        </Style>
+    </Style>
     
     <!-- Circular Menu ToggleButton (40×40) -->
     <Style Selector="ToggleButton.circular-menu">
@@ -118,9 +228,7 @@
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="CornerRadius" Value="20,20,20,20" />
         <Setter Property="Transitions">
-            <Transitions>
-                <BrushTransition Property="Background" Duration="0:0:0.12" />
-            </Transitions>
+            <Transitions>            </Transitions>
         </Setter>
         <Style Selector="^:pointerover">
             <Setter Property="Background" Value="{StaticResource ButtonHoverBackground}" />
@@ -158,9 +266,7 @@
                         BorderBrush="{TemplateBinding BorderBrush}"
                         BorderThickness="{TemplateBinding BorderThickness}">
                     <Border.Transitions>
-                        <Transitions>
-                            <BrushTransition Property="Background" Duration="0:0:0.12" />
-                        </Transitions>
+                        <Transitions>                        </Transitions>
                     </Border.Transitions>
                     <ContentPresenter x:Name="ContentPresenter"
                                       Content="{TemplateBinding Content}"
@@ -448,8 +554,29 @@
     </Style>
     <Style Selector="Button">
         <Setter Property="Transitions">
+            <Transitions>            </Transitions>
+        </Setter>
+    </Style>
+
+    <!-- Focus Visible Ring — 2px accent with 2px offset, visible on dark backgrounds -->
+    <Style Selector="Button:focus-visible /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource AppAccentDim}" />
+        <Setter Property="BorderThickness" Value="2" />
+        <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
+    </Style>
+
+    <!-- ── Dialog Open Animation ────────────────────────────────── -->
+    <Style Selector="Panel.dialog-animate">
+        <Setter Property="Opacity" Value="0" />
+        <Setter Property="RenderTransform">
+            <Setter.Value>
+                <ScaleTransform ScaleX="0.97" ScaleY="0.97" />
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Transitions">
             <Transitions>
-                <BrushTransition Property="Background" Duration="0:0:0.12" />
+                <DoubleTransition Property="Opacity" Duration="0:0:0.2" />
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2" />
             </Transitions>
         </Setter>
     </Style>
@@ -695,9 +822,7 @@
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Transitions">
             <Setter.Value>
-                <Transitions>
-                    <BrushTransition Property="Background" Duration="0:0:0.12" />
-                </Transitions>
+                <Transitions>                </Transitions>
             </Setter.Value>
         </Setter>
     </Style>

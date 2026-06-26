@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Threading;
 using System.Threading.Tasks;
 using Cine.Avalonia.Models;
 
@@ -43,7 +44,7 @@ public interface ISubtitleManager : INotifyPropertyChanged, IDisposable
     // ── External Files ──
     Func<Task<string?>>? RequestSubtitleFileAsync { get; set; }
     Func<Task>? DismissFlyoutAsync { get; set; }
-    Task LoadExternalSubtitleAsync(string filePath);
+    Task LoadExternalSubtitleAsync(string filePath, CancellationToken ct = default);
     Task AddSubtitleTrackAsync();
 
     // ── Lifecycle ──

@@ -25,37 +25,33 @@
         </Grid>
 
         <!-- Body -->
-        <StackPanel Grid.Row="1" Spacing="12" Margin="16,12,16,0"
+        <StackPanel Grid.Row="1" Spacing="{StaticResource space-spacing-3}" Margin="16,12,16,0"
                     VerticalAlignment="Top">
             <TextBlock Text="Enter time (HH:MM:SS or MM:SS)" Classes="md3-caption"
-                       Opacity="0.5" />
+                       Foreground="{StaticResource TextTertiary}" />
             <TextBox x:Name="TimeTextBox"
                      Text=""
                      PlaceholderText="e.g. 1:23:45 or 3:30"
-                     FontSize="24"
+                     Classes="md3-headline4"
                      FontWeight="Bold"
                      Foreground="{StaticResource OsdForeground}"
                      Background="{StaticResource PopoverBackground}"
                      BorderBrush="{StaticResource PopoverBorder}"
                      BorderThickness="1"
-                     CornerRadius="8"
-                     Padding="12,6"
+                     CornerRadius="{StaticResource radius-md}"
+                     Padding="12,8"
                      HorizontalContentAlignment="Center"
-                     KeyDown="OnTimeTextBoxKeyDown" />
+                     KeyDown="OnTimeTextBoxKeyDown"
+                     AutomationProperties.Name="Enter time to seek" />
         </StackPanel>
 
         <!-- Footer -->
         <Button Grid.Row="2"
                 x:Name="GoButton"
                 Content="Go"
-                FontSize="14" FontWeight="SemiBold"
+                Classes="primary"
                 HorizontalAlignment="Stretch"
                 Margin="16,0,16,12"
-                Height="36"
-                CornerRadius="18"
-                Background="{StaticResource AppAccent}"
-                Foreground="White"
-                BorderThickness="0"
                 Click="OnGoClick" />
     </Grid>
 </Window>

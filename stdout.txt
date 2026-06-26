@@ -1,0 +1,5 @@
+=== Cine.Avalonia starting ===
+App.Initialize() - before base
+App.Initialize() - after base
+OnFrameworkInitializationCompleted - start
+MainWindow created and assigned successfully.

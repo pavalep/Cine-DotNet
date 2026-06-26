@@ -28,22 +28,22 @@
                       MaxHeight="600"
                       HorizontalScrollBarVisibility="Disabled"
                       VerticalScrollBarVisibility="Auto">
-            <StackPanel Spacing="16" Margin="0,12">
+            <StackPanel Spacing="{StaticResource space-spacing-4}" Margin="0,12">
 
                 <!-- General -->
-                <TextBlock Text="General" FontSize="15" FontWeight="SemiBold"
-                           Foreground="{StaticResource OsdForeground}" Opacity="0.7" />
+                <TextBlock Text="General" Classes="md3-subtitle1"
+                           Foreground="{StaticResource TextSecondary}" />
 
                 <Border Background="{StaticResource PopoverBackground}"
-                        CornerRadius="6" Padding="14,12">
-                    <StackPanel Spacing="12">
+                        CornerRadius="{StaticResource radius-sm}" Padding="{StaticResource space-2}">
+                    <StackPanel Spacing="{StaticResource space-spacing-3}">
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel>
-                                <TextBlock Text="Audio Normalization" FontSize="13" FontWeight="Medium"
-                                           Foreground="{StaticResource OsdForeground}" />
+                                <TextBlock Text="Audio Normalization" Classes="md3-body2" FontWeight="Medium"
+                                           Foreground="{StaticResource TextPrimary}" />
                                 <TextBlock Text="Dynamic range compression for consistent volume"
-                                           FontSize="12" Classes="md3-caption" Opacity="0.5"
-                                           Foreground="{StaticResource OsdForeground}" />
+                                           Classes="md3-caption"
+                                           Foreground="{StaticResource TextTertiary}" />
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           VerticalAlignment="Center" OnContent="" OffContent=""
@@ -51,11 +51,11 @@
                         </Grid>
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel>
-                                <TextBlock Text="Dialogue Boost" FontSize="13" FontWeight="Medium"
-                                           Foreground="{StaticResource OsdForeground}" />
+                                <TextBlock Text="Dialogue Boost" Classes="md3-body2" FontWeight="Medium"
+                                           Foreground="{StaticResource TextPrimary}" />
                                 <TextBlock Text="Enhance speech clarity using spectral compression"
-                                           FontSize="12" Classes="md3-caption" Opacity="0.5"
-                                           Foreground="{StaticResource OsdForeground}" />
+                                           Classes="md3-caption"
+                                           Foreground="{StaticResource TextTertiary}" />
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           VerticalAlignment="Center" OnContent="" OffContent=""
@@ -65,19 +65,19 @@
                 </Border>
 
                 <!-- Rendering -->
-                <TextBlock Text="Rendering" FontSize="15" FontWeight="SemiBold"
-                           Foreground="{StaticResource OsdForeground}" Opacity="0.7" />
+                <TextBlock Text="Rendering" Classes="md3-subtitle1"
+                           Foreground="{StaticResource TextSecondary}" />
 
                 <Border Background="{StaticResource PopoverBackground}"
-                        CornerRadius="6" Padding="14,12">
-                    <StackPanel Spacing="12">
+                        CornerRadius="{StaticResource radius-sm}" Padding="{StaticResource space-2}">
+                    <StackPanel Spacing="{StaticResource space-spacing-3}">
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel>
-                                <TextBlock Text="Hardware Acceleration" FontSize="14" FontWeight="Medium"
-                                           Foreground="{StaticResource OsdForeground}" />
+                                <TextBlock Text="Hardware Acceleration" Classes="md3-body1" FontWeight="Medium"
+                                           Foreground="{StaticResource TextPrimary}" />
                                 <TextBlock Text="Use GPU for video decoding and rendering. Disable if experiencing playback issues."
-                                           FontSize="12" Classes="md3-caption" Opacity="0.5"
-                                           Foreground="{StaticResource OsdForeground}" />
+                                           Classes="md3-caption"
+                                           Foreground="{StaticResource TextTertiary}" />
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           VerticalAlignment="Center" OnContent="" OffContent=""
@@ -87,149 +87,148 @@
                 </Border>
 
                 <!-- Subtitles -->
-                <TextBlock Text="Subtitles" FontSize="15" FontWeight="SemiBold"
-                           Foreground="{StaticResource OsdForeground}" Opacity="0.7" />
+                <TextBlock Text="Subtitles" Classes="md3-subtitle1"
+                           Foreground="{StaticResource TextSecondary}" />
 
                 <Border Background="{StaticResource PopoverBackground}"
-                        CornerRadius="6" Padding="14,12">
-                    <StackPanel Spacing="12">
+                        CornerRadius="{StaticResource radius-sm}" Padding="{StaticResource space-2}">
+                    <StackPanel Spacing="{StaticResource space-spacing-3}">
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel>
-                                <TextBlock Text="Auto-load External Subtitles" FontSize="14" FontWeight="Medium"
-                                           Foreground="{StaticResource OsdForeground}" />
+                                <TextBlock Text="Auto-load External Subtitles" Classes="md3-body1" FontWeight="Medium"
+                                           Foreground="{StaticResource TextPrimary}" />
                                 <TextBlock Text="Automatically scan for .srt / .ass files in media directory"
-                                           FontSize="12" Classes="md3-caption" Opacity="0.5"
-                                           Foreground="{StaticResource OsdForeground}" />
+                                           Classes="md3-caption"
+                                           Foreground="{StaticResource TextTertiary}" />
                             </StackPanel>
                             <ToggleSwitch x:Name="AutoLoadSubsToggle"
                                           VerticalAlignment="Center" OnContent="" OffContent="" />
                         </Grid>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Preferred Languages" FontSize="12" Classes="md3-caption" FontWeight="SemiBold"
-                                       Foreground="{StaticResource OsdForeground}" Opacity="0.5" />
+                        <StackPanel Spacing="{StaticResource space-spacing-1}">
+                            <TextBlock Text="Preferred Languages" Classes="md3-caption" FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextTertiary}" />
                             <TextBox x:Name="PreferredLangInput"
                                      Text="eng, jpn, und"
-                                     FontSize="12"
-                                     Padding="12,6"
+                                     Classes="md3-caption"
+                                     Padding="{StaticResource space-1}"
                                      Background="{StaticResource AppBackground}"
                                      BorderBrush="{StaticResource PopoverBorder}"
-                                     BorderThickness="1" CornerRadius="4"
-                                     Foreground="{StaticResource OsdForeground}" />
+                                     BorderThickness="1" CornerRadius="{StaticResource radius-xs}"
+                                     Foreground="{StaticResource TextPrimary}"
+                                     AutomationProperties.Name="Preferred subtitle languages" />
                             <TextBlock Text="Comma-separated language codes. First match is auto-selected."
-                                       FontSize="12" Opacity="0.5"
-                                       Foreground="{StaticResource OsdForeground}" />
+                                       Classes="md3-caption"
+                                       Foreground="{StaticResource TextTertiary}" />
                         </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="External Subtitle Directories" FontSize="12" Classes="md3-caption" FontWeight="SemiBold"
-                                       Foreground="{StaticResource OsdForeground}" Opacity="0.5" />
+                        <StackPanel Spacing="{StaticResource space-spacing-1}">
+                            <TextBlock Text="External Subtitle Directories" Classes="md3-caption" FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextTertiary}" />
                             <TextBox x:Name="SubDirsInput"
                                      Text="./subs, ./subtitles"
-                                     FontSize="12"
-                                     Padding="12,6"
+                                     Classes="md3-caption"
+                                     Padding="{StaticResource space-1}"
                                      Background="{StaticResource AppBackground}"
                                      BorderBrush="{StaticResource PopoverBorder}"
-                                     BorderThickness="1" CornerRadius="4"
-                                     Foreground="{StaticResource OsdForeground}" />
+                                     BorderThickness="1" CornerRadius="{StaticResource radius-xs}"
+                                     Foreground="{StaticResource TextPrimary}"
+                                     AutomationProperties.Name="Subtitle directory paths" />
                             <TextBlock Text="Relative to media file directory. Comma-separated."
-                                       FontSize="12" Opacity="0.5"
-                                       Foreground="{StaticResource OsdForeground}" />
+                                       Classes="md3-caption"
+                                       Foreground="{StaticResource TextTertiary}" />
                         </StackPanel>
                     </StackPanel>
                 </Border>
 
                 <!-- Keyboard Shortcuts -->
-                <TextBlock Text="Keyboard Shortcuts" FontSize="15" FontWeight="SemiBold"
-                           Foreground="{StaticResource OsdForeground}" Opacity="0.7" />
+                <TextBlock Text="Keyboard Shortcuts" Classes="md3-subtitle1"
+                           Foreground="{StaticResource TextSecondary}" />
 
                 <Border Background="{StaticResource PopoverBackground}"
-                        CornerRadius="6" Padding="14,12">
-                    <StackPanel Spacing="6">
+                        CornerRadius="{StaticResource radius-sm}" Padding="{StaticResource space-2}">
+                    <StackPanel Spacing="{StaticResource space-spacing-1}">
                         <Grid ColumnDefinitions="120,*">
-                            <TextBlock Text="Space" FontWeight="SemiBold" FontSize="12"
-                                       Foreground="{StaticResource OsdForeground}" />
-                            <TextBlock Grid.Column="1" Text="Play / Pause" FontSize="12"
-                                       Foreground="{StaticResource OsdForeground}" Opacity="0.7" />
+                            <TextBlock Text="Space" FontWeight="SemiBold" Classes="md3-caption"
+                                       Foreground="{StaticResource TextPrimary}" />
+                            <TextBlock Grid.Column="1" Text="Play / Pause" Classes="md3-caption"
+                                       Foreground="{StaticResource TextSecondary}" />
                         </Grid>
                         <Grid ColumnDefinitions="120,*">
                             <TextBlock Text="F / F11" FontWeight="SemiBold" Classes="md3-caption"
-                                       Foreground="{StaticResource OsdForeground}" />
+                                       Foreground="{StaticResource TextPrimary}" />
                             <TextBlock Grid.Column="1" Text="Toggle Fullscreen" Classes="md3-caption"
-                                       Opacity="0.7" />
+                                       Foreground="{StaticResource TextSecondary}" />
                         </Grid>
                         <Grid ColumnDefinitions="120,*">
-                            <TextBlock Text="← / →" FontWeight="SemiBold" Classes="md3-caption" />
-                                       Foreground="{StaticResource OsdForeground}" />
-                            <TextBlock Grid.Column="1" Text="Seek ±5s" FontSize="12"
-                                       Foreground="{StaticResource OsdForeground}" Opacity="0.7" />
+                            <TextBlock Text="← / →" FontWeight="SemiBold" Classes="md3-caption"
+                                       Foreground="{StaticResource TextPrimary}" />
+                            <TextBlock Grid.Column="1" Text="Seek ±5s" Classes="md3-caption"
+                                       Foreground="{StaticResource TextSecondary}" />
                         </Grid>
                         <Grid ColumnDefinitions="120,*">
-                            <TextBlock Text="Ctrl+← / Ctrl+→" FontWeight="SemiBold" FontSize="12"
-                                       Foreground="{StaticResource OsdForeground}" />
+                            <TextBlock Text="Ctrl+← / Ctrl+→" FontWeight="SemiBold" Classes="md3-caption"
+                                       Foreground="{StaticResource TextPrimary}" />
                             <TextBlock Grid.Column="1" Text="Prev/Next Chapter" Classes="md3-caption"
-                                       Opacity="0.7" />
+                                       Foreground="{StaticResource TextSecondary}" />
                         </Grid>
                         <Grid ColumnDefinitions="120,*">
-                            <TextBlock Text="Shift+← / Shift+→" FontWeight="SemiBold" FontSize="12"
-                                       Foreground="{StaticResource OsdForeground}" />
+                            <TextBlock Text="Shift+← / Shift+→" FontWeight="SemiBold" Classes="md3-caption"
+                                       Foreground="{StaticResource TextPrimary}" />
                             <TextBlock Grid.Column="1" Text="Seek ±30s" Classes="md3-caption"
-                                       Opacity="0.7" />
+                                       Foreground="{StaticResource TextSecondary}" />
                         </Grid>
                         <Grid ColumnDefinitions="120,*">
-                            <TextBlock Text="↑ / ↓" FontWeight="SemiBold" FontSize="12"
-                                       Foreground="{StaticResource OsdForeground}" />
-                            <TextBlock Grid.Column="1" Text="Volume ±5%" FontSize="12"
-                                       Foreground="{StaticResource OsdForeground}" Opacity="0.7" />
+                            <TextBlock Text="↑ / ↓" FontWeight="SemiBold" Classes="md3-caption"
+                                       Foreground="{StaticResource TextPrimary}" />
+                            <TextBlock Grid.Column="1" Text="Volume ±5%" Classes="md3-caption"
+                                       Foreground="{StaticResource TextSecondary}" />
                         </Grid>
                         <Grid ColumnDefinitions="120,*">
-                            <TextBlock Text="M" FontWeight="SemiBold" FontSize="12"
-                                       Foreground="{StaticResource OsdForeground}" />
-                            <TextBlock Grid.Column="1" Text="Mute Toggle" FontSize="12"
-                                       Foreground="{StaticResource OsdForeground}" Opacity="0.7" />
+                            <TextBlock Text="M" FontWeight="SemiBold" Classes="md3-caption"
+                                       Foreground="{StaticResource TextPrimary}" />
+                            <TextBlock Grid.Column="1" Text="Mute Toggle" Classes="md3-caption"
+                                       Foreground="{StaticResource TextSecondary}" />
                         </Grid>
                         <Grid ColumnDefinitions="120,*">
-                            <TextBlock Text="C" FontWeight="SemiBold" FontSize="12"
-                                       Foreground="{StaticResource OsdForeground}" />
-                            <TextBlock Grid.Column="1" Text="Cycle Subtitles" FontSize="12"
-                                       Foreground="{StaticResource OsdForeground}" Opacity="0.7" />
+                            <TextBlock Text="C" FontWeight="SemiBold" Classes="md3-caption"
+                                       Foreground="{StaticResource TextPrimary}" />
+                            <TextBlock Grid.Column="1" Text="Cycle Subtitles" Classes="md3-caption"
+                                       Foreground="{StaticResource TextSecondary}" />
                         </Grid>
                         <Grid ColumnDefinitions="120,*">
-                            <TextBlock Text="S / Ctrl+S" FontWeight="SemiBold" FontSize="12"
-                                       Foreground="{StaticResource OsdForeground}" />
-                            <TextBlock Grid.Column="1" Text="Screenshot" FontSize="12"
-                                       Foreground="{StaticResource OsdForeground}" Opacity="0.7" />
+                            <TextBlock Text="S / Ctrl+S" FontWeight="SemiBold" Classes="md3-caption"
+                                       Foreground="{StaticResource TextPrimary}" />
+                            <TextBlock Grid.Column="1" Text="Screenshot" Classes="md3-caption"
+                                       Foreground="{StaticResource TextSecondary}" />
                         </Grid>
                         <Grid ColumnDefinitions="120,*">
-                            <TextBlock Text="Esc" FontWeight="SemiBold" FontSize="12"
-                                       Foreground="{StaticResource OsdForeground}" />
-                            <TextBlock Grid.Column="1" Text="Exit Fullscreen" FontSize="12"
-                                       Foreground="{StaticResource OsdForeground}" Opacity="0.7" />
+                            <TextBlock Text="Esc" FontWeight="SemiBold" Classes="md3-caption"
+                                       Foreground="{StaticResource TextPrimary}" />
+                            <TextBlock Grid.Column="1" Text="Exit Fullscreen" Classes="md3-caption"
+                                       Foreground="{StaticResource TextSecondary}" />
                         </Grid>
                         <Grid ColumnDefinitions="120,*">
-                            <TextBlock Text="Ctrl+P" FontWeight="SemiBold" FontSize="12"
-                                       Foreground="{StaticResource OsdForeground}" />
-                            <TextBlock Grid.Column="1" Text="Playlist" FontSize="12"
-                                       Foreground="{StaticResource OsdForeground}" Opacity="0.7" />
+                            <TextBlock Text="Ctrl+P" FontWeight="SemiBold" Classes="md3-caption"
+                                       Foreground="{StaticResource TextPrimary}" />
+                            <TextBlock Grid.Column="1" Text="Playlist" Classes="md3-caption"
+                                       Foreground="{StaticResource TextSecondary}" />
                         </Grid>
                         <Grid ColumnDefinitions="120,*">
-                            <TextBlock Text="Ctrl+O" FontWeight="SemiBold" FontSize="12"
-                                       Foreground="{StaticResource OsdForeground}" />
-                            <TextBlock Grid.Column="1" Text="Open File" FontSize="12"
-                                       Foreground="{StaticResource OsdForeground}" Opacity="0.7" />
+                            <TextBlock Text="Ctrl+O" FontWeight="SemiBold" Classes="md3-caption"
+                                       Foreground="{StaticResource TextPrimary}" />
+                            <TextBlock Grid.Column="1" Text="Open File" Classes="md3-caption"
+                                       Foreground="{StaticResource TextSecondary}" />
                         </Grid>
                         <Grid ColumnDefinitions="120,*">
-                            <TextBlock Text="Ctrl+Shift+E" FontWeight="SemiBold" FontSize="12"
-                                       Foreground="{StaticResource OsdForeground}" />
-                            <TextBlock Grid.Column="1" Text="Equalizer" FontSize="12"
-                                       Foreground="{StaticResource OsdForeground}" Opacity="0.7" />
+                            <TextBlock Text="Ctrl+Shift+E" FontWeight="SemiBold" Classes="md3-caption"
+                                       Foreground="{StaticResource TextPrimary}" />
+                            <TextBlock Grid.Column="1" Text="Equalizer" Classes="md3-caption"
+                                       Foreground="{StaticResource TextSecondary}" />
                         </Grid>
                     </StackPanel>
                 </Border>
 
-                <Button Content="View All Shortcuts (Ctrl+/)" Margin="0,4,0,0"
-                        Background="{StaticResource OsdForeground}"
-                        Foreground="{StaticResource Black}" CornerRadius="20"
-                        Padding="16,8" FontSize="13" FontWeight="SemiBold"
-                        BorderThickness="0"
+                <Button Content="View All Shortcuts (Ctrl+/)"
+                        Classes="primary"
                         HorizontalAlignment="Center"
                         Click="OnViewAllShortcutsClick" />
             </StackPanel>
@@ -239,11 +238,8 @@
         <Border Grid.Row="2" Height="1" Background="{StaticResource PopoverBorder}"
                 Margin="0,4,0,0" />
         <Button Grid.Row="2" Content="Close" HorizontalAlignment="Center"
-                Margin="0,8,0,12" Padding="48,8"
-                Click="OnCloseClick"
-                Background="{StaticResource OsdForeground}"
-                Foreground="{StaticResource Black}" CornerRadius="20"
-                FontWeight="SemiBold"
-                BorderThickness="0" />
+                Classes="primary"
+                Margin="0,8,0,12"
+                Click="OnCloseClick" />
     </Grid>
 </Window>

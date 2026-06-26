@@ -23,10 +23,12 @@
     
     <!-- ======================== -->
     <!--  PRIMARY ACCENT          -->
+    <!--  Warmer blue tone:       -->
+    <!--  #5B9BD5 (hover/pressed) -->
     <!-- ======================== -->
-    <Color x:Key="Accent">#0078D4</Color>
-    <Color x:Key="AccentHover">#106EBE</Color>
-    <Color x:Key="AccentPressed">#005A9E</Color>
+    <Color x:Key="Accent">#5B9BD5</Color>
+    <Color x:Key="AccentHover">#4A8BC5</Color>
+    <Color x:Key="AccentPressed">#3A7BB5</Color>
     
     <!-- ======================== -->
     <!--  OSD (On-Screen Display)  -->
@@ -114,6 +116,12 @@
     <!-- Reference: rgba(255,255,255,0.225) -->
     <SolidColorBrush x:Key="ProgressTroughBackground" Color="#39FFFFFF" />
     <SolidColorBrush x:Key="ProgressSliderBackground" Color="{StaticResource White}" />
+
+    <!-- Seek bar fill gradient — accent on left → lighter accent on right -->
+    <LinearGradientBrush x:Key="SeekFillGradient" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Offset="0" Color="{StaticResource Accent}" />
+        <GradientStop Offset="1" Color="#FF7FB8FF" />
+    </LinearGradientBrush>
     <SolidColorBrush x:Key="ProgressSliderForeground" Color="{StaticResource Accent}" />
     
     <!-- ======================== -->
@@ -126,8 +134,8 @@
     <!--  POPOVER / MENU          -->
     <!-- ======================== -->
     <!-- Reference: rgba(25,25,27,0.95) border #202021 -->
-    <SolidColorBrush x:Key="PopoverBackground" Color="#F219191B" />
-    <SolidColorBrush x:Key="PopoverBorder" Color="#FF303040" />
+    <SolidColorBrush x:Key="PopoverBackground" Color="#D019191B" />
+    <SolidColorBrush x:Key="PopoverBorder" Color="#40FFFFFF" />
     
     <!-- ======================== -->
     <!--  STATUS BAR              -->
@@ -187,5 +195,47 @@
     <!-- Drag-drop accent (Windows blue) -->
     <SolidColorBrush x:Key="AppDragAccent" Color="#FF0078D7" />
     <SolidColorBrush x:Key="AppDragAccentDim" Color="#400078D7" />
+
+    <!-- ======================== -->
+    <!--  SEMANTIC COLORS         -->
+    <!--  For status indicators,  -->
+    <!--  error/success/warning   -->
+    <!-- ======================== -->
+
+    <!-- Error — red, for failures, destructive actions -->
+    <Color x:Key="ErrorColor">#FF5252</Color>
+    <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource ErrorColor}" />
+    <SolidColorBrush x:Key="ErrorDim" Color="#33FF5252" />
+
+    <!-- Success — green, for confirmations, completed actions -->
+    <Color x:Key="SuccessColor">#4CAF50</Color>
+    <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}" />
+    <SolidColorBrush x:Key="SuccessDim" Color="#334CAF50" />
+
+    <!-- Warning — amber, for cautions, pending states -->
+    <Color x:Key="WarningColor">#FFB300</Color>
+    <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}" />
+    <SolidColorBrush x:Key="WarningDim" Color="#33FFB300" />
+
+    <!-- Info — blue, for informational indicators -->
+    <Color x:Key="InfoColor">#42A5F5</Color>
+    <SolidColorBrush x:Key="InfoBrush" Color="{StaticResource InfoColor}" />
+    <SolidColorBrush x:Key="InfoDim" Color="#3342A5F5" />
+
+    <!-- ======================== -->
+    <!--  TEXT HIERARCHY          -->
+    <!--  Named brushes for       -->
+    <!--  consistent text opacity -->
+    <!-- ======================== -->
+
+    <!-- Primary text — 80% white, for body, titles -->
+    <SolidColorBrush x:Key="TextPrimary" Color="#CCFFFFFF" />
+
+    <!-- Secondary text — 67% white, for labels, captions -->
+    <SolidColorBrush x:Key="TextSecondary" Color="#AAFFFFFF" />
+
+    <!-- Tertiary text — 50% white, for hints, placeholders — already defined above -->
+    <!-- Disabled text — 31% white, for disabled controls -->
+    <SolidColorBrush x:Key="TextDisabled" Color="#50FFFFFF" />
 </Styles.Resources>
 </Styles>

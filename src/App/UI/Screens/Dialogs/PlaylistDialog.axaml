@@ -32,7 +32,8 @@
                     Margin="0,0,2,0"
                     x:Name="SortBtn"
                     Click="OnSortClick"
-                    ToolTip.Tip="Sort by Title">
+                    ToolTip.Tip="Sort by Title"
+                    AutomationProperties.Name="Sort by title">
                 <materialIcons:MaterialIcon Kind="SortAlphabeticalAscending" Width="14" Height="14"
                     Foreground="{StaticResource OsdForeground}" />
             </Button>
@@ -41,7 +42,8 @@
                     Margin="0,0,2,0"
                     x:Name="QueueBtn"
                     Click="OnQueueModeClick"
-                    ToolTip.Tip="Queue Mode: Add files after current">
+                    ToolTip.Tip="Queue Mode: Add files after current"
+                    AutomationProperties.Name="Toggle queue mode">
                 <materialIcons:MaterialIcon Kind="PlaylistPlay" Width="14" Height="14"
                     Foreground="{StaticResource OsdForeground}" />
             </Button>
@@ -49,7 +51,8 @@
                     Classes="flat"
                     Margin="0,0,2,0"
                     Click="OnClearPlaylistClick"
-                    ToolTip.Tip="Clear All">
+                    ToolTip.Tip="Clear All"
+                    AutomationProperties.Name="Clear all playlist items">
                 <materialIcons:MaterialIcon Kind="PlaylistRemove" Width="14" Height="14"
                     Foreground="{StaticResource OsdForeground}" />
             </Button>
@@ -65,16 +68,17 @@
                     Classes="flat" 
                     Margin="0,0,8,0"
                     Click="OnCloseClick"
-                    ToolTip.Tip="Close">
+                    ToolTip.Tip="Close"
+                    AutomationProperties.Name="Close playlist dialog">
                 <materialIcons:MaterialIcon Kind="Close" Width="14" Height="14"
                     Foreground="{StaticResource OsdForeground}" />
             </Button>
         </Grid>
 
-        <!-- Search Bar (P3.3) -->
+        <!-- Search Bar -->
         <Border Grid.Row="1" Height="36" Margin="8,4,8,0"
                 Background="{StaticResource PopoverBackground}"
-                CornerRadius="6"
+                CornerRadius="{StaticResource radius-sm}"
                 BorderBrush="{StaticResource PopoverBorder}"
                 BorderThickness="1">
             <Grid ColumnDefinitions="Auto,*,Auto" Margin="8,0">
@@ -87,7 +91,7 @@
                          BorderThickness="0"
                          Foreground="{StaticResource OsdForeground}"
                          PlaceholderText="Search playlist..."
-                         FontSize="13"
+                         Classes="md3-caption"
                          Margin="8,0,0,0"
                          VerticalAlignment="Center"
                          TextChanged="OnSearchTextChanged" />
@@ -97,7 +101,8 @@
                         Width="20" Height="20"
                         IsVisible="False"
                         Click="OnSearchClearClick"
-                        ToolTip.Tip="Clear">
+                        ToolTip.Tip="Clear"
+                        AutomationProperties.Name="Clear search">
                     <materialIcons:MaterialIcon Kind="CloseCircle" Width="12" Height="12"
                         Foreground="{StaticResource OsdForeground}" />
                 </Button>
@@ -134,17 +139,18 @@
                                           Click="OnItemPropertiesClick" />
                             </ContextMenu>
                         </Grid.ContextMenu>
-                        <TextBlock Grid.Column="0" Text="▶" FontSize="10"
+                        <TextBlock Grid.Column="0" Text="▶" Classes="md3-caption"
                                    Foreground="{StaticResource OsdForeground}"
                                    VerticalAlignment="Center" Margin="0,0,8,0" />
                         <TextBlock Grid.Column="1" Text="{Binding Title}"
-                                   FontSize="13" Foreground="{StaticResource OsdForeground}"
+                                   Classes="md3-body2" Foreground="{StaticResource OsdForeground}"
                                    VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                         <Button Grid.Column="2" 
                                 Classes="circular-transport" 
                                 Click="OnItemPlayClick"
                                 Width="32" Height="32"
-                                Margin="8,0,0,0">
+                                Margin="8,0,0,0"
+                                AutomationProperties.Name="Play this item">
                             <materialIcons:MaterialIcon Kind="Play" Width="12" Height="12"
                                 Foreground="{StaticResource OsdForeground}" />
                         </Button>
@@ -152,7 +158,8 @@
                                 Classes="circular-transport" 
                                 Click="OnItemRemoveClick"
                                 Width="32" Height="32"
-                                ToolTip.Tip="Remove">
+                                ToolTip.Tip="Remove"
+                                AutomationProperties.Name="Remove from playlist">
                             <materialIcons:MaterialIcon Kind="Close" Width="12" Height="12"
                                 Foreground="{StaticResource OsdForeground}" />
                         </Button>
@@ -164,24 +171,24 @@
         <!-- Empty State (no items at all) -->
         <Border Grid.Row="2" x:Name="EmptyStateOverlay"
                 Background="Transparent" IsVisible="False" ZIndex="1">
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="{StaticResource space-spacing-4}">
                 <materialIcons:MaterialIcon Kind="PlaylistPlus" Width="64" Height="64"
                     Foreground="{StaticResource OsdForeground}" />
-                <TextBlock Text="Add to Playlist" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center" />
+                <TextBlock Text="Add to Playlist" Classes="md3-headline4" FontWeight="Bold" HorizontalAlignment="Center" />
             </StackPanel>
         </Border>
 
-        <!-- No Results (P3.6) -->
+        <!-- No Results -->
         <Border Grid.Row="2" x:Name="NoResultsOverlay"
                 Background="Transparent" IsVisible="False" ZIndex="2">
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="{StaticResource space-spacing-3}">
                 <materialIcons:MaterialIcon Kind="MagnifyClose" Width="48" Height="48"
                     Foreground="{StaticResource OsdForeground}" Opacity="0.7" />
-                <TextBlock Text="No matching items" FontSize="18" FontWeight="Medium"
-                           Foreground="{StaticResource OsdForeground}" Opacity="0.7" HorizontalAlignment="Center" />
+                <TextBlock Text="No matching items" Classes="md3-body1" FontWeight="Medium"
+                           Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center" />
                 <TextBlock Text="Try a different search term" Classes="md3-caption"
                            HorizontalAlignment="Center"
-                           Foreground="{StaticResource OsdForeground}" Opacity="0.5" />
+                           Foreground="{StaticResource TextTertiary}" />
             </StackPanel>
         </Border>
     </Grid>

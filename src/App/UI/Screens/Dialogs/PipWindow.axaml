@@ -16,7 +16,7 @@
 
     <Window.Styles>
         <Style Selector="Border.pip-container">
-            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="CornerRadius" Value="{StaticResource radius-lg}" />
             <Setter Property="Background" Value="{StaticResource AppBackground}" />
             <Setter Property="BoxShadow" Value="0 6 32 0 #AA000000, 0 0 0 1 #25FFFFFF" />
             <Setter Property="ClipToBounds" Value="True" />
@@ -45,12 +45,12 @@
             <Setter Property="Padding" Value="0" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="CornerRadius" Value="{StaticResource radius-md}" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
         <Style Selector="Button.pip-btn:pointerover">
-            <Setter Property="Background" Value="#2BFFFFFF" />
+            <Setter Property="Background" Value="{StaticResource ButtonHoverBackground}" />
         </Style>
         <Style Selector="Button.pip-center-play">
             <Setter Property="Width" Value="44" />
@@ -58,7 +58,7 @@
             <Setter Property="Padding" Value="0" />
             <Setter Property="Background" Value="#33000000" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="CornerRadius" Value="22" />
+            <Setter Property="CornerRadius" Value="{StaticResource radius-full}" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
@@ -68,8 +68,8 @@
         <Style Selector="Border.pip-seek-thumb">
             <Setter Property="Width" Value="12" />
             <Setter Property="Height" Value="12" />
-            <Setter Property="CornerRadius" Value="6" />
-            <Setter Property="Background" Value="#FFFFFFFF" />
+            <Setter Property="CornerRadius" Value="{StaticResource radius-sm}" />
+            <Setter Property="Background" Value="White" />
             <Setter Property="HorizontalAlignment" Value="Left" />
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="IsHitTestVisible" Value="True" />
@@ -77,7 +77,7 @@
         <Style Selector="Border.pip-seek-thumb:pointerover">
             <Setter Property="Width" Value="16" />
             <Setter Property="Height" Value="16" />
-            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="CornerRadius" Value="{StaticResource radius-md}" />
         </Style>
     </Window.Styles>
 
@@ -89,7 +89,7 @@
                 <Border x:Name="VideoArea"
                         Background="{StaticResource AppBackground}"
                         ClipToBounds="True"
-                        CornerRadius="12">
+                        CornerRadius="{StaticResource radius-lg}">
                     <Image x:Name="PipVideoFrame"
                            HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                            Stretch="Uniform"
@@ -101,11 +101,11 @@
                         Background="#99000000"
                         IsVisible="False"
                         IsHitTestVisible="False"
-                        CornerRadius="12">
+                        CornerRadius="{StaticResource radius-lg}">
                     <TextBlock Text="Starting Picture-in-Picture&#x2026;"
                                Foreground="White"
-                               FontSize="13"
-                               VerticalAlignment="Center"
+                               Classes="md3-caption"
+                               FontWeight="SemiBold"
                                HorizontalAlignment="Center" />
                 </Border>
 
@@ -123,9 +123,9 @@
                               PointerEntered="OnTopBarPointerEntered"
                               PointerExited="OnTopBarPointerExited">
                             <TextBlock Grid.Column="0" x:Name="PipFileName"
-                                       FontSize="13" FontWeight="SemiBold"
-                                       Foreground="White"
-                                       Opacity="0.7"
+                                       Classes="md3-body2"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextSecondary}"
                                        VerticalAlignment="Center"
                                        Margin="12,0,0,0"
                                        TextTrimming="CharacterEllipsis"
@@ -148,7 +148,8 @@
                                 VerticalAlignment="Center"
                                 PointerEntered="OnCenterPointerEntered"
                                 PointerExited="OnCenterPointerExited"
-                                Click="OnPlayPauseClick">
+                                Click="OnPlayPauseClick"
+                                AutomationProperties.Name="Play or pause">
                             <materialIcons:MaterialIcon x:Name="PlayPauseIcon"
                                 Kind="Play" Width="22" Height="22"
                                 Foreground="White" />
@@ -189,7 +190,8 @@
                                     Classes="pip-btn"
                                     ToolTip.Tip="Toggle mute"
                                     Margin="0,0,6,0"
-                                    Click="OnMuteToggle">
+                                    Click="OnMuteToggle"
+                                    AutomationProperties.Name="Toggle mute">
                                 <materialIcons:MaterialIcon x:Name="MuteIcon"
                                     Kind="VolumeHigh"
                                     Width="16" Height="16"

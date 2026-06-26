@@ -47,9 +47,10 @@ public partial class MainWindow
         // ── Escape (context-sensitive) ──
         Register(Key.Escape, () =>
         {
-            if (_headerBar?.HasActiveFlyouts == true)
-                _headerBar.CloseOpenFlyouts();
-            else if (_playerService?.Player?.IsFullscreen == true)
+            // Close any open flyout first
+            _flyoutManager.CloseAll();
+            // If no flyout was open, exit fullscreen
+            if (_playerService?.Player?.IsFullscreen == true)
                 _viewModel?.ToggleFullscreen();
         }, "Close Flyout / Exit Fullscreen");
 
@@ -211,6 +212,13 @@ public partial class MainWindow
         var shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
         var ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
 
+        // ── Skip if a text-editable control has focus (TextBox, NumericUpDown, etc.) ──
+        var focused = TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement();
+        if (focused is global::Avalonia.Controls.TextBox or AutoCompleteBox or global::Avalonia.Controls.NumericUpDown)
+        {
+            return;
+        }
+
         // When PIP is active, only allow Escape and Ctrl+Shift+P through
         if (_pipWindowManager is { IsActive: true } &&
             key != Key.Escape && !(ctrl && shift && key == Key.P))
@@ -243,14 +251,11 @@ public partial class MainWindow
 
     private void CloseOpenFlyouts()
     {
-        var flyoutsToClose = new[] { _controlsBox?.BtnVolumeMenu, _headerBar?.BtnOpenMenu, _headerBar?.BtnPrimaryMenu };
-        foreach (var btn in flyoutsToClose)
-            if (btn?.Flyout is Flyout f)
-                f.Hide();
-        _controlsBox?.SubtitleOverlayCtrl?.HideFlyout();
-        _controlsBox?.AudioTrackSelectorCtrl?.HideFlyout();
-        if (_controlsBox?.BtnVideoMenu?.Flyout is Flyout fv)
-            fv.Hide();
+        // Close all via FlyoutManager — handles all registered flyouts
+        _flyoutManager.CloseAll();
+        // Also close any inline flyouts not managed by FlyoutManager
+        _controlsBox?.SubtitleOverlay?.HideFlyout();
+        _controlsBox?.AudioTrackSelector?.HideFlyout();
     }
 
     // ─────────────────────────────────────────────────────────────

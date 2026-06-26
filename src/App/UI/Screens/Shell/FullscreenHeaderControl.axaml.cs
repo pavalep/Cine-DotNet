@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Cine.Avalonia.Builders;
+using Cine.Avalonia.Services;
 using Cine.Avalonia.ViewModels;
 using Cine.Avalonia.Views.Dialogs;
 using RoutedEventArgs = Avalonia.Interactivity.RoutedEventArgs;
@@ -15,18 +16,15 @@ public partial class FullscreenHeaderControl : UserControl
     public event EventHandler? PipToggled;
 
     private MainViewModel? _viewModel;
-    private int _activeFlyouts;
     private PrimaryMenuBuilder? _fullscreenMenuBuilder;
+    private FlyoutManager? _flyoutManager;
 
     public FullscreenHeaderControl()
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
 
-        // Build menu from shared builder
         _fullscreenMenuBuilder = BuildFullscreenMenu();
-        BtnFullscreenMenu.Flyout = _fullscreenMenuBuilder.Build();
-        BtnFullscreenMenu.Flyout.Opened += (_, _) => _fullscreenMenuBuilder?.SyncCheckStates();
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
@@ -46,7 +44,7 @@ public partial class FullscreenHeaderControl : UserControl
             .AddItem("SkipNext", "Seek +10s", "Right", () => _viewModel?.SeekForward())
             .AddSeparator()
             .AddSection("TOOLS")
-            .AddItem("ClockOutline", "Go to Time…", "Ctrl+G", () =>
+            .AddItem("ClockOutline", "Go to Time\u2026", "Ctrl+G", () =>
             {
                 var w = TopLevel.GetTopLevel(this) as Window;
                 if (w != null && _viewModel != null) new GoToTimeDialog { DataContext = _viewModel }.Show(w);
@@ -82,19 +80,32 @@ public partial class FullscreenHeaderControl : UserControl
         return builder;
     }
 
-    public bool HasActiveFlyouts => _activeFlyouts > 0;
+    public bool HasActiveFlyouts => _btnFlyout != null;
+
+    private MenuFlyout? _btnFlyout;
+
+    public FlyoutManager? FlyoutManager
+    {
+        get => _flyoutManager;
+        set
+        {
+            _flyoutManager = value;
+            value?.Register("fullscreen-menu", () => _btnFlyout?.Hide());
+        }
+    }
 
     // P12: Expose inner FullscreenHeader Border for overlay hover tracking
     public global::Avalonia.Controls.Border FullscreenHeaderElement => FullscreenHeader;
 
-    public void TrackFlyoutOpened(object? sender, EventArgs e)
+    private void OnFullscreenMenuClick(object? sender, RoutedEventArgs e)
     {
-        _activeFlyouts++;
-    }
-
-    public void TrackFlyoutClosed(object? sender, EventArgs e)
-    {
-        _activeFlyouts = Math.Max(0, _activeFlyouts - 1);
+        _fullscreenMenuBuilder?.SyncCheckStates();
+        _flyoutManager?.DismissOthers("fullscreen-menu");
+        _btnFlyout = _fullscreenMenuBuilder!.Build();
+        _btnFlyout.Placement = PlacementMode.Bottom;
+        _btnFlyout.Opened += (_, _) => { _flyoutManager?.DismissOthers("fullscreen-menu"); };
+        _btnFlyout.Closed += (_, _) => { _flyoutManager?.MarkClosed("fullscreen-menu"); _btnFlyout = null; };
+        _btnFlyout.ShowAt(BtnFullscreenMenu);
     }
 
     public void Show()
@@ -141,4 +152,3 @@ public partial class FullscreenHeaderControl : UserControl
         if (w != null) new AboutDialog { DataContext = _viewModel }.Show(w);
     }
 }
-

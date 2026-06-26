@@ -53,7 +53,8 @@ public static class TrackFlyoutBuilder
         Action resetDelay,
         int searchThreshold = 5,
         string searchPlaceholder = "Search…",
-        Action<StackPanel>? appendExtra = null)
+        Action<StackPanel>? appendExtra = null,
+        global::Material.Icons.MaterialIconKind emptyIcon = global::Material.Icons.MaterialIconKind.ClosedCaptionOutline)
     {
         _log.Debug("Build: {Count} tracks, threshold={Threshold}, extra={HasExtra}",
             tracks.Count, searchThreshold, appendExtra != null);
@@ -71,7 +72,7 @@ public static class TrackFlyoutBuilder
             {
                 PlaceholderText = searchPlaceholder,
                 Margin = new Thickness(8, 4, 8, 0),
-                Padding = new Thickness(8, 4),
+                Padding = Token.GetThickness("space-1"),
                 FontSize = Token.Size("font-size-body2"),
                 Height = 28,
                 BorderThickness = new Thickness(1),
@@ -100,12 +101,30 @@ public static class TrackFlyoutBuilder
             var filteredItems = filtered.ToList();
             if (filteredItems.Count == 0)
             {
-                trackListPanel.Children.Add(new TextBlock
+                trackListPanel.Children.Add(new global::Avalonia.Controls.StackPanel
                 {
-                    Text = string.IsNullOrWhiteSpace(filter) ? emptyMessage : "No matching tracks",
-                    FontSize = Token.Size("font-size-body2"),
-                    Foreground = AppColors.TextTertiary,
-                    Padding = new Thickness(12, 9)
+                    Orientation = global::Avalonia.Layout.Orientation.Vertical,
+                    HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Center,
+                    Spacing = 4,
+                    Margin = new Thickness(12, 16),
+                    Children =
+                    {
+                        new global::Material.Icons.Avalonia.MaterialIcon
+                        {
+                            Kind = emptyIcon,
+                            Width = 32,
+                            Height = 32,
+                            Foreground = AppColors.TextTertiary,
+                            Opacity = 0.5
+                        },
+                        new TextBlock
+                        {
+                            Text = string.IsNullOrWhiteSpace(filter) ? emptyMessage : "No matching tracks",
+                            FontSize = Token.Size("font-size-body2"),
+                            Foreground = AppColors.TextTertiary,
+                            HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Center
+                        }
+                    }
                 });
                 return;
             }
@@ -119,12 +138,30 @@ public static class TrackFlyoutBuilder
         // handles both search and non-search states).
         if (tracks.Count == 0 && !showSearch)
         {
-            trackListPanel.Children.Add(new TextBlock
+            trackListPanel.Children.Add(new global::Avalonia.Controls.StackPanel
             {
-                Text = emptyMessage,
-                FontSize = Token.Size("font-size-body2"),
-                Foreground = AppColors.TextTertiary,
-                Padding = new Thickness(12, 9)
+                Orientation = global::Avalonia.Layout.Orientation.Vertical,
+                HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Center,
+                Spacing = 4,
+                Margin = new Thickness(12, 16),
+                Children =
+                {
+                    new global::Material.Icons.Avalonia.MaterialIcon
+                    {
+                        Kind = emptyIcon,
+                        Width = 32,
+                        Height = 32,
+                        Foreground = AppColors.TextTertiary,
+                        Opacity = 0.5
+                    },
+                    new TextBlock
+                    {
+                        Text = emptyMessage,
+                        FontSize = Token.Size("font-size-body2"),
+                        Foreground = AppColors.TextTertiary,
+                        HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Center
+                    }
+                }
             });
         }
         else
@@ -204,8 +241,7 @@ public static class TrackFlyoutBuilder
             Cursor = new Cursor(StandardCursorType.Arrow)
         };
         btnMinus.Click += (_, _) => NudgeDelay(-0.5);
-        btnMinus.PointerEntered += (_, _) => btnMinus.Background = AppColors.HoverSubtle;
-        btnMinus.PointerExited += (_, _) => btnMinus.Background = AppColors.Transparent;
+        btnMinus.Classes.Add("hover-subtle");
 
         var btnPlus = new Button
         {
@@ -217,13 +253,12 @@ public static class TrackFlyoutBuilder
             Cursor = new Cursor(StandardCursorType.Arrow)
         };
         btnPlus.Click += (_, _) => NudgeDelay(0.5);
-        btnPlus.PointerEntered += (_, _) => btnPlus.Background = AppColors.HoverSubtle;
-        btnPlus.PointerExited += (_, _) => btnPlus.Background = AppColors.Transparent;
+        btnPlus.Classes.Add("hover-subtle");
 
         var btnReset = new Button
         {
             Content = new TextBlock { Text = "Reset", FontSize = Token.Size("font-size-caption"), Foreground = AppColors.TextTertiary },
-            Background = AppColors.Transparent, BorderThickness = new Thickness(0), Padding = new Thickness(6, 2),
+            Background = AppColors.Transparent, BorderThickness = new Thickness(0), Padding = Token.GetThickness("space-1"),
             Cursor = new Cursor(StandardCursorType.Arrow)
         };
         btnReset.Click += (_, _) => ResetDelay();
@@ -296,7 +331,7 @@ public static class TrackFlyoutBuilder
                 FontWeight = FontWeight.Bold,
                 Foreground = AppColors.Accent,
                 VerticalAlignment = AvaloniaLayout.VerticalAlignment.Center,
-                Margin = new Thickness(0, 0, 6, 0)
+                Margin = new Thickness(0, 0, 8, 0)
             };
             var addText = new TextBlock
             {

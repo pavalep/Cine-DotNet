@@ -22,7 +22,7 @@ public partial class HeaderBarControl : AvaloniaUserControl
 
     private MainViewModel? _viewModel;
     private FlyoutManager? _flyoutManager;
-    private int _activeFlyouts;
+    private readonly List<global::Avalonia.Controls.Primitives.FlyoutBase> _trackedFlyouts = new();
     private PrimaryMenuBuilder? _primaryMenuBuilder;
 
     public HeaderBarControl()
@@ -184,7 +184,7 @@ public partial class HeaderBarControl : AvaloniaUserControl
     }
 
     /// <summary>
-    /// Flyout ecosystem manager. Registers the Open menu for mutual exclusion.
+    /// Flyout ecosystem manager. Registers the Open and Primary menus for mutual exclusion.
     /// </summary>
     public FlyoutManager? FlyoutManager
     {
@@ -193,12 +193,18 @@ public partial class HeaderBarControl : AvaloniaUserControl
         {
             _flyoutManager = value;
             value?.Register("open-menu", () => BtnOpenMenu.Flyout?.Hide());
+            value?.Register("primary-menu", () => BtnPrimaryMenu.Flyout?.Hide());
 
             // Wire Opened/Closed to dismiss others and track state
             if (BtnOpenMenu.Flyout != null)
             {
                 BtnOpenMenu.Flyout.Opened += (_, _) => value?.DismissOthers("open-menu");
                 BtnOpenMenu.Flyout.Closed += (_, _) => value?.MarkClosed("open-menu");
+            }
+            if (BtnPrimaryMenu.Flyout != null)
+            {
+                BtnPrimaryMenu.Flyout.Opened += (_, _) => value?.DismissOthers("primary-menu");
+                BtnPrimaryMenu.Flyout.Closed += (_, _) => value?.MarkClosed("primary-menu");
             }
         }
     }
@@ -223,11 +229,12 @@ public partial class HeaderBarControl : AvaloniaUserControl
 
     public void TrackFlyoutOpened(object? sender, EventArgs e)
     {
-        _activeFlyouts++;
-
-        // P5.4: When Open menu flyout opens, add recent files dynamically
         if (sender is Flyout flyout)
         {
+            if (!_trackedFlyouts.Contains(flyout))
+                _trackedFlyouts.Add(flyout);
+
+            // P5.4: When Open menu flyout opens, add recent files dynamically
             UpdateOpenMenuRecentFiles(flyout);
         }
     }
@@ -334,10 +341,10 @@ public partial class HeaderBarControl : AvaloniaUserControl
 
     public void TrackFlyoutClosed(object? sender, EventArgs e)
     {
-        _activeFlyouts = Math.Max(0, _activeFlyouts - 1);
+        // No counter needed — rely on IsOpen check
     }
 
-    public bool HasActiveFlyouts => _activeFlyouts > 0;
+    public bool HasActiveFlyouts => _trackedFlyouts.Any(f => f.IsOpen);
 
     public void CloseOpenFlyouts()
     {

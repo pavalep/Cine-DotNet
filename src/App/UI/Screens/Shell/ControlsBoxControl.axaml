@@ -50,8 +50,25 @@
                             Click="OnPlayPause"
                             ToolTip.Tip="Play/Pause (Space)"
                             AutomationProperties.Name="Play or pause">
-                        <materialIcons:MaterialIcon x:Name="PlayPauseIconPath" Kind="Play" Width="24" Height="24"
-                            Foreground="{StaticResource OsdForeground}" />
+                        <Panel Width="24" Height="24">
+                            <materialIcons:MaterialIcon x:Name="PlayPauseIcon" Kind="Play" Width="24" Height="24"
+                                Foreground="{StaticResource OsdForeground}">
+                                <materialIcons:MaterialIcon.Transitions>
+                                    <Transitions>
+                                        <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
+                                    </Transitions>
+                                </materialIcons:MaterialIcon.Transitions>
+                            </materialIcons:MaterialIcon>
+                            <materialIcons:MaterialIcon x:Name="PlayPauseAltIcon" Kind="Pause" Width="24" Height="24"
+                                Foreground="{StaticResource OsdForeground}"
+                                Opacity="0">
+                                <materialIcons:MaterialIcon.Transitions>
+                                    <Transitions>
+                                        <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
+                                    </Transitions>
+                                </materialIcons:MaterialIcon.Transitions>
+                            </materialIcons:MaterialIcon>
+                        </Panel>
                     </Button>
                     <Button x:Name="BtnNext"
                             Classes="circular-transport"
@@ -74,8 +91,23 @@
                             AutomationProperties.Name="Volume"
                             PointerWheelChanged="OnVolumeButtonScroll">
                         <Panel Width="22" Height="22">
-                            <materialIcons:MaterialIcon x:Name="VolumeIconPath" Kind="VolumeHigh" Width="22" Height="22"
-                                Foreground="{StaticResource OsdForeground}" />
+                            <materialIcons:MaterialIcon x:Name="VolumeIcon" Kind="VolumeHigh" Width="22" Height="22"
+                                Foreground="{StaticResource OsdForeground}">
+                                <materialIcons:MaterialIcon.Transitions>
+                                    <Transitions>
+                                        <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
+                                    </Transitions>
+                                </materialIcons:MaterialIcon.Transitions>
+                            </materialIcons:MaterialIcon>
+                            <materialIcons:MaterialIcon x:Name="VolumeMuteIcon" Kind="VolumeOff" Width="22" Height="22"
+                                Foreground="{StaticResource OsdForeground}"
+                                Opacity="0">
+                                <materialIcons:MaterialIcon.Transitions>
+                                    <Transitions>
+                                        <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
+                                    </Transitions>
+                                </materialIcons:MaterialIcon.Transitions>
+                            </materialIcons:MaterialIcon>
                         </Panel>
                         <Button.Flyout>
                             <Flyout Placement="Top">
@@ -85,19 +117,19 @@
                                         BorderThickness="1"
                                         CornerRadius="{StaticResource radius-sm}"
                                         Padding="12,8">
-                                    <StackPanel Orientation="Vertical" Spacing="6" Width="180"
+                                    <StackPanel Orientation="Vertical" Spacing="{StaticResource space-spacing-2}" Width="200"
                                                 HorizontalAlignment="Center">
                                         <!-- Label row -->
                                         <Grid ColumnDefinitions="*,Auto">
                                             <TextBlock Grid.Column="0"
                                                        Text="Volume"
-                                                       FontSize="12" FontWeight="SemiBold"
+                                                       Classes="md3-caption" FontWeight="SemiBold"
                                                        Foreground="{StaticResource OsdForeground}"
                                                        VerticalAlignment="Center" />
                                             <TextBlock Grid.Column="1"
                                                        x:Name="VolumePercentLabel"
                                                        Text="{Binding VolumeValue, StringFormat='{}{0:F0}%'}"
-                                                       FontSize="13" FontWeight="SemiBold"
+                                                       Classes="md3-body2" FontWeight="SemiBold"
                                                        Foreground="{StaticResource OsdForeground}" />
                                         </Grid>
                                         <!-- Horizontal slider -->
@@ -123,7 +155,7 @@
                                                     Click="OnPresetVolume25"
                                                     HorizontalAlignment="Stretch"
                                                     Padding="4">
-                                                <TextBlock Text="25%" FontSize="11"
+                                                <TextBlock Text="25%" Classes="md3-caption"
                                                     Foreground="{StaticResource OsdForeground}"
                                                     HorizontalAlignment="Center" />
                                             </Button>
@@ -131,7 +163,7 @@
                                                     Click="OnPresetVolume50"
                                                     HorizontalAlignment="Stretch"
                                                     Padding="4">
-                                                <TextBlock Text="50%" FontSize="11"
+                                                <TextBlock Text="50%" Classes="md3-caption"
                                                     Foreground="{StaticResource OsdForeground}"
                                                     HorizontalAlignment="Center" />
                                             </Button>
@@ -139,7 +171,7 @@
                                                     Click="OnPresetVolume100"
                                                     HorizontalAlignment="Stretch"
                                                     Padding="4">
-                                                <TextBlock Text="100%" FontSize="11"
+                                                <TextBlock Text="100%" Classes="md3-caption"
                                                     Foreground="{StaticResource OsdForeground}"
                                                     HorizontalAlignment="Center" />
                                             </Button>
@@ -221,7 +253,7 @@
                                                      Classes="circular-transport"
                                                      Padding="0"
                                                      VerticalAlignment="Center" />
-                    <controls:AudioTrackSelectorControl x:Name="AudioOverlayCtrl"
+                    <controls:AudioTrackSelectorControl x:Name="AudioOverlay"
                                                         Classes="circular-transport"
                                                         Padding="0"
                                                         VerticalAlignment="Center" />
@@ -230,7 +262,7 @@
                                   Click="OnToggleFullscreen"
                                   ToolTip.Tip="Fullscreen (F)"
                                   AutomationProperties.Name="Toggle fullscreen">
-                        <materialIcons:MaterialIcon x:Name="FullscreenIconPath" Kind="Fullscreen" Width="16" Height="16"
+                        <materialIcons:MaterialIcon x:Name="FullscreenIcon" Kind="Fullscreen" Width="16" Height="16"
                             Foreground="{StaticResource OsdForeground}" />
                     </ToggleButton>
                 </StackPanel>

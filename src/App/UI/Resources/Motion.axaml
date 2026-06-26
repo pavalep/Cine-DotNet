@@ -1,0 +1,63 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Styles.Resources>
+
+    <!-- ============================================================
+         Motion Tokens (Material Design 3 + HarmonyOS)
+         Reference: https://m3.material.io/styles/motion/easing-and-duration
+
+         Usage in XAML:
+             <Setter Property="Transitions">
+                 <Transitions>
+                     <DoubleTransition Duration="0:0:0.200"
+                                       Easing="{StaticResource ease-standard}" />
+                 </Transitions>
+             </Setter>
+
+         Usage in C#:
+             var ms = (double)App.Current!.FindResource("duration-normal")!;
+             var duration = TimeSpan.FromMilliseconds(ms);
+         ============================================================ -->
+
+    <!-- ── Duration Tokens (milliseconds) ──────────────────────── -->
+
+    <!-- 50ms — micro interactions, ripple start, hover-in delay -->
+    <x:Double x:Key="duration-instant">50</x:Double>
+
+    <!-- 100ms — fast feedback, button press, toggle switch -->
+    <x:Double x:Key="duration-fast">100</x:Double>
+
+    <!-- 150ms — short transitions, icon crossfade, tooltip fade -->
+    <x:Double x:Key="duration-short">150</x:Double>
+
+    <!-- 200ms — standard transitions, button hover, flyout open -->
+    <x:Double x:Key="duration-normal">200</x:Double>
+
+    <!-- 250ms — medium transitions, header/controls fade, OSD slide -->
+    <x:Double x:Key="duration-medium">250</x:Double>
+
+    <!-- 350ms — slow transitions, dialog open, page transitions -->
+    <x:Double x:Key="duration-slow">350</x:Double>
+
+    <!-- 500ms — extra slow, skeleton loading, splash fade -->
+    <x:Double x:Key="duration-x-slow">500</x:Double>
+
+    <!-- ── Easing Tokens ───────────────────────────────────────── -->
+
+    <!-- Standard — most UI transitions -->
+    <CubicEaseOut x:Key="ease-standard" />
+
+    <!-- Emphasized — dialog open, page transitions -->
+    <CubicEaseOut x:Key="ease-emphasized" />
+
+    <!-- Decelerated — elements entering screen -->
+    <CubicEaseIn x:Key="ease-decelerated" />
+
+    <!-- Accelerated — elements leaving screen -->
+    <CubicEaseOut x:Key="ease-accelerated" />
+
+    <!-- Linear — progress bars, continuous animations -->
+    <LinearEasing x:Key="ease-linear" />
+
+    </Styles.Resources>
+</Styles>

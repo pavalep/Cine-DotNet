@@ -8,8 +8,8 @@
         ExtendClientAreaToDecorationsHint="True"
         WindowDecorations="BorderOnly">
 
-    <Grid RowDefinitions="*,Auto" Margin="24">
-        <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="8">
+    <Grid RowDefinitions="*,Auto" Margin="{StaticResource space-5}">
+        <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="{StaticResource space-spacing-2}">
             <Panel Width="64" Height="64" HorizontalAlignment="Center">
                 <Path Data="M 32 2 A 30 30 0 1 1 32 62 A 30 30 0 1 1 32 2 Z"
                       Fill="{StaticResource AppHoverSubtle}"
@@ -19,16 +19,12 @@
                       Fill="{StaticResource OsdForeground}" />
             </Panel>
             <TextBlock Text="Cine Media Player" Classes="md3-headline6" FontWeight="Bold" Foreground="{StaticResource OsdForeground}" HorizontalAlignment="Center" />
-            <TextBlock Text="Version 1.0.0" Classes="md3-body2" Opacity="0.7" Foreground="{StaticResource OsdForeground}" HorizontalAlignment="Center" />
-            <TextBlock Text="Built with Avalonia UI &amp; libmpv" Classes="md3-caption" Opacity="0.5" Foreground="{StaticResource OsdForeground}" HorizontalAlignment="Center" />
+            <TextBlock Text="Version 1.0.0" Classes="md3-body2" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center" />
+            <TextBlock Text="Built with Avalonia UI &amp; libmpv" Classes="md3-caption" Foreground="{StaticResource TextTertiary}" HorizontalAlignment="Center" />
         </StackPanel>
 
-        <Button Grid.Row="1" Content="Close" HorizontalAlignment="Center" Padding="32,8"
-                Click="OnCloseClick"
-                Background="{StaticResource OsdForeground}"
-                Foreground="{StaticResource Black}"
-                CornerRadius="20"
-                FontWeight="SemiBold"
-                BorderThickness="0" />
+        <Button Grid.Row="1" Content="Close" HorizontalAlignment="Center"
+                Classes="primary"
+                Click="OnCloseClick" />
     </Grid>
 </Window>

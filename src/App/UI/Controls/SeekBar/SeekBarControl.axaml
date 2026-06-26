@@ -25,14 +25,14 @@
                     IsHitTestVisible="False" />
 
             <Border x:Name="SeekFill"
-                    Background="{StaticResource ProgressSliderBackground}"
+                    Background="{StaticResource SeekFillGradient}"
                     CornerRadius="2"
                     Height="4"
                     VerticalAlignment="Center"
                     HorizontalAlignment="Left"
                     IsHitTestVisible="False">
                 <Border.Effect>
-                    <DropShadowEffect BlurRadius="6" OffsetY="0" Color="#400078D4" />
+                    <DropShadowEffect BlurRadius="8" OffsetY="0" Color="#4D5B9BD5" />
                 </Border.Effect>
             </Border>
 
@@ -65,7 +65,8 @@
                     <DataTemplate>
                         <Rectangle Width="3" Height="12"
                                    Fill="{StaticResource OsdForeground}"
-                                   Opacity="0.6" />
+                                   Opacity="0.6"
+                                   AutomationProperties.Name="Chapter marker" />
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
@@ -112,6 +113,7 @@
                    MinWidth="45"
                    Text="00:00"
                    Margin="{StaticResource space-h-1}"
-                   VerticalAlignment="Center" />
+                   VerticalAlignment="Center"
+                   AutomationProperties.Name="Total duration" />
     </Grid>
 </UserControl>

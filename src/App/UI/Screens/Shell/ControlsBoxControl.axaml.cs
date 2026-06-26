@@ -28,7 +28,7 @@ public partial class ControlsBoxControl : AvaloniaUserControl
 {
     private MainViewModel? _viewModel;
     private bool _replayMode;
-    private int _activeFlyouts;
+    private readonly List<global::Avalonia.Controls.Primitives.FlyoutBase> _trackedFlyouts = new();
     private PlaylistDialog? _playlistDialog;
     private FlyoutManager? _flyoutManager;
 
@@ -48,8 +48,8 @@ public partial class ControlsBoxControl : AvaloniaUserControl
     }
 
     public SeekBarControl SeekBarControl => SeekBar;
-    public SubtitleOverlayControl? SubtitleOverlayCtrl => SubOverlayCtrl;
-    public AudioTrackSelectorControl? AudioTrackSelectorCtrl => AudioOverlayCtrl;
+    public SubtitleOverlayControl? SubtitleOverlay => SubOverlayCtrl;
+    public AudioTrackSelectorControl? AudioTrackSelector => AudioOverlay;
     public global::Avalonia.Controls.Border ControlsBoxElement => ControlsBox;
 
     public ControlsBoxControl()
@@ -87,9 +87,16 @@ public partial class ControlsBoxControl : AvaloniaUserControl
         _viewModel = DataContext as MainViewModel;
     }
 
+    private void OnFirstLoadedForPlayPause(object? sender, EventArgs e)
+    {
+        Loaded -= OnFirstLoadedForPlayPause;
+        _hasPendingPlayPauseSync = false;
+        // The icon update will be triggered by the next state change from MainWindow
+    }
+
     // --- Public API for MainWindow ---
 
-    public bool HasActiveFlyouts => _activeFlyouts > 0;
+    public bool HasActiveFlyouts => _trackedFlyouts.Any(f => f.IsOpen);
 
     /// <summary>
     /// Flyout ecosystem manager. When set, all flyouts controlled by this control
@@ -112,9 +119,11 @@ public partial class ControlsBoxControl : AvaloniaUserControl
 
             // Pass to child controls
             if (SubOverlayCtrl != null) SubOverlayCtrl.FlyoutManager = value;
-            if (AudioOverlayCtrl != null) AudioOverlayCtrl.FlyoutManager = value;
+            if (AudioOverlay != null) AudioOverlay.FlyoutManager = value;
         }
     }
+
+    private bool _hasPendingPlayPauseSync;
 
     /// <summary>
     /// SINGLE authoritative method for updating the play/pause icon.
@@ -123,37 +132,43 @@ public partial class ControlsBoxControl : AvaloniaUserControl
     /// </summary>
     public void SyncPlayPauseIcon(bool isPlaying)
     {
-        if (PlayPauseIconPath == null)
+        if (PlayPauseIcon == null)
         {
-            // Control tree not ready yet — use Loaded event to apply once ready.
-            // The icon default is "Play" from XAML, so no visible flicker.
-            if (!this.IsLoaded)
+            // Control tree not ready yet — defer once via UI thread.
+            // Use a flag to avoid accumulating multiple Loaded handlers.
+            if (!this.IsLoaded && !_hasPendingPlayPauseSync)
             {
-                Loaded += (_, _) => SyncPlayPauseIcon(isPlaying);
+                _hasPendingPlayPauseSync = true;
+                Loaded += OnFirstLoadedForPlayPause;
                 return;
             }
+
             // If loaded but still null (e.g. template not applied), defer once
             global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
             {
-                if (PlayPauseIconPath != null) SyncPlayPauseIcon(isPlaying);
+                if (PlayPauseIcon != null) SyncPlayPauseIcon(isPlaying);
             }, global::Avalonia.Threading.DispatcherPriority.Render);
             return;
         }
 
         if (_replayMode)
         {
-            PlayPauseIconPath.Kind = Material.Icons.MaterialIconKind.Replay;
-            PlayPauseIconPath.InvalidateVisual();
+            PlayPauseIcon.Kind = Material.Icons.MaterialIconKind.Replay;
+            PlayPauseAltIcon.Kind = Material.Icons.MaterialIconKind.Replay;
+            PlayPauseIcon.Opacity = 1;
+            PlayPauseAltIcon.Opacity = 0;
+            PlayPauseIcon.InvalidateVisual();
             PauseLog($"SyncPlayPauseIcon: replay mode -> Replay");
         }
         else
         {
-            var newKind = isPlaying
-                ? Material.Icons.MaterialIconKind.Pause
-                : Material.Icons.MaterialIconKind.Play;
-            PauseLog($"SyncPlayPauseIcon: isPlaying={isPlaying} _replayMode={_replayMode} -> {newKind}");
-            PlayPauseIconPath.Kind = newKind;
-            PlayPauseIconPath.InvalidateVisual();
+            PauseLog($"SyncPlayPauseIcon: isPlaying={isPlaying} _replayMode={_replayMode}");
+            // Crossfade: show play icon when paused, pause icon when playing
+            var showPlay = !isPlaying;
+            PlayPauseIcon.Kind = Material.Icons.MaterialIconKind.Play;
+            PlayPauseAltIcon.Kind = Material.Icons.MaterialIconKind.Pause;
+            PlayPauseIcon.Opacity = showPlay ? 1 : 0;
+            PlayPauseAltIcon.Opacity = showPlay ? 0 : 1;
         }
     }
 
@@ -172,17 +187,18 @@ public partial class ControlsBoxControl : AvaloniaUserControl
         if (_viewModel == null) return;
         var vol = _viewModel.VolumeValue;
         var muted = _viewModel.IsMuted && vol <= 0;
-        var icon = muted
-            ? Material.Icons.MaterialIconKind.VolumeOff
-            : vol switch
-            {
-                <= 0 => Material.Icons.MaterialIconKind.VolumeLow,
-                <= 33 => Material.Icons.MaterialIconKind.VolumeLow,
-                <= 66 => Material.Icons.MaterialIconKind.VolumeMedium,
-                _ => Material.Icons.MaterialIconKind.VolumeHigh
-            };
-        VolumeIconPath.Kind = icon;
-        MuteToggleIcon.Kind = icon;
+        if (muted)
+        {
+            VolumeIcon.Opacity = 0;
+            VolumeMuteIcon.Opacity = 1;
+        }
+        else
+        {
+            VolumeIcon.Opacity = 1;
+            VolumeMuteIcon.Opacity = 0;
+        }
+        // Sync MuteToggleIcon (still single icon)
+        MuteToggleIcon.Kind = muted ? Material.Icons.MaterialIconKind.VolumeOff : Material.Icons.MaterialIconKind.VolumeHigh;
     }
 
     public void SetControlsVisibility(bool visible)
@@ -194,13 +210,13 @@ public partial class ControlsBoxControl : AvaloniaUserControl
     {
         if (isFullscreen)
         {
-            FullscreenIconPath.Kind = Material.Icons.MaterialIconKind.FullscreenExit;
+            FullscreenIcon.Kind = Material.Icons.MaterialIconKind.FullscreenExit;
             ToolTip.SetTip(BtnFullscreen, "Exit Fullscreen (F)");
             BtnFullscreen.IsChecked = true;
         }
         else
         {
-            FullscreenIconPath.Kind = Material.Icons.MaterialIconKind.Fullscreen;
+            FullscreenIcon.Kind = Material.Icons.MaterialIconKind.Fullscreen;
             ToolTip.SetTip(BtnFullscreen, "Fullscreen (F)");
             BtnFullscreen.IsChecked = false;
         }
@@ -373,10 +389,7 @@ public partial class ControlsBoxControl : AvaloniaUserControl
 
     private Flyout BuildChaptersFlyout(ObservableCollection<ChapterInfo> chapters)
     {
-        var builder = new FlyoutBuilder()
-            .WithMinWidth(220)
-            .WithMaxHeight(300)
-            .WithPlacement(PlacementMode.Top);
+        var stack = new global::Avalonia.Controls.StackPanel();
 
         foreach (var chapter in chapters)
         {
@@ -385,13 +398,67 @@ public partial class ControlsBoxControl : AvaloniaUserControl
                 : TimeSpan.FromSeconds(chapter.Time).ToString(@"mm\:ss");
 
             var seekTime = chapter.Time;
-            builder.AddLabeledItem(chapter.Title, timeStr, () =>
+            var grid = new Grid
+            {
+                ColumnDefinitions = new ColumnDefinitions
+                {
+                    new ColumnDefinition(GridLength.Star),
+                    new ColumnDefinition(GridLength.Auto)
+                }
+            };
+            var left = new TextBlock
+            {
+                Text = chapter.Title,
+                FontSize = Token.Size("font-size-body2"),
+                Foreground = (IBrush?)global::Avalonia.Application.Current?.FindResource("OsdForeground"),
+                VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center,
+                Padding = new Thickness(12, 8, 4, 8)
+            };
+            var right = new TextBlock
+            {
+                Text = timeStr,
+                FontSize = Token.Size("font-size-caption"),
+                Foreground = AppColors.TextOnDarkHint,
+                VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center,
+                Padding = new Thickness(4, 8, 12, 8)
+            };
+            Grid.SetColumn(left, 0);
+            Grid.SetColumn(right, 1);
+            grid.Children.Add(left);
+            grid.Children.Add(right);
+
+            var btn = new global::Avalonia.Controls.Button
+            {
+                Content = grid,
+                Background = AppColors.Transparent,
+                BorderThickness = new Thickness(0),
+                HorizontalContentAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch,
+                Cursor = new Cursor(StandardCursorType.Arrow)
+            };
+            btn.Click += (_, _) =>
             {
                 _viewModel?.SeekTo(seekTime / _viewModel.Duration.TotalSeconds);
-            });
+            };
+            stack.Children.Add(btn);
         }
 
-        return builder.Build();
+        var border = new Border
+        {
+            Background = (IBrush?)global::Avalonia.Application.Current?.FindResource("PopoverBackground"),
+            BorderBrush = (IBrush?)global::Avalonia.Application.Current?.FindResource("PopoverBorder"),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(4),
+            MinWidth = 220,
+            Child = new ScrollViewer
+            {
+                Content = stack,
+                MaxHeight = 300,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto
+            }
+        };
+
+        return new Flyout { Content = border, Placement = PlacementMode.Top };
     }
 
     private Flyout BuildTrackMenuFlyout(ObservableCollection<TrackMenuItem> tracks)
@@ -450,7 +517,7 @@ public partial class ControlsBoxControl : AvaloniaUserControl
                 Content = grid,
                 Background = AppColors.Transparent,
                 BorderThickness = new Thickness(0),
-                Padding = new Thickness(12, 9),
+                Padding = new Thickness(12, 8),
                 HorizontalContentAlignment = AvaloniaLayout.HorizontalAlignment.Stretch,
                 Cursor = new Cursor(StandardCursorType.Arrow),
                 Opacity = track.DisplayOpacity,
@@ -485,10 +552,9 @@ public partial class ControlsBoxControl : AvaloniaUserControl
         return new Flyout { Content = border, Placement = PlacementMode.Top };
     }
 
-    private void TrackFlyout(Flyout flyout)
+    private void TrackFlyout(global::Avalonia.Controls.Primitives.FlyoutBase flyout)
     {
-        flyout.Opened += (_, _) => _activeFlyouts++;
-        flyout.Closed += (_, _) => _activeFlyouts = Math.Max(0, _activeFlyouts - 1);
+        _trackedFlyouts.Add(flyout);
     }
 
     // --- Playlist dialog ---

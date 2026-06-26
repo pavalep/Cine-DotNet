@@ -13,19 +13,17 @@
             <TextBlock Grid.Column="0"
                        Text="{Binding Title}"
                        Foreground="{StaticResource OsdForeground}"
-                       FontSize="13" FontWeight="SemiBold"
+                       Classes="md3-body2"
+                       FontWeight="SemiBold"
                        VerticalAlignment="Center" />
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="{StaticResource space-spacing-1}">
                 <Button x:Name="BtnFullscreenMenu"
                         Classes="circular-menu"
                         ToolTip.Tip="Menu"
+                        Click="OnFullscreenMenuClick"
                         AutomationProperties.Name="Fullscreen menu">
                     <materialIcons:MaterialIcon Kind="DotsHorizontal" Width="16" Height="16"
                         Foreground="{StaticResource OsdForeground}" />
-                    <Button.Flyout>
-                        <Flyout Placement="Bottom"
-                                Opened="TrackFlyoutOpened" Closed="TrackFlyoutClosed" />
-                    </Button.Flyout>
                 </Button>
             </StackPanel>
         </Grid>

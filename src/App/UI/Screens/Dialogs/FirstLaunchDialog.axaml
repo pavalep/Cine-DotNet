@@ -11,7 +11,7 @@
         ExtendClientAreaToDecorationsHint="True"
         Background="{StaticResource AppDialogSurface}">
 
-    <Grid RowDefinitions="*,Auto,Auto,Auto,Auto" Margin="36">
+    <Grid RowDefinitions="*,Auto,Auto,Auto,Auto" Margin="32">
 
         <!-- Header -->
         <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center">
@@ -22,7 +22,7 @@
                        Foreground="{StaticResource AppTextPrimary}"
                        HorizontalAlignment="Center" Margin="0,12,0,4" />
             <TextBlock Text="Cine needs to download native media components (~54 MB total)"
-                       FontSize="13"
+                       Classes="md3-body2"
                        Foreground="{StaticResource AppTextOnDarkSecondary}"
                        HorizontalAlignment="Center"
                        TextWrapping="Wrap"
@@ -36,9 +36,9 @@
             <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="dialogs:DownloadItem">
                     <Grid ColumnDefinitions="*,Auto" Margin="0,4">
-                        <TextBlock Text="{Binding FileName}" FontSize="12"
+                        <TextBlock Text="{Binding FileName}" Classes="md3-caption"
                                    Foreground="{StaticResource AppTextOnDarkSecondary}" />
-                        <TextBlock Grid.Column="1" Text="{Binding Status}" FontSize="12"
+                        <TextBlock Grid.Column="1" Text="{Binding Status}" Classes="md3-caption"
                                    Foreground="{StaticResource AppTextMuted}" />
                     </Grid>
                 </DataTemplate>
@@ -56,7 +56,7 @@
         <!-- Status text -->
         <TextBlock Grid.Row="3" x:Name="StatusTextBlock"
                    Text="{Binding StatusText}"
-                   FontSize="11"
+                   Classes="md3-caption"
                    Foreground="{StaticResource AppTextOnDarkHint}"
                    HorizontalAlignment="Center" />
 
@@ -65,7 +65,7 @@
                 Content="{Binding ButtonText}"
                 Command="{Binding DownloadCommand}"
                 HorizontalAlignment="Center" Margin="0,16,0,0"
-                Width="180" Height="36"
-                Classes="start-page-suggested-action" />
+                Width="180"
+                Classes="primary" />
     </Grid>
 </Window>

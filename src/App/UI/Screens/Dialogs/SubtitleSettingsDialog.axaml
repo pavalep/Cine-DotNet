@@ -31,28 +31,19 @@
         </ScrollViewer>
 
         <!-- Footer -->
-        <StackPanel Grid.Row="2" Margin="12,4,12,12" Spacing="4">
+        <StackPanel Grid.Row="2" Margin="{StaticResource space-3}" Spacing="{StaticResource space-spacing-1}">
             <Button x:Name="ResetButton"
                     Content="Reset Defaults"
-                    FontSize="11"
+                    Classes="ghost"
                     HorizontalAlignment="Stretch"
-                    Height="28"
-                    CornerRadius="14"
-                    Background="Transparent"
-                    BorderBrush="{StaticResource PopoverBorder}"
-                    BorderThickness="1"
-                    Foreground="{StaticResource OsdForeground}"
-                    Click="OnResetClick" />
+                    Click="OnResetClick"
+                    AutomationProperties.Name="Reset subtitle settings to defaults" />
             <Button x:Name="CloseButton"
                     Content="Done"
-                    FontSize="12" FontWeight="SemiBold"
+                    Classes="primary"
                     HorizontalAlignment="Stretch"
-                    Height="30"
-                    CornerRadius="15"
-                    Background="{StaticResource AppAccent}"
-                    Foreground="White"
-                    BorderThickness="0"
-                    Click="OnCloseClick" />
+                    Click="OnCloseClick"
+                    AutomationProperties.Name="Close subtitle settings" />
         </StackPanel>
     </Grid>
 </Window>

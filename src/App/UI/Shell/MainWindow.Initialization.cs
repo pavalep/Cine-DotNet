@@ -93,12 +93,13 @@ public partial class MainWindow
         _flyoutManager = new FlyoutManager();
         _controlsBox.FlyoutManager = _flyoutManager;
         _headerBar.FlyoutManager = _flyoutManager;
+        _fullscreenHeader.FlyoutManager = _flyoutManager;
 
         // Wire reopen actions for flyouts that trigger native dialogs (Avalonia #18969):
         // after the dialog completes, the flyout is shown again automatically.
         _flyoutManager.SetReopen("open-menu", () => _headerBar.ReopenFlyout());
-        _flyoutManager.SetReopen("subtitle", () => _controlsBox.SubtitleOverlayCtrl?.ReopenFlyout());
-        _flyoutManager.SetReopen("audio", () => _controlsBox.AudioTrackSelectorCtrl?.ReopenFlyout());
+        _flyoutManager.SetReopen("subtitle", () => _controlsBox.SubtitleOverlay?.ReopenFlyout());
+        _flyoutManager.SetReopen("audio", () => _controlsBox.AudioTrackSelector?.ReopenFlyout());
 
         // Update OnBeforeOpen to use the centralized manager
         _dialogHandler.OnBeforeOpen = () => _flyoutManager.CloseAll();
@@ -147,30 +148,41 @@ public partial class MainWindow
 
         _viewModel.Playlist.CollectionChanged += (_, _) => _viewModel?.SaveSession();
 
-        player.Opened += OnMediaOpened;
-        player.PlaybackStateChangedEvent += OnPlaybackStateChanged;
-        player.PositionChanged += OnPositionChanged;
-        player.ChapterListChanged += OnChapterListChanged;
-        player.FullscreenChangedEvent += OnPlayerFullscreenChanged;
+        // Wire all player events, watchers, and component subscriptions
+        InitializeWiring(player);
 
-        // Create PlaybackStateManager — the single authoritative source for
-        // playback state. All UI consumers read from, this, not from player directly.
-        _stateManager = new PlaybackStateManager(player);
-        _stateManager.StateChanged += OnManagerStateChanged;
-
-        // Sync initial icon state. StateChanged won't fire for the current state
-        // since it was already set in the PlaybackStateManager constructor before
-        // our handler was subscribed.
-        _controlsBox.SyncPlayPauseIcon(_stateManager.IsPlaying);
-        SyncPipPlayState(_stateManager.State);
-
-        _playerService.Error += (_, error) =>
+        _viewModel.SessionResumeRequested = (path, pos) =>
         {
-            Dispatcher.UIThread.OnUiThread(() =>
+            _queuedOpenPath = path;
+            _sessionResumePosition = pos;
+            ShowOsdNotification($"Resume {Path.GetFileName(path)} from {pos.Minutes:D2}:{pos.Seconds:D2}?", 5000);
+            _ = Dispatcher.UIThread.OnUiThreadAsync(async () =>
             {
-                _spinnerOverlay.Stop();
-                _isLoading = false;
-                ShowOsdNotification($"Error: {error}", 4000);
+                await Task.Delay(4000);
+                if (!string.IsNullOrEmpty(_queuedOpenPath) && File.Exists(_queuedOpenPath))
+                {
+                    var p = _queuedOpenPath;
+                    var resumePos = _sessionResumePosition;
+                    _queuedOpenPath = null;
+                    _sessionResumePosition = TimeSpan.Zero;
+                    if (_viewModel != null)
+                    {
+                        _ = _viewModel.OpenFile(p);
+                        _viewModel.ClearSession();
+                    }
+                    if (resumePos.TotalSeconds > 0)
+                    {
+                        EventHandler? handler = null;
+                        handler = (s, args) =>
+                        {
+                            _playerService?.Player?.Seek(resumePos);
+                            var playerInstance = _playerService?.Player;
+                            if (playerInstance != null) playerInstance.Opened -= handler;
+                        };
+                        var playerInstance = _playerService?.Player;
+                        if (playerInstance != null) playerInstance.Opened += handler;
+                    }
+                }
             });
         };
 
@@ -193,84 +205,6 @@ public partial class MainWindow
             });
             return;
         }
-
-        KeyDown += OnKeyDown;
-
-        // Pointer events on transparent overlay (topmost, catches all mouse activity)
-        VideoClickOverlay.PointerMoved += OnWindowPointerMoved;
-
-        // P12: Hover tracking — direct PointerEntered/Exited on each overlay element
-        // Mirrors Python's EventController + contains_pointer checks
-        _headerBar.HeaderBar.PointerEntered += OnHeaderPointerEntered;
-        _headerBar.HeaderBar.PointerExited += OnHeaderPointerExited;
-        _controlsBox.ControlsBox.PointerEntered += OnControlsPointerEntered;
-        _controlsBox.ControlsBox.PointerExited += OnControlsPointerExited;
-        _fullscreenHeader.FullscreenHeader.PointerEntered += OnFullscreenHeaderPointerEntered;
-        _fullscreenHeader.FullscreenHeader.PointerExited += OnFullscreenHeaderPointerExited;
-
-        // P6.6: Window backdrop opacity
-        Activated += OnWindowActivated;
-        Deactivated += OnWindowDeactivated;
-
-        if (_viewModel != null)
-        {
-            SetupPropertyWatchers();
-        }
-
-        // Wire up component events
-        _replayOverlay.ReplayRequested += (_, _) =>
-        {
-            var player = _playerService?.Player;
-            if (player == null) return;
-            // Force reset from EOF state: stop, seek to start, then play
-            player.Stop();
-            player.Seek(TimeSpan.Zero);
-            player.Play();
-        };
-
-        _osdNotification.NotificationClicked += OnOsdNotificationClicked;
-
-        // Wire external file drop events from standalone overlay controls
-        if (_controlsBox.SubtitleOverlayCtrl != null)
-            _controlsBox.SubtitleOverlayCtrl.ExternalFileDropped += (_, path) =>
-                ShowOsdNotification(MaterialIconKind.ClosedCaption,
-                    $"Subtitle loaded: {Path.GetFileName(path)}");
-
-        // SubtitleManager OSD feedback (font size, position, delay changes) — REMOVED
-        // Settings changes are now handled via the SubtitleSettingsDialog.
-        if (_controlsBox.AudioTrackSelectorCtrl != null)
-            _controlsBox.AudioTrackSelectorCtrl.ExternalFileDropped += (_, path) =>
-                ShowOsdNotification(MaterialIconKind.Music,
-                    $"Audio track loaded: {Path.GetFileName(path)}");
-
-        _controlsBox.SeekBarControl.InitializeSeekBar();
-        _controlsBox.SeekBarControl.SeekWheelChanged += (_, delta) =>
-        {
-            if (delta > 0) _viewModel?.SeekForward();
-            else _viewModel?.SeekBackward();
-        };
-
-        InitializeAutoHide();
-        InitializeSessionSave();
-        InitializeResponsiveLayout();
-
-        // Initialize PIP manager — owns PipService + bridges events to UI
-        _pipWindowManager = new PipWindowManager(
-            new PipService(MpvVideoView),
-            _viewModel!,
-            _headerBar,
-            _controlsBox,
-            MpvVideoView,
-            _playerService!,
-            msg => ShowOsdNotification(msg));
-
-        // Wire header toggle buttons → OnPipToggled → PipWindowManager
-        _headerBar.PipToggled += OnPipToggled;
-        _fullscreenHeader.PipToggled += OnPipToggled;
-
-        AddHandler(global::Avalonia.Input.DragDrop.DragEnterEvent, OnWindowDragEnter);
-        AddHandler(global::Avalonia.Input.DragDrop.DragLeaveEvent, OnWindowDragLeave);
-        AddHandler(global::Avalonia.Input.DragDrop.DropEvent, OnWindowDrop);
 
         ReportWindowState("MainWindow.OnWindowInitialized.Finish");
         DebugLog("OnWindowInitialized finish");
@@ -335,21 +269,21 @@ public partial class MainWindow
             _viewModel?.LoadSession();
 
         _headerBar.UpdateMaximizeIcon(WindowState == global::Avalonia.Controls.WindowState.Maximized);
-        _controlsBox?.SubtitleOverlayCtrl?.RefreshIcon();
-        _controlsBox?.AudioTrackSelectorCtrl?.RefreshIcon();
+        _controlsBox?.SubtitleOverlay?.RefreshIcon();
+        _controlsBox?.AudioTrackSelector?.RefreshIcon();
         _controlsBox?.RefreshVolumeIcon();
 
         // Wire flyout dismissal before file dialogs open (prevents dialog overlap)
         if (_viewModel?.Subtitles is { } subMgr)
             subMgr.DismissFlyoutAsync = () =>
             {
-                _controlsBox?.SubtitleOverlayCtrl?.HideFlyout();
+                _controlsBox?.SubtitleOverlay?.HideFlyout();
                 return Task.CompletedTask;
             };
         if (_viewModel?.Audio is { } audMgr)
             audMgr.DismissFlyoutAsync = () =>
             {
-                _controlsBox?.AudioTrackSelectorCtrl?.HideFlyout();
+                _controlsBox?.AudioTrackSelector?.HideFlyout();
                 return Task.CompletedTask;
             };
         ReportWindowState("MainWindow.OnOpened.AfterInitialState");
@@ -411,33 +345,5 @@ public partial class MainWindow
             _controlsBox?.SeekBarControl.InitializeSeekBar();
             DebugLog("Deferred init complete");
         }, DispatcherPriority.Background);
-    }
-
-    private void InitVideoRenderer()
-    {
-        var player = _playerService?.Player as MpvPlayer;
-        if (player == null || _viewModel == null)
-        {
-            DebugLog("InitVideoRenderer: player or viewModel is null");
-            return;
-        }
-
-        DebugLog("InitVideoRenderer: initializing MpvVideoView (ANGLE + render API)");
-
-        // Main window uses ANGLE/OpenGL render API.
-        // MpvVideoView creates its own ANGLE context, initializes mpv render API,
-        // and runs a dedicated render thread that updates a WriteableBitmap Image.
-        // This bypasses Avalonia's OpenGlControlBase which can fail silently in v12.
-        MpvVideoView.Initialize(player);
-    }
-
-    private void InitializeSessionSave()
-    {
-        _sessionSaveTimer = new DispatcherTimer
-        {
-            Interval = TimeSpan.FromSeconds(15)
-        };
-        _sessionSaveTimer.Tick += (_, _) => _viewModel?.SaveSession();
-        _sessionSaveTimer.Start();
     }
 }

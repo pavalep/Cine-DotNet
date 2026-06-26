@@ -147,7 +147,8 @@ public class App : global::Avalonia.Application
                     {
                         Log("MSIX: Runtime DLLs missing — downloading on demand...");
                         System.Console.WriteLine("Downloading media runtime (first launch, this may take a minute)...");
-                        RuntimeDownloader.EnsureRuntimeAsync().GetAwaiter().GetResult();
+                        using var runtimeCts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+                    Task.Run(async () => await RuntimeDownloader.EnsureRuntimeAsync(ct: runtimeCts.Token).ConfigureAwait(false)).GetAwaiter().GetResult();
                         Log("MSIX: Runtime download complete.");
                     }
                 }

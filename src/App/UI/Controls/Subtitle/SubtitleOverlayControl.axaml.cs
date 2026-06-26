@@ -141,7 +141,8 @@ public partial class SubtitleOverlayControl : AvaloniaUserControl
             () => mgr.SubtitleDelay,
             v => mgr.SubtitleDelay = (float)Math.Clamp(v, -10, 10),
             () => mgr.SubtitleDelay = 0,
-            appendExtra: root => AppendFlyoutFooter(root, mgr)
+            appendExtra: root => AppendFlyoutFooter(root, mgr),
+            emptyIcon: global::Material.Icons.MaterialIconKind.ClosedCaptionOutline
         );
     }
 
@@ -233,6 +234,8 @@ public partial class SubtitleOverlayControl : AvaloniaUserControl
         var files = e.DataTransfer.TryGetFiles();
         if (files == null) return;
 
+        try
+        {
         foreach (var file in files)
         {
             var path = file.Path.LocalPath;
@@ -249,6 +252,11 @@ public partial class SubtitleOverlayControl : AvaloniaUserControl
             {
                 _log.Trace("OnBtnDrop: ignored unsupported file {Path} (ext={Ext})", path, ext);
             }
+        }
+        }
+        catch (Exception ex)
+        {
+            _log.Error(ex, "OnBtnDrop: exception during subtitle drop");
         }
     }
 }

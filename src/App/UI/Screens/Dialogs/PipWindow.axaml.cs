@@ -52,6 +52,7 @@ public partial class PipWindow : Window, IPipWindow
     {
         WindowStartupLocation = WindowStartupLocation.Manual;
         InitializeComponent();
+        Topmost = true;                              // PiP always on top
         KeyDown += OnKeyDown;
         SetupHoverTimer();
         ShowAllControls();
@@ -150,7 +151,6 @@ public partial class PipWindow : Window, IPipWindow
     private void OnPinToggle(object? sender, RoutedEventArgs e)
     {
         _isPinned = !_isPinned;
-        Topmost = _isPinned;
         SaveState();
         ResetHoverTimer();
     }
@@ -399,7 +399,7 @@ public partial class PipWindow : Window, IPipWindow
                     state = new PipState(screens[0].WorkingArea.Width - state.W - 20, 20, state.W, state.H, state.Pinned);
             }
             Position = new PixelPoint(state.X, state.Y); Width = state.W; Height = state.H;
-            _isPinned = state.Pinned; Topmost = _isPinned;
+            _isPinned = state.Pinned;
         }
         catch
         {

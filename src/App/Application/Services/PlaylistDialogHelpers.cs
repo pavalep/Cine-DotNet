@@ -35,15 +35,16 @@ public static class PlaylistDialogHelpers
     /// <summary>
     /// Export playlist items as M3U format to a file.
     /// </summary>
-    public static async Task ExportToM3UAsync(IEnumerable<PlaylistItemViewModel> items, string filePath)
+    public static async Task ExportToM3UAsync(IEnumerable<PlaylistItemViewModel> items, string filePath, CancellationToken ct = default)
     {
         await using var stream = File.OpenWrite(filePath);
         await using var writer = new StreamWriter(stream);
-        await writer.WriteLineAsync("#EXTM3U");
+        await writer.WriteLineAsync("#EXTM3U".AsMemory(), ct);
         foreach (var item in items)
         {
-            await writer.WriteLineAsync($"#EXTINF:0,{item.Title}");
-            await writer.WriteLineAsync(item.FilePath);
+            ct.ThrowIfCancellationRequested();
+            await writer.WriteLineAsync($"#EXTINF:0,{item.Title}".AsMemory(), ct);
+            await writer.WriteLineAsync(item.FilePath.AsMemory(), ct);
         }
     }
 }

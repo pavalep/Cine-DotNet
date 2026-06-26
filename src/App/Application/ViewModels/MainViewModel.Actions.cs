@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using Cine.Avalonia.Extensions;
@@ -69,13 +70,14 @@ public partial class MainViewModel
     }
 
     /// <summary>Load an external subtitle file directly (bypasses file dialog).</summary>
-    public async Task LoadExternalSubtitleAsync(string filePath)
+    public async Task LoadExternalSubtitleAsync(string filePath, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(filePath) || Subtitles == null) return;
         try
         {
-            await Subtitles.LoadExternalSubtitleAsync(filePath);
+            await Subtitles.LoadExternalSubtitleAsync(filePath, ct);
         }
+        catch (OperationCanceledException) { }
         catch (Exception ex)
         {
             global::Cine.Core.Log.ForContext<MainViewModel>().Error(ex, "LoadExternalSubtitle failed");

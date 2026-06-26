@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 using Cine.Avalonia.Models;
@@ -789,7 +790,8 @@ public sealed class SubtitleManager : ISubtitleManager
     /// 3. Auto-select the first track on UI thread
     ///    (RebuildSubtitleTracks is called naturally by OnSubtitleTrackListChanged)
     /// </summary>
-    private async Task DispatchAddExternalSubtitlesAsync(List<string> externalFiles)
+    /// <param name="ct">Cancellation token for the mpv TrackListChanged wait.</param>
+    private async Task DispatchAddExternalSubtitlesAsync(List<string> externalFiles, CancellationToken ct = default)
     {
         try
         {
@@ -841,7 +843,18 @@ public sealed class SubtitleManager : ISubtitleManager
 
             // Wait for mpv's event loop to fire TrackListChanged
             var timeout = TimeSpan.FromSeconds(3);
-            bool eventReceived = await Task.WhenAny(tcs.Task, Task.Delay(timeout)) == tcs.Task;
+            using var delayCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            delayCts.CancelAfter(timeout);
+            bool eventReceived = false;
+            try
+            {
+                await Task.WhenAny(tcs.Task, Task.Delay(Timeout.Infinite, delayCts.Token));
+                eventReceived = tcs.Task.IsCompleted && !tcs.Task.IsFaulted;
+            }
+            catch (OperationCanceledException)
+            {
+                // Timed out or cancelled
+            }
             var latestTracks = Array.Empty<SubtitleSource>();
             if (eventReceived)
             {
@@ -936,11 +949,11 @@ public sealed class SubtitleManager : ISubtitleManager
     }
 
     /// <summary>Load external subtitle directly (drag-drop, automation).</summary>
-    public async Task LoadExternalSubtitleAsync(string filePath)
+    public async Task LoadExternalSubtitleAsync(string filePath, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(filePath)) return;
         _sessionOverride = true;
-        await DispatchAddExternalSubtitlesAsync(new List<string> { filePath });
+        await DispatchAddExternalSubtitlesAsync(new List<string> { filePath }, ct);
     }
 
     /// <summary>Select a subtitle track by its ID. Used for session restore.</summary>

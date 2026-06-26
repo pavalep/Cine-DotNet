@@ -15,7 +15,7 @@ namespace Cine.Avalonia.Views.Dialogs;
 
 public partial class SubtitleSettingsDialog : Window
 {
-    private readonly ISubtitleManager _mgr;
+    private readonly ISubtitleManager _mgr = null!;
 
     private static IBrush? GetThemeBrush(string key)
         => global::Avalonia.Application.Current?.FindResource(key) as IBrush;
@@ -39,9 +39,16 @@ public partial class SubtitleSettingsDialog : Window
         ("#A0A0A0", global::Avalonia.Media.Color.FromRgb(160, 160, 160)),
     };
 
+    /// <summary>Parameterless constructor required by Avalonia XAML loader.</summary>
+    public SubtitleSettingsDialog()
+    {
+        // No-op — this dialog is always created in code with the manager.
+        // Only exists to satisfy AVLN3001.
+    }
+
     public SubtitleSettingsDialog(ISubtitleManager mgr)
     {
-        _mgr = mgr ?? throw new ArgumentNullException(nameof(mgr));
+        _mgr = mgr;
         InitializeComponent();
         BuildControls();
     }
@@ -114,7 +121,7 @@ public partial class SubtitleSettingsDialog : Window
         var header = new Grid
         {
             ColumnDefinitions = new("Auto,*,Auto"),
-            Margin = new Thickness(8, 0, 6, 0)
+            Margin = new Thickness(8, 0, 4, 0)
         };
         var labelText = new TextBlock
         {
