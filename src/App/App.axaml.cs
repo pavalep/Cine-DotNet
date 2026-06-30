@@ -273,7 +273,14 @@ public class App : global::Avalonia.Application
         catch (Exception ex)
         {
             Log($"OnFrameworkInitializationCompleted FAILED: {ex}");
-            throw;
+            CrashReporter.Dump(ex, "App.OnFrameworkInitializationCompleted");
+
+            // Don't rethrow — graceful degradation: close cleanly instead of crashing silently
+            if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            {
+                try { desktop.Shutdown(); }
+                catch { /* best-effort shutdown */ }
+            }
         }
 
         base.OnFrameworkInitializationCompleted();

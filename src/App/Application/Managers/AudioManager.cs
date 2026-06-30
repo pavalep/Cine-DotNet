@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Cine.Media.Events;
 using Cine.Media.Interfaces;
 using Cine.Media.Models;
+using Cine.Avalonia.Helpers;
 using Cine.Avalonia.Models;
 using Cine.Avalonia.Services;
 
@@ -277,6 +278,13 @@ public sealed class AudioManager : IAudioManager
         _pendingAudioTrackId = trackId;
     }
 
+    // ── Track Change Feedback (wired by shell for OSD) ──
+    public Action<string>? TrackChangedMessage { get; set; }
+
+    // ═══════════════════════════════════════════════
+    //  Track Selection
+    // ═══════════════════════════════════════════════
+
     private void OnSelectAudio(TrackMenuItem item)
     {
         if (item.DisplayName == "Add Audio Track…")
@@ -291,6 +299,7 @@ public sealed class AudioManager : IAudioManager
             _currentAudioTrackId = -1;
             foreach (var t in AudioTracks) t.RefreshSelection(false);
             item.RefreshSelection(true);
+            TrackChangedMessage?.Invoke("Audio: None");
             return;
         }
 
@@ -301,6 +310,7 @@ public sealed class AudioManager : IAudioManager
             foreach (var t in AudioTracks) t.RefreshSelection(false);
             item.RefreshSelection(true);
             MarkDirty();
+            TrackChangedMessage?.Invoke(item.DisplayName);
         }
     }
 
@@ -358,9 +368,7 @@ public sealed class AudioManager : IAudioManager
 
     private static string FormatTrack(string prefix, SubtitleSource track)
     {
-        var lang = string.IsNullOrWhiteSpace(track.Language) ? "und" : track.Language;
-        var state = track.IsEnabled ? "on" : "off";
-        return $"{prefix}: {lang} ({state})";
+        return Cine.Avalonia.Helpers.TrackDisplayHelper.FormatTrack(TrackType.Audio, track);
     }
 
     #endregion

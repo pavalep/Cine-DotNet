@@ -73,6 +73,7 @@
                         Content="Open…"
                         Padding="32,0"
                         HorizontalAlignment="Center"
+                        AutomationProperties.Name="Open media file"
                         Click="BtnOpenFile_Click" />
 
                 <!-- Open Folder button (pill) -->
@@ -81,6 +82,7 @@
                         Content="Open Folder"
                         Padding="32,0"
                         HorizontalAlignment="Center"
+                        AutomationProperties.Name="Open media folder"
                         Click="BtnOpenFolder_Click" />
 
                 <!-- Recent files section -->

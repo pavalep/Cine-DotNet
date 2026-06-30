@@ -73,6 +73,12 @@
             <Setter Property="HorizontalAlignment" Value="Left" />
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="IsHitTestVisible" Value="True" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Width" Duration="0:0:0.12" Easing="{StaticResource ease-standard}" />
+                    <DoubleTransition Property="Height" Duration="0:0:0.12" Easing="{StaticResource ease-standard}" />
+                </Transitions>
+            </Setter>
         </Style>
         <Style Selector="Border.pip-seek-thumb:pointerover">
             <Setter Property="Width" Value="16" />

@@ -114,6 +114,26 @@
                                      VerticalAlignment="Bottom"
                                      HorizontalAlignment="Stretch" />
 
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <!--  SIGNATURE INNOVATIONS (Phase 11)                            -->
+        <!-- ══════════════════════════════════════════════════════════════ -->
+
+        <!-- Now Playing Info Panel — bottom-right overlay, hidden by default -->
+        <controls:NowPlayingInfoControl x:Name="NowPlayingInfoPanel"
+                                        VerticalAlignment="Bottom"
+                                        HorizontalAlignment="Right"
+                                        ZIndex="35"
+                                        IsVisible="False" />
+
+        <!-- Focus Mode indicator — a tiny thin line at the bottom when all chrome is hidden -->
+        <Border x:Name="FocusModeIndicator" ZIndex="40"
+                VerticalAlignment="Bottom" HorizontalAlignment="Center"
+                IsVisible="False" IsHitTestVisible="False"
+                Background="{StaticResource AppAccent}"
+                Width="120" Height="2"
+                CornerRadius="1"
+                Margin="0,0,0,4" />
+
         <!-- OSD Notification — bottom center, floats above ControlsBox.
              Bottom margin lifts it above the ControlsBox (which is ~100-110px tall). -->
         <controls:OsdNotificationControl x:Name="OsdNotificationControl"

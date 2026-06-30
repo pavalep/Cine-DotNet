@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
+using Cine.Avalonia.Helpers;
 using Cine.Avalonia.Models;
 using Cine.Avalonia.Services;
 using Cine.Core.Services;
@@ -64,6 +65,7 @@ public sealed class SubtitleManager : ISubtitleManager
     // ── Callback ──
     public Func<Task<string?>>? RequestSubtitleFileAsync { get; set; }
     public Func<Task>? DismissFlyoutAsync { get; set; }
+    public Action<string>? TrackChangedMessage { get; set; }
 
     // ── Events from player ──
     private EventHandler<TrackListChangedEventArgs>? _trackListChangedHandler;
@@ -729,6 +731,7 @@ public sealed class SubtitleManager : ISubtitleManager
             foreach (var t in SubtitleTracks) t.RefreshSelection(false);
             item.RefreshSelection(true);
             MarkDirty();
+            TrackChangedMessage?.Invoke(item.DisplayName);
             return;
         }
 
@@ -741,6 +744,7 @@ public sealed class SubtitleManager : ISubtitleManager
             foreach (var t in SubtitleTracks) t.RefreshSelection(false);
             item.RefreshSelection(true);
             MarkDirty();
+            TrackChangedMessage?.Invoke(item.DisplayName);
         }
         else
         {
@@ -1095,51 +1099,9 @@ public sealed class SubtitleManager : ISubtitleManager
     //  Helpers
     // ═══════════════════════════════════════════════
 
-    private static readonly Dictionary<string, string> LanguageNames = new()
-    {
-        ["eng"] = "English", ["spa"] = "Spanish", ["fre"] = "French",
-        ["ger"] = "German",  ["ita"] = "Italian", ["por"] = "Portuguese",
-        ["jpn"] = "Japanese",["kor"] = "Korean",  ["chi"] = "Chinese",
-        ["zho"] = "Chinese", ["rus"] = "Russian", ["ara"] = "Arabic",
-        ["hin"] = "Hindi",   ["vie"] = "Vietnamese", ["tha"] = "Thai",
-        ["tur"] = "Turkish", ["pol"] = "Polish",  ["dut"] = "Dutch",
-        ["nld"] = "Dutch",   ["swe"] = "Swedish", ["nor"] = "Norwegian",
-        ["dan"] = "Danish",  ["fin"] = "Finnish", ["cze"] = "Czech",
-        ["rum"] = "Romanian",["hun"] = "Hungarian",["gre"] = "Greek",
-        ["heb"] = "Hebrew",  ["ukr"] = "Ukrainian",["bul"] = "Bulgarian",
-        ["hrv"] = "Croatian",["srp"] = "Serbian", ["slv"] = "Slovenian",
-        ["ind"] = "Indonesian",["msa"] = "Malay", ["tgl"] = "Filipino",
-        ["und"] = "Unknown"
-    };
-
-    private static string LanguageName(string code)
-    {
-        if (string.IsNullOrWhiteSpace(code)) return "Unknown";
-        var key = code.ToLowerInvariant().Trim();
-        // Handle "AG-en" style codes from external subtitle filenames
-        if (key.Contains('-'))
-        {
-            var parts = key.Split('-');
-            var last = parts[^1];
-            if (LanguageNames.TryGetValue(last, out var name))
-                return name;
-        }
-        return LanguageNames.TryGetValue(key, out var n) ? n : code;
-    }
-
     private static string FormatTrack(string prefix, SubtitleSource track)
     {
-        var lang = LanguageName(track.Language);
-        var tags = new List<string>();
-
-        if (track.IsExternal) tags.Add("External");
-        if (track.IsForced) tags.Add("Forced");
-        if (track.IsHearingImpaired) tags.Add("SDH");
-        if (track.IsBitmap) tags.Add("PGS");
-
-        return tags.Count > 0
-            ? $"{lang} ({string.Join(", ", tags)})"
-            : lang;
+        return Cine.Avalonia.Helpers.TrackDisplayHelper.FormatTrack(TrackType.Subtitle, track);
     }
 
     // ═══════════════════════════════════════════════

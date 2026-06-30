@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using Avalonia.Threading;
 using Cine.Avalonia.Controls;
+using Cine.Avalonia.Services;
 using Cine.Media.Implementations;
 
 namespace Cine.Avalonia;
@@ -33,6 +34,12 @@ public partial class MainWindow
         // and runs a dedicated render thread that updates a WriteableBitmap Image.
         // This bypasses Avalonia's OpenGlControlBase which can fail silently in v12.
         MpvVideoView.Initialize(player);
+
+        // Phase 2 premium: wire performance services
+        var perfMonitor = new PerformanceMonitor();
+        var renderThrottle = new RenderThrottleService();
+        MpvVideoView.SetPerformanceServices(perfMonitor, renderThrottle);
+        DebugLog("InitVideoRenderer: performance services wired");
     }
 
     /// <summary>

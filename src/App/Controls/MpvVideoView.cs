@@ -7,6 +7,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Avalonia.Platform;
+using Cine.Avalonia.Services;
 using Cine.Media.Implementations;
 using Cine.Media.Models;
 using Image = Avalonia.Controls.Image;
@@ -54,6 +55,10 @@ public class MpvVideoView : Decorator
     /// Frames still fire <see cref="FrameRendered"/> so PiP continues to work.
     /// </summary>
     public bool DisplayEnabled { get; set; } = true;
+
+    // Performance monitoring (Phase 2 premium)
+    private PerformanceMonitor? _performanceMonitor;
+    private RenderThrottleService? _renderThrottle;
 
     // Debug counters
     private long _frameCount;
@@ -157,6 +162,19 @@ public class MpvVideoView : Decorator
         _player = null;
     }
 
+    /// <summary>
+    /// Wire optional performance services (Phase 2 premium).
+    /// Call after Initialize() and before opening media.
+    /// </summary>
+    public void SetPerformanceServices(
+        PerformanceMonitor? monitor,
+        RenderThrottleService? throttle)
+    {
+        _performanceMonitor = monitor;
+        _renderThrottle = throttle;
+        Log($"Performance services set: monitor={(monitor != null)} throttle={(throttle != null)}");
+    }
+
     private void OnPlayerOpened(object? sender, EventArgs e)
     {
         if (_player == null) return;
@@ -199,6 +217,16 @@ public class MpvVideoView : Decorator
                         continue;
                     }
 
+                    // Phase 2: RenderThrottleService check (60fps cap)
+                    if (_renderThrottle != null && !_renderThrottle.ShouldRender())
+                    {
+                        // Throttled — consume the flag anyway so we don't
+                        // infinitely re-process the same frame-ready signal.
+                        _frameReady = false;
+                        Thread.Sleep(1);
+                        continue;
+                    }
+
                     // Consume
                     _frameReady = false;
                     _lastFrameTime = now;
@@ -208,7 +236,9 @@ public class MpvVideoView : Decorator
                     if ((now - _lastDebugLog) > DebugLogInterval)
                     {
                         _lastDebugLog = now;
-                        Log($"STATS: frames={_frameCount} renders={_renderCount} displays={_displayCount} vidSize={_videoWidth}x{_videoHeight} fbo={_angleContext?.Width}x{_angleContext?.Height}");
+                        var throttleSummary = _renderThrottle?.GetSummary() ?? "throttle=unused";
+                        var perfSummary = _performanceMonitor?.GetSummary() ?? "perf=unused";
+                        Log($"STATS: frames={_frameCount} renders={_renderCount} displays={_displayCount} vidSize={_videoWidth}x{_videoHeight} fbo={_angleContext?.Width}x{_angleContext?.Height} | {throttleSummary} | {perfSummary}");
                     }
 
                     try
@@ -248,6 +278,9 @@ public class MpvVideoView : Decorator
                             UpdateDisplay(pixels, w, h);
                             _displayCount++;
                         }, DispatcherPriority.Background);
+
+                        // Phase 2: Notify performance monitor of a successful render
+                        _performanceMonitor?.OnFrameRendered();
                     }
                     catch (Exception ex)
                     {

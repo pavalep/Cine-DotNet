@@ -171,7 +171,7 @@
     <SolidColorBrush x:Key="AppTextOnDarkDisabled" Color="#50FFFFFF" />
     <SolidColorBrush x:Key="AppTextOnDarkTertiary" Color="#80FFFFFF" />
     <SolidColorBrush x:Key="TextTertiary" Color="#80FFFFFF" />
-    <SolidColorBrush x:Key="AppTextOnDarkSubtle" Color="#60FFFFFF" />
+    <SolidColorBrush x:Key="AppTextOnDarkSubtle" Color="#78FFFFFF" />
 
     <SolidColorBrush x:Key="AppOverlay" Color="#B0000000" />
     <SolidColorBrush x:Key="AppOverlayLight" Color="#80000000" />

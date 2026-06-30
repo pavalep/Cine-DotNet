@@ -19,6 +19,7 @@ using Cine.Avalonia.Services;
 using Cine.Avalonia.ViewModels;
 using Cine.Avalonia.Views.Dialogs;
 using Cine.Avalonia.Builders;
+using Material.Icons;
 using MaterialIcon = global::Material.Icons.Avalonia.MaterialIcon;
 using App = global::Avalonia.Application;
 using SizeChangedEventArgs = Avalonia.Controls.SizeChangedEventArgs;
@@ -35,6 +36,7 @@ public partial class MainWindow
 
     private void RegisterKeyboardShortcuts()
     {
+        DebugLog("[DBG] RegisterKeyboardShortcuts: enter, _inputRouter=" + (_inputRouter == null ? "null" : "not-null"));
         if (_inputRouter == null) return;
 
         // ── Playback ──
@@ -177,15 +179,146 @@ public partial class MainWindow
         Register(Key.P, KeyModifiers.Control | KeyModifiers.Shift, () => OnPipToggled(null, EventArgs.Empty), "Toggle Picture-in-Picture");
 
         // ── Dialogs ──
-        Register(Key.OemComma, KeyModifiers.Control, () => { var prefs = new PreferencesDialog { DataContext = _viewModel }; prefs.Show(this); },
-            "Preferences");
-        Register(Key.OemQuestion, KeyModifiers.Control, () => { var dlg = new KeyboardShortcutsDialog(); dlg.Show(this); },
-            "Keyboard Shortcuts");
-        Register(Key.G, KeyModifiers.Control, () => { var dlg = new GoToTimeDialog { DataContext = _viewModel }; dlg.Show(this); },
-            "Go To Time");
+        Register(Key.OemComma, KeyModifiers.Control, () => ShowDialogWithScope(() =>
+        {
+            var prefs = new PreferencesDialog { DataContext = _viewModel };
+            prefs.Show(this);
+        }), "Preferences");
+        Register(Key.OemQuestion, KeyModifiers.Control, () => ShowDialogWithScope(() =>
+        {
+            var dlg = new KeyboardShortcutsDialog();
+            dlg.Show(this);
+        }), "Keyboard Shortcuts");
+        Register(Key.G, KeyModifiers.Control, () => ShowDialogWithScope(() =>
+        {
+            var dlg = new GoToTimeDialog { DataContext = _viewModel };
+            dlg.Show(this);
+        }), "Go To Time");
 
         // ── Time Display ──
         Register(Key.T, KeyModifiers.None, () => _controlsBox?.SeekBarControl?.ToggleTimeDisplay(), "Toggle Time Display");
+
+        // Phase 3: Validate all shortcut bindings at startup
+        var validation = KeyboardConflictValidator.Validate(_inputRouter!);
+        DebugLog($"[DBG] RegisterKeyboardShortcuts: {validation.TotalBindings} bindings registered, {validation.ConflictCount} conflicts");
+        if (!validation.IsClean)
+        {
+            DebugLog($"KeyboardConflictValidator: {validation.ConflictCount} conflicts found in {validation.TotalBindings} bindings.");
+            foreach (var c in validation.Conflicts)
+                DebugLog($"  Conflict: {c}");
+        }
+        else
+        {
+            DebugLog($"KeyboardConflictValidator: Clean — {validation.TotalBindings} bindings, no conflicts.");
+        }
+
+        // ── Phase 11: Signature Commands ──
+        Register(Key.K, KeyModifiers.Control, ShowCommandPalette, "Command Palette (Ctrl+K)");
+        Register(Key.D, KeyModifiers.Control, ToggleNowPlayingInfo, "Now Playing Info (Ctrl+J)");
+        Register(Key.OemPeriod, KeyModifiers.Control, ToggleFocusMode, "Focus Mode (Ctrl+.)");
+
+        PopulatePaletteCommands();
+    }
+
+    /// <summary>Collects all signal commands for the command palette.</summary>
+    private void PopulatePaletteCommands()
+    {
+        _paletteCommands.Clear();
+        // Playback
+        AddPalette("Play / Pause", () => _viewModel?.PlayPause());
+        AddPalette("Stop", () => _viewModel?.Stop());
+        AddPalette("Seek Backward 5s", () => _viewModel?.SeekBackward());
+        AddPalette("Seek Forward 5s", () => _viewModel?.SeekForward());
+        AddPalette("Seek Backward 30s", () => _viewModel?.SeekLargeBackward());
+        AddPalette("Seek Forward 30s", () => _viewModel?.SeekLargeForward());
+        AddPalette("Seek Backward 10s", () => _playerService?.Player?.SeekBackward(10));
+        AddPalette("Seek Forward 10s", () => _playerService?.Player?.SeekForward(10));
+        // Navigation
+        AddPalette("Next Chapter", () => _viewModel?.NextChapter());
+        AddPalette("Previous Chapter", () => _viewModel?.PreviousChapter());
+        AddPalette("Next Frame", () => _playerService?.Player?.NextFrame());
+        AddPalette("Previous Frame", () => _playerService?.Player?.PreviousFrame());
+        // View
+        AddPalette("Toggle Fullscreen", () => _viewModel?.ToggleFullscreen());
+        AddPalette("Toggle Focus Mode", ToggleFocusMode);
+        AddPalette("Toggle Picture-in-Picture", () => OnPipToggled(null, EventArgs.Empty));
+        AddPalette("Toggle Time Display", () => _controlsBox?.SeekBarControl?.ToggleTimeDisplay());
+        AddPalette("Now Playing Info", ToggleNowPlayingInfo);
+        // Speed
+        AddPalette("Increase Speed", () => _playerService?.Player?.IncreaseSpeed());
+        AddPalette("Decrease Speed", () => _playerService?.Player?.DecreaseSpeed());
+        AddPalette("Reset Speed", () => _playerService?.Player?.ResetSpeed());
+        // Audio
+        AddPalette("Mute / Unmute", () => _viewModel?.ToggleMute());
+        AddPalette("Volume Up", () => _viewModel?.IncreaseVolume());
+        AddPalette("Volume Down", () => _viewModel?.DecreaseVolume());
+        AddPalette("Toggle Shuffle", () => _viewModel?.ToggleShuffle());
+        AddPalette("Toggle Loop File", () => _viewModel?.ToggleLoopFile());
+        AddPalette("Toggle Loop Playlist", () => _viewModel?.ToggleLoopPlaylist());
+        // Subtitles
+        AddPalette("Toggle Subtitles", () => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.IsSubtitleEnabled = !_viewModel.Subtitles.IsSubtitleEnabled; });
+        AddPalette("Next Subtitle Track", () => { if (_viewModel?.Subtitles != null) _viewModel.Subtitles.CycleSubtitleTrackForward(); });
+        // Screenshots
+        AddPalette("Screenshot (with subs)", () => _playerService?.Player?.ScreenshotWithSubtitles());
+        AddPalette("Screenshot (no subs)", () => _playerService?.Player?.ScreenshotWithoutSubtitles());
+        // Dialogs
+        AddPalette("Go to Time…", () => ShowDialogWithScope(() => new GoToTimeDialog { DataContext = _viewModel }.Show(this)));
+        AddPalette("Preferences", () => ShowDialogWithScope(() => new PreferencesDialog { DataContext = _viewModel }.Show(this)));
+        AddPalette("Keyboard Shortcuts", () => ShowDialogWithScope(() => new KeyboardShortcutsDialog().Show(this)));
+        // Zoom
+        AddPalette("Zoom In", () => { if (_playerService?.Player != null) _playerService.Player.Zoom += 0.05; });
+        AddPalette("Zoom Out", () => { if (_playerService?.Player != null) _playerService.Player.Zoom -= 0.05; });
+        // Loop / Playlist
+        AddPalette("Next Item", () => _viewModel?.NextItem());
+        AddPalette("Previous Item", () => _viewModel?.PreviousItem());
+    }
+
+    private void AddPalette(string description, Action action)
+        => _paletteCommands.Add((description, action));
+
+    /// <summary>Show the command palette dialog.</summary>
+    private void ShowCommandPalette()
+    {
+        var dlg = new CommandPaletteDialog(_paletteCommands)
+        {
+            DataContext = _viewModel
+        };
+        dlg.Show(this);
+    }
+
+    /// <summary>Toggle Now Playing info panel overlay.</summary>
+    private void ToggleNowPlayingInfo()
+    {
+        if (NowPlayingInfoPanel == null) return;
+        NowPlayingInfoPanel.IsVisible = !NowPlayingInfoPanel.IsVisible;
+        if (NowPlayingInfoPanel.IsVisible)
+        {
+            NowPlayingInfoPanel.SetPlayer(_playerService?.Player);
+            NowPlayingInfoPanel.Refresh();
+            ShowOsdNotification(MaterialIconKind.InformationOutline, "Now Playing");
+        }
+    }
+
+    /// <summary>Toggle Focus Mode — hides all chrome except a thin indicator line.</summary>
+    private void ToggleFocusMode()
+    {
+        _isFocusMode = !_isFocusMode;
+        if (_isFocusMode)
+        {
+            _headerBar.IsVisible = false;
+            _fullscreenHeader.IsVisible = false;
+            _controlsBox.IsVisible = false;
+            FocusModeIndicator.IsVisible = true;
+            ShowOsdNotification(MaterialIconKind.MoonWaxingCrescent, "Focus Mode");
+        }
+        else
+        {
+            _headerBar.IsVisible = WindowState != WindowState.FullScreen;
+            _fullscreenHeader.IsVisible = WindowState == WindowState.FullScreen;
+            _controlsBox.IsVisible = true;
+            FocusModeIndicator.IsVisible = false;
+            ShowOsdNotification(MaterialIconKind.MoonWaxingCrescent, "Focus Mode Off");
+        }
     }
 
     private void Register(Key key, Action action, string description)
@@ -203,50 +336,112 @@ public partial class MainWindow
     }
 
     // ─────────────────────────────────────────────────────────────
-    //  Key Down — routed through InputRoutingService
+    //  Key Down — global Tunnel handler catches all keys before children
     // ─────────────────────────────────────────────────────────────
 
-    private void OnKeyDown(object? sender, KeyEventArgs e)
+    protected override void OnKeyDown(KeyEventArgs e)
     {
+        base.OnKeyDown(e);
+        if (e.Handled) return;
+
         var key = e.Key;
-        var shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
         var ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
+        var shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
+        DebugLog($"[DBG] OnKeyDown: key={key} ctrl={ctrl} shift={shift}");
 
-        // ── Skip if a text-editable control has focus (TextBox, NumericUpDown, etc.) ──
+        // ── Text-edit scope: skip routing when a text control has focus ──
         var focused = TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement();
-        if (focused is global::Avalonia.Controls.TextBox or AutoCompleteBox or global::Avalonia.Controls.NumericUpDown)
+        if (focused is global::Avalonia.Controls.TextBox
+            or AutoCompleteBox
+            or global::Avalonia.Controls.NumericUpDown)
         {
+            // Push TextEdit scope so only TextEdit-registered shortcuts fire
+            _inputRouter?.PushScope(InputRoutingService.InputScope.TextEdit);
+            try
+            {
+                if (_inputRouter != null && _inputRouter.TryHandle(e))
+                    e.Handled = true;
+            }
+            finally
+            {
+                _inputRouter?.PopScope();
+            }
             return;
         }
 
-        // When PIP is active, only allow Escape and Ctrl+Shift+P through
-        if (_pipWindowManager is { IsActive: true } &&
-            key != Key.Escape && !(ctrl && shift && key == Key.P))
-        {
-            e.Handled = true;
-            return;
-        }
-
-        // Detect if any modal dialog is open → switch scope to DialogOpen
-        var scope = InputRoutingService.InputScope.Normal;
+        // ── Dialog scope: detect if any owned modal dialog is visible ──
+        var hasVisibleDialog = false;
         if (OwnedWindows.Count > 0)
         {
-            // Check if any owned window is modal (visible dialog)
             foreach (var owned in OwnedWindows)
             {
                 if (owned.IsVisible)
                 {
-                    scope = InputRoutingService.InputScope.DialogOpen;
+                    hasVisibleDialog = true;
                     break;
                 }
             }
         }
 
-        // Route through InputRoutingService with detected scope
-        if (_inputRouter != null && _inputRouter.TryHandle(e, scope))
+        if (hasVisibleDialog)
         {
+            _inputRouter?.PushScope(InputRoutingService.InputScope.DialogOpen);
+            try
+            {
+                if (_inputRouter != null && _inputRouter.TryHandle(e))
+                    e.Handled = true;
+            }
+            finally
+            {
+                _inputRouter?.PopScope();
+            }
+            return;
+        }
+
+        // ── PIP scope ──
+        if (_pipWindowManager is { IsActive: true })
+        {
+            // Only allow Escape and Ctrl+Shift+P through
+            if (key == Key.Escape || (ctrl && shift && key == Key.P))
+            {
+                _inputRouter?.PushScope(InputRoutingService.InputScope.PipActive);
+                try
+                {
+                    if (_inputRouter != null && _inputRouter.TryHandle(e))
+                        e.Handled = true;
+                }
+                finally
+                {
+                    _inputRouter?.PopScope();
+                }
+            }
+            else
+            {
+                e.Handled = true;
+            }
+            return;
+        }
+
+        // ── Normal scope ──
+        if (_inputRouter != null && _inputRouter.TryHandle(e))
+        {
+            DebugLog($"[DBG] OnKeyDown: handled key={key} ctrl={ctrl} shift={shift}");
             e.Handled = true;
         }
+        else
+        {
+            var routerState = _inputRouter == null ? "null" : $"{_inputRouter.ScopeDepth} scopes, cur={_inputRouter.CurrentScope}";
+            DebugLog($"[DBG] OnKeyDown: unhandled key={key} ctrl={ctrl} shift={shift} router={routerState}");
+        }
+    }
+
+    /// <summary>
+    /// Show a dialog. The dialog opens as an owned window; OnKeyDown detects it
+    /// automatically via OwnedWindows and switches to DialogOpen scope.
+    /// </summary>
+    private void ShowDialogWithScope(Action showDialog)
+    {
+        showDialog();
     }
 
     private void CloseOpenFlyouts()

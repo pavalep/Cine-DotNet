@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using Cine.Media.Interfaces;
 using Cine.Media.Models;
+using Cine.Avalonia.Helpers;
 using Cine.Avalonia.Models;
 
 namespace Cine.Avalonia.Managers;
@@ -175,9 +176,7 @@ public sealed class VideoManager : INotifyPropertyChanged, IDisposable
 
     private static string FormatTrack(string prefix, SubtitleSource track)
     {
-        var lang = string.IsNullOrWhiteSpace(track.Language) ? "und" : track.Language;
-        var state = track.IsEnabled ? "on" : "off";
-        return $"{prefix}: {lang} ({state})";
+        return Cine.Avalonia.Helpers.TrackDisplayHelper.FormatTrack(TrackType.Video, track);
     }
 
     #endregion

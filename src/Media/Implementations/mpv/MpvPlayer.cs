@@ -1092,6 +1092,14 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
                 SetOptionString(kv.Key, kv.Value);
             }
 
+            // Phase 2 premium: apply low-latency tuning on top of base options
+            DebugLog("  Applying premium tuning...");
+            foreach (var kv in MpvConfig.GetPremiumTuningOptions())
+            {
+                DebugLog($"  PremiumOption: {kv.Key}={kv.Value}");
+                SetOptionString(kv.Key, kv.Value);
+            }
+
             DebugLog("  calling mpv_initialize...");
             var initErr = MpvNative.mpv_initialize(_mpv);
             DebugLog($"  mpv_initialize returned {initErr}");

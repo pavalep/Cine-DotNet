@@ -47,6 +47,9 @@ public interface ISubtitleManager : INotifyPropertyChanged, IDisposable
     Task LoadExternalSubtitleAsync(string filePath, CancellationToken ct = default);
     Task AddSubtitleTrackAsync();
 
+    // ── Track Change Feedback (wired by shell for OSD) ──
+    Action<string>? TrackChangedMessage { get; set; }
+
     // ── Lifecycle ──
     void OnFileClosing();
     void NotifyMediaOpened(string mediaPath);

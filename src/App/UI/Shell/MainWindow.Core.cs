@@ -78,6 +78,15 @@ public partial class MainWindow
     // Session save
     private DispatcherTimer? _sessionSaveTimer;
 
+    // Phase 10: Per-phase startup timing
+    private readonly StartupTimer _startupTimer = new();
+
+    // Phase 11: Command palette command registry
+    private readonly List<(string description, Action action)> _paletteCommands = new();
+
+    // Phase 11: Focus mode — hides all chrome except a thin indicator
+    private bool _isFocusMode;
+
     // ── Volume OSD debounce ──
     private DispatcherTimer? _volumeOsdTimer;
     private double _pendingVolumeLevel;

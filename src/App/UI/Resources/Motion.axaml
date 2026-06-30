@@ -50,6 +50,9 @@
     <!-- Emphasized — dialog open, page transitions -->
     <CubicEaseOut x:Key="ease-emphasized" />
 
+    <!-- Spring-like decelerated — elements entering screen -->
+    <BackEaseOut x:Key="ease-spring" />
+
     <!-- Decelerated — elements entering screen -->
     <CubicEaseIn x:Key="ease-decelerated" />
 

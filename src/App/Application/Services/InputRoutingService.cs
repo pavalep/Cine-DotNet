@@ -9,7 +9,12 @@ namespace Cine.Avalonia.Services;
 /// 
 /// Shortcuts are registered once (typically in MainWindow.ctor) and routed
 /// through <see cref="TryHandle"/>. Scopes allow blocking certain shortcuts
-/// when dialogs are open or when PIP is active.
+/// when dialogs are open, text controls are focused, or PIP is active.
+///
+/// Phase 3: Stack-based scope management. PushScope/PopScope replaces
+/// manual scope detection in OnKeyDown. The scope stack is pushed when a
+/// dialog opens and popped when it closes — ensuring nested dialogs work
+/// correctly without scope confusion.
 ///
 /// Chord precedence: longer modifier combinations (Ctrl+Shift+S) are checked
 /// before shorter ones (Ctrl+S) so the correct shortcut always fires.
@@ -27,10 +32,81 @@ public class InputRoutingService
         Fullscreen = 2,
         /// <summary>Picture-in-Picture is active.</summary>
         PipActive = 3,
+        /// <summary>Text editing control has focus (TextBox, etc.).</summary>
+        TextEdit = 4,
     }
 
     private readonly List<RegisteredShortcut> _bindings = new();
+    private readonly Stack<InputScope> _scopeStack = new();
     private readonly object _lock = new();
+
+    public InputRoutingService()
+    {
+        // Default scope is Normal
+        _scopeStack.Push(InputScope.Normal);
+    }
+
+    /// <summary>
+    /// The current effective scope (top of the scope stack).
+    /// </summary>
+    public InputScope CurrentScope
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _scopeStack.Count > 0 ? _scopeStack.Peek() : InputScope.Normal;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Number of scopes currently on the stack (useful for debugging nested dialogs).
+    /// </summary>
+    public int ScopeDepth
+    {
+        get
+        {
+            lock (_lock) { return _scopeStack.Count; }
+        }
+    }
+
+    /// <summary>
+    /// Push a new scope onto the stack (e.g., when a dialog opens).
+    /// Call <see cref="PopScope"/> when the scope ends.
+    /// </summary>
+    public void PushScope(InputScope scope)
+    {
+        lock (_lock)
+        {
+            _scopeStack.Push(scope);
+        }
+    }
+
+    /// <summary>
+    /// Pop the current scope from the stack.
+    /// </summary>
+    public void PopScope()
+    {
+        lock (_lock)
+        {
+            if (_scopeStack.Count > 1) // Never pop the last Normal scope
+                _scopeStack.Pop();
+        }
+    }
+
+    /// <summary>
+    /// Clear the scope stack back to Normal. Call when a bulk reset is needed
+    /// (e.g., all dialogs closed at once).
+    /// </summary>
+    public void ClearScopes()
+    {
+        lock (_lock)
+        {
+            _scopeStack.Clear();
+            _scopeStack.Push(InputScope.Normal);
+        }
+    }
 
     /// <summary>
     /// Register a keyboard shortcut.
@@ -57,27 +133,26 @@ public class InputRoutingService
     }
 
     /// <summary>
-    /// Attempt to handle a key event. Returns true if a shortcut consumed the event.
+    /// Attempt to handle a key event, using the current scope stack.
+    /// Returns true if a shortcut consumed the event.
     /// </summary>
-    /// <param name="e">The key event.</param>
-    /// <param name="currentScope">Current application scope.</param>
-    /// <returns>True if a registered shortcut matched and was executed.</returns>
-    public bool TryHandle(KeyEventArgs e, InputScope currentScope = InputScope.Normal)
+    public bool TryHandle(KeyEventArgs e)
     {
-        return TryHandle(e.Key, e.KeyModifiers, currentScope);
+        return TryHandle(e.Key, e.KeyModifiers);
     }
 
     /// <summary>
-    /// Attempt to handle a key combination directly.
+    /// Attempt to handle a key combination directly, using the current scope stack.
     /// </summary>
-    public bool TryHandle(Key key, KeyModifiers modifiers, InputScope currentScope = InputScope.Normal)
+    public bool TryHandle(Key key, KeyModifiers modifiers)
     {
         RegisteredShortcut? match = null;
 
         lock (_lock)
         {
-            // Sort by modifier count descending so longer chords match first.
-            // E.g., Ctrl+Shift+S is checked before Ctrl+S.
+            var currentScope = _scopeStack.Count > 0 ? _scopeStack.Peek() : InputScope.Normal;
+
+            // Sort by modifier count descending so longer chords match first
             var candidates = _bindings
                 .Where(b => b.Key == key)
                 .OrderByDescending(b => CountModifiers(b.Modifiers))
@@ -89,7 +164,7 @@ public class InputRoutingService
                 if (candidate.Modifiers != (modifiers & candidate.Modifiers)) continue;
                 // Check that no EXTRA modifiers are pressed
                 if ((modifiers & ~candidate.Modifiers) != KeyModifiers.None) continue;
-                // Scope check
+                // Scope check against current scope
                 if (!IsScopeActive(candidate.Scope, currentScope)) continue;
 
                 match = candidate;
@@ -115,12 +190,29 @@ public class InputRoutingService
         }
     }
 
+    /// <summary>
+    /// Check if a scope is active. DialogOpen overrides Normal and Fullscreen.
+    /// TextEdit overrides everything except DialogOpen. PipActive is exclusive.
+    /// </summary>
     private static bool IsScopeActive(InputScope registeredScope, InputScope currentScope)
     {
-        // Normal scope is always active (unless blocked by explicit scope mismatch)
+        // Normal scope shortcuts are always available unless overridden
         if (registeredScope == InputScope.Normal)
-            return true;
+            return currentScope != InputScope.PipActive;
 
+        // DialogOpen scope: only DialogOpen-registered shortcuts pass through
+        if (currentScope == InputScope.DialogOpen)
+            return registeredScope == InputScope.DialogOpen;
+
+        // TextEdit scope: only TextEdit-registered shortcuts pass through
+        if (currentScope == InputScope.TextEdit)
+            return registeredScope == InputScope.TextEdit;
+
+        // PipActive: only PipActive-registered shortcuts pass through
+        if (currentScope == InputScope.PipActive)
+            return registeredScope == InputScope.PipActive;
+
+        // Exact scope match for all other cases
         return registeredScope == currentScope;
     }
 

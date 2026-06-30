@@ -51,6 +51,15 @@ public class SessionManager : ISessionService
             };
 
             var json = JsonSerializer.Serialize(session);
+
+            // Backup existing session before overwriting (crash recovery)
+            if (File.Exists(_sessionPath))
+            {
+                var backupPath = _sessionPath + ".bak";
+                try { File.Copy(_sessionPath, backupPath, overwrite: true); }
+                catch { /* best-effort backup — not critical */ }
+            }
+
             // Atomic write: temp → rename (prevents half-written files on crash)
             var tempPath = _sessionPath + ".tmp";
             File.WriteAllText(tempPath, json);
@@ -68,7 +77,19 @@ public class SessionManager : ISessionService
         try
         {
             if (!File.Exists(_sessionPath))
-                return null;
+            {
+                // Try backup if main session is missing (crash recovery)
+                var backupPath = _sessionPath + ".bak";
+                if (File.Exists(backupPath))
+                {
+                    try { File.Copy(backupPath, _sessionPath, overwrite: true); }
+                    catch { /* best-effort — backup may be stale */ }
+                }
+                else
+                {
+                    return null;
+                }
+            }
 
             var json = File.ReadAllText(_sessionPath);
             using var doc = JsonDocument.Parse(json);
@@ -87,6 +108,23 @@ public class SessionManager : ISessionService
 
             return new SessionData(filePath, positionTicks, subtitleTrackId, audioTrackId,
                                    subtitleDelay, audioDelay, rendererMode);
+        }
+        catch (JsonException)
+        {
+            // Session file is corrupted — try backup
+            Log.ForContext<SessionManager>().Warning("Session file corrupted, trying backup...");
+            try
+            {
+                var backupPath = _sessionPath + ".bak";
+                if (File.Exists(backupPath))
+                {
+                    File.Copy(backupPath, _sessionPath, overwrite: true);
+                    // Recursive call to parse the restored session
+                    return Load();
+                }
+            }
+            catch { /* best-effort — no backup available */ }
+            return null;
         }
         catch (Exception ex)
         {

@@ -61,22 +61,27 @@ public class VideoContextMenuBuilder
         video.Items.Add(Item("Always on Top", null, () => _window.Topmost = !_window.Topmost, Icon("PinOutline"), _topmost));
         video.Items.Add(new Separator());
 
-        // Aspect Ratio
+        // Aspect Ratio — common ratios inline, advanced behind "More…"
         video.Items.Add(Header("ASPECT RATIO"));
         video.Items.Add(SelectItem("Original", () => _viewModel?.SetAspectRatio(-1), _aspectRatio < 0));
         video.Items.Add(SelectItem("16:9", () => _viewModel?.SetAspectRatio(1.7778), Math.Abs(_aspectRatio - 1.7778) < 0.01));
-        video.Items.Add(SelectItem("16:10", () => _viewModel?.SetAspectRatio(1.6), Math.Abs(_aspectRatio - 1.6) < 0.01));
         video.Items.Add(SelectItem("4:3", () => _viewModel?.SetAspectRatio(1.3333), Math.Abs(_aspectRatio - 1.3333) < 0.01));
-        video.Items.Add(SelectItem("2.35:1", () => _viewModel?.SetAspectRatio(2.35), Math.Abs(_aspectRatio - 2.35) < 0.01));
+        var moreAspects = SubMenu("More…", Icon("MenuRight"));
+        moreAspects.Items.Add(SelectItem("16:10", () => _viewModel?.SetAspectRatio(1.6), Math.Abs(_aspectRatio - 1.6) < 0.01));
+        moreAspects.Items.Add(SelectItem("2.35:1", () => _viewModel?.SetAspectRatio(2.35), Math.Abs(_aspectRatio - 2.35) < 0.01));
+        video.Items.Add(moreAspects);
         video.Items.Add(new Separator());
 
-        // Crop
+        // Crop — common ratios shown inline, advanced behind "More…"
         video.Items.Add(Header("CROP"));
         video.Items.Add(SelectItem("Off", () => _viewModel?.ResetCrop(), _cropValue < 0));
         video.Items.Add(SelectItem("16:9", () => _viewModel?.SetCrop(1.7778), Math.Abs(_cropValue - 1.7778) < 0.01));
-        video.Items.Add(SelectItem("16:10", () => _viewModel?.SetCrop(1.6), Math.Abs(_cropValue - 1.6) < 0.01));
         video.Items.Add(SelectItem("4:3", () => _viewModel?.SetCrop(1.3333), Math.Abs(_cropValue - 1.3333) < 0.01));
-        video.Items.Add(SelectItem("2.35:1", () => _viewModel?.SetCrop(2.35), Math.Abs(_cropValue - 2.35) < 0.01));
+        // Progressive disclosure: less common ratios in a submenu
+        var moreCrops = SubMenu("More Crops…", Icon("MenuRight"));
+        moreCrops.Items.Add(SelectItem("16:10", () => _viewModel?.SetCrop(1.6), Math.Abs(_cropValue - 1.6) < 0.01));
+        moreCrops.Items.Add(SelectItem("2.35:1", () => _viewModel?.SetCrop(2.35), Math.Abs(_cropValue - 2.35) < 0.01));
+        video.Items.Add(moreCrops);
 
         menu.Items.Add(video);
 
@@ -95,8 +100,7 @@ public class VideoContextMenuBuilder
 
         // ── Bottom actions ──
         menu.Items.Add(new Separator());
-        menu.Items.Add(Item("Preferences", null, () => new PreferencesDialog { DataContext = _viewModel }.Show(_window), Icon("Cog")));
-        menu.Items.Add(Item("About Cine", null, () => new AboutDialog { DataContext = _viewModel }.Show(_window), Icon("Information")));
+        menu.Items.Add(Item("Keyboard Shortcuts", null, () => new KeyboardShortcutsDialog().Show(_window), Icon("Keyboard")));
 
         return menu;
     }

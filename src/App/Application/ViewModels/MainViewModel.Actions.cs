@@ -6,6 +6,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using Cine.Avalonia.Extensions;
+using Cine.Avalonia.Helpers;
+using Cine.Avalonia.Models;
 using Cine.Core;
 using Cine.Media.Events;
 using Cine.Media.Interfaces;
@@ -114,6 +116,15 @@ public partial class MainViewModel
     {
         if (string.IsNullOrWhiteSpace(path)) return;
 
+        // ── Pre-checks ──
+        if (!File.Exists(path))
+        {
+            Log.ForContext<MainViewModel>().Warning("OpenFile: file not found: {Path}", path);
+            FilePath = string.Empty;
+            RefreshState();
+            return;
+        }
+
         // ── Avalonia / app-layer bookkeeping (no mpv coupling) ──
         Audio?.OnFileClosing();
         Subtitles?.OnFileClosing();
@@ -126,9 +137,9 @@ public partial class MainViewModel
         {
             _player.Open(path);
         }
-        catch
+        catch (Exception ex)
         {
-            Log.ForContext<MainViewModel>().Warning("Open failed for {Path}", path);
+            Log.ForContext<MainViewModel>().Error(ex, "OpenFile failed for {Path}", path);
             FilePath = string.Empty;
         }
         finally
@@ -312,9 +323,7 @@ public partial class MainViewModel
 
     private static string FormatTrack(string prefix, SubtitleSource track)
     {
-        var lang = string.IsNullOrWhiteSpace(track.Language) ? "und" : track.Language;
-        var state = track.IsEnabled ? "on" : "off";
-        return $"{prefix}: {lang} ({state})";
+        return TrackDisplayHelper.FormatTrack(TrackType.Audio, track);
     }
 
     private static string FormatTime(TimeSpan ts)

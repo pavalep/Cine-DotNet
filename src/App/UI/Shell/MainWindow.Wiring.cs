@@ -51,7 +51,6 @@ public partial class MainWindow
             });
         };
 
-        AddHandler(KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
         VideoClickOverlay.PointerMoved += OnWindowPointerMoved;
 
         // Hover tracking

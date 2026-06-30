@@ -48,21 +48,24 @@ public partial class HeaderBarControl : AvaloniaUserControl
         _viewModel = DataContext as MainViewModel;
     }
 
-    /// <summary>Builds the shared primary menu using PrimaryMenuBuilder.</summary>
+    /// <summary>
+    /// Builds the shared primary menu using PrimaryMenuBuilder.
+    /// Consolidated to show only items NOT available via keyboard shortcuts
+    /// or the right-click context menu (Phase 6).
+    ///
+    /// Removed (available via keyboard/context menu):
+    ///   - Play / Pause, Stop, Seek ±10s (PLAYBACK section)
+    ///   - Fullscreen toggle (VIEW section — available via F key + context menu)
+    /// Kept (unique to this menu):
+    ///   - Picture in Picture, Always on Top
+    ///   - Loop File, Loop Playlist, Shuffle
+    ///   - Go to Time, Keyboard Shortcuts, Preferences, About
+    /// </summary>
     private PrimaryMenuBuilder BuildPrimaryMenu()
     {
         var builder = new PrimaryMenuBuilder();
         builder
-            .AddSection("PLAYBACK")
-            .AddItem("Play", "Play / Pause", "Space", () => _viewModel?.PlayPause())
-            .AddItem("Stop", "Stop", "Ctrl+S", () => _viewModel?.Stop())
-            .AddItem("SkipPrevious", "Seek -10s", "Left", () => _viewModel?.SeekBackward())
-            .AddItem("SkipNext", "Seek +10s", "Right", () => _viewModel?.SeekForward())
-            .AddSeparator()
             .AddSection("VIEW")
-            .AddToggleItem("Fullscreen", "Fullscreen", "F",
-                () => _viewModel?.ToggleFullscreen(),
-                () => _viewModel?.IsFullscreen ?? false)
             .AddItem("PictureInPictureBottomRight", "Picture in Picture", "Ctrl+Shift+P", () => PipToggled?.Invoke(this, EventArgs.Empty))
             .AddItem("PinOutline", "Always on Top", null, () =>
             {

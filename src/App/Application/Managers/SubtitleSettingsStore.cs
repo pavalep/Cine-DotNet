@@ -32,7 +32,7 @@ public sealed class SubtitleSettingsStore
 
     public sealed record SubtitleDefaults
     {
-        public int Version { get; init; } = 2;
+        public int Version { get; init; } = 3;
         public bool AutoEnabled { get; init; } = true;
         public string[] PreferredLanguages { get; init; } = new[] { "eng", "jpn", "und" };
         public bool FallbackToExternal { get; init; } = true;
@@ -42,15 +42,20 @@ public sealed class SubtitleSettingsStore
 
     public sealed record SubtitleStyle
     {
-        public double FontScale { get; init; } = 1.0;
+        /// <summary>Font scale factor (1.0 = base size). Default 1.1 for premium readability.</summary>
+        public double FontScale { get; init; } = 1.1;
+        /// <summary>Vertical position (0=top, 100=default bottom).</summary>
         public int Position { get; init; } = 100;
         public double Delay { get; init; } = 0.0;
-        public double BorderSize { get; init; } = 2.0;
-        public double ShadowOffset { get; init; } = 1.0;
+        /// <summary>Border/outline thickness. Default 2.5 for clearer separation from video.</summary>
+        public double BorderSize { get; init; } = 2.5;
+        /// <summary>Drop shadow offset. Default 1.5 for subtle depth.</summary>
+        public double ShadowOffset { get; init; } = 1.5;
         public double Opacity { get; init; } = 1.0;
         public double Blur { get; init; } = 0.0;
         public bool Bold { get; init; }
-        public string Font { get; init; } = "Arial";
+        /// <summary>Default system font with broad readability. Fallback-safe.</summary>
+        public string Font { get; init; } = "Segoe UI";
         public string Color { get; init; } = "#FFFFFF";
     }
 

@@ -36,6 +36,26 @@
     </Style>
 
     <!-- ======================== -->
+    <!--  FOCUS INDICATORS (a11y) -->
+    <!-- ======================== -->
+    <!-- Use a subtle border tint on focus-visible for keyboard nav clarity -->
+    <Style Selector="Button:focus-visible, ToggleButton:focus-visible">
+        <Setter Property="BorderBrush" Value="{StaticResource AppAccent}" />
+        <Setter Property="BorderThickness" Value="2" />
+    </Style>
+    <Style Selector="CheckBox:focus-visible, RadioButton:focus-visible">
+        <Setter Property="BorderBrush" Value="{StaticResource AppAccent}" />
+    </Style>
+    <Style Selector="Slider:focus-visible /template/ Thumb#thumb">
+        <Setter Property="BorderBrush" Value="{StaticResource AppAccent}" />
+        <Setter Property="BorderThickness" Value="2" />
+    </Style>
+    <Style Selector="TextBox:focus-visible, NumericUpDown:focus-visible">
+        <Setter Property="BorderBrush" Value="{StaticResource AppAccent}" />
+        <Setter Property="BorderThickness" Value="1.5" />
+    </Style>
+
+    <!-- ======================== -->
     <!--  TRANSPORT BUTTONS       -->
     <!-- ======================== -->
     
@@ -304,9 +324,11 @@
             <Animation Duration="0:0:0.2" FillMode="Both" Easing="QuadraticEaseOut">
                 <KeyFrame Cue="0%">
                     <Setter Property="Opacity" Value="0" />
+                    <Setter Property="RenderTransform" Value="scale(0.95)" />
                 </KeyFrame>
                 <KeyFrame Cue="100%">
                     <Setter Property="Opacity" Value="1" />
+                    <Setter Property="RenderTransform" Value="scale(1)" />
                 </KeyFrame>
             </Animation>
         </Style.Animations>
@@ -575,8 +597,8 @@
         </Setter>
         <Setter Property="Transitions">
             <Transitions>
-                <DoubleTransition Property="Opacity" Duration="0:0:0.2" />
-                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2" />
+                <DoubleTransition Property="Opacity" Duration="0:0:0.25" Easing="{StaticResource ease-emphasized}" />
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.25" Easing="{StaticResource ease-emphasized}" />
             </Transitions>
         </Setter>
     </Style>
@@ -655,6 +677,20 @@
         <Setter Property="Height" Value="32" />
         <Setter Property="Background" Value="{StaticResource ProgressTroughBackground}" />
         <Setter Property="Foreground" Value="{StaticResource ProgressSliderBackground}" />
+        <Style.Resources>
+            <x:Double x:Key="SliderTrackThickness">4</x:Double>
+        </Style.Resources>
+    </Style>
+    <Style Selector="Slider.seek-slider /template/ Thumb#thumb">
+        <Setter Property="RenderTransform" Value="scale(1)" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" Easing="{StaticResource ease-standard}" />
+            </Transitions>
+        </Setter>
+    </Style>
+    <Style Selector="Slider.seek-slider /template/ Thumb#thumb:pointerover">
+        <Setter Property="RenderTransform" Value="scale(1.15)" />
     </Style>
     
     <!-- Volume Slider -->
@@ -682,6 +718,15 @@
         <Setter Property="Height" Value="10" />
         <Setter Property="MinWidth" Value="10" />
         <Setter Property="MinHeight" Value="10" />
+        <Setter Property="RenderTransform" Value="scale(1)" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" Easing="{StaticResource ease-standard}" />
+            </Transitions>
+        </Setter>
+    </Style>
+    <Style Selector="Slider.volume-slider /template/ Thumb#thumb:pointerover">
+        <Setter Property="RenderTransform" Value="scale(1.3)" />
     </Style>
 
     <!-- Compact slider: 10px thumb + light track for all secondary sliders (volume, EQ, subtitle settings) -->
@@ -708,6 +753,15 @@
         <Setter Property="Height" Value="10" />
         <Setter Property="MinWidth" Value="10" />
         <Setter Property="MinHeight" Value="10" />
+        <Setter Property="RenderTransform" Value="scale(1)" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" Easing="{StaticResource ease-standard}" />
+            </Transitions>
+        </Setter>
+    </Style>
+    <Style Selector="Slider.compact /template/ Thumb#thumb:pointerover">
+        <Setter Property="RenderTransform" Value="scale(1.3)" />
     </Style>
 
     <!-- Volume slider: 10px thumb (same principle) -->
@@ -722,6 +776,15 @@
         <Setter Property="Height" Value="10" />
         <Setter Property="MinWidth" Value="10" />
         <Setter Property="MinHeight" Value="10" />
+        <Setter Property="RenderTransform" Value="scale(1)" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" Easing="{StaticResource ease-standard}" />
+            </Transitions>
+        </Setter>
+    </Style>
+    <Style Selector="Slider.volume-slider /template/ Thumb#thumb:pointerover">
+        <Setter Property="RenderTransform" Value="scale(1.3)" />
     </Style>
 
     <!-- ======================== -->

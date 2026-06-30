@@ -44,6 +44,7 @@ public static class TrackFlyoutBuilder
     /// disable search entirely.
     /// </param>
     /// <param name="searchPlaceholder">Placeholder text for the search box.</param>
+    /// <param name="title">Header title shown in the flyout header bar. If null, no header is shown.</param>
     public static Flyout Build(
         ObservableCollection<TrackMenuItem> tracks,
         string emptyMessage,
@@ -53,12 +54,51 @@ public static class TrackFlyoutBuilder
         Action resetDelay,
         int searchThreshold = 5,
         string searchPlaceholder = "Search…",
+        string? title = null,
         Action<StackPanel>? appendExtra = null,
         global::Material.Icons.MaterialIconKind emptyIcon = global::Material.Icons.MaterialIconKind.ClosedCaptionOutline)
     {
         _log.Debug("Build: {Count} tracks, threshold={Threshold}, extra={HasExtra}",
             tracks.Count, searchThreshold, appendExtra != null);
-        var rootPanel = new global::Avalonia.Controls.StackPanel();
+        var rootPanel = new global::Avalonia.Controls.StackPanel
+        {
+            Spacing = 10
+        };
+
+        // ── Header: title + close button (equalizer standard) ──────
+        if (title != null)
+        {
+            var headerGrid = new Grid
+            {
+                ColumnDefinitions = new ColumnDefinitions
+                {
+                    new ColumnDefinition(GridLength.Star),
+                    new ColumnDefinition(GridLength.Auto)
+                }
+            };
+
+            var titleBlock = new TextBlock
+            {
+                Text = title,
+                Classes = { "md3-subtitle1" },
+                VerticalAlignment = AvaloniaLayout.VerticalAlignment.Center
+            };
+            headerGrid.Children.Add(titleBlock);
+
+            var closeBtn = new Button
+            {
+                Content = new TextBlock { Text = "\u2715", FontSize = 14, Foreground = AppColors.TextTertiary },
+                Background = AppColors.Transparent,
+                BorderThickness = new Thickness(0),
+                Width = 24, Height = 24,
+                CornerRadius = new CornerRadius(12),
+                Cursor = new Cursor(StandardCursorType.Arrow)
+            };
+            closeBtn.Classes.Add("hover-subtle");
+            Grid.SetColumn(closeBtn, 1);
+            headerGrid.Children.Add(closeBtn);
+            rootPanel.Children.Add(headerGrid);
+        }
 
         // Count real (non-pseudo) tracks
         var realTracks = tracks.Where(t => !t.IsPseudoEntry).ToList();
@@ -186,22 +226,20 @@ public static class TrackFlyoutBuilder
 
         rootPanel.Children.Add(trackListPanel);
 
-        // ── Separator ──────────────────────────────────────────────
-        rootPanel.Children.Add(new Separator
+        // ── Separator (equalizer standard) ─────────────────────────
+        rootPanel.Children.Add(new Border
         {
             Background = (IBrush?)global::Avalonia.Application.Current?.FindResource("PopoverBorder"),
-            Margin = new Thickness(8, 4)
+            Height = 1,
+            Opacity = 0.5,
+            Margin = new Thickness(0, 2)
         });
 
         // ── Delay section label ─────────────────────────────────────
         rootPanel.Children.Add(new TextBlock
         {
             Text = delayLabel,
-            FontSize = Token.Size("font-size-caption"),
-            FontWeight = FontWeight.Bold,
-            Foreground = (IBrush?)global::Avalonia.Application.Current?.FindResource("OsdForeground"),
-            Opacity = 0.5,
-            LetterSpacing = 0.8,
+            Classes = { "md3-caption" },
             Margin = new Thickness(12, 8, 12, 4)
         });
 
@@ -302,7 +340,7 @@ public static class TrackFlyoutBuilder
             BorderBrush = (IBrush?)global::Avalonia.Application.Current?.FindResource("PopoverBorder"),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(4),
+            Padding = new Thickness(14, 12),
             MinWidth = 220,
             Child = scrollRoot
         };
@@ -314,39 +352,20 @@ public static class TrackFlyoutBuilder
     private static Button BuildTrackRow(TrackMenuItem track)
     {
         // "Add Subtitle Track…" pseudo-entry → render as a secondary action button
+        // Note: no redundant "+" icon — the text "Add" is self-explanatory.
         if (track.IsPseudoEntry && track.TrackIndex == -1)
         {
-            var addGrid = new Grid
-            {
-                ColumnDefinitions = new ColumnDefinitions
-                {
-                    new ColumnDefinition(GridLength.Auto),
-                    new ColumnDefinition(GridLength.Star)
-                }
-            };
-            var plusIcon = new TextBlock
-            {
-                Text = "+",
-                FontSize = Token.Size("font-size-subtitle1"),
-                FontWeight = FontWeight.Bold,
-                Foreground = AppColors.Accent,
-                VerticalAlignment = AvaloniaLayout.VerticalAlignment.Center,
-                Margin = new Thickness(0, 0, 8, 0)
-            };
             var addText = new TextBlock
             {
                 Text = track.DisplayName,
                 FontSize = Token.Size("font-size-body2"),
                 Foreground = AppColors.Accent
             };
-            addGrid.Children.Add(plusIcon);
-            addGrid.Children.Add(addText);
-            Grid.SetColumn(addText, 1);
 
             // Thin separator above the add button (via parent, but we add a subtle top border here)
             var addBtn = new Button
             {
-                Content = addGrid,
+                Content = addText,
                 Background = AppColors.Transparent,
                 BorderThickness = new Thickness(0),
                 Padding = new Thickness(8, 4),

@@ -45,8 +45,11 @@ public partial class MainWindow
 
         ReportWindowState("MainWindow.OnWindowInitialized.AfterResolve");
 
+        _startupTimer.Mark("input-router");
         _inputRouter ??= new InputRoutingService();
         RegisterKeyboardShortcuts();
+
+        _startupTimer.Mark("player-init");
 
         _playerService ??= new PlayerService();
         try
@@ -80,10 +83,18 @@ public partial class MainWindow
 
         if (_isDisposed) return;
 
+        _startupTimer.Mark("managers");
+
         // Create domain managers — single source of truth for their domains
         _audioManager = new AudioManager(player);
         _videoManager = new VideoManager(player);
         _subtitleManager = new SubtitleManager(player);
+
+        // Phase 7: Wire OSD feedback for track switching
+        _subtitleManager.TrackChangedMessage = msg =>
+            ShowOsdNotification(MaterialIconKind.ClosedCaption, $"Subtitle: {msg}");
+        _audioManager.TrackChangedMessage = msg =>
+            ShowOsdNotification(MaterialIconKind.Music, $"Audio: {msg}");
 
         // Init centralized file-dialog handler (Avalonia #21433 workaround applied)
         _dialogHandler = new FileDialogHandler(this);
@@ -109,6 +120,8 @@ public partial class MainWindow
         _viewModel = new MainViewModel(player, null, null, _audioManager, _videoManager, _subtitleManager,
             rendererService: null, mediaFileService: null, fileDialogService: fileDialogService);
         DataContext = _viewModel;
+
+        _startupTimer.Mark("viewmodel");
 
         _viewModel.SessionResumeRequested = (path, pos) =>
         {
@@ -187,6 +200,7 @@ public partial class MainWindow
         };
 
         // Initialize OpenGL render API (no fallback — this MUST succeed)
+        _startupTimer.Mark("video-renderer");
         try
         {
             InitVideoRenderer();
@@ -207,6 +221,7 @@ public partial class MainWindow
         }
 
         ReportWindowState("MainWindow.OnWindowInitialized.Finish");
+        _startupTimer.Mark("init-complete");
         DebugLog("OnWindowInitialized finish");
     }
 
@@ -217,7 +232,7 @@ public partial class MainWindow
         DebugLog("OnOpened enter");
         ReportWindowState("MainWindow.OnOpened.Enter");
 
-        var startupWatch = Stopwatch.StartNew();
+        _startupTimer.Mark("opened");
 
         try
         {
@@ -334,9 +349,9 @@ public partial class MainWindow
             });
         }, DispatcherPriority.Background);
 
-        // P10.4: Log startup timing
-        startupWatch.Stop();
-        DebugLog($"Startup complete in {startupWatch.Elapsed.TotalMilliseconds:F0}ms");
+        // P10.4: Log startup timing breakdown
+        var perfSummary = _startupTimer.Finalize();
+        DebugLog(perfSummary);
 
         // P10.4: Deferred non-critical init — runs after window is fully painted
         Dispatcher.UIThread.OnUiThread(async () =>
