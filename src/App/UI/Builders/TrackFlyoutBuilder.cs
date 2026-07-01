@@ -462,37 +462,93 @@ public static class TrackFlyoutBuilder
             return addBtn;
         }
 
+        // Check if this track is actively playing (different from just selected)
+        bool isNowPlaying = track.IsSelected; // Active track that's currently being played
+        var dotColor = isNowPlaying ? AppColors.Accent : AppColors.IconDim;
+        var dotScale = isNowPlaying ? 1.3 : 1.0;
+
         var dot = new Border
         {
-            Width = 6, Height = 6,
-            CornerRadius = new CornerRadius(3),
-            Background = track.IsSelected && !track.IsPseudoEntry
-                ? AppColors.Accent
-                : AppColors.IconDim,
+            Width = isNowPlaying ? 8 : 6,
+            Height = isNowPlaying ? 8 : 6,
+            CornerRadius = new CornerRadius(isNowPlaying ? 4 : 3),
+            Background = dotColor,
             VerticalAlignment = AvaloniaLayout.VerticalAlignment.Center,
+            HorizontalAlignment = AvaloniaLayout.HorizontalAlignment.Center,
+            RenderTransform = new ScaleTransform(dotScale, dotScale),
             Margin = new Thickness(0, 0, 8, 0)
         };
+
+        // Set tooltip for the active state
+        if (isNowPlaying)
+        {
+            ToolTip.SetTip(dot, "Now playing");
+        }
 
         var text = new TextBlock
         {
             Text = track.DisplayName,
-            FontWeight = track.IsSelected ? FontWeight.SemiBold : FontWeight.Normal,
+            FontWeight = isNowPlaying ? FontWeight.SemiBold : FontWeight.Normal,
             FontSize = Token.Size("font-size-body2"),
-            Foreground = AppColors.TextPrimary
+            Foreground = isNowPlaying ? AppColors.Accent : AppColors.TextPrimary
         };
 
         var grid = new Grid
         {
             ColumnDefinitions = new ColumnDefinitions
             {
-                new ColumnDefinition(GridLength.Auto),
-                new ColumnDefinition(GridLength.Star)
+                new ColumnDefinition(GridLength.Auto),  // dot
+                new ColumnDefinition(GridLength.Auto),  // codec badge
+                new ColumnDefinition(GridLength.Star),   // text
+                new ColumnDefinition(GridLength.Auto)    // default marker
             }
         };
         grid.Children.Add(dot);
-        grid.Children.Add(text);
-        Grid.SetColumn(text, 1);
+        Grid.SetColumn(dot, 0);
 
+        // ── F12: Codec badge (small colored dot indicating codec type) ──
+        if (!track.IsPseudoEntry && track.Source != null)
+        {
+            var codec = string.IsNullOrWhiteSpace(track.Source.Codec)
+                ? (track.Source.Type == TrackType.Audio ? "unknown" : "srt")
+                : track.Source.Codec.ToLowerInvariant();
+
+            var badgeColor = GetCodecBadgeColor(codec);
+            var badge = new Border
+            {
+                Width = 6, Height = 6,
+                CornerRadius = new CornerRadius(3),
+                Background = badgeColor,
+                VerticalAlignment = AvaloniaLayout.VerticalAlignment.Center,
+                HorizontalAlignment = AvaloniaLayout.HorizontalAlignment.Center,
+                Margin = new Thickness(4, 0, 4, 0)
+            };
+            var codecTip = !string.IsNullOrWhiteSpace(track.Source.Codec) ? $"{track.Source.Codec} codec" : "Unknown codec";
+            ToolTip.SetTip(badge, codecTip);
+            grid.Children.Add(badge);
+            Grid.SetColumn(badge, 1);
+        }
+
+        grid.Children.Add(text);
+        Grid.SetColumn(text, 2);
+
+        // ── F19: Default track marker (small star for container default) ──
+        if (track.IsDefault)
+        {
+            var defaultMark = new TextBlock
+            {
+                Text = "★",
+                FontSize = 8,
+                Foreground = AppColors.IconDim,
+                VerticalAlignment = AvaloniaLayout.VerticalAlignment.Center,
+                Margin = new Thickness(4, 0, 0, 0)
+            };
+            ToolTip.SetTip(defaultMark, "Default track");
+            grid.Children.Add(defaultMark);
+            Grid.SetColumn(defaultMark, 3);
+        }
+
+        // ── F13: Drag-over feedback on track buttons ──
         var button = new Button
         {
             Content = grid,
@@ -505,33 +561,43 @@ public static class TrackFlyoutBuilder
             Opacity = track.DisplayOpacity,
             Command = track.SelectCommand
         };
+        DragDrop.SetAllowDrop(button, true);
         button.PointerEntered += (_, _) => button.Background = AppColors.HoverSubtle;
         button.PointerExited += (_, _) => button.Background = AppColors.Transparent;
 
         // ── Tooltip: show filename + path for external subtitles ──
         if (!track.IsPseudoEntry && track.Source != null)
         {
-            var src = track.Source;
-            string tip;
-            if (src.IsExternal && !string.IsNullOrWhiteSpace(src.ExternalFilename))
-            {
-                var fileName = Path.GetFileName(src.ExternalFilename);
-                var codec = string.IsNullOrWhiteSpace(src.Codec) ? "" : src.Codec;
-                tip = $"{track.DisplayName}\n\n"
-                    + $"File: {fileName}\n"
-                    + $"Path: {src.ExternalFilename}\n"
-                    + $"Format: {(string.IsNullOrWhiteSpace(codec) ? "SRT" : codec)}";
-            }
-            else
-            {
-                var codec = string.IsNullOrWhiteSpace(src.Codec) ? "" : src.Codec;
-                tip = $"{track.DisplayName}\n"
-                    + $"Track {track.TrackIndex}\n"
-                    + (string.IsNullOrWhiteSpace(codec) ? "" : $"Codec: {codec}");
-            }
-            button.SetValue(global::Avalonia.Controls.ToolTip.TipProperty, tip);
+            button.SetValue(global::Avalonia.Controls.ToolTip.TipProperty,
+                BuildTrackTooltip(track.Source));
         }
 
         return button;
     }
+
+    /// <summary>Builds a human-readable tooltip for a subtitle source.</summary>
+    private static string BuildTrackTooltip(SubtitleSource src)
+    {
+        string codec = string.IsNullOrWhiteSpace(src.Codec) ? "SRT" : src.Codec;
+        if (src.IsExternal && !string.IsNullOrWhiteSpace(src.ExternalFilename))
+        {
+            var fileName = System.IO.Path.GetFileName(src.ExternalFilename);
+            return $"File: {fileName}\n\nPath: {src.ExternalFilename}\nFormat: {codec}";
+        }
+        return $"Track {src.PathOrId}\nCodec: {codec}";
+    }
+
+    /// <summary>Maps common codec names to a distinctive badge color for F12.</summary>
+    private static IBrush GetCodecBadgeColor(string codecLower) => codecLower switch
+    {
+        "ass" or "ssa" => new SolidColorBrush(Color.FromArgb(255, 0, 180, 180)),     // Teal
+        "subrip" or "srt" => new SolidColorBrush(Color.FromArgb(255, 120, 130, 140)), // Slate gray
+        "hdmv_pgs_subtitle" or "hdmv_pgs" or "pgs" => new SolidColorBrush(Color.FromArgb(255, 180, 100, 50)), // Orange
+        "dvd_subtitle" or "vobsub" or "dvb_subtitle" => new SolidColorBrush(Color.FromArgb(255, 100, 120, 200)), // Blue
+        "mov_text" or "tx3g" => new SolidColorBrush(Color.FromArgb(255, 200, 180, 50)),  // Gold
+        "dvb" or "dvbsub" => new SolidColorBrush(Color.FromArgb(255, 150, 80, 180)),    // Purple
+        "webvtt" or "vtt" => new SolidColorBrush(Color.FromArgb(255, 80, 180, 80)),     // Green
+        "unknown" => new SolidColorBrush(Color.FromArgb(255, 100, 100, 100)),           // Dim gray
+        _ => new SolidColorBrush(Color.FromArgb(255, 80, 80, 80)),                      // Default dim
+    };
 }

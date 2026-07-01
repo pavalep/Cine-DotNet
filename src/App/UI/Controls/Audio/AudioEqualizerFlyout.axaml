@@ -21,6 +21,12 @@
             <Setter Property="Background" Value="{StaticResource AppAccent}" />
             <Setter Property="Foreground" Value="White" />
         </Style>
+        <Style Selector="Button.eq-preset.selected">
+            <Setter Property="Background" Value="{StaticResource AppAccent}" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderBrush" Value="{StaticResource AppAccent}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
         <Style Selector="Button.eq-close">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
@@ -102,7 +108,7 @@
             </Grid>
 
             <!-- Audio Delay -->
-            <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto" RowDefinitions="Auto">
                 <TextBlock Grid.Column="0" Text="Audio Delay"
                            Classes="md3-caption" FontWeight="SemiBold"
                            Foreground="{StaticResource TextSecondary}"
@@ -117,6 +123,14 @@
                            Foreground="{StaticResource OsdForeground}"
                            HorizontalAlignment="Right"
                            VerticalAlignment="Center" Margin="8,0,0,0" />
+                <NumericUpDown Grid.Column="3" x:Name="DelayNumeric"
+                               MinWidth="56" Height="28"
+                               Minimum="-10" Maximum="10" Increment="0.1"
+                               Value="{Binding AudioDelay, Mode=TwoWay, StringFormat=F2}"
+                               FormatString="F2"
+                               FontSize="11" Classes="compact"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Center" Margin="4,0,0,0" />
             </Grid>
         </StackPanel>
     </Border>

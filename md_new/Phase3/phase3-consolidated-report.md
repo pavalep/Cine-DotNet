@@ -147,7 +147,7 @@ This report consolidates all findings from the Cine v2 quality audit. **8 docume
 | TrackFlyoutBuilder | 6/10 | 8/10 | +2 |
 | PlaylistCoordinator | 7/10 | 9/10 | +2 |
 | App.axaml.cs | 6/10 | 8/10 | +2 |
-| **Overall** | **6.2/10** | **8.3/10** | **+2.1** |
+| **Overall** | **6.2/10** | **8.4/10** | **+2.2** |
 
 ---
 

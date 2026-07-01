@@ -329,8 +329,19 @@ public partial class SeekBarControl : AvaloniaUserControl
             var thumbCenter = normalized * (trackWidth - thumbWidth) + thumbHalf;
 
             var popoverWidth = ChapterPreviewPopover.DesiredSize.Width;
-            var xPos = thumbCenter - (popoverWidth / 2);
-            xPos = Math.Clamp(xPos, 4, Math.Max(4, trackWidth - popoverWidth - 4));
+            var minPopoverWidth = ChapterPreviewPopover.MinWidth > 0
+                ? ChapterPreviewPopover.MinWidth
+                : 80;
+            var safeMaxWidth = trackWidth * 0.65;
+            var boundedPopoverWidth = Math.Max(minPopoverWidth, Math.Min(popoverWidth, safeMaxWidth));
+
+            // Clamp position to stay within seek bar bounds with a small margin
+            var marginPx = 6.0;
+            var clampedWidth = Math.Max(marginPx, boundedPopoverWidth);
+            var xPos = thumbCenter - (clampedWidth / 2);
+            xPos = Math.Clamp(xPos, marginPx, Math.Max(marginPx, trackWidth - clampedWidth - marginPx));
+
+            ChapterPreviewPopover.Width = clampedWidth;
             ChapterPreviewPopover.Margin = new Thickness(xPos, -34, 0, 0);
         }
     }

@@ -304,7 +304,25 @@ public partial class ControlsBoxControl : AvaloniaUserControl
     // Volume controls are now shown via FlyoutOverlay (no inline Flyout)
     // Handlers left stubbed for now:
 
-    private void OnToggleMute(object? sender, RoutedEventArgs e) => _viewModel?.ToggleMute();
+    private double _volumeBeforeMute = 50;
+
+    private void OnToggleMute(object? sender, RoutedEventArgs e)
+    {
+        if (_viewModel == null) return;
+        if (_viewModel.IsMuted)
+        {
+            // Restore previous volume
+            _viewModel.IsMuted = false;
+            _viewModel.VolumeValue = _volumeBeforeMute > 0 ? _volumeBeforeMute : 50;
+        }
+        else
+        {
+            // Save current volume and mute
+            _volumeBeforeMute = _viewModel.VolumeValue;
+            _viewModel.IsMuted = true;
+            _viewModel.VolumeValue = 0;
+        }
+    }
     
     private void OnVolumeSliderPointerPressed(object? sender, PointerPressedEventArgs e) => e.Handled = true;
 

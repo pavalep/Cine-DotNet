@@ -105,6 +105,47 @@ The `hideOverlay` action is already defined on line 126 and is used correctly fo
 
 ---
 
+### Fix 9 — Flyout Positioning Broken (Canvas.SetLeft/Parent Mismatch) 🆕 FIXED
+
+| Field | Value |
+|---|---|
+| **File** | [FlyoutOverlayControl.axaml](file:///x:/Development/Cine_CSharp_DotNet/src/App/UI/Controls/FlyoutOverlayControl.axaml) |
+| **Severity** | 🔴 Critical |
+| **Status** | ☑ Resolved |
+
+#### Root Cause
+`Canvas.SetLeft()` / `Canvas.SetTop()` attached properties only work when the target element's **visual parent is a `Canvas`**. The `ContentContainer` border was placed directly inside another `Border` (`OverlayBackground`), so the Canvas attached properties had no effect. Every flyout opened at position (0,0) — the top-left corner of the overlay — instead of near the triggering button.
+
+#### Fix
+Wrap `ContentContainer` inside a `<Canvas>` element so that `Canvas.SetLeft/Top` in the code-behind correctly positions the flyout content relative to the overlay.
+
+#### Exact Diff
+```diff
+         <Border x:Name="OverlayBackground"
+                 Background="Transparent"
+                 HorizontalAlignment="Stretch"
+                 VerticalAlignment="Stretch"
+                 PointerPressed="OnBackgroundPointerPressed"
+                 KeyDown="OnBackgroundKeyDown">
++            <!-- Canvas wrapper so Canvas.SetLeft/Top works for flyout positioning -->
++            <Canvas>
+                 <Border x:Name="ContentContainer"
+                         UseLayoutRounding="True"
+                         HorizontalAlignment="Left"
+                         VerticalAlignment="Top">
+                 </Border>
++            </Canvas>
+         </Border>
+```
+
+#### Verification
+1. Open any media file
+2. Click Volume button — slider opens **near the Volume button**, not at top-left
+3. Click Equalizer — opens near the Equalizer button
+4. Right-click video → context menu opens at cursor position
+
+---
+
 ## Tier 2 — High: Visual Quality Defects
 
 ---
@@ -634,6 +675,7 @@ Copy this checklist into your task tracker:
 TIER 1 — Critical
 ☑  Fix 1: MainWindow.axaml — FlyoutOverlay ZIndex 10 → 50
 ☑  Fix 2: ControlsBoxControl.axaml.cs:128 — Volume close delegate
+☑  Fix 9: FlyoutOverlayControl.axaml — Canvas wrapper for flyout positioning
 
 TIER 2 — High
 ☑  Fix 3: FlyoutOverlayControl.axaml — Remove visual decoration from ContentContainer
@@ -658,4 +700,4 @@ TIER 5 — Debt
 
 *This document is a living companion to [Codebase_Analysis_Consolidated.md](./Codebase_Analysis_Consolidated.md).*
 *Update the Status column and checklist as fixes are applied and verified.*
-*Document Version: 1.0 — Created by Antigravity, 2026-07-01*
+*Document Version: 2.0 — Updated by Antigravity, 2026-07-01*

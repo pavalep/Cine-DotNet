@@ -183,9 +183,8 @@ public partial class SubtitleOverlayControl : AvaloniaUserControl
             Background = AppColors.Transparent,
             BorderThickness = new Thickness(0),
             Padding = new Thickness(8, 4),
-            HorizontalContentAlignment = AvaloniaLayout.HorizontalAlignment.Center,
             Cursor = new Cursor(StandardCursorType.Arrow),
-            Margin = new Thickness(8, 4, 8, 4)
+            ToolTip = { ToolTip.TipProperty = "Subtitle settings — font, size, color, outline, encoding" }
         };
         gearBtn.PointerEntered += (_, _) => { if (gearBtn.Content is TextBlock tb) tb.Foreground = AppColors.TextPrimary; };
         gearBtn.PointerExited += (_, _) => { if (gearBtn.Content is TextBlock tb) tb.Foreground = AppColors.TextTertiary; };

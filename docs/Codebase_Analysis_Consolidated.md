@@ -349,6 +349,29 @@ However, this button is completely non-functional:
 
 * **Remediation**: Declare a standard `Flyout` inside `BtnOpenMenu` in XAML containing a `Border` and a `StackPanel` with "Open File..." and "Open Folder..." options, styled to match the visual system.
 
+### Finding 1.5: Flyout Canvas.Positioning Failure (Critical)
+`FlyoutOverlayControl.axaml` places `ContentContainer` inside a `Border` (`OverlayBackground`). However, `Canvas.SetLeft()` / `Canvas.SetTop()` attached properties only work when the target element's **visual parent is a `Canvas`**. Since `ContentContainer` is inside a `Border`, the attached properties silently have no effect. Every flyout opens at position (0,0) — the top-left corner of the overlay — instead of near the triggering button.
+
+* **Root cause**: The `ContentContainer` is wrapped inside a `Border`, not a `Canvas`.
+* **Fix**: Wrap `ContentContainer` inside a `<Canvas>` element so that `Canvas.SetLeft/Top` in the code-behind correctly positions the flyout content.
+
+```diff
+  <Border x:Name="OverlayBackground"
+          Background="Transparent"
+          HorizontalAlignment="Stretch"
+          VerticalAlignment="Stretch"
+          PointerPressed="OnBackgroundPointerPressed"
+          KeyDown="OnBackgroundKeyDown">
++     <Canvas>
+      <Border x:Name="ContentContainer"
+              UseLayoutRounding="True"
+              HorizontalAlignment="Left"
+              VerticalAlignment="Top">
+      </Border>
++     </Canvas>
+  </Border>
+```
+
 ### Finding 2: Double-Border and Double-Background Nesting on Flyouts
 `FlyoutOverlayControl.axaml` defines an outer border container `ContentContainer`:
 ```xml
@@ -1281,18 +1304,20 @@ Resource dictionaries defining the application design system:
 The following table consolidates all verified defects and their severity:
 
 | # | File | Issue | Severity | Status |
-|---|---|---|---|---|
-| 1 | `MainWindow.axaml` | `FlyoutOverlayControl` ZIndex=10 renders below chrome | **Critical** | Unresolved |
-| 2 | `ControlsBoxControl.axaml.cs:128` | Volume close action is a no-op (`Flyout?.Hide()` on null flyout) | **Critical** | Unresolved |
-| 3 | `HeaderBarControl.axaml` | `BtnOpenMenu` has no Flyout — button is dead | **High** | Unresolved |
-| 4 | `FlyoutOverlayControl.axaml` | `ContentContainer` carries visual decoration causing double-border | **High** | Unresolved |
-| 5 | `ControlsBoxControl.axaml.cs:37–50` | `PauseLog` writes to disk on UI thread on every play/pause | **Medium** | Unresolved |
-| 6 | `App.axaml.cs` | 3× `Console.WriteLine` in production code | **Low** | Unresolved |
-| 7 | `TrackFlyoutBuilder.cs` | No keyboard arrow-key navigation in track lists | **Low** | Unresolved |
-| 8 | `PlaylistCoordinator.cs` | Shuffle may replay current track immediately | **Low** | Unresolved |
-| 9 | `MpvMediaPlayer.cs` | Frame capture via temp file is slow (50–200ms) | **Low** | Unresolved |
-| 10 | `SubtitleManager.cs` | Monolithic 48 KB class, should be decomposed | **Debt** | Unresolved |
-| 11 | `SubtitleSettingsStore.cs` | `Encoding` is raw `int` (Windows code page), not typed enum | **Debt** | Unresolved |
+|---|------|-------|----------|--------|
+| 1 | `MainWindow.axaml` | `FlyoutOverlayControl` ZIndex=10 renders below chrome | **Critical** | ✅ Fixed |
+| 2 | `ControlsBoxControl.axaml.cs:128` | Volume close action is a no-op (`Flyout?.Hide()` on null flyout) | **Critical** | ✅ Fixed |
+| 3 | `FlyoutOverlayControl.axaml` | `ContentContainer` has no `Canvas` wrapper — `Canvas.SetLeft/Top` does not work, all flyouts open at (0,0) | **Critical** | ✅ Fixed |
+| 4 | `HeaderBarControl.axaml` | `BtnOpenMenu` has no Flyout — button is dead | **High** | ✅ Fixed |
+| 5 | `FlyoutOverlayControl.axaml` | `ContentContainer` carries visual decoration causing double-border | **High** | ✅ Fixed |
+| 6 | `ControlsBoxControl.axaml.cs:37–50` | `PauseLog` writes to disk on UI thread on every play/pause | **Medium** | ✅ Fixed |
+| 7 | `App.axaml.cs` | 3× `Console.WriteLine` in production code | **Low** | ✅ Fixed |
+| 8 | `TrackFlyoutBuilder.cs` | No keyboard arrow-key navigation in track lists | **Low** | ✅ Fixed |
+| 9 | `PlaylistCoordinator.cs` | Shuffle may replay current track immediately | **Low** | ✅ Fixed |
+| 10 | `MpvMediaPlayer.cs` | Frame capture via temp file is slow (50–200ms) | **Low** | Open |
+| 11 | `SubtitleManager.cs` | Monolithic 48 KB class, should be decomposed | **Debt** | Deferred (v2) |
+| 12 | `SubtitleSettingsStore.cs` | `Encoding` is raw `int` (Windows code page), not typed enum | **Debt** | Deferred (v2) |
+| 13 | 87× `.axaml` files | Hardcoded pixel margins/padding instead of design tokens | **Debt** | Deferred (v2) |
 
 > **Exact diffs and verification steps for every row above are in [fix-solutions.md](./fix-solutions.md)**.
 
@@ -1302,25 +1327,28 @@ The following table consolidates all verified defects and their severity:
 
 Based on impact vs. effort analysis:
 
-### Tier 1 — Critical (Do First, blocking UX)
-1. **Fix ZIndex** — `MainWindow.axaml`: ZIndex `10` → `50` on `FlyoutOverlay`. *(~2 min, 1-line change)*
-2. **Fix Volume Close Delegate** — `ControlsBoxControl.axaml.cs:128`: `() => BtnVolumeMenu?.Flyout?.Hide()` → `hideOverlay`. *(~2 min, 1-line change)*
-3. **Wire Open Menu Button** — Add `<Button.Flyout>` to `BtnOpenMenu` in `HeaderBarControl.axaml` and bind handlers. *(~45 min)*
+### Tier 1 — Critical (Done)
+1. ✅ **Fix ZIndex** — `MainWindow.axaml`: ZIndex `10` → `50` on `FlyoutOverlay`. *(~2 min)*
+2. ✅ **Fix Volume Close Delegate** — `ControlsBoxControl.axaml.cs:128`: `() => BtnVolumeMenu?.Flyout?.Hide()` → `hideOverlay`. *(~2 min)*
+3. ✅ **Fix Flyout Canvas Positioning** — `FlyoutOverlayControl.axaml`: Wrap `ContentContainer` in `<Canvas>` so `Canvas.SetLeft/Top` works. *(~5 min)*
+4. ✅ **Wire Open Menu Button** — `HeaderBarControl.axaml`: Add `<Button.Flyout>` with "Open File…" / "Open Folder…" + handlers. *(~45 min)*
 
-### Tier 2 — High (Do Second, visual quality)
-4. **Fix Double Border** — Strip visual decoration from `FlyoutOverlayControl.axaml`'s `ContentContainer`. *(~10 min)*
-5. **Standardize Spacing Tokens** — Audit all hardcoded margins/padding and replace with token references. *(~2 hours)*
+### Tier 2 — High (Done)
+5. ✅ **Fix Double Border** — Strip visual decoration from `FlyoutOverlayControl.axaml`'s `ContentContainer`. *(~10 min)*
 
-### Tier 3 — Medium (Do Third, quality & performance)
-6. **Remove `PauseLog`** — Replace with `Log.ForContext<ControlsBoxControl>().Debug(...)`. *(~15 min)*
-7. **Remove `Console.WriteLine`** — Replace 3 instances in `App.axaml.cs`. *(~5 min)*
-8. **Add Keyboard Navigation** — Implement arrow-key handler in `TrackFlyoutBuilder`. *(~1 hour)*
+### Tier 3 — Medium (Pending)
+6. 🔲 **Add Unit Tests** — Set up test project + write tests for `PlaylistCoordinator`, `AudioManager`, `SubtitleSettingsStore`. *(~1 week)*
+7. 🔲 **Performance Profiling** — Measure startup time, GPU usage, memory footprint; optimize hot paths. *(~1 week)*
+8. 🔲 **Security Audit** — Path traversal, unsigned DLLs, subtitle parser. *(~3 days)*
 
-### Tier 4 — Debt / Improvement (Ongoing)
-9. ~~**Decompose `SubtitleManager`**~~ — ~~Split into 4 focused services.~~ *Deferred — v2 architectural scope*
-10. ✅ **Fix Shuffle Bug** — Exclude current item from first position in shuffle sequence.
-11. ~~**Improve Frame Capture**~~ — ~~Implement zero-copy frame buffer access in `MpvMediaPlayer`.~~ *Deferred — v2 media layer*
-12. ~~**Type `Encoding` property**~~ — ~~Convert raw `int` to typed enum in `SubtitleSettingsStore`.~~ *Deferred — v2 media layer*
+### Tier 4 — Debt (Deferred to v2)
+9. ~~**Decompose `SubtitleManager`**~~ *(48 KB → 4 services)*
+10. ~~**Type `Encoding` property**~~ *(raw int → enum)*
+11. ~~**Standardize spacing tokens**~~ *(87 instances)*
+### Tier 4 — Debt (Deferred to v2)
+9. ~~**Decompose `SubtitleManager`**~~ *(48 KB → 4 services)*
+10. ~~**Type `Encoding` property**~~ *(raw int → enum)*
+11. ~~**Standardize spacing tokens**~~ *(87 instances)*
 
 ---
 

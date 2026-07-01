@@ -4,7 +4,7 @@
 Apply all documented fixes from the consolidated architecture audit, verify each fix in-place, and update the companion documentation to reflect the current (fixed) state of the codebase.
 
 ## Scope
-- Fixes 1–8 from `fix-solutions.md`
+- Fixes 1–9 from `fix-solutions.md`
 - 3 additional bugs discovered during the fix pass
 - Documentation updates to `Codebase_Analysis_Consolidated.md` and `fix-solutions.md`
 
@@ -28,12 +28,27 @@ Apply all documented fixes from the consolidated architecture audit, verify each
 - **Impact**: When the user opened the volume panel and then opened the equalizer, the volume panel remained visible because `BtnVolumeMenu.Flyout` was always null (the volume panel uses the canvas-based `FlyoutOverlayControl`, not a native `Button.Flyout`).
 - **Verification**: Volume close delegate now matches the pattern used by all other panels (`equalizer`, `video-menu`, `chapters`).
 
+#### Fix 9 — Flyout Positioning Broken (Canvas.SetLeft/Parent Mismatch) 🆕
+- **File**: `src/App/UI/Controls/FlyoutOverlayControl.axaml`
+- **Root Cause**: `Canvas.SetLeft()` / `Canvas.SetTop()` attached properties only work when the target element's visual parent is a `Canvas`. The `ContentContainer` was placed directly inside a `Border` (`OverlayBackground`), so the attached properties had no effect. Every flyout opened at position (0,0).
+- **Fix**: Wrapped `ContentContainer` inside a `<Canvas>` element so that `Canvas.SetLeft/Top` in the code-behind correctly positions the flyout content.
+- **Exact Diff**:
+```diff
+     <Border x:Name="OverlayBackground" ...>
++        <Canvas>
+         <Border x:Name="ContentContainer" ...>
+         </Border>
++        </Canvas>
+     </Border>
+```
+- **Impact**: All flyouts (Volume, Equalizer, Video Menu, Chapters, Open Menu) now open at their triggering button's position instead of at (0,0).
+
 ---
 
 ### Tier 2 — High (Visual Quality Defects)
 
 #### Fix 3: Double Border on All Custom Flyouts
-- **File**: `src/App/UI/Controls\FlyoutOverlayControl.axaml`
+- **File**: `src/App/UI/Controls/FlyoutOverlayControl.axaml`
 - **Before**: `ContentContainer` had `Background`, `BorderBrush`, `BorderThickness`, `CornerRadius`, and `Padding` — every panel injected into it also declared the same border properties.
 - **After**: `ContentContainer` retains only `UseLayoutRounding`, `HorizontalAlignment`, and `VerticalAlignment`. Each child panel is responsible for its own visual chrome.
 - **Impact**: Eliminated visible double borders and double background tinting on volume slider, equalizer, track selectors, chapters, and video settings.

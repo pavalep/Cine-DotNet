@@ -14,10 +14,24 @@
             VerticalAlignment="Stretch"
             PointerPressed="OnBackgroundPointerPressed"
             KeyDown="OnBackgroundKeyDown">
-        <Border x:Name="ContentContainer"
-                UseLayoutRounding="True"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Top">
-        </Border>
+        <!-- Canvas wrapper so Canvas.SetLeft/Top works for flyout positioning -->
+        <Canvas>
+            <Border x:Name="ContentContainer"
+                    UseLayoutRounding="True"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    Opacity="0"
+                    RenderTransformOrigin="0.5,0.5">
+                <Border.RenderTransform>
+                    <ScaleTransform ScaleX="0.96" ScaleY="0.96"/>
+                </Border.RenderTransform>
+                <Border.Transitions>
+                    <Transitions>
+                        <DoubleTransition Property="Opacity" Duration="0:0:0.18" Easing="ExponentialEaseOut" />
+                        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="ExponentialEaseOut"/>
+                    </Transitions>
+                </Border.Transitions>
+            </Border>
+        </Canvas>
     </Border>
 </UserControl>

@@ -143,6 +143,14 @@ public partial class AudioEqualizerFlyout : UserControl
                 DelayLabel.Text = $"{DelaySlider.Value:F2}s";
             }
         };
+        DelayNumeric.PropertyChanged += (_, e) =>
+        {
+            if (e.Property.Name == nameof(NumericUpDown.Value))
+            {
+                DelaySlider.Value = DelayNumeric.Value;
+                DelayLabel.Text = $"{DelayNumeric.Value:F2}s";
+            }
+        };
     }
 
     public void LoadFromManager()
@@ -158,8 +166,10 @@ public partial class AudioEqualizerFlyout : UserControl
         NormToggle.IsChecked = _manager.IsAudioNormalizationEnabled;
         DialogueToggle.IsChecked = _manager.IsDialogueBoostEnabled;
 
-        DelaySlider.Value = Math.Clamp(_manager.AudioDelay, -10, 10);
-        DelayLabel.Text = $"{_manager.AudioDelay:F2}s";
+        float delay = Math.Clamp(_manager.AudioDelay, -10, 10);
+        DelaySlider.Value = delay;
+        DelayNumeric.Value = delay;
+        DelayLabel.Text = $"{delay:F2}s";
     }
 
     private void OnPresetClick(object? sender, RoutedEventArgs e)
@@ -167,6 +177,25 @@ public partial class AudioEqualizerFlyout : UserControl
         if (sender is not global::Avalonia.Controls.Button btn || btn.Tag is not string presetName || _manager == null) return;
 
         _manager.ApplyEqualizerPreset(presetName);
+
+        // Update selected visual state on preset buttons
+        if (SlidersPanel.Parent is Panel parent)
+        {
+            foreach (var child in parent.Children)
+            {
+                if (child is WrapPanel wp)
+                {
+                    foreach (var item in wp.Children)
+                    {
+                        if (item is global::Avalonia.Controls.Button presetBtn)
+                        {
+                            presetBtn.Classes.Remove("selected");
+                        }
+                    }
+                }
+            }
+        }
+        btn.Classes.Add("selected");
 
         var bands = _manager.EqualizerBands;
         for (int i = 0; i < 10 && i < bands.Length; i++)
