@@ -105,7 +105,14 @@ public partial class FullscreenHeaderControl : UserControl
         _btnFlyout.Placement = PlacementMode.Bottom;
         _btnFlyout.Opened += (_, _) => { _flyoutManager?.DismissOthers("fullscreen-menu"); };
         _btnFlyout.Closed += (_, _) => { _flyoutManager?.MarkClosed("fullscreen-menu"); _btnFlyout = null; };
-        _btnFlyout.ShowAt(BtnFullscreenMenu);
+        try
+        {
+            _btnFlyout.ShowAt(BtnFullscreenMenu);
+        }
+        catch (Exception ex)
+        {
+            global::Cine.Core.Log.ForContext<FullscreenHeaderControl>().Error(ex, "OnFullscreenMenuClick ShowAt failed (BtnFullscreenMenu)");
+        }
     }
 
     public void Show()

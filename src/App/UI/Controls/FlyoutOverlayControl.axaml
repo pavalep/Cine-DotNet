@@ -1,0 +1,23 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:transitions="using:Avalonia.Animation.Transitions"
+             x:Class="Cine.Avalonia.Controls.FlyoutOverlayControl"
+             IsVisible="False"
+             IsHitTestVisible="True"
+             Background="Transparent">
+    <!-- Transparent full-window overlay that hosts flyout content
+         at the window level, bypassing the broken Popup overlay layer.
+         PointerPressed on the transparent background dismisses the flyout. -->
+    <Border x:Name="OverlayBackground"
+            Background="Transparent"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch"
+            PointerPressed="OnBackgroundPointerPressed"
+            KeyDown="OnBackgroundKeyDown">
+        <Border x:Name="ContentContainer"
+                UseLayoutRounding="True"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top">
+        </Border>
+    </Border>
+</UserControl>

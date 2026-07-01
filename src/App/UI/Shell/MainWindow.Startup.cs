@@ -29,17 +29,35 @@ public partial class MainWindow
 
         DebugLog("InitVideoRenderer: initializing MpvVideoView (ANGLE + render API)");
 
-        // Main window uses ANGLE/OpenGL render API.
+        // Main window uses ANGLE/OpenGL render API by default.
         // MpvVideoView creates its own ANGLE context, initializes mpv render API,
         // and runs a dedicated render thread that updates a WriteableBitmap Image.
         // This bypasses Avalonia's OpenGlControlBase which can fail silently in v12.
-        MpvVideoView.Initialize(player);
+        try
+        {
+            MpvVideoView.Initialize(player);
 
-        // Phase 2 premium: wire performance services
-        var perfMonitor = new PerformanceMonitor();
-        var renderThrottle = new RenderThrottleService();
-        MpvVideoView.SetPerformanceServices(perfMonitor, renderThrottle);
-        DebugLog("InitVideoRenderer: performance services wired");
+            // Phase 2 premium: wire performance services
+            var perfMonitor = new PerformanceMonitor();
+            var renderThrottle = new RenderThrottleService();
+            MpvVideoView.SetPerformanceServices(perfMonitor, renderThrottle);
+            DebugLog("InitVideoRenderer: performance services wired");
+        }
+        catch (System.DllNotFoundException dllEx)
+        {
+            // Missing native ANGLE/GL DLLs — continue without fatal crash and log clear guidance.
+            DebugLog($"InitVideoRenderer FAILED: {dllEx}");
+            DebugLog("ANGLE/GL not available. Video rendering disabled. To enable, install runtime DLLs (libEGL.dll/libGLESv2.dll) or unset CINE_DEV_MODE.");
+            // Detach player so other systems can still operate.
+            try { MpvVideoView.DetachPlayer(); } catch (Exception detEx) { DebugLog($"DetachPlayer failed: {detEx}"); }
+        }
+        catch (Exception ex)
+        {
+            // Generic fallback — avoid crashing the whole UI if renderer init fails.
+            DebugLog($"InitVideoRenderer FAILED: {ex}");
+            DebugLog("Video renderer initialization failed; continuing without hardware-backed video.");
+            try { MpvVideoView.DetachPlayer(); } catch (Exception detEx) { DebugLog($"DetachPlayer failed: {detEx}"); }
+        }
     }
 
     /// <summary>

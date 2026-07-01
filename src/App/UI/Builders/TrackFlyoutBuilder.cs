@@ -5,6 +5,7 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Media;
 using Cine.Avalonia.Models;
 using Cine.Avalonia.Services;
@@ -226,6 +227,60 @@ public static class TrackFlyoutBuilder
 
         rootPanel.Children.Add(trackListPanel);
 
+        // Keyboard navigation for track list
+        trackListPanel.KeyDown += (_, e) =>
+        {
+            var buttons = trackListPanel.Children
+                .OfType<Button>()
+                .Where(b => b.IsEnabled && b.IsVisible)
+                .ToList();
+
+            if (buttons.Count == 0) return;
+
+            var focused = TopLevel.GetTopLevel(trackListPanel)
+                ?.FocusManager
+                ?.GetFocusedElement() as Button;
+            var currentIndex = focused is not null ? buttons.IndexOf(focused) : -1;
+
+            switch (e.Key)
+            {
+                case Key.Down:
+                    e.Handled = true;
+                    var nextIndex = Math.Min(currentIndex + 1, buttons.Count - 1);
+                    if (nextIndex >= 0) buttons[nextIndex].Focus();
+                    break;
+
+                case Key.Up:
+                    e.Handled = true;
+                    var prevIndex = Math.Max(currentIndex - 1, 0);
+                    if (prevIndex >= 0) buttons[prevIndex].Focus();
+                    break;
+
+                case Key.Enter:
+                case Key.Return:
+                    e.Handled = true;
+                    focused?.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    break;
+
+                case Key.Home:
+                    e.Handled = true;
+                    buttons.FirstOrDefault()?.Focus();
+                    break;
+
+                case Key.End:
+                    e.Handled = true;
+                    buttons.LastOrDefault()?.Focus();
+                    break;
+            }
+        };
+
+        // Focus the first button automatically when the panel is shown
+        trackListPanel.AttachedToVisualTree += (_, _) =>
+        {
+            var first = trackListPanel.Children.OfType<Button>().FirstOrDefault(b => b.IsEnabled);
+            first?.Focus();
+        };
+
         // ── Separator (equalizer standard) ─────────────────────────
         rootPanel.Children.Add(new Border
         {
@@ -346,6 +401,34 @@ public static class TrackFlyoutBuilder
         };
 
         return new Flyout { Content = border, Placement = PlacementMode.Top };
+    }
+
+    /// <summary>
+    /// Builds only the flyout content control (the wrapped Border/ScrollViewer),
+    /// without wrapping it in a Flyout. Use this with a window-level FlyoutOverlayControl
+    /// to bypass Avalonia's broken Popup overlay layer.
+    ///
+    /// All parameters and behavior are identical to Build.
+    /// </summary>
+    public static Border BuildContent(
+        ObservableCollection<TrackMenuItem> tracks,
+        string emptyMessage,
+        string delayLabel,
+        Func<double> getDelay,
+        Action<double> setDelay,
+        Action resetDelay,
+        int searchThreshold = 5,
+        string searchPlaceholder = "Search\u2026",
+        string? title = null,
+        Action<StackPanel>? appendExtra = null,
+        global::Material.Icons.MaterialIconKind emptyIcon = global::Material.Icons.MaterialIconKind.ClosedCaptionOutline)
+    {
+        // Build the content using the same infrastructure, then unwrap
+        var flyout = Build(tracks, emptyMessage, delayLabel, getDelay, setDelay, resetDelay,
+            searchThreshold, searchPlaceholder, title, appendExtra, emptyIcon);
+        var border = (flyout.Content as Border) ?? new Border(); // fallback
+        // Rewire placement logic: border is already correctly built
+        return border;
     }
 
     /// <summary>Builds a single track row with selection dot + text label.</summary>

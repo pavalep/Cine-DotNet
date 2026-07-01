@@ -86,14 +86,43 @@ public class PlaylistCoordinator : IPlaylistService
             _currentIndex++;
     }
 
-    /// <summary>Shuffle the playlist items randomly.</summary>
+    /// <summary>Shuffle the playlist items randomly, excluding the current track from position 0.</summary>
     public void Shuffle()
     {
-        for (int i = _items.Count - 1; i > 0; i--)
+        if (_items.Count <= 1) return;
+
+        // Build index list excluding the current track so it never repeats immediately
+        var indices = new List<int>(_items.Count - 1);
+        for (int i = 0; i < _items.Count; i++)
+        {
+            if (i != _currentIndex) indices.Add(i);
+        }
+
+        // Fisher-Yates shuffle on the remaining indices
+        for (int i = indices.Count - 1; i > 0; i--)
         {
             var j = _rng.Next(i + 1);
-            (_items[i], _items[j]) = (_items[j], _items[i]);
+            (indices[i], indices[j]) = (indices[j], indices[i]);
         }
+
+        // Rebuild _items in shuffled order (current track stays where it is)
+        var shuffled = new List<string>(_items.Count);
+        var currentItem = _currentIndex >= 0 && _currentIndex < _items.Count ? _items[_currentIndex] : null;
+        foreach (var idx in indices)
+        {
+            if (_items[idx] != currentItem)
+                shuffled.Add(_items[idx]);
+        }
+
+        // Insert current item at a random position among the shuffled items
+        if (currentItem != null)
+        {
+            var insertAt = _rng.Next(shuffled.Count + 1);
+            shuffled.Insert(insertAt, currentItem);
+        }
+
+        _items.Clear();
+        _items.AddRange(shuffled);
     }
 
     /// <summary>Sort playlist items alphabetically (case-insensitive).</summary>

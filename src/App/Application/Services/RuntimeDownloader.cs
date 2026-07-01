@@ -43,6 +43,11 @@ public class RuntimeDownloader
     /// </summary>
     public static bool IsRuntimeReady()
     {
+        // Dev mode: allow overriding runtime readiness to speed local dev and testing.
+        // Set environment variable CINE_DEV_MODE=1 to skip runtime-download/first-launch flow.
+        if (string.Equals(Environment.GetEnvironmentVariable("CINE_DEV_MODE"), "1", StringComparison.Ordinal))
+            return true;
+
         // Check bundled first
         if (CheckBundled())
             return true;
@@ -224,7 +229,7 @@ public class RuntimeDownloader
             }
 
             // Clean up
-            try { File.Delete(archivePath); Directory.Delete(tempDir, true); } catch { }
+            try { File.Delete(archivePath); Directory.Delete(tempDir, true); } catch (Exception ex) { _log.Warning(ex, "RuntimeDownloader cleanup failed"); }
 
             if (File.Exists(dest))
                 progress?.Report("  libmpv-2.dll: done.");
@@ -279,7 +284,7 @@ public class RuntimeDownloader
                     return output.Trim();
             }
         }
-        catch { }
+        catch (Exception ex) { _log.Warning(ex, "WhichFailed failed"); }
 
         return null;
     }

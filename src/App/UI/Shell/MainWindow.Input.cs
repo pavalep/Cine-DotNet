@@ -480,9 +480,32 @@ public partial class MainWindow
 
     private void OnVideoRightTapped(object? sender, TappedEventArgs e)
     {
-        var menu = new VideoContextMenuBuilder(this, _viewModel!, _playerService?.Player).Build();
-        menu.ShowAt(this);
-        e.Handled = true;
+        try
+        {
+            var pos = e.GetPosition(this);
+            DebugLog($"OnVideoRightTapped: pos=({pos.X:0.##},{pos.Y:0.##}) overlayIsPointerOver={(VideoClickOverlay?.IsPointerOver == true)}");
+
+            var menu = new VideoContextMenuBuilder(this, _viewModel!, _playerService?.Player).Build();
+            DebugLog($"OnVideoRightTapped: built menu with {menu.Items.Count} top-level items");
+
+            try
+            {
+                menu.ShowAt(this);
+                DebugLog("OnVideoRightTapped: ShowAt succeeded");
+            }
+            catch (Exception ex)
+            {
+                DebugLog($"OnVideoRightTapped: ShowAt threw: {ex}");
+            }
+        }
+        catch (Exception ex)
+        {
+            DebugLog($"OnVideoRightTapped: handler failed: {ex}");
+        }
+        finally
+        {
+            e.Handled = true;
+        }
     }
 
     private void OnStartPagePointerPressed(object? sender, PointerPressedEventArgs e)

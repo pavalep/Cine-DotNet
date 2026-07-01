@@ -140,5 +140,11 @@
                                           VerticalAlignment="Bottom"
                                           HorizontalAlignment="Center"
                                           Margin="0,0,0,110" />
+
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <!--  FLYOUT OVERLAY (ZIndex=50, above all interactive chrome)   -->
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <controls:FlyoutOverlayControl x:Name="FlyoutOverlay"
+                                       ZIndex="50" />
     </Grid>
 </Window>

@@ -13,16 +13,17 @@ using DragDropEffects = Avalonia.Input.DragDropEffects;
 namespace Cine.Avalonia.Controls;
 
 /// <summary>
-/// Standalone audio track selector layer with its own button + flyout containing
-/// audio track selection and audio delay controls. Supports drag-drop of
-/// external audio files (.mp3, .aac, .flac, .ogg, .wav, .m4a) directly onto
+/// Standalone audio track selector layer with its own button + flyout overlay
+/// containing audio track selection and audio delay controls. Supports drag-drop
+/// of external audio files (.mp3, .aac, .flac, .ogg, .wav, .m4a) directly onto
 /// the button for immediate loading.
 /// </summary>
 public partial class AudioTrackSelectorControl : AvaloniaUserControl
 {
     private MainViewModel? _viewModel;
-    private Flyout? _currentFlyout;
+    private Border? _currentFlyoutContent;
     private FlyoutManager? _flyoutManager;
+    private FlyoutOverlayControl? _overlay;
 
     private static readonly string[] AudioExtensions = { ".mp3", ".aac", ".flac", ".ogg", ".wav", ".m4a", ".opus" };
 
@@ -63,15 +64,22 @@ public partial class AudioTrackSelectorControl : AvaloniaUserControl
     /// <summary>Closes the flyout if it is currently open.</summary>
     public void HideFlyout()
     {
-        if (_currentFlyout?.IsOpen == true)
-            _currentFlyout.Hide();
+        if (_currentFlyoutContent != null)
+        {
+            _overlay?.HideContent();
+            _currentFlyoutContent = null;
+        }
     }
 
     /// <summary>Reopens the flyout (for file dialog reopen cycle).</summary>
     public void ReopenFlyout()
     {
-        if (_currentFlyout != null && BtnAudio != null)
-            _currentFlyout.ShowAt(BtnAudio);
+        if (_currentFlyoutContent != null && BtnAudio != null)
+        {
+            _overlay ??= MainWindow.GetOverlay(this);
+            if (_overlay != null)
+                _overlay.ShowContent(BtnAudio, _currentFlyoutContent, placeAbove: true);
+        }
     }
 
     /// <summary>
@@ -83,7 +91,7 @@ public partial class AudioTrackSelectorControl : AvaloniaUserControl
         set
         {
             _flyoutManager = value;
-            value?.Register("audio", () => _currentFlyout?.Hide());
+            value?.Register("audio", () => { _overlay?.HideContent(); _currentFlyoutContent = null; });
         }
     }
 
@@ -91,16 +99,27 @@ public partial class AudioTrackSelectorControl : AvaloniaUserControl
     {
         if (_viewModel == null) return;
         _flyoutManager?.DismissOthers("audio");
-        _currentFlyout = BuildAudioFlyout();
-        _currentFlyout.Closed += (_, _) => _flyoutManager?.MarkClosed("audio");
-        _currentFlyout.ShowAt(BtnAudio);
+        _overlay ??= MainWindow.GetOverlay(this);
+        if (_overlay == null) return;
+
+        _currentFlyoutContent = BuildAudioFlyoutContent();
+
+        _overlay.OnBackgroundDismissed -= OnAudioOverlayDismissed;
+        _overlay.OnBackgroundDismissed += OnAudioOverlayDismissed;
+        _overlay.ShowContent(BtnAudio, _currentFlyoutContent, placeAbove: true);
     }
 
-    private Flyout BuildAudioFlyout()
+    private void OnAudioOverlayDismissed()
     {
-        if (_viewModel == null) return new Flyout();
+        _currentFlyoutContent = null;
+        _flyoutManager?.MarkClosed("audio");
+    }
+
+    private Border BuildAudioFlyoutContent()
+    {
+        if (_viewModel == null) return new Border();
         var vm = _viewModel;
-        return TrackFlyoutBuilder.Build(
+        return TrackFlyoutBuilder.BuildContent(
             vm.AudioTracks,
             "No audio tracks available",
             "Audio Delay",

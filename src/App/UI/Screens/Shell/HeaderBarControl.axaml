@@ -33,6 +33,46 @@
                     CornerRadius="99"
                     BorderThickness="0"
                     Padding="12,6">
+                <Button.Flyout>
+                    <Flyout Placement="Bottom">
+                        <Border Padding="4"
+                                Background="{StaticResource PopoverBackground}"
+                                BorderBrush="{StaticResource PopoverBorder}"
+                                BorderThickness="1"
+                                CornerRadius="{StaticResource radius-sm}">
+                            <StackPanel x:Name="OpenMenuStack" Width="230" Spacing="2">
+                                <!-- Open File action -->
+                                <Button x:Name="BtnMenuOpenFile"
+                                        Classes="flyout-item">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <materialIcons:MaterialIcon Kind="FileOutline"
+                                            Width="16" Height="16"
+                                            Foreground="{StaticResource TextPrimary}" />
+                                        <TextBlock Text="Open File…"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{StaticResource TextPrimary}" />
+                                    </StackPanel>
+                                </Button>
+                                <!-- Open Folder action -->
+                                <Button x:Name="BtnMenuOpenFolder"
+                                        Classes="flyout-item">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <materialIcons:MaterialIcon Kind="FolderOutline"
+                                            Width="16" Height="16"
+                                            Foreground="{StaticResource TextPrimary}" />
+                                        <TextBlock Text="Open Folder…"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{StaticResource TextPrimary}" />
+                                    </StackPanel>
+                                </Button>
+                                <!-- Recent Files divider — populated at runtime by UpdateOpenMenuRecentFiles -->
+                                <Separator x:Name="OpenMenuRecentDivider"
+                                           IsVisible="False"
+                                           Margin="8,4" />
+                            </StackPanel>
+                        </Border>
+                    </Flyout>
+                </Button.Flyout>
                 <Button.Styles>
                     <Style Selector="Button#BtnOpenMenu /template/ ContentPresenter">
                         <Setter Property="Background" Value="Transparent" />
@@ -54,61 +94,6 @@
                         Opacity="0.7"
                         VerticalAlignment="Center" />
                 </StackPanel>
-                <Button.Flyout>
-                    <Flyout Placement="BottomEdgeAlignedLeft"
-                            Opened="TrackFlyoutOpened" Closed="TrackFlyoutClosed">
-                        <Border Background="{StaticResource PopoverBackground}"
-                                BorderBrush="{StaticResource PopoverBorder}"
-                                BorderThickness="1"
-                                CornerRadius="{StaticResource radius-sm}"
-                                Padding="{StaticResource space-1}">
-                            <StackPanel Width="{StaticResource size-dialog-min-width-menu}">
-                                <StackPanel.Styles>
-                                    <Style Selector="Button.flyout-item">
-                                        <Setter Property="Background" Value="Transparent" />
-                                        <Setter Property="BorderThickness" Value="0" />
-                                        <Setter Property="Padding" Value="10,7" />
-                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                        <Setter Property="Cursor" Value="Arrow" />
-                                    </Style>
-                                    <Style Selector="Button.flyout-item:pointerover">
-                                        <Setter Property="Background" Value="{StaticResource AppHoverSubtle}" />
-                                    </Style>
-                                    <Style Selector="Button.flyout-item TextBlock">
-                                        <Setter Property="FontSize" Value="13" />
-                                        <Setter Property="FontWeight" Value="500" />
-                                        <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
-                                    </Style>
-                                </StackPanel.Styles>
-                                <Button Classes="flyout-item"
-                                        Command="{Binding OpenFilesCommand}">
-                                    <Grid ColumnDefinitions="Auto,*">
-                                        <materialIcons:MaterialIcon Kind="Play" Width="14" Height="14"
-                                            Foreground="{StaticResource OsdForeground}" />
-                                        <TextBlock Grid.Column="1" Text="Open Files" Margin="{StaticResource space-left-10}" />
-                                    </Grid>
-                                </Button>
-                                <Button Classes="flyout-item"
-                                        Command="{Binding OpenFolderCommand}">
-                                    <Grid ColumnDefinitions="Auto,*">
-                                        <materialIcons:MaterialIcon Kind="Folder" Width="14" Height="14"
-                                            Foreground="{StaticResource OsdForeground}" />
-                                        <TextBlock Grid.Column="1" Text="Open Folder" Margin="{StaticResource space-left-10}" />
-                                    </Grid>
-                                </Button>
-                                <Separator Background="{StaticResource PopoverBorder}" />
-                                <Button Classes="flyout-item"
-                                        Command="{Binding AddFilesCommand}">
-                                    <Grid ColumnDefinitions="Auto,*">
-                                        <materialIcons:MaterialIcon Kind="Plus" Width="14" Height="14"
-                                            Foreground="{StaticResource OsdForeground}" />
-                                        <TextBlock Grid.Column="1" Text="Add Files" Margin="{StaticResource space-left-10}" />
-                                    </Grid>
-                                </Button>
-                            </StackPanel>
-                        </Border>
-                    </Flyout>
-                </Button.Flyout>
             </Button>
 
             <!-- Col 1: Window Title (centered) -->

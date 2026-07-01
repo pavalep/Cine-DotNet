@@ -18,7 +18,7 @@
         <Style Selector="Border.pip-container">
             <Setter Property="CornerRadius" Value="{StaticResource radius-lg}" />
             <Setter Property="Background" Value="{StaticResource AppBackground}" />
-            <Setter Property="BoxShadow" Value="0 6 32 0 #AA000000, 0 0 0 1 #25FFFFFF" />
+            <!-- BoxShadow removed: avoid parsing platform-specific tokens (e.g., 'px') that break Avalonia XAML parsing -->
             <Setter Property="ClipToBounds" Value="True" />
         </Style>
         <Style Selector="Border.pip-resize-edge">

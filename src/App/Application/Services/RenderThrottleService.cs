@@ -16,7 +16,7 @@ public class RenderThrottleService
     private long _lastRenderTicks;
 
     // Minimum interval between renders: ~16.666ms = 60fps
-    private const long MinIntervalTicks = (long)(16.666 * TimeSpan.TicksPerMillisecond);
+    private const long MinIntervalTicks = 166660; // ~16.666ms in TimeSpan ticks (1 ms = 10000 ticks)
 
     /// <summary>
     /// The minimum interval between renders in ticks (default ~16.666ms).
@@ -43,8 +43,16 @@ public class RenderThrottleService
     public bool ShouldRender()
     {
         long now = Stopwatch.GetTimestamp();
-        long last = Interlocked.Read(ref _lastRenderTicks);
+        long last = Volatile.Read(ref _lastRenderTicks);
         long interval = Volatile.Read(ref _minIntervalField);
+
+        // First call: allow immediately (last == 0 means never rendered)
+        if (last == 0)
+        {
+            Interlocked.Exchange(ref _lastRenderTicks, now);
+            Interlocked.Increment(ref _allowedRenders);
+            return true;
+        }
 
         // Convert Stopwatch ticks to TimeSpan ticks
         long elapsed = (now - last) * TimeSpan.TicksPerSecond / Stopwatch.Frequency;

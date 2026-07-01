@@ -960,6 +960,14 @@ public sealed class SubtitleManager : ISubtitleManager
         await DispatchAddExternalSubtitlesAsync(new List<string> { filePath }, ct);
     }
 
+    /// <summary>Legacy synchronous wrapper for tests/automation: starts async load and returns immediately.</summary>
+    public void LoadExternalSubtitle(string filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath)) return;
+        _sessionOverride = true;
+        _ = DispatchAddExternalSubtitlesAsync(new List<string> { filePath });
+    }
+
     /// <summary>Select a subtitle track by its ID. Used for session restore.</summary>
     public void SelectSubtitleTrackById(int trackId)
     {

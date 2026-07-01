@@ -15,12 +15,13 @@ public static class Token
         return AvaloniaApp.Current?.FindResource(resourceKey);
     }
 
-    /// <summary>Resolve a Double resource by key. Falls back to 0.</summary>
+    /// <summary>Resolve a Double resource by key. Falls back to a sensible default (14).</summary>
     public static double Size(string resourceKey)
     {
         var result = Get(resourceKey);
         if (result is double d) return d;
-        return 0;
+        // Fallback to a reasonable default font size so UI code doesn't set invalid 0 values.
+        return 14.0;
     }
 
     /// <summary>Resolve a Thickness resource by key. Falls back to default.</summary>

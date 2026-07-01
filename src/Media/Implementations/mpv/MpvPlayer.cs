@@ -1056,8 +1056,6 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
         _onFrameReady?.Invoke();
     }
 
-    // ── Render API — matches reference LibMpv-OpenGL exactly ──
-
     public bool IsRenderApiReady => _renderApiReady && _renderContext != IntPtr.Zero;
 
     public unsafe void InitializeRenderApi(Func<string, IntPtr> getProcAddress, Action onFrameReady)

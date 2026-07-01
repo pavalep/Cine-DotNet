@@ -28,24 +28,13 @@ public partial class ControlsBoxControl : AvaloniaUserControl
 {
     private MainViewModel? _viewModel;
     private bool _replayMode;
-    private readonly List<global::Avalonia.Controls.Primitives.FlyoutBase> _trackedFlyouts = new();
     private PlaylistDialog? _playlistDialog;
     private FlyoutManager? _flyoutManager;
+    private FlyoutOverlayControl? _flyoutOverlay; // cached reference
+    private string? _activeFlyoutKey; // tracks current overlay flyout for dismiss cleanup
+    private Border? _overlayContent; // cached volume overlay content
 
-    private static void PauseLog(string msg)
-    {
-        try
-        {
-            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Cine");
-            Directory.CreateDirectory(dir);
-            File.AppendAllText(Path.Combine(dir, "cine_playpause.log"), $"[{DateTime.Now:HH:mm:ss.fff}] {msg}{Environment.NewLine}");
-        }
-        catch (Exception ex)
-        {
-            global::Cine.Core.Log.ForContext<ControlsBoxControl>()
-                .Warning("State comparison failed: {Error}", ex.Message);
-        }
-    }
+
 
     public SeekBarControl SeekBarControl => SeekBar;
     public SubtitleOverlayControl? SubtitleOverlay => SubOverlayCtrl;
@@ -56,35 +45,39 @@ public partial class ControlsBoxControl : AvaloniaUserControl
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
-
-        // Volume flyout auto-dismiss: close after 1.5s of inactivity on slider
-        BtnVolumeMenu.Flyout!.Opened += (_, _) =>
-        {
-            _flyoutManager?.DismissOthers("volume");
-            VolumeSlider.PointerWheelChanged += OnVolumeAutoDismiss;
-            VolumeSlider.PointerReleased += OnVolumeAutoDismiss;
-        };
-        BtnVolumeMenu.Flyout.Closed += (_, _) =>
-        {
-            _flyoutManager?.MarkClosed("volume");
-            VolumeSlider.PointerWheelChanged -= OnVolumeAutoDismiss;
-            VolumeSlider.PointerReleased -= OnVolumeAutoDismiss;
-        };
+        // Event subscription will be set when FlyoutManager is assigned
     }
 
-    private void OnVolumeAutoDismiss(object? sender, EventArgs e)
+    private void OnVolumeOverlayDismissed()
     {
-        ErrorBoundary.Run(async () =>
-        {
-            await Task.Delay(1500);
-            if (BtnVolumeMenu?.Flyout is Flyout f && f.IsOpen)
-                f.Hide();
-        });
+        _flyoutManager?.MarkClosed("volume");
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
         _viewModel = DataContext as MainViewModel;
+    }
+
+    private void OnVolumeMenuClick(object? sender, RoutedEventArgs e)
+    {
+        if (_viewModel == null) return;
+        
+        // Ensure overlay is cached and event is subscribed
+        if (_flyoutOverlay == null)
+        {
+            _flyoutOverlay = MainWindow.GetOverlay(this);
+            if (_flyoutOverlay != null)
+                _flyoutOverlay.OnBackgroundDismissed += OnVolumeOverlayDismissed;
+        }
+        
+        if (_flyoutOverlay == null) return;
+
+        _flyoutManager?.DismissOthers("volume");
+
+        var content = BuildVolumeContent();
+        _overlayContent = content;
+
+        _flyoutOverlay.ShowContent(BtnVolumeMenu, content, placeAbove: true);
     }
 
     private void OnFirstLoadedForPlayPause(object? sender, EventArgs e)
@@ -96,7 +89,7 @@ public partial class ControlsBoxControl : AvaloniaUserControl
 
     // --- Public API for MainWindow ---
 
-    public bool HasActiveFlyouts => _trackedFlyouts.Any(f => f.IsOpen);
+    public bool HasActiveFlyouts => _flyoutOverlay?.IsVisible == true;
 
     /// <summary>
     /// Flyout ecosystem manager. When set, all flyouts controlled by this control
@@ -111,11 +104,17 @@ public partial class ControlsBoxControl : AvaloniaUserControl
             _flyoutManager = value;
             if (value == null) return;
 
-            // Register this control's flyouts with close actions
-            value.Register("equalizer",   () => _equalizerFlyout?.Hide());
-            value.Register("volume",      () => BtnVolumeMenu?.Flyout?.Hide());
-            value.Register("video-menu",  () => { /* ContextMenu — click outside closes it */ });
-            value.Register("chapters",    () => { /* ContextMenu — click outside closes it */ });
+            // Cache overlay reference FIRST
+            _flyoutOverlay = MainWindow.GetOverlay(this);
+            if (_flyoutOverlay != null)
+                _flyoutOverlay.OnBackgroundDismissed += OnVolumeOverlayDismissed;
+
+            // Register close actions — all hide the overlay instead of calling Flyout.Hide()
+            Action hideOverlay = () => _flyoutOverlay?.HideContent();
+            value.Register("equalizer",   hideOverlay);
+            value.Register("volume",      hideOverlay);
+            value.Register("video-menu",  hideOverlay);
+            value.Register("chapters",    hideOverlay);
 
             // Pass to child controls
             if (SubOverlayCtrl != null) SubOverlayCtrl.FlyoutManager = value;
@@ -158,11 +157,11 @@ public partial class ControlsBoxControl : AvaloniaUserControl
             PlayPauseIcon.Opacity = 1;
             PlayPauseAltIcon.Opacity = 0;
             PlayPauseIcon.InvalidateVisual();
-            PauseLog($"SyncPlayPauseIcon: replay mode -> Replay");
+            Cine.Core.Log.ForContext<ControlsBoxControl>().Debug("SyncPlayPauseIcon: replay mode -> Replay");
         }
         else
         {
-            PauseLog($"SyncPlayPauseIcon: isPlaying={isPlaying} _replayMode={_replayMode}");
+            Cine.Core.Log.ForContext<ControlsBoxControl>().Debug("SyncPlayPauseIcon: isPlaying={IsPlaying}", isPlaying);
             // Crossfade: show play icon when paused, pause icon when playing
             var showPlay = !isPlaying;
             PlayPauseIcon.Kind = Material.Icons.MaterialIconKind.Play;
@@ -179,7 +178,8 @@ public partial class ControlsBoxControl : AvaloniaUserControl
     public void SetReplayMode(bool replayMode)
     {
         _replayMode = replayMode;
-        PauseLog($"SetReplayMode({replayMode})");
+        Cine.Core.Log.ForContext<ControlsBoxControl>().Debug("SetReplayMode({ReplayMode})", replayMode);
+
     }
 
     public void RefreshVolumeIcon()
@@ -197,8 +197,7 @@ public partial class ControlsBoxControl : AvaloniaUserControl
             VolumeIcon.Opacity = 1;
             VolumeMuteIcon.Opacity = 0;
         }
-        // Sync MuteToggleIcon (still single icon)
-        MuteToggleIcon.Kind = muted ? Material.Icons.MaterialIconKind.VolumeOff : Material.Icons.MaterialIconKind.VolumeHigh;
+        // MuteToggleIcon no longer exists (removed from XAML)
     }
 
     public void SetControlsVisibility(bool visible)
@@ -260,19 +259,19 @@ public partial class ControlsBoxControl : AvaloniaUserControl
     private void OnPlayPause(object? sender, RoutedEventArgs e)
     {
         if (_viewModel == null) return;
-        PauseLog($"OnPlayPause CLICKED. _replayMode={_replayMode}");
+        Cine.Core.Log.ForContext<ControlsBoxControl>().Debug("OnPlayPause CLICKED. _replayMode={ReplayMode}", _replayMode);
         // If in replay mode, clicking play restarts the video from beginning
         if (_replayMode)
         {
             _replayMode = false;
             _viewModel.PlayPause(); // ViewModel handles stop+seek+play internally
-            PauseLog($"OnPlayPause replay mode: _viewModel.PlayPause() called");
+            Cine.Core.Log.ForContext<ControlsBoxControl>().Debug("OnPlayPause replay mode: _viewModel.PlayPause() called");
             return;
         }
         // Do NOT optimistically toggle the icon — let PlaybackStateManager's StateChanged
         // event update the icon through SyncPlayPauseIcon. This avoids the double-press
         // bug where the icon shows Pause before mpv has actually started playing.
-        PauseLog($"OnPlayPause: _viewModel.PlayPause() called");
+        Cine.Core.Log.ForContext<ControlsBoxControl>().Debug("OnPlayPause: _viewModel.PlayPause() called");
         _viewModel.PlayPause();
     }
 
@@ -302,7 +301,11 @@ public partial class ControlsBoxControl : AvaloniaUserControl
 
     // --- Volume handlers ---
 
+    // Volume controls are now shown via FlyoutOverlay (no inline Flyout)
+    // Handlers left stubbed for now:
+
     private void OnToggleMute(object? sender, RoutedEventArgs e) => _viewModel?.ToggleMute();
+    
     private void OnVolumeSliderPointerPressed(object? sender, PointerPressedEventArgs e) => e.Handled = true;
 
     private void OnVolumeButtonScroll(object? sender, PointerWheelEventArgs e)
@@ -313,6 +316,99 @@ public partial class ControlsBoxControl : AvaloniaUserControl
         else if (e.Delta.Y < 0)
             _viewModel.DecreaseVolume();
         e.Handled = true;
+    }
+
+    /// <summary>Builds the volume controls overlay content.</summary>
+    private Border BuildVolumeContent()
+    {
+        var stack = new StackPanel
+        {
+            Width = 200,
+            HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Center,
+            Spacing = 12 // Matches HeaderBar flyout spacing
+        };
+
+        // Volume label row
+        var labelRow = new StackPanel
+        {
+            Orientation = global::Avalonia.Layout.Orientation.Horizontal,
+            Margin = new Thickness(12, 0),
+            Spacing = 12
+        };
+
+        labelRow.Children.Add(new TextBlock
+        {
+            Text = "Volume",
+            Classes = { "md3-subtitle1" },
+            VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center
+        });
+
+        var volumePercentLabel = new TextBlock
+        {
+            Name = "VolumePercentLabel",
+            Text = "100%",
+            Classes = { "md3-body2" },
+            FontWeight = global::Avalonia.Media.FontWeight.SemiBold,
+            VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center
+        };
+        labelRow.Children.Add(volumePercentLabel);
+        stack.Children.Add(labelRow);
+
+        // Slider
+        var slider = new Slider
+        {
+            Classes = { "compact" },
+            Minimum = 0,
+            Maximum = 150,
+            Height = 36,
+            VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center,
+            HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch
+        };
+        stack.Children.Add(slider);
+
+        // Presets row - matching TrackFlyoutBuilder pattern
+        var presetsRow = new StackPanel
+        {
+            Orientation = global::Avalonia.Layout.Orientation.Horizontal,
+            HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Center,
+            Spacing = 8 // Matches TrackFlyoutBuilder spacing
+        };
+
+        foreach (var value in new[] { 25, 50, 75, 100 })
+        {
+            var btn = new Button
+            {
+                Content = $"{value}%",
+                HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Center,
+                Background = global::Avalonia.Media.Brushes.Transparent,
+                Foreground = global::Avalonia.Application.Current?.FindResource("TextPrimary") as global::Avalonia.Media.IBrush,
+                Padding = new Thickness(12, 9), // Matches flyout-item Padding="12,9"
+                FontSize = 13, // Matches flyout-item FontSize="13"
+                FontWeight = global::Avalonia.Media.FontWeight.Medium, // Matches flyout-item FontWeight="Medium"
+                Classes = { "flyout-item" },
+                Cursor = new global::Avalonia.Input.Cursor(global::Avalonia.Input.StandardCursorType.Arrow)
+            };
+            btn.Click += (_, __) => 
+            {
+                if (_viewModel != null)
+                    _viewModel.VolumeValue = value;
+            };
+            presetsRow.Children.Add(btn);
+        }
+        stack.Children.Add(presetsRow);
+
+        // Wrap stack in Border with flyout styling
+        var border = new Border
+        {
+            Background = global::Avalonia.Application.Current?.FindResource("PopoverBackground") as global::Avalonia.Media.Brush,
+            BorderBrush = global::Avalonia.Application.Current?.FindResource("PopoverBorder") as global::Avalonia.Media.Brush,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(6), // radius-sm = 6
+            Padding = new Thickness(0), // Let StackPanel handle spacing
+            Child = stack
+        };
+
+        return border;
     }
 
     // --- Volume preset handlers ---
@@ -334,32 +430,39 @@ public partial class ControlsBoxControl : AvaloniaUserControl
 
     // --- Track menu handlers ---
 
-    private Flyout? _equalizerFlyout;
-
     public void OpenEqualizerFlyout()
     {
         if (_viewModel == null) return;
-        _equalizerFlyout?.Hide();
+        _flyoutOverlay ??= MainWindow.GetOverlay(this);
+        if (_flyoutOverlay == null) return;
+
+        // Dismiss any previous flyout
+        _flyoutManager?.DismissOthers("equalizer");
+
+        // Build content
         var flyoutContent = new AudioEqualizerFlyout(_viewModel.Audio);
-        flyoutContent.CloseAction = () => _equalizerFlyout?.Hide();
-        _equalizerFlyout = new Flyout
+        flyoutContent.CloseAction = () =>
         {
-            Content = flyoutContent,
-            Placement = PlacementMode.TopEdgeAlignedLeft,
-            ShowMode = FlyoutShowMode.Standard,
-            OverlayDismissEventPassThrough = true
+            _flyoutOverlay?.HideContent();
+            _flyoutManager?.MarkClosed("equalizer");
         };
-        TrackFlyout(_equalizerFlyout);
-        if (BtnEqualizer != null)
-        {
-            _flyoutManager?.DismissOthers("equalizer");
-            _equalizerFlyout.ShowAt(BtnEqualizer);
-        }
-        else if (BtnFullscreen != null)
-        {
-            _flyoutManager?.DismissOthers("equalizer");
-            _equalizerFlyout.ShowAt(BtnFullscreen);
-        }
+
+        // Track current key for dismiss
+        _activeFlyoutKey = "equalizer";
+        _flyoutOverlay.OnBackgroundDismissed -= OnOverlayDismissed;
+        _flyoutOverlay.OnBackgroundDismissed += OnOverlayDismissed;
+
+        // Choose anchor: if BtnEqualizer exists use it, else fall back to BtnFullscreen
+        var anchor = BtnEqualizer ?? BtnFullscreen;
+        if (anchor != null)
+            _flyoutOverlay.ShowContent(anchor, flyoutContent, placeAbove: true);
+    }
+
+    private void OnOverlayDismissed()
+    {
+        if (_activeFlyoutKey != null)
+            _flyoutManager?.MarkClosed(_activeFlyoutKey);
+        _activeFlyoutKey = null;
     }
 
     private void OnEqualizerClick(object? sender, RoutedEventArgs e)
@@ -370,10 +473,15 @@ public partial class ControlsBoxControl : AvaloniaUserControl
     private void OnVideoMenuClick(object? sender, RoutedEventArgs e)
     {
         if (_viewModel == null) return;
-        var flyout = BuildTrackMenuFlyout(_viewModel.VideoTracks);
-        TrackFlyout(flyout);
+        _flyoutOverlay ??= MainWindow.GetOverlay(this);
+        if (_flyoutOverlay == null) return;
+
+        var content = BuildTrackMenuContent(_viewModel.VideoTracks);
         _flyoutManager?.DismissOthers("video-menu");
-        flyout.ShowAt(BtnVideoMenu);
+        _activeFlyoutKey = "video-menu";
+        _flyoutOverlay.OnBackgroundDismissed -= OnOverlayDismissed;
+        _flyoutOverlay.OnBackgroundDismissed += OnOverlayDismissed;
+        _flyoutOverlay.ShowContent(BtnVideoMenu, content, placeAbove: true);
     }
 
     // --- Chapter menu handler ---
@@ -381,13 +489,18 @@ public partial class ControlsBoxControl : AvaloniaUserControl
     private void OnChaptersMenuClick(object? sender, RoutedEventArgs e)
     {
         if (_viewModel == null || _viewModel.Chapters.Count == 0) return;
-        var flyout = BuildChaptersFlyout(_viewModel.Chapters);
-        TrackFlyout(flyout);
+        _flyoutOverlay ??= MainWindow.GetOverlay(this);
+        if (_flyoutOverlay == null) return;
+
+        var content = BuildChaptersContent(_viewModel.Chapters);
         _flyoutManager?.DismissOthers("chapters");
-        flyout.ShowAt(BtnChaptersMenu);
+        _activeFlyoutKey = "chapters";
+        _flyoutOverlay.OnBackgroundDismissed -= OnOverlayDismissed;
+        _flyoutOverlay.OnBackgroundDismissed += OnOverlayDismissed;
+        _flyoutOverlay.ShowContent(BtnChaptersMenu, content, placeAbove: true);
     }
 
-    private Flyout BuildChaptersFlyout(ObservableCollection<ChapterInfo> chapters)
+    private Control BuildChaptersContent(ObservableCollection<ChapterInfo> chapters)
     {
         var stack = new global::Avalonia.Controls.StackPanel();
 
@@ -458,10 +571,10 @@ public partial class ControlsBoxControl : AvaloniaUserControl
             }
         };
 
-        return new Flyout { Content = border, Placement = PlacementMode.Top };
+        return border;
     }
 
-    private Flyout BuildTrackMenuFlyout(ObservableCollection<TrackMenuItem> tracks)
+    private Control BuildTrackMenuContent(ObservableCollection<TrackMenuItem> tracks)
     {
         var stackPanel = new global::Avalonia.Controls.StackPanel();
 
@@ -549,12 +662,7 @@ public partial class ControlsBoxControl : AvaloniaUserControl
             Child = scroll
         };
 
-        return new Flyout { Content = border, Placement = PlacementMode.Top };
-    }
-
-    private void TrackFlyout(global::Avalonia.Controls.Primitives.FlyoutBase flyout)
-    {
-        _trackedFlyouts.Add(flyout);
+        return border;
     }
 
     // --- Playlist dialog ---

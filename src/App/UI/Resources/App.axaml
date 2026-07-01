@@ -27,7 +27,7 @@
         <Setter Property="FontFamily" Value="{StaticResource font-family-default}" />
         <Setter Property="ExtendClientAreaToDecorationsHint" Value="True" />
         <Setter Property="ExtendClientAreaTitleBarHeightHint" Value="0" />
-        <Setter Property="WindowDecorations" Value="BorderOnly" />
+        <Setter Property="WindowDecorations" Value="None" />
     </Style>
 
     <!-- Global ToolTip delay -->

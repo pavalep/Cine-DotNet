@@ -52,7 +52,7 @@ public partial class PlaylistDialog : Window
                 return text.Trim() == "true";
             }
         }
-        catch { }
+        catch (Exception ex) { _log.Warning(ex, "LoadQueueMode failed"); }
         return false; // default: sequential mode
     }
 
@@ -69,7 +69,7 @@ public partial class PlaylistDialog : Window
             File.WriteAllText(tempPath, _queueMode.ToString().ToLower());
             File.Move(tempPath, path, overwrite: true);
         }
-        catch { }
+        catch (Exception ex) { _log.Warning(ex, "LoadQueueMode failed"); }
     }
 
     // Centralized file-dialog handler

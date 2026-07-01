@@ -48,7 +48,7 @@ public class MpvVideoView : Decorator
     private readonly Image _videoImage;
     private WriteableBitmap? _writeableBitmap;
     private DateTime _lastFrameTime = DateTime.MinValue;
-    private static readonly TimeSpan MinFrameInterval = TimeSpan.FromMilliseconds(8); // ~120fps cap
+    private static readonly TimeSpan MinFrameInterval = TimeSpan.FromMilliseconds(16.666); // ~60fps cap
 
     /// <summary>
     /// When false, the main window doesn't display video frames.
@@ -94,7 +94,7 @@ public class MpvVideoView : Decorator
         _videoImage = new Image
         {
             Stretch = Stretch.Uniform,
-            IsHitTestVisible = false,
+            IsHitTestVisible = true,
             IsVisible = false              // Hide until first frame renders
         };
         Child = _videoImage;

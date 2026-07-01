@@ -42,6 +42,7 @@ public class VideoContextMenuBuilder
 
     public MenuFlyout Build()
     {
+        Cine.Core.Log.ForContext<VideoContextMenuBuilder>().Debug("Building video context menu: topmost={Topmost} aspect={Aspect} crop={Crop} speed={Speed}", _topmost, _aspectRatio, _cropValue, _speedValue);
         var menu = new MenuFlyout { Placement = PlacementMode.Pointer };
 
         // ── Playback ──
@@ -134,7 +135,12 @@ public class VideoContextMenuBuilder
             item.Icon = Icon(global::Material.Icons.MaterialIconKind.CheckCircle, 16, AppColors.Accent);
         else if (icon.HasValue)
             item.Icon = Icon(icon.Value, 16);
-        item.Click += (_, _) => action();
+        item.Click += (_, _) =>
+        {
+            Cine.Core.Log.ForContext<VideoContextMenuBuilder>().Debug("Menu item clicked: {Item}", text);
+            try { action(); }
+            catch (Exception ex) { Cine.Core.Log.ForContext<VideoContextMenuBuilder>().Error(ex, "Menu item action failed: {Item}", text); }
+        };
         return item;
     }
 
@@ -144,7 +150,12 @@ public class VideoContextMenuBuilder
         item.Icon = isSelected
             ? Icon(global::Material.Icons.MaterialIconKind.CheckCircle, 16, AppColors.Accent)
             : Icon(global::Material.Icons.MaterialIconKind.CircleOutline, 16);
-        item.Click += (_, _) => action();
+        item.Click += (_, _) =>
+        {
+            Cine.Core.Log.ForContext<VideoContextMenuBuilder>().Debug("Menu select clicked: {Item}", text);
+            try { action(); }
+            catch (Exception ex) { Cine.Core.Log.ForContext<VideoContextMenuBuilder>().Error(ex, "Menu select action failed: {Item}", text); }
+        };
         return item;
     }
 

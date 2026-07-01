@@ -127,35 +127,20 @@ public static class MpvConfig
     }
 
     /// <summary>
-    /// Premium low-latency tuning options for the OpenGL render API path.
-    /// These options reduce latency and improve frame pacing:
-    /// - cache=no: Disable read-ahead cache (not needed for local files; reduces seek latency).
-    /// - opengl-early-flush=yes: Flush OpenGL commands early to reduce frame latency.
-    /// - hwdec=auto: Enable hardware decoding (auto-selects the best available decoder).
-    /// - audio-buffer=0.1: Reduce audio buffer to 100ms for lower A/V sync latency.
-    /// - display-resample=linear: Linear resampling for smooth display rate matching.
-    /// - video-sync=display-resample: Sync video to display refresh with resampling.
-    /// - video-sync-max-audio-change=0.1: Limit audio pitch correction during sync.
+    /// Premium tuning options for the OpenGL render API path.
+    /// Applied ON TOP OF GetRenderApiOptions() — these override or add to the base set.
     ///
-    /// These are applied ON TOP OF GetRenderApiOptions() by the caller.
+    /// Validated mpv options (all compatible with vo=libmpv render API):
+    /// - audio-buffer=0.2: Tighter audio buffer for lower A/V sync latency (200ms).
+    /// - cache=no: Skip read-ahead cache for local files (reduces seek latency).
+    /// - hwdec=auto-safe: Enable hardware decoding (overrides base render API's hwdec=no).
     /// </summary>
     public static Dictionary<string, string> GetPremiumTuningOptions()
     {
         return new()
         {
-            // ── Audio: moderate buffer for stability ──
             ["audio-buffer"] = "0.2",
-
-            // ── Cache: small cache for smoother network streams ──
-            ["cache"] = "yes",
-            ["cache-default"] = "1500",
-            ["cache-secs"] = "10",
-
-            // ── Display sync: match video to display refresh ──
-            ["video-sync"] = "display-resample",
-            ["video-sync-max-audio-change"] = "0.2",
-
-            // ── Hardware decoding ──
+            ["cache"] = "no",
             ["hwdec"] = "auto-safe"
         };
     }

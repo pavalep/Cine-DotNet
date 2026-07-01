@@ -7,6 +7,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Cine.Avalonia;
 using Cine.Avalonia.Builders;
 using Cine.Avalonia.Services;
 using Cine.Avalonia.ViewModels;
@@ -30,8 +31,9 @@ public partial class SubtitleOverlayControl : AvaloniaUserControl
 {
     private readonly ILogger _log;
     private MainViewModel? _viewModel;
-    private Flyout? _currentFlyout;
+    private Border? _currentFlyoutContent; // overlay content (not a Flyout)
     private FlyoutManager? _flyoutManager;
+    private FlyoutOverlayControl? _overlay; // cached window-level overlay
 
     private static readonly string[] SubtitleExtensions = { ".srt", ".ass", ".ssa", ".vtt", ".sub", ".idx" };
 
@@ -75,20 +77,23 @@ public partial class SubtitleOverlayControl : AvaloniaUserControl
     /// <summary>Closes the flyout if it is currently open.</summary>
     public void HideFlyout()
     {
-        if (_currentFlyout?.IsOpen == true)
+        if (_currentFlyoutContent != null)
         {
-            _log.Trace("HideFlyout: hiding subtitle flyout");
-            _currentFlyout.Hide();
+            _log.Trace("HideFlyout: hiding subtitle overlay");
+            _overlay?.HideContent();
+            _currentFlyoutContent = null;
         }
     }
 
     /// <summary>Reopens the subtitle flyout on its button (call after dialog completes).</summary>
     public void ReopenFlyout()
     {
-        if (_currentFlyout != null && BtnSubtitles != null)
+        if (_currentFlyoutContent != null && BtnSubtitles != null)
         {
-            _log.Trace("ReopenFlyout: reopening subtitle flyout");
-            _currentFlyout.ShowAt(BtnSubtitles);
+            _log.Trace("ReopenFlyout: reopening subtitle overlay");
+            _overlay ??= MainWindow.GetOverlay(this);
+            if (_overlay != null)
+                _overlay.ShowContent(BtnSubtitles, _currentFlyoutContent, placeAbove: true);
         }
     }
 
@@ -102,7 +107,7 @@ public partial class SubtitleOverlayControl : AvaloniaUserControl
         set
         {
             _flyoutManager = value;
-            value?.Register("subtitle", () => _currentFlyout?.Hide());
+            value?.Register("subtitle", () => { _overlay?.HideContent(); _currentFlyoutContent = null; });
         }
     }
 
@@ -115,36 +120,41 @@ public partial class SubtitleOverlayControl : AvaloniaUserControl
                 _log.Warning("OnSubtitlesClick: _viewModel or Subtitles is null");
                 return;
             }
-            _log.Debug("OnSubtitlesClick: building and showing subtitle flyout");
+            _log.Debug("OnSubtitlesClick: building and showing subtitle overlay");
             _flyoutManager?.DismissOthers("subtitle");
-            _currentFlyout = BuildSubtitleFlyout();
-            _currentFlyout.Closed += (_, _) => _flyoutManager?.MarkClosed("subtitle");
-            _currentFlyout.ShowAt(BtnSubtitles);
+            _overlay ??= MainWindow.GetOverlay(this);
+            if (_overlay == null) return;
+
+            _currentFlyoutContent = TrackFlyoutBuilder.BuildContent(
+                tracks: _viewModel.Subtitles.SubtitleTracks,
+                "No subtitles available",
+                "Subtitle Delay",
+                () => _viewModel.Subtitles.SubtitleDelay,
+                v => _viewModel.Subtitles.SubtitleDelay = (float)Math.Clamp(v, -10, 10),
+                () => _viewModel.Subtitles.SubtitleDelay = 0,
+                appendExtra: root => AppendFlyoutFooter(root, _viewModel.Subtitles),
+                emptyIcon: global::Material.Icons.MaterialIconKind.ClosedCaptionOutline
+            );
+
+            _overlay.OnBackgroundDismissed -= OnSubtitleOverlayDismissed;
+            _overlay.OnBackgroundDismissed += OnSubtitleOverlayDismissed;
+            _overlay.ShowContent(BtnSubtitles, _currentFlyoutContent, placeAbove: true);
         }
         catch (Exception ex)
         {
-            _log.Error(ex, "OnSubtitlesClick: exception building/showing flyout");
+            _log.Error(ex, "OnSubtitlesClick: exception building/showing overlay");
         }
     }
 
-    // ═══════════════════════════════════════════════
-    //  Flyout Construction
-    // ═══════════════════════════════════════════════
-
-    private Flyout BuildSubtitleFlyout()
+    private void OnSubtitleOverlayDismissed()
     {
-        var mgr = _viewModel!.Subtitles;
-        return TrackFlyoutBuilder.Build(
-            mgr.SubtitleTracks,
-            "No subtitles available",
-            "Subtitle Delay",
-            () => mgr.SubtitleDelay,
-            v => mgr.SubtitleDelay = (float)Math.Clamp(v, -10, 10),
-            () => mgr.SubtitleDelay = 0,
-            appendExtra: root => AppendFlyoutFooter(root, mgr),
-            emptyIcon: global::Material.Icons.MaterialIconKind.ClosedCaptionOutline
-        );
+        _currentFlyoutContent = null;
+        _flyoutManager?.MarkClosed("subtitle");
     }
+
+    // ═══════════════════════════════════════════════
+    //  Flyout Footer
+    // ═══════════════════════════════════════════════
 
     /// <summary>
     /// Adds a thin separator + gear button at the bottom of the flyout.
@@ -181,7 +191,9 @@ public partial class SubtitleOverlayControl : AvaloniaUserControl
         gearBtn.PointerExited += (_, _) => { if (gearBtn.Content is TextBlock tb) tb.Foreground = AppColors.TextTertiary; };
         gearBtn.Click += (_, _) =>
         {
-            _currentFlyout?.Hide();
+            _overlay?.HideContent();
+            _currentFlyoutContent = null;
+            _flyoutManager?.MarkClosed("subtitle");
             var w = TopLevel.GetTopLevel(this) as Window;
             if (w != null)
                 new SubtitleSettingsDialog(mgr).Show(w);

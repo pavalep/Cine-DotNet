@@ -345,6 +345,20 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public bool IsSubtitleEnabled => Subtitles?.IsSubtitleEnabled ?? false;
 
+    // Backwards-compatible subtitle delay property used by some tests/UI
+    public float SubtitleDelayValue
+    {
+        get => Subtitles?.SubtitleDelay ?? 0f;
+        set
+        {
+            if (Subtitles != null) Subtitles.SubtitleDelay = value;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>Helper to select a subtitle track by id (legacy name).</summary>
+    public void SelectTrackById(int id) => Subtitles?.SelectSubtitleTrackById(id);
+
     public bool IsAudioEnabled
     {
         get => _isAudioEnabled;

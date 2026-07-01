@@ -41,6 +41,26 @@ public partial class HeaderBarControl : AvaloniaUserControl
             _primaryMenuBuilder?.SyncCheckStates();
         };
         BtnPrimaryMenu.Flyout.Closed += TrackFlyoutClosed;
+
+        // Wire Open Menu button actions
+        BtnMenuOpenFile.Click += (_, _) =>
+        {
+            BtnOpenMenu.Flyout?.Hide();
+            _viewModel?.OpenFilesCommand.Execute(null);
+        };
+        BtnMenuOpenFolder.Click += (_, _) =>
+        {
+            BtnOpenMenu.Flyout?.Hide();
+            _viewModel?.OpenFolderCommand.Execute(null);
+        };
+
+        // Sync recent files and register for mutual exclusion when flyout opens
+        BtnOpenMenu.Flyout!.Opened += (sender, _) =>
+        {
+            _flyoutManager?.DismissOthers("open-menu");
+            if (sender is Flyout f) UpdateOpenMenuRecentFiles(f);
+        };
+        BtnOpenMenu.Flyout.Closed += (_, _) => _flyoutManager?.MarkClosed("open-menu");
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
@@ -198,12 +218,8 @@ public partial class HeaderBarControl : AvaloniaUserControl
             value?.Register("open-menu", () => BtnOpenMenu.Flyout?.Hide());
             value?.Register("primary-menu", () => BtnPrimaryMenu.Flyout?.Hide());
 
-            // Wire Opened/Closed to dismiss others and track state
-            if (BtnOpenMenu.Flyout != null)
-            {
-                BtnOpenMenu.Flyout.Opened += (_, _) => value?.DismissOthers("open-menu");
-                BtnOpenMenu.Flyout.Closed += (_, _) => value?.MarkClosed("open-menu");
-            }
+            // Wire Opened/Closed for PrimaryMenu mutual exclusion only
+            // (Open Menu handlers are already wired in the constructor)
             if (BtnPrimaryMenu.Flyout != null)
             {
                 BtnPrimaryMenu.Flyout.Opened += (_, _) => value?.DismissOthers("primary-menu");
@@ -227,7 +243,14 @@ public partial class HeaderBarControl : AvaloniaUserControl
     /// </summary>
     public void ReopenFlyout()
     {
-        BtnOpenMenu.Flyout?.ShowAt(BtnOpenMenu);
+        try
+        {
+            BtnOpenMenu.Flyout?.ShowAt(BtnOpenMenu);
+        }
+        catch (Exception ex)
+        {
+            global::Cine.Core.Log.ForContext<HeaderBarControl>().Error(ex, "ReopenFlyout ShowAt failed (BtnOpenMenu)");
+        }
     }
 
     public void TrackFlyoutOpened(object? sender, EventArgs e)

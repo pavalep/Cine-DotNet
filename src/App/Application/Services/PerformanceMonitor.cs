@@ -65,8 +65,8 @@ public class PerformanceMonitor
             // Track peak/min
             UpdateExtremes(count);
 
-            // Log if drops detected
-            if (count < 50)
+            // Log if drops detected (sub-15 fps = actual problem, not 24fps film content)
+            if (count < 15)
             {
                 Interlocked.Increment(ref _dropsDetected);
                 CrashReporter.LogError(

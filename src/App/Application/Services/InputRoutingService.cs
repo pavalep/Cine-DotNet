@@ -180,6 +180,41 @@ public class InputRoutingService
     }
 
     /// <summary>
+    /// Attempt to handle a key combination against an explicit scope (used by tests).
+    /// </summary>
+    public bool TryHandle(Key key, KeyModifiers modifiers, InputScope scope)
+    {
+        RegisteredShortcut? match = null;
+
+        lock (_lock)
+        {
+            var currentScope = scope;
+
+            // Sort by modifier count descending so longer chords match first
+            var candidates = _bindings
+                .Where(b => b.Key == key)
+                .OrderByDescending(b => CountModifiers(b.Modifiers))
+                .ToList();
+
+            foreach (var candidate in candidates)
+            {
+                if (candidate.Modifiers != (modifiers & candidate.Modifiers)) continue;
+                if ((modifiers & ~candidate.Modifiers) != KeyModifiers.None) continue;
+                if (!IsScopeActive(candidate.Scope, currentScope)) continue;
+
+                match = candidate;
+                break;
+            }
+        }
+
+        if (match == null)
+            return false;
+
+        match.Action();
+        return true;
+    }
+
+    /// <summary>
     /// Returns all registered shortcuts for display in a keyboard shortcuts dialog.
     /// </summary>
     public IReadOnlyList<RegisteredShortcut> GetAllBindings()
