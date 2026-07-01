@@ -956,6 +956,20 @@ public sealed class SubtitleManager : ISubtitleManager
     public async Task LoadExternalSubtitleAsync(string filePath, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(filePath)) return;
+
+        // ── Dedup: skip if this file is already loaded ──
+        var normalizedPath = System.IO.Path.GetFullPath(filePath);
+        var alreadyLoaded = SubtitleTracks.Any(t =>
+            t.Source != null &&
+            t.Source.IsExternal &&
+            !string.IsNullOrWhiteSpace(t.Source.ExternalFilename) &&
+            System.IO.Path.GetFullPath(t.Source.ExternalFilename).Equals(normalizedPath, StringComparison.OrdinalIgnoreCase));
+        if (alreadyLoaded)
+        {
+            _log.Info("LoadExternalSubtitleAsync: skipping duplicate {File}", filePath);
+            return;
+        }
+
         _sessionOverride = true;
         await DispatchAddExternalSubtitlesAsync(new List<string> { filePath }, ct);
     }

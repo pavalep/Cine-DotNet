@@ -89,7 +89,7 @@ public partial class ControlsBoxControl : AvaloniaUserControl
 
     // --- Public API for MainWindow ---
 
-    public bool HasActiveFlyouts => _flyoutOverlay?.IsVisible == true;
+    public bool HasActiveFlyouts => _flyoutOverlay?.IsOpen == true;
 
     /// <summary>
     /// Flyout ecosystem manager. When set, all flyouts controlled by this control

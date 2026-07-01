@@ -590,7 +590,7 @@ public static class TrackDisplayHelper
 
     /// <summary>
     /// Format a subtitle/audio/video track entry for display.
-    /// Subtitle tracks show language + tags (External, Forced, SDH, PGS).
+    /// Subtitle tracks show language + tags (External, Forced, SDH, PGS, Track N).
     /// Audio/video tracks use a "Language (type)" format.
     /// </summary>
     public static string FormatTrack(TrackType type, SubtitleSource track)
@@ -600,7 +600,13 @@ public static class TrackDisplayHelper
         if (type == TrackType.Subtitle)
         {
             var tags = new List<string>();
-            if (track.IsExternal) tags.Add("External");
+            if (track.IsExternal)
+            {
+                tags.Add("External");
+                // Show filename snippet when available to distinguish multiple external tracks
+                if (!string.IsNullOrWhiteSpace(track.ExternalFilename))
+                    tags.Add(System.IO.Path.GetFileNameWithoutExtension(track.ExternalFilename));
+            }
             if (track.IsForced) tags.Add("Forced");
             if (track.IsHearingImpaired) tags.Add("SDH");
             if (track.IsBitmap) tags.Add("PGS");

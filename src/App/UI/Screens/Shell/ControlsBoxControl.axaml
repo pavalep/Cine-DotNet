@@ -123,7 +123,6 @@
                             Classes="circular-menu"
                             ToolTip.Tip="Video Track"
                             AutomationProperties.Name="Video track menu"
-                            IsVisible="{Binding HasMultipleVideoTracks}"
                             Click="OnVideoMenuClick">
                         <materialIcons:MaterialIcon Kind="Video" Width="18" Height="18"
                             Foreground="{StaticResource OsdForeground}" />

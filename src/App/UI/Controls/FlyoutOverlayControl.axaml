@@ -1,34 +1,23 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:transitions="using:Avalonia.Animation.Transitions"
              x:Class="Cine.Avalonia.Controls.FlyoutOverlayControl"
-             IsVisible="False"
-             IsHitTestVisible="True"
-             Background="Transparent">
-    <!-- Transparent full-window overlay that hosts flyout content
-         at the window level, bypassing the broken Popup overlay layer.
-         PointerPressed on the transparent background dismisses the flyout. -->
+             IsHitTestVisible="False"
+             Opacity="0">
     <Border x:Name="OverlayBackground"
-            Background="Transparent"
+            Background="#14000000"
             HorizontalAlignment="Stretch"
             VerticalAlignment="Stretch"
             PointerPressed="OnBackgroundPointerPressed"
             KeyDown="OnBackgroundKeyDown">
-        <!-- Canvas wrapper so Canvas.SetLeft/Top works for flyout positioning -->
         <Canvas>
             <Border x:Name="ContentContainer"
                     UseLayoutRounding="True"
                     HorizontalAlignment="Left"
                     VerticalAlignment="Top"
-                    Opacity="0"
-                    RenderTransformOrigin="0.5,0.5">
-                <Border.RenderTransform>
-                    <ScaleTransform ScaleX="0.96" ScaleY="0.96"/>
-                </Border.RenderTransform>
+                    Opacity="0">
                 <Border.Transitions>
                     <Transitions>
-                        <DoubleTransition Property="Opacity" Duration="0:0:0.18" Easing="ExponentialEaseOut" />
-                        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="ExponentialEaseOut"/>
+                        <DoubleTransition Property="Opacity" Duration="0:0:0.180" Easing="ExponentialEaseOut" />
                     </Transitions>
                 </Border.Transitions>
             </Border>
