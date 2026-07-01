@@ -242,13 +242,30 @@ public partial class ControlsBoxControl : AvaloniaUserControl
         bool isNarrow = width < UiConstants.BreakpointNarrow;
         if (isNarrow)
         {
-            SetVis(BtnVideoMenu, false);
+            // Single track — show button but disabled
+            SetVis(BtnVideoMenu, true);
+            BtnVideoMenu.IsEnabled = false;
+            BtnVideoMenu.Opacity = 0.4;
+            ToolTip.SetTip(BtnVideoMenu, "Single video track — no switching available");
             SetFont(SeekBar.PositionTimeLabel, Token.Size("font-size-caption"));
             SetFont(SeekBar.DurationTimeLabel, Token.Size("font-size-caption"));
         }
         else
         {
-            SetVis(BtnVideoMenu, hasMultipleVideoTracks);
+            // Multiple tracks check — enable or disable appropriately
+            SetVis(BtnVideoMenu, true);
+            if (hasMultipleVideoTracks)
+            {
+                BtnVideoMenu.IsEnabled = true;
+                BtnVideoMenu.Opacity = 1;
+                ToolTip.SetTip(BtnVideoMenu, "Switch video track");
+            }
+            else
+            {
+                BtnVideoMenu.IsEnabled = false;
+                BtnVideoMenu.Opacity = 0.4;
+                ToolTip.SetTip(BtnVideoMenu, "Single video track — no switching available");
+            }
             SetFont(SeekBar.PositionTimeLabel, 13);
             SetFont(SeekBar.DurationTimeLabel, 13);
         }

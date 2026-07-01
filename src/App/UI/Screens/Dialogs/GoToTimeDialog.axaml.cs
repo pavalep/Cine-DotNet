@@ -14,7 +14,22 @@ public partial class GoToTimeDialog : Window
     public GoToTimeDialog()
     {
         InitializeComponent();
-        TimeTextBox.AttachedToVisualTree += (_, _) => TimeTextBox.Focus();
+        TimeTextBox.AttachedToVisualTree += (_, _) => 
+        {
+            TimeTextBox.Focus();
+            EnsureCentered();
+        };
+    }
+
+    private void EnsureCentered()
+    {
+        // Ensure explicit centering in case CenterOwner doesn't work properly in fullscreen
+        var owner = TopLevel.GetTopLevel(this);
+        if (owner is Window w)
+        {
+            PositionX = w.Position.X + (w.Bounds.Width - Width) / 2;
+            PositionY = w.Position.Y + (w.Bounds.Height - Height) / 2;
+        }
     }
 
     private void OnGoClick(object? sender, RoutedEventArgs e) => SeekToTime();

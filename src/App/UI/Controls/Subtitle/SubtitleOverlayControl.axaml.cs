@@ -12,6 +12,7 @@ using Cine.Avalonia.Builders;
 using Cine.Avalonia.Services;
 using Cine.Avalonia.ViewModels;
 using Cine.Avalonia.Views.Dialogs;
+using Cine.Core;
 using Cine.Core.Services;
 using DragEventArgs = Avalonia.Input.DragEventArgs;
 using DragDropEffects = Avalonia.Input.DragDropEffects;
@@ -29,7 +30,7 @@ namespace Cine.Avalonia.Controls;
 /// </summary>
 public partial class SubtitleOverlayControl : AvaloniaUserControl
 {
-    private readonly ILogger _log;
+    private static Cine.Core.Services.ILogger _log = Cine.Core.Log;
     private MainViewModel? _viewModel;
     private Border? _currentFlyoutContent; // overlay content (not a Flyout)
     private FlyoutManager? _flyoutManager;
@@ -183,9 +184,9 @@ public partial class SubtitleOverlayControl : AvaloniaUserControl
             Background = AppColors.Transparent,
             BorderThickness = new Thickness(0),
             Padding = new Thickness(8, 4),
-            Cursor = new Cursor(StandardCursorType.Arrow),
-            ToolTip = { ToolTip.TipProperty = "Subtitle settings — font, size, color, outline, encoding" }
+            Cursor = new Cursor(StandardCursorType.Arrow)
         };
+        global::Avalonia.Controls.ToolTip.SetTip(gearBtn, "Subtitle settings \u2014 font, size, color, outline, encoding");
         gearBtn.PointerEntered += (_, _) => { if (gearBtn.Content is TextBlock tb) tb.Foreground = AppColors.TextPrimary; };
         gearBtn.PointerExited += (_, _) => { if (gearBtn.Content is TextBlock tb) tb.Foreground = AppColors.TextTertiary; };
         gearBtn.Click += (_, _) =>
@@ -220,6 +221,7 @@ public partial class SubtitleOverlayControl : AvaloniaUserControl
         if (e.DataTransfer == null || !e.DataTransfer.Contains(DataFormat.File))
         {
             e.DragEffects = DragDropEffects.None;
+            ClearDragVisual();
             return;
         }
 
@@ -234,7 +236,24 @@ public partial class SubtitleOverlayControl : AvaloniaUserControl
 
         e.DragEffects = hasValidFile ? DragDropEffects.Copy : DragDropEffects.None;
         e.Handled = true;
+
+        // F11: Visual feedback — accent glow on the button when valid subtitle file is dragged over
+        if (hasValidFile)
+            ShowDragVisual();
+        else
+            ClearDragVisual();
+
         _log.Trace("OnBtnDragOver: validFile={ValidFile}", hasValidFile);
+    }
+
+    private void ShowDragVisual()
+    {
+        BtnSubtitles.Background = new SolidColorBrush(Color.FromArgb(0x22, 0x5B, 0xDB, 0xFF)); // faint accent
+    }
+
+    private void ClearDragVisual()
+    {
+        BtnSubtitles.Background = AppColors.Transparent;
     }
 
     private async void OnBtnDrop(object? sender, DragEventArgs e)

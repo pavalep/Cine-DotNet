@@ -81,6 +81,34 @@ public partial class PreferencesDialog : Window
 
     private void OnCloseClick(object? sender, RoutedEventArgs e) => Close();
 
+    private void OnResetDefaults(object? sender, RoutedEventArgs e)
+    {
+        // Audio defaults — use parameterless constructor (all defaults)
+        _audioStore.SaveDefaults(new AudioSettingsStore.AudioGlobalDefaults());
+        _audioStore.ClearAllPerFile();
+
+        // Subtitle defaults
+        var factoryDefaults = new SubtitleSettingsStore.SubtitleDefaults
+        {
+            AutoEnabled = true,
+            PreferredLanguages = new[] { "eng", "jpn", "und" },
+            FallbackToExternal = true,
+            ExternalSubDirectories = new[] { "./subs", "./subtitles" },
+            Style = null
+        };
+        _subStore.SaveDefaults(factoryDefaults);
+
+        // Refresh UI with new defaults
+        AutoLoadSubsToggle.IsChecked = factoryDefaults.AutoEnabled;
+        PreferredLangInput.Text = string.Join(", ", factoryDefaults.PreferredLanguages);
+        SubDirsInput.Text = string.Join(", ", factoryDefaults.ExternalSubDirectories);
+
+        // Update dirty-state snapshots
+        _originalAutoLoadSubs = factoryDefaults.AutoEnabled;
+        _originalLangs = PreferredLangInput.Text ?? string.Empty;
+        _originalDirs = SubDirsInput.Text ?? string.Empty;
+    }
+
     private void OnViewAllShortcutsClick(object? sender, RoutedEventArgs e)
     {
         var dialog = new KeyboardShortcutsDialog();

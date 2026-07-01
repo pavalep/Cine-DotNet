@@ -24,7 +24,14 @@ public partial class OsdNotificationControl : AvaloniaUserControl
 
     private record OsdMessage(string Text, MaterialIconKind? Icon, double DurationMs, double? Progress = null, string? Category = null);
 
-    public event EventHandler? NotificationClicked;
+    /// <summary>Provides the OSD message category when clicked.</summary>
+    public class OsdClickedEventArgs : EventArgs
+    {
+        public string Category { get; }
+        public OsdClickedEventArgs(string category) => Category = category;
+    }
+
+    public event EventHandler<OsdClickedEventArgs>? NotificationClicked;
 
     public bool IsControlsBoxVisible { get; set; } = true;
 
@@ -249,6 +256,7 @@ public partial class OsdNotificationControl : AvaloniaUserControl
 
     private void OnOsdNotificationClick(object? sender, PointerPressedEventArgs e)
     {
-        NotificationClicked?.Invoke(this, EventArgs.Empty);
+        var category = _activeMessage?.Category ?? "default";
+        NotificationClicked?.Invoke(this, new OsdClickedEventArgs(category));
     }
 }

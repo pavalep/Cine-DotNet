@@ -191,6 +191,7 @@ public partial class MainWindow
 
     private void OnOsdNotificationClicked(object? sender, EventArgs e)
     {
+        // Handle session resume (queued open from file association)
         if (!string.IsNullOrEmpty(_queuedOpenPath) && System.IO.File.Exists(_queuedOpenPath))
         {
             var path = _queuedOpenPath;
@@ -213,6 +214,29 @@ public partial class MainWindow
                 };
                 player.Opened += handler;
             }
+            return;
+        }
+
+        // F17: Category-based OSD click actions
+        string category = (e as global::Cine.Avalonia.Controls.OsdNotificationControl.OsdClickedEventArgs)?.Category ?? "default";
+        switch (category)
+        {
+            case "volume":
+                _controlsBox?.BtnVolumeMenu?.Focus();
+                break;
+            case "subtitle":
+            case "audio":
+                if (category == "subtitle")
+                    _controlsBox?.SubtitleOverlay?.Focus();
+                else
+                    _controlsBox?.AudioTrackSelector?.Focus();
+                break;
+            case "speed":
+                _playerService?.Player?.ResetSpeed();
+                break;
+            case "error":
+                Cine.Core.Log.ForContext<MainWindow>().Warning("OSD error notification clicked");
+                break;
         }
     }
 }
