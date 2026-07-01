@@ -129,7 +129,11 @@ public partial class MainWindow
         Register(Key.S, KeyModifiers.Shift, () => _playerService?.Player?.ScreenshotWithoutSubtitles(), "Screenshot (no subtitles)");
 
         // ── Go To Time ──
-        Register(Key.G, KeyModifiers.Control, () => ShowGoToTimeDialog(), "Go To Time");
+        Register(Key.G, KeyModifiers.Control, () =>
+        {
+            var dlg = new GoToTimeDialog { DataContext = _viewModel };
+            dlg.Show(this);
+        }, "Go To Time");
 
         // ── Equalizer ──
         Register(Key.E, KeyModifiers.Control | KeyModifiers.Shift, () => _controlsBox?.OpenEqualizerFlyout(), "Open Equalizer");

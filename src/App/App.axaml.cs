@@ -14,6 +14,7 @@ using Avalonia.Win32;
 using Cine.Avalonia.Services;
 using Cine.Avalonia.Managers;
 using Cine.Avalonia.ViewModels;
+using Cine.Core;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cine.Avalonia;
@@ -146,7 +147,7 @@ public class App : global::Avalonia.Application
                     if (!RuntimeDownloader.IsRuntimeReady())
                     {
                         Log("MSIX: Runtime DLLs missing — downloading on demand...");
-                        Cine.Core.Log.ForContext<App>().Information("Downloading media runtime (first launch, this may take a minute)...");
+                        Cine.Core.Log.ForContext<App>().Info("Downloading media runtime (first launch, this may take a minute)...");
                         using var runtimeCts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
                     Task.Run(async () => await RuntimeDownloader.EnsureRuntimeAsync(ct: runtimeCts.Token).ConfigureAwait(false)).GetAwaiter().GetResult();
                         Log("MSIX: Runtime download complete.");
@@ -155,7 +156,7 @@ public class App : global::Avalonia.Application
                 catch (Exception dlEx)
                 {
                     Log($"MSIX: Runtime download failed: {dlEx.Message}");
-                    Cine.Core.Log.ForContext<App>().Warning(dlEx, "Could not download media runtime");
+                    Cine.Core.Log.ForContext<App>().Warning(dlEx.ToString(), "Could not download media runtime");
                 }
             }
 

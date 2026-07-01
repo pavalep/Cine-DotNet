@@ -30,7 +30,7 @@ namespace Cine.Avalonia.Controls;
 /// </summary>
 public partial class SubtitleOverlayControl : AvaloniaUserControl
 {
-    private static Cine.Core.Services.ILogger _log = Cine.Core.Log;
+    private Cine.Core.Services.ILogger _log = Cine.Core.Log.ForContext<SubtitleOverlayControl>();
     private MainViewModel? _viewModel;
     private Border? _currentFlyoutContent; // overlay content (not a Flyout)
     private FlyoutManager? _flyoutManager;
@@ -248,7 +248,7 @@ public partial class SubtitleOverlayControl : AvaloniaUserControl
 
     private void ShowDragVisual()
     {
-        BtnSubtitles.Background = new SolidColorBrush(Color.FromArgb(0x22, 0x5B, 0xDB, 0xFF)); // faint accent
+        BtnSubtitles.Background = new SolidColorBrush(global::Avalonia.Media.Color.FromArgb(0x22, 0x5B, 0xDB, 0xFF)); // faint accent
     }
 
     private void ClearDragVisual()

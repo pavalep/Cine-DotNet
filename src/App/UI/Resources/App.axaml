@@ -226,7 +226,29 @@
             <Setter Property="Background" Value="{StaticResource AppHover}" />
         </Style>
     </Style>
-    
+
+    <!-- ── Destructive Flyout Item (P5) ────────────────────────── -->
+    <Style Selector="Button.flyout-item.destructive">
+        <Setter Property="Foreground" Value="{StaticResource ErrorBrush}" />
+        <Style Selector="^:pointerover">
+            <Setter Property="Background" Value="{StaticResource ErrorDim}" />
+        </Style>
+        <Style Selector="^:pressed">
+            <Setter Property="Background" Value="{StaticResource ErrorBrush}" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+    </Style>
+
+    <!-- ── Reusable Divider (P5) ────────────────────────────────── -->
+    <Style Selector="Border.divider">
+        <Setter Property="Height" Value="1" />
+        <Setter Property="Background" Value="{StaticResource AppDivider}" />
+    </Style>
+    <Style Selector="Border.divider-strong">
+        <Setter Property="Height" Value="1" />
+        <Setter Property="Background" Value="{StaticResource AppDividerStrong}" />
+    </Style>
+
     <!-- ── Subtle Hover Button (for code-behind dynamic buttons) ── -->
     <Style Selector="Button.hover-subtle">
         <Setter Property="Background" Value="Transparent" />

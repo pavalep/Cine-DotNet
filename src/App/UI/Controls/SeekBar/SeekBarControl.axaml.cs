@@ -236,6 +236,13 @@ public partial class SeekBarControl : AvaloniaUserControl
             var ch = _viewModel.Chapters[i];
             var pos = Math.Clamp(ch.Time / duration, 0.0, 1.0);
             Canvas.SetLeft(container.Children[i], pos * w);
+
+            // Tooltip: chapter title + time
+            var timeStr = TimeSpan.FromSeconds(ch.Time).ToString(@"hh\:mm\:ss");
+            var tip = !string.IsNullOrWhiteSpace(ch.Title)
+                ? $"{ch.Title} ({timeStr})"
+                : timeStr;
+            global::Avalonia.Controls.ToolTip.SetTip(container.Children[i], tip);
         }
     }
 

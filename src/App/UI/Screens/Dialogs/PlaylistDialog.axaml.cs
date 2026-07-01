@@ -53,7 +53,7 @@ public partial class PlaylistDialog : Window
                 return text.Trim() == "true";
             }
         }
-        catch (Exception ex) { global::Cine.Core.Log.ForContext<PlaylistDialog>().Warning("LoadQueueMode failed"); }
+        catch (Exception) { global::Cine.Core.Log.ForContext<PlaylistDialog>().Warning("LoadQueueMode failed"); }
         return false; // default: sequential mode
     }
 
@@ -70,7 +70,7 @@ public partial class PlaylistDialog : Window
             File.WriteAllText(tempPath, _queueMode.ToString().ToLower());
             File.Move(tempPath, path, overwrite: true);
         }
-        catch (Exception ex) { global::Cine.Core.Log.ForContext<PlaylistDialog>().Warning("SaveQueueMode failed"); }
+        catch (Exception) { global::Cine.Core.Log.ForContext<PlaylistDialog>().Warning("SaveQueueMode failed"); }
     }
 
     // Centralized file-dialog handler

@@ -5,8 +5,10 @@ using Avalonia;
 using Avalonia.Animation;
 using Avalonia.Animation.Easings;
 using Avalonia.Controls;
+using Avalonia.Controls.Shapes;
 using Avalonia.Input;
 using Avalonia.Media;
+using Avalonia.Threading;
 
 namespace Cine.Avalonia.Controls;
 
@@ -21,10 +23,7 @@ namespace Cine.Avalonia.Controls;
 /// </summary>
 public partial class FlyoutOverlayControl : global::Avalonia.Controls.UserControl
 {
-    private static readonly ExponentialEaseOut EaseOut = new(2);
-    private static readonly ExponentialEaseIn EaseIn = new(2);
-    private static readonly TimeSpan FadeInDuration = TimeSpan.FromMilliseconds(180);
-    private static readonly TimeSpan FadeOutDuration = TimeSpan.FromMilliseconds(150);
+    // No scale transform needed - simplified animations via XAML Transitions
 
     public FlyoutOverlayControl()
     {
@@ -68,98 +67,12 @@ public partial class FlyoutOverlayControl : global::Avalonia.Controls.UserContro
         IsVisible = true;
         ContentContainer.IsVisible = true;
 
-        // Start invisible, then animate to visible
+        // Start invisible, then animate to visible via XAML transitions
         ContentContainer.Opacity = 0;
-        var scale = new ScaleTransform(0.96, 0.96);
-        ContentContainer.RenderTransform = scale;
-
-        // Focus first focusable element inside content after layout pass
-        void FocusFirst()
-        {
-            var focusable = ContentContainer.Child?
-                .GetVisualDescendants()
-                .Where(d => d is Control c && c.Focusable)
-                .Cast<Control>()
-                .FirstOrDefault();
-            if (focusable != null)
-            {
-                Dispatcher.UIThread.Post(
-                    () => focusable.Focus(),
-                    global::Avalonia.Threading.DispatcherPriority.Loaded);
-            }
-        }
-
-        // Kick off animated entrance
-        _ = AnimateIn(FocusFirst);
     }
 
-    private async void AnimateIn(Action? onCompleted = null)
+    public void HideContent()
     {
-        // Let layout settle before starting animation
-        await Task.Delay(1);
-
-        var opacityAnim = new Animation
-        {
-            Easing = EaseOut,
-            Duration = FadeInDuration,
-            Children =
-            {
-                new KeyFrame { Cue = new Cue(0d), Setters = { new Setter(OpacityProperty, 0.0) } },
-                new KeyFrame { Cue = new Cue(1d), Setters = { new Setter(OpacityProperty, 1.0) } }
-            }
-        };
-
-        var scaleAnim = new Animation
-        {
-            Easing = EaseOut,
-            Duration = FadeInDuration,
-            Children =
-            {
-                new KeyFrame { Cue = new Cue(0d), Setters = { new Setter(ScaleTransform.ScaleXProperty, 0.96), new Setter(ScaleTransform.ScaleYProperty, 0.96) } },
-                new KeyFrame { Cue = new Cue(1d), Setters = { new Setter(ScaleTransform.ScaleXProperty, 1.0), new Setter(ScaleTransform.ScaleYProperty, 1.0) } }
-            }
-        };
-
-        await Task.WhenAll(
-            opacityAnim.RunAsync(ContentContainer),
-            scaleAnim.RunAsync(ContentContainer.RenderTransform));
-
-        onCompleted?.Invoke();
-    }
-
-    public async void HideContent()
-    {
-        // Animate out: opacity 1→0, scale 1→0.96
-        var opacityAnim = new Animation
-        {
-            Easing = EaseIn,
-            Duration = FadeOutDuration,
-            Children =
-            {
-                new KeyFrame { Cue = new Cue(0d), Setters = { new Setter(OpacityProperty, ContentContainer.Opacity) } },
-                new KeyFrame { Cue = new Cue(1d), Setters = { new Setter(OpacityProperty, 0.0) } }
-            }
-        };
-
-        var scaleAnim = new Animation
-        {
-            Easing = EaseIn,
-            Duration = FadeOutDuration,
-            Children =
-            {
-                new KeyFrame { Cue = new Cue(0d), Setters = { new Setter(ScaleTransform.ScaleXProperty, 1.0), new Setter(ScaleTransform.ScaleYProperty, 1.0) } },
-                new KeyFrame { Cue = new Cue(1d), Setters = { new Setter(ScaleTransform.ScaleXProperty, 0.96), new Setter(ScaleTransform.ScaleYProperty, 0.96) } }
-            }
-        };
-
-        try
-        {
-            await Task.WhenAll(
-                opacityAnim.RunAsync(ContentContainer),
-                scaleAnim.RunAsync(ContentContainer.RenderTransform));
-        }
-        catch (Exception) { /* Animation interrupted — proceed with cleanup */ }
-
         ContentContainer.Child = null;
         IsVisible = false;
     }

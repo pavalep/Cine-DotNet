@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
@@ -145,9 +146,9 @@ public partial class AudioEqualizerFlyout : UserControl
         };
         DelayNumeric.PropertyChanged += (_, e) =>
         {
-            if (e.Property.Name == nameof(NumericUpDown.Value))
+            if (e.Property.Name == nameof(global::Avalonia.Controls.NumericUpDown.Value))
             {
-                DelaySlider.Value = DelayNumeric.Value;
+                DelaySlider.Value = (double)DelayNumeric.Value!;
                 DelayLabel.Text = $"{DelayNumeric.Value:F2}s";
             }
         };
@@ -168,7 +169,7 @@ public partial class AudioEqualizerFlyout : UserControl
 
         float delay = Math.Clamp(_manager.AudioDelay, -10, 10);
         DelaySlider.Value = delay;
-        DelayNumeric.Value = delay;
+        DelayNumeric.Value = (decimal)delay;
         DelayLabel.Text = $"{delay:F2}s";
     }
 
@@ -179,11 +180,11 @@ public partial class AudioEqualizerFlyout : UserControl
         _manager.ApplyEqualizerPreset(presetName);
 
         // Update selected visual state on preset buttons
-        if (SlidersPanel.Parent is Panel parent)
+        if (SlidersPanel.Parent is global::Avalonia.Controls.Panel parent)
         {
             foreach (var child in parent.Children)
             {
-                if (child is WrapPanel wp)
+                if (child is global::Avalonia.Controls.WrapPanel wp)
                 {
                     foreach (var item in wp.Children)
                     {

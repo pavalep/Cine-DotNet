@@ -94,7 +94,7 @@ public partial class PreferencesDialog : Window
             PreferredLanguages = new[] { "eng", "jpn", "und" },
             FallbackToExternal = true,
             ExternalSubDirectories = new[] { "./subs", "./subtitles" },
-            Style = null
+            Style = new SubtitleSettingsStore.SubtitleStyle()
         };
         _subStore.SaveDefaults(factoryDefaults);
 

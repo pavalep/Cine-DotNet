@@ -229,7 +229,7 @@ public class RuntimeDownloader
             }
 
             // Clean up
-            try { File.Delete(archivePath); Directory.Delete(tempDir, true); } catch (Exception ex) { _log.Warning(ex, "RuntimeDownloader cleanup failed"); }
+            try { File.Delete(archivePath); Directory.Delete(tempDir, true); } catch (Exception) { Cine.Core.Log.ForContext("RuntimeDownloader").Warning("RuntimeDownloader cleanup failed"); }
 
             if (File.Exists(dest))
                 progress?.Report("  libmpv-2.dll: done.");
@@ -284,7 +284,7 @@ public class RuntimeDownloader
                     return output.Trim();
             }
         }
-        catch (Exception ex) { _log.Warning(ex, "WhichFailed failed"); }
+        catch (Exception) { Cine.Core.Log.ForContext("RuntimeDownloader").Warning("WhichFailed failed"); }
 
         return null;
     }

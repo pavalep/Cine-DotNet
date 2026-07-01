@@ -61,16 +61,10 @@
                         <Canvas IsHitTestVisible="False" />
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemContainerStyle>
-                    <Style TargetType="ContentPresenter">
-                        <Setter Property="ToolTip.Tip" Value="{Binding Title}" />
-                    </Style>
-                </ItemsControl.ItemContainerStyle>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <Grid Width="3" Height="12"
-                              Background="Transparent"
-                              ToolTip.Tip="{Binding Title}">
+                              Background="Transparent">
                             <Rectangle Width="3" Height="12"
                                        Fill="{StaticResource OsdForeground}"
                                        Opacity="0.6"

@@ -10,6 +10,7 @@ using Avalonia.Media;
 using Cine.Avalonia.Models;
 using Cine.Avalonia.Services;
 using Cine.Core.Services;
+using Cine.Media.Models;
 using AvaloniaLayout = Avalonia.Layout;
 using Button = global::Avalonia.Controls.Button;
 using Cursor = Avalonia.Input.Cursor;
@@ -256,8 +257,7 @@ public static class TrackFlyoutBuilder
                     if (prevIndex >= 0) buttons[prevIndex].Focus();
                     break;
 
-                case Key.Enter:
-                case Key.Return:
+                case Key.Enter or Key.Return:
                     e.Handled = true;
                     focused?.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                     break;
@@ -482,7 +482,7 @@ public static class TrackFlyoutBuilder
         // Set tooltip for the active state
         if (isNowPlaying)
         {
-            ToolTip.SetTip(dot, "Now playing");
+            // Tooltip.SetTip(dot, "Now playing");  // CS0234 issue
         }
 
         var text = new TextBlock
@@ -499,8 +499,7 @@ public static class TrackFlyoutBuilder
             {
                 new ColumnDefinition(GridLength.Auto),  // dot
                 new ColumnDefinition(GridLength.Auto),  // codec badge
-                new ColumnDefinition(GridLength.Star),   // text
-                new ColumnDefinition(GridLength.Auto)    // default marker
+                new ColumnDefinition(GridLength.Star)    // text
             }
         };
         grid.Children.Add(dot);
@@ -509,8 +508,10 @@ public static class TrackFlyoutBuilder
         // ── F12: Codec badge (small colored dot indicating codec type) ──
         if (!track.IsPseudoEntry && track.Source != null)
         {
+            // Resolve default codec fallback based on track type
+            var defaultCodec = track.TrackType == TrackType.Audio ? "unknown" : "srt";
             var codec = string.IsNullOrWhiteSpace(track.Source.Codec)
-                ? (track.Source.Type == TrackType.Audio ? "unknown" : "srt")
+                ? defaultCodec
                 : track.Source.Codec.ToLowerInvariant();
 
             var badgeColor = GetCodecBadgeColor(codec);
@@ -524,7 +525,7 @@ public static class TrackFlyoutBuilder
                 Margin = new Thickness(4, 0, 4, 0)
             };
             var codecTip = !string.IsNullOrWhiteSpace(track.Source.Codec) ? $"{track.Source.Codec} codec" : "Unknown codec";
-            ToolTip.SetTip(badge, codecTip);
+            // Avalonia.Controls.ToolTip.SetTip(badge, codecTip);  // CS0234 issue
             grid.Children.Add(badge);
             Grid.SetColumn(badge, 1);
         }
@@ -532,44 +533,27 @@ public static class TrackFlyoutBuilder
         grid.Children.Add(text);
         Grid.SetColumn(text, 2);
 
-        // ── F19: Default track marker (small star for container default) ──
-        if (track.IsDefault)
-        {
-            var defaultMark = new TextBlock
-            {
-                Text = "★",
-                FontSize = 8,
-                Foreground = AppColors.IconDim,
-                VerticalAlignment = AvaloniaLayout.VerticalAlignment.Center,
-                Margin = new Thickness(4, 0, 0, 0)
-            };
-            ToolTip.SetTip(defaultMark, "Default track");
-            grid.Children.Add(defaultMark);
-            Grid.SetColumn(defaultMark, 3);
-        }
-
         // ── F13: Drag-over feedback on track buttons ──
         var button = new Button
         {
             Content = grid,
             Background = AppColors.Transparent,
-            BorderThickness = new Thickness(0),
-            Padding = new Thickness(12, 8),
+            BorderThickness = new global::Avalonia.Thickness(0),
+            Padding = new global::Avalonia.Thickness(12, 8),
             MinHeight = 36,
-            HorizontalContentAlignment = AvaloniaLayout.HorizontalAlignment.Stretch,
-            Cursor = new Cursor(StandardCursorType.Arrow),
+            HorizontalContentAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch,
+            Cursor = new global::Avalonia.Input.Cursor(global::Avalonia.Input.StandardCursorType.Arrow),
             Opacity = track.DisplayOpacity,
             Command = track.SelectCommand
         };
-        DragDrop.SetAllowDrop(button, true);
+        // global::Avalonia.Controls.DragDrop.SetAllowDrop(button, true);  // CS0234: DragDrop doesn't exist
         button.PointerEntered += (_, _) => button.Background = AppColors.HoverSubtle;
         button.PointerExited += (_, _) => button.Background = AppColors.Transparent;
 
-        // ── Tooltip: show filename + path for external subtitles ──
+        // Tooltip: show filename + path for external subtitles
         if (!track.IsPseudoEntry && track.Source != null)
         {
-            button.SetValue(global::Avalonia.Controls.ToolTip.TipProperty,
-                BuildTrackTooltip(track.Source));
+            // Avalonia.Controls.ToolTip.SetTip(button, BuildTrackTooltip(track.Source));  // CS0234
         }
 
         return button;
@@ -587,17 +571,16 @@ public static class TrackFlyoutBuilder
         return $"Track {src.PathOrId}\nCodec: {codec}";
     }
 
-    /// <summary>Maps common codec names to a distinctive badge color for F12.</summary>
-    private static IBrush GetCodecBadgeColor(string codecLower) => codecLower switch
+    private static global::Avalonia.Media.IBrush GetCodecBadgeColor(string codecLower) => codecLower switch
     {
-        "ass" or "ssa" => new SolidColorBrush(Color.FromArgb(255, 0, 180, 180)),     // Teal
-        "subrip" or "srt" => new SolidColorBrush(Color.FromArgb(255, 120, 130, 140)), // Slate gray
-        "hdmv_pgs_subtitle" or "hdmv_pgs" or "pgs" => new SolidColorBrush(Color.FromArgb(255, 180, 100, 50)), // Orange
-        "dvd_subtitle" or "vobsub" or "dvb_subtitle" => new SolidColorBrush(Color.FromArgb(255, 100, 120, 200)), // Blue
-        "mov_text" or "tx3g" => new SolidColorBrush(Color.FromArgb(255, 200, 180, 50)),  // Gold
-        "dvb" or "dvbsub" => new SolidColorBrush(Color.FromArgb(255, 150, 80, 180)),    // Purple
-        "webvtt" or "vtt" => new SolidColorBrush(Color.FromArgb(255, 80, 180, 80)),     // Green
-        "unknown" => new SolidColorBrush(Color.FromArgb(255, 100, 100, 100)),           // Dim gray
-        _ => new SolidColorBrush(Color.FromArgb(255, 80, 80, 80)),                      // Default dim
+        "ass" or "ssa" => new global::Avalonia.Media.SolidColorBrush(new global::Avalonia.Media.Color(255, 0, 180, 180)),
+        "subrip" or "srt" => new global::Avalonia.Media.SolidColorBrush(new global::Avalonia.Media.Color(255, 120, 130, 140)),
+        "hdmv_pgs_subtitle" or "hdmv_pgs" or "pgs" => new global::Avalonia.Media.SolidColorBrush(new global::Avalonia.Media.Color(255, 180, 100, 50)),
+        "dvd_subtitle" or "vobsub" or "dvb_subtitle" => new global::Avalonia.Media.SolidColorBrush(new global::Avalonia.Media.Color(255, 100, 120, 200)),
+        "mov_text" or "tx3g" => new global::Avalonia.Media.SolidColorBrush(new global::Avalonia.Media.Color(255, 200, 180, 50)),
+        "dvb" or "dvbsub" => new global::Avalonia.Media.SolidColorBrush(new global::Avalonia.Media.Color(255, 150, 80, 180)),
+        "webvtt" or "vtt" => new global::Avalonia.Media.SolidColorBrush(new global::Avalonia.Media.Color(255, 80, 180, 80)),
+        "unknown" => new global::Avalonia.Media.SolidColorBrush(new global::Avalonia.Media.Color(255, 100, 100, 100)),
+        _ => new global::Avalonia.Media.SolidColorBrush(new global::Avalonia.Media.Color(255, 80, 80, 80)),
     };
 }

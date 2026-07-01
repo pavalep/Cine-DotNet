@@ -23,12 +23,12 @@ public partial class GoToTimeDialog : Window
 
     private void EnsureCentered()
     {
-        // Ensure explicit centering in case CenterOwner doesn't work properly in fullscreen
-        var owner = TopLevel.GetTopLevel(this);
-        if (owner is Window w)
+        var tl = TopLevel.GetTopLevel(this);
+        if (tl is Window w)
         {
-            PositionX = w.Position.X + (w.Bounds.Width - Width) / 2;
-            PositionY = w.Position.Y + (w.Bounds.Height - Height) / 2;
+            Position = new global::Avalonia.PixelPoint(
+                (int)(w.Position.X + (w.Bounds.Width - Width) / 2),
+                (int)(w.Position.Y + (w.Bounds.Height - Height) / 2));
         }
     }
 
