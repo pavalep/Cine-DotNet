@@ -90,7 +90,13 @@ public partial class FullscreenHeaderControl : UserControl
         set
         {
             _flyoutManager = value;
-            value?.Register("fullscreen-menu", () => _btnFlyout?.Hide());
+            if (value != null)
+            {
+                value.Register("fullscreen-menu", () => _btnFlyout?.Hide());
+                // Pass to child track selector controls for mutual exclusion
+                if (FullscreenSubOverlay != null) FullscreenSubOverlay.FlyoutManager = value;
+                if (FullscreenAudioOverlay != null) FullscreenAudioOverlay.FlyoutManager = value;
+            }
         }
     }
 

@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Cine.Avalonia.ViewModels"
+             xmlns:controls="using:Cine.Avalonia.Controls"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Cine.Avalonia.Controls.FullscreenHeaderControl"
              x:DataType="vm:MainViewModel">
@@ -17,6 +18,14 @@
                        FontWeight="SemiBold"
                        VerticalAlignment="Center" />
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="{StaticResource space-spacing-1}">
+                <controls:SubtitleOverlayControl x:Name="FullscreenSubOverlay"
+                                                 Classes="circular-transport"
+                                                 Padding="0"
+                                                 VerticalAlignment="Center" />
+                <controls:AudioTrackSelectorControl x:Name="FullscreenAudioOverlay"
+                                                    Classes="circular-transport"
+                                                    Padding="0"
+                                                    VerticalAlignment="Center" />
                 <Button x:Name="BtnFullscreenMenu"
                         Classes="circular-menu"
                         ToolTip.Tip="Menu"

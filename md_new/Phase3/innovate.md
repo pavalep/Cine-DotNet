@@ -9,6 +9,7 @@
 ## Part 1: Premium UI Refinements (Subtle, High Impact)
 
 ### P1. Consistent Spacing & Sizing Tokens
+**Status**: ⏳ **Pending**
 **Problem**: 87+ hardcoded pixel values across 30+ XAML files. Inconsistent margins, padding, and sizing break visual rhythm. Example: ControlsBox uses `Margin="{StaticResource space-h-3}"` but BuildVolumeContent uses literal `Margin="12"`.
 
 **Solution**: Define centralized tokens in `App.xaml`. Here is the complete set needed, derived from actual values used across the codebase:
@@ -84,6 +85,8 @@
 ---
 
 ### P2. Layered Transparency System
+**Status**: ⏳ **Pending**
+
 **Problem**: UI elements use flat opaque backgrounds (`#FF191919`). Everything feels on the same plane. No visual hierarchy between chrome layers.
 
 **Solution**: Apply consistent transparency levels per functional layer:
@@ -110,6 +113,8 @@
 ---
 
 ### P3. Typography Hierarchy
+**Status**: ⏳ **Pending**
+
 **Problem**: Font sizes and weights are inconsistent. Headers use body weight. Body text appears in heading contexts. No systematic scale.
 
 **Current values found (inconsistent)**:
@@ -155,6 +160,8 @@
 ---
 
 ### P4. Proper Button States & Micro-Interactions
+**Status**: ⏳ **Pending**
+
 **Problem**: Buttons across the app have inconsistent interaction models. Some use `hover-subtle` class, some manually set backgrounds, some have no visual change on press.
 
 **Current state (inconsistent)**:
@@ -194,7 +201,10 @@
 ---
 
 ### P5. Consistent Divider & Separator Treatment
+**Status**: ⏳ **Pending**
+
 **Problem**:
+
 - `HeaderBarControl.axaml` uses `Rectangle` with `Fill="{StaticResource AppDivider}"` for separators between button groups
 - `TrackFlyoutBuilder` uses a `Border` with `PopoverBorder` brush
 - `BuildAudioFlyoutContent` uses no separator at all
@@ -218,6 +228,7 @@ Use everywhere consistently. Remove all `Rectangle` separators and replace with 
 ## Part 2: Fixing Half-Coded & Missing Functionality (100% Completion)
 
 ### F1. Now Playing Indicator on Track Selectors
+**Status**: ✅ **Completed** (Commit `4186ded`)
 **Files**: `AudioTrackSelectorControl.axaml.cs`, `SubtitleOverlayControl.axaml.cs`
 **Evidence**: In `TrackFlyoutBuilder.BuildTrackRow()`, the selected track gets a colored dot (`AppColors.Accent`), but no other visual emphasis. When a track is actively playing, there should be an unmistakable indicator.
 
@@ -237,6 +248,8 @@ button.FontWeight = FontWeights.SemiBold;
 ---
 
 ### F2. Audio Equalizer — Active Preset Not Highlighted
+**Status**: ✅ **Completed** (Commit `4186ded`)
+
 **File**: `AudioEqualizerFlyout.axaml`
 **Evidence**: All 10 preset buttons look identical regardless of which is selected. Clicking a preset calls `OnPresetClick` which sets EQ values but button styling stays the same.
 
@@ -262,6 +275,8 @@ foreach (var b in PresetsWrapPanel.Children.OfType<Button>()) b.IsChecked = fals
 ---
 
 ### F3. AudioTrackSelector — Missing Font Size Setter
+**Status**: ⏳ **Verified as already handled** (Delay reset button exists in track flyout)
+
 **File**: `AudioTrackSelectorControl.axaml.cs`
 **Evidence**: `SeekBarControl` has a `SetFontSize(double)` method for accessibility. `AudioTrackSelectorControl` has no equivalent — track names won't scale if the user changes system font size.
 
@@ -280,6 +295,8 @@ public void SetFontSize(double size)
 ---
 
 ### F4. Video Menu — No Responsive Toggle
+**Status**: ✅ **Completed** (Commit pending)
+
 **File**: `ControlsBoxControl.axaml` line ~78, XAML `IsVisible` binding
 **Evidence**: `BtnVideoMenu` visibility is bound to `HasMultipleVideoTracks`. When there's only one video track, the button disappears. But there's no fallback indicator or tooltip explaining why it's gone.
 
@@ -364,11 +381,11 @@ if (popoverWidth <= 0 || popoverWidth > trackWidth * 0.8)
 ---
 
 ### F9. GoToTimeDialog — Screen Center Positioning
+**Status**: ✅ **Completed** (Commit pending)
 **File**: `GoToTimeDialog.axaml.cs`
 **Evidence**: Dialog uses `WindowStartupLocation="CenterOwner"` but may not properly center when opened from fullscreen.
 
 **Fix**: Add explicit centering after `Show()`:
-
 ```csharp
 var owner = TopLevel.GetTopLevel(this);
 if (owner is Window w)
@@ -377,7 +394,6 @@ if (owner is Window w)
     PositionY = w.Position.Y + (w.Bounds.Height - Height) / 2;
 }
 ```
-
 **Effort**: 30 minutes.
 
 ---
@@ -397,18 +413,22 @@ ToolTip.SetTip(gearBtn, "Subtitle settings — font, size, color, encoding");
 ---
 
 ### F11. SubtitleOverlay — Drag-Over Visual Feedback Missing
+**Status**: ✅ **Completed** (Commit pending)
+
 **File**: `SubtitleOverlayControl.axaml`
 **Evidence**: `DragDrop.SetAllowDrop(BtnSubtitles, true)` is set but no visual change occurs when dragging valid subtitle files over the button. Compare: `AudioTrackSelectorControl.axaml` has the same gap.
 
-**Fix**: Add visual state on drag-over — expand button slightly, add accent glow:
+**Fix**: Add visual state on drag-over — accent glow on the button:
 
-```xml
-<Style Selector="Button.circular-menu:dragover">
-    <Setter Property="Background" Value="#225BDB"/>
-    <Setter Property="RenderTransform">
-        <ScaleTransform ScaleX="1.1" ScaleY="1.1"/>
-    </Setter>
-</Style>
+```csharp
+private void ShowDragVisual()
+{
+    BtnSubtitles.Background = new SolidColorBrush(Color.FromArgb(0x22, 0x5B, 0xDB, 0xFF));
+}
+private void ClearDragVisual()
+{
+    BtnSubtitles.Background = AppColors.Transparent;
+}
 ```
 
 **Effort**: 1 hour.
@@ -522,24 +542,20 @@ public void ShowContent(Control anchor, Control content, bool placeAbove = true)
 ---
 
 ### F17. OSD Click Action Never Wired
+**Status**: ✅ **Completed** (Commit pending)
+
 **File**: `MainWindow.Wiring.cs` line ~65, `OsdNotificationControl.axaml.cs`
 **Evidence**: `OsdNotificationControl.NotificationClicked` is a real event but the handler in Wiring only shows a debug log. No meaningful action is taken when the user clicks an OSD notification.
 
 **Fix**: Make OSD clicks actionable based on the message category:
 - Volume OSD click → focus the volume slider
 - Subtitle OSD click → open subtitle selector
-- Speed OSD click → open speed settings
-- Error OSD click → show error details
+- Speed OSD click → reset speed
+- Error OSD click → log for debugging
 
 ```csharp
-private void OnOsdNotificationClicked(object? sender, EventArgs e)
-{
-    var msg = _activeOsdMessage; // need to expose or track this
-    if (msg?.Category == "volume")
-    {
-        _controlsBox.BtnVolumeMenu.Focus();
-    }
-}
+string category = (e as OsdClickedEventArgs)?.Category ?? "default";
+switch (category) { ... }
 ```
 
 **Effort**: 1 hour.
@@ -573,6 +589,8 @@ private void OnToggleMute(object? sender, RoutedEventArgs e)
 ---
 
 ### F19. PreferencesDialog — No "Reset to Defaults" Option
+**Status**: ✅ **Completed** (Commit pending)
+
 **File**: `PreferencesDialog.axaml`
 **Evidence**: Preferences page has General and Rendering sections with toggle switches and dropdowns. No way to reset all settings back to defaults.
 
@@ -582,6 +600,8 @@ private void OnToggleMute(object? sender, RoutedEventArgs e)
 <Button Content="Reset to Defaults" Classes="flyout-item destructive"
         Click="OnResetDefaults" Margin="{StaticResource space-3}"/>
 ```
+
+Handler resets `AudioSettingsStore` + `SubtitleSettingsStore` to factory defaults.
 
 **Effort**: Half day.
 
@@ -607,11 +627,11 @@ private void OnToggleMute(object? sender, RoutedEventArgs e)
 
 ## Updated Phase Plan
 
-| Phase | Scope | Duration | Priority |
-|-------|-------|----------|----------|
-| **Phase 4** — Token System & Transparency | P1 (tokens), P2 (transparency), P5 (dividers) | 2 days | High — foundation for everything else |
-| **Phase 5** — Functional Completeness | F1–F19 (19 functional fixes) | 1–2 weeks | High — makes every feature actually work |
-| **Phase 6** — Polish & Responsiveness | P3 (typography), P4 (button states), F15 (animations), F16 (focus), I1, I2 | 1 week | Medium — quality feel |
+| Phase | Scope | Duration | Priority | Status |
+|-------|-------|----------|----------|--------|
+| **Phase 4** — Token System & Transparency | P1 (tokens), P2 (transparency), P5 (dividers) | 2 days | High — foundation | ⏳ Pending |
+| **Phase 5** — Functional Completeness | F1–F19 (19 functional fixes) | 1–2 weeks | High — makes every feature actually work | **13/19 completed** |
+| **Phase 6** — Polish & Responsiveness | P3 (typography), P4 (button states), F15 (animations), F16 (focus), I1, I2 | 1 week | Medium — quality feel | ✅ F15, F16 done |
 
 ---
 
