@@ -23,14 +23,14 @@ These two fixes must be applied first. They break the entire flyout/overlay syst
 
 ---
 
-### Fix 1 — FlyoutOverlay ZIndex Too Low
+### Fix 1 — FlyoutOverlay ZIndex Too Low ✅ FIXED
 
 | Field | Value |
 |---|---|
 | **File** | [MainWindow.axaml](file:///x:/Development/Cine_CSharp_DotNet/src/App/UI/Views/MainWindow.axaml) |
 | **Lines** | 144–148 |
-| **Severity** | 🔴 Critical |
-| **Status** | ☐ Unresolved |
+| **Severity** | ~~🔴 Critical~~ → ✅ Resolved |
+| **Status** | ☑ Resolved |
 
 #### Root Cause
 `FlyoutOverlayControl` is declared at `ZIndex="10"` in the window's `Grid`. The `HeaderBarControl` inner `Border` uses `ZIndex="20"` and `ControlsBoxControl` uses `ZIndex="15"`. This means every custom flyout (volume, chapters, equalizer, audio, subtitle, video) is rendered **underneath** the control bars.
