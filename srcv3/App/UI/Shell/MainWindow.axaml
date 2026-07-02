@@ -78,6 +78,32 @@
              opens, revealing VideoClickOverlay + video beneath. -->
         <components:StartPage x:Name="StartPage" PointerPressed="OnStartPagePointerPressed" />
 
+        <!-- Trial Watermark — translucent overlay visible only during trial mode -->
+        <Border x:Name="TrialWatermark"
+                IsHitTestVisible="False"
+                IsVisible="{Binding IsTrial}"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch">
+            <TextBlock Text="TRIAL"
+                       FontSize="72"
+                       FontWeight="Bold"
+                       Foreground="#15FFFFFF"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       IsHitTestVisible="False" />
+            <Border.Styles>
+                <Style Selector="Border">
+                    <Setter Property="Transitions">
+                        <Setter.Value>
+                            <Transitions>
+                                <DoubleTransition Property="Opacity" Duration="0:0:0.5" />
+                            </Transitions>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </Border.Styles>
+        </Border>
+
         <!-- ══════════════════════════════════════════════════════════════ -->
         <!--  LAYER 1: UI OVERLAYS (floats on top of video)               -->
         <!-- ══════════════════════════════════════════════════════════════ -->

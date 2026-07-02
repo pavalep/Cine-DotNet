@@ -291,10 +291,20 @@ public partial class ControlsBox : AvaloniaUserControl
     public void TriggerEqualizer()
     {
         if (_viewModel == null) return;
-        var anchor = BtnEqualizer ?? BtnFullscreen;
-        if (anchor == null) return;
 
-        AudioEqualizerFlyout.Show(_flyoutManager, _viewModel.Audio, anchor, this);
+        // Show upgrade CTA if equalizer is not available under current tier
+        if (!_viewModel.IsEqualizerEnabled)
+        {
+            var anchor = BtnEqualizer ?? BtnFullscreen;
+            if (anchor != null)
+                UpgradeCtaContent.Show(_flyoutManager, "equalizer.upgrade", anchor, this, "Equalizer");
+            return;
+        }
+
+        var eqAnchor = BtnEqualizer ?? BtnFullscreen;
+        if (eqAnchor == null) return;
+
+        AudioEqualizerFlyout.Show(_flyoutManager, _viewModel.Audio, eqAnchor, this);
     }
 
     private void OnEqualizerClick(object? sender, RoutedEventArgs e)
@@ -316,6 +326,15 @@ public partial class ControlsBox : AvaloniaUserControl
 
     private void OnOpenPlaylistDialog(object? sender, RoutedEventArgs e)
     {
+        // Show upgrade CTA if playlist save/load is not available under current tier
+        if (_viewModel != null && !_viewModel.IsPlaylistSaveLoadEnabled)
+        {
+            var anchor = BtnPlaylistDialog ?? BtnFullscreen;
+            if (anchor != null)
+                UpgradeCtaContent.Show(_flyoutManager, "playlist.upgrade", anchor, this, "Playlist");
+            return;
+        }
+
         var w = TopLevel.GetTopLevel(this) as Window;
         if (w == null) return;
 

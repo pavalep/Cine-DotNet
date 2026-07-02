@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Cine.Avalonia.Services;
 using Cine.Avalonia.State;
 using Cine.Avalonia.ViewModels;
+using Cine.Avalonia.Features;
 using Cine.Media.Codecs;
 using Cine.Media.Interfaces;
 
@@ -33,6 +34,11 @@ public static class CompositionRoot
         services.AddSingleton<ICodecProvider, SoftwareFallbackCodecProvider>();
         services.AddSingleton<CodecManager>();
         services.AddSingleton<CodecPluginLoader>();
+
+        // ── Feature management (licensing, toggles, evaluation) ──
+        services.AddSingleton<IFeatureStore, FeatureStore>();
+        services.AddSingleton<ILicensingService, LicensingService>();
+        services.AddSingleton<IFeatureService, FeatureService>();
 
         // ── Player service (singleton, initialized once at startup) ──
         services.AddSingleton<PlayerService>();

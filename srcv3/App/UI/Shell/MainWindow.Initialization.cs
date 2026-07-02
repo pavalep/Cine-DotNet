@@ -14,6 +14,7 @@ using Cine.Avalonia.State;
 using Cine.Avalonia.Extensions;
 using Cine.Avalonia.Models;
 using Cine.Avalonia.ViewModels;
+using Cine.Avalonia.Features;
 using Cine.Core;
 using Cine.Media.Interfaces;
 using Cine.Media.Implementations;
@@ -121,10 +122,12 @@ public partial class MainWindow
         var playlistService = _serviceProvider.GetRequiredService<IPlaylistService>();
         var mediaFileService = _serviceProvider.GetRequiredService<IMediaFileService>();
         var fileDialogService = new FileDialogService(_dialogHandler);
+        var featureService = _serviceProvider.GetRequiredService<IFeatureService>();
+        var licensingService = _serviceProvider.GetRequiredService<ILicensingService>();
 
         _viewModel = new MainViewModel(player, sessionService, playlistService,
             _audioManager, _videoManager, _subtitleManager,
-            rendererService, mediaFileService, fileDialogService);
+            rendererService, mediaFileService, fileDialogService, featureService, licensingService);
         DataContext = _viewModel;
 
         _startupTimer.Mark("viewmodel");

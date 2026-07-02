@@ -14,6 +14,7 @@ using Cine.Avalonia.Models;
 using Cine.Avalonia.Extensions;
 using Cine.Avalonia.Services;
 using Cine.Avalonia.Utilities;
+using Cine.Avalonia.Features;
 using Cine.Core;
 using Cine.Media.Interfaces;
 using Cine.Media.Models;
@@ -32,6 +33,8 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
     private readonly IPlaylistService _playlistCoordinator;
     private readonly IMediaFileService _mediaFile;
     private readonly IFileDialogService? _fileDialog;
+    private readonly IFeatureService? _featureService;
+    private readonly ILicensingService? _licensingService;
     private bool _disposed;
     // --- Bindable state ---
     private PlaybackState _state = PlaybackState.Stopped;
@@ -111,13 +114,17 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
         ISubtitleManager? subtitleManager = null,
         IRendererService? rendererService = null,
         IMediaFileService? mediaFileService = null,
-        IFileDialogService? fileDialogService = null)
+        IFileDialogService? fileDialogService = null,
+        IFeatureService? featureService = null,
+        ILicensingService? licensingService = null)
     {
         _player = player ?? throw new ArgumentNullException(nameof(player));
         _session = session ?? throw new ArgumentNullException(nameof(session));
         _playlistCoordinator = playlistCoordinator ?? throw new ArgumentNullException(nameof(playlistCoordinator));
         _mediaFile = mediaFileService ?? throw new ArgumentNullException(nameof(mediaFileService));
         _fileDialog = fileDialogService;
+        _featureService = featureService;
+        _licensingService = licensingService;
         Audio = audioManager ?? new AudioManager(player);
         Video = videoManager ?? new VideoManager(player);
         Subtitles = subtitleManager ?? new SubtitleManager(player);
@@ -129,6 +136,17 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
             Audio.RequestAudioFileAsync = () => _fileDialog.OpenAudioAsync();
             Subtitles!.RequestSubtitleFileAsync = () => _fileDialog.OpenSubtitleAsync();
         }
+
+        // Wire feature state changes to refresh UI bindings
+        if (_featureService != null)
+        {
+            _featureService.FeatureStateChanged += OnFeatureStateChanged;
+            RefreshFeatureStatuses();
+        }
+
+        // Wire license tier changes to refresh trial UI
+        if (_licensingService != null)
+            _licensingService.TierChanged += OnTierChanged;
 
         // Wire player events
         _player.Opened += OnPlayerOpened;
@@ -375,6 +393,105 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
     public bool HasPlaylistItems => PlaylistItems.Count > 0;
     public bool HasChapters => Chapters.Count > 0;
 
+    // ─────────────────────────────────────────────────────
+    //  Feature-Gating Properties (bound from XAML)
+    // ─────────────────────────────────────────────────────
+
+    /// <summary>True if the audio equalizer feature is available under current license.</summary>
+    public bool IsEqualizerEnabled => _featureService?.IsEnabled(FeatureKeys.AudioEqualizer) ?? true;
+
+    /// <summary>True if the playlist save/load feature is available under current license.</summary>
+    public bool IsPlaylistSaveLoadEnabled => _featureService?.IsEnabled(FeatureKeys.PlaylistSaveLoad) ?? true;
+
+    // ─────────────────────────────────────────────────────
+    //  Trial/License Info
+    // ─────────────────────────────────────────────────────
+
+    /// <summary>True when the current license tier is Trial (evaluation mode).</summary>
+    public bool IsTrial => _licensingService?.CurrentTier == LicensingTier.Trial;
+
+    /// <summary>Days remaining in the trial period (0 if not in trial).</summary>
+    public int TrialDaysRemaining => _licensingService?.TrialDaysRemaining ?? 0;
+
+    /// <summary>Human-readable license label (e.g. "Trial (14 days left)").</summary>
+    public string LicenseLabel => _licensingService?.LicenseLabel ?? "Free";
+
+    /// <summary>The current license tier as a display string.</summary>
+    public string LicenseTierDisplay => _licensingService?.CurrentTier switch
+    {
+        LicensingTier.Trial => $"Trial ({_licensingService.TrialDaysRemaining} days remaining)",
+        LicensingTier.Free => "Free",
+        LicensingTier.Full => "Full License",
+        LicensingTier.Pro => "Pro License",
+        _ => "Unknown"
+    };
+
+    /// <summary>Observable collection of feature status entries shown in Preferences.</summary>
+    public ObservableCollection<FeatureStatusInfo> FeatureStatuses { get; } = new();
+
+    private void OnFeatureStateChanged(string key, bool _)
+    {
+        switch (key)
+        {
+            case FeatureKeys.AudioEqualizer:
+                OnPropertyChanged(nameof(IsEqualizerEnabled));
+                break;
+            case FeatureKeys.PlaylistSaveLoad:
+                OnPropertyChanged(nameof(IsPlaylistSaveLoadEnabled));
+                break;
+        }
+        RefreshFeatureStatuses();
+    }
+
+
+    private void OnTierChanged(LicensingTier _)
+    {
+        OnPropertyChanged(nameof(IsTrial));
+        OnPropertyChanged(nameof(TrialDaysRemaining));
+        OnPropertyChanged(nameof(LicenseLabel));
+        OnPropertyChanged(nameof(LicenseTierDisplay));
+        RefreshFeatureStatuses();
+        // Invalidate feature-gating UI
+        if (_featureService != null)
+            _featureService.InvalidateCache();
+    }
+
+    private void RefreshFeatureStatuses()
+    {
+        FeatureStatuses.Clear();
+
+        // Known feature keys with high-level descriptions for display
+        var known = new Dictionary<string, (string Name, string ReasonEnabled, string ReasonDisabled)>
+        {
+            [FeatureKeys.AudioEqualizer] = ("Audio Equalizer",
+                "Available with your current license",
+                "Requires Full license tier"),
+            [FeatureKeys.PlaylistSaveLoad] = ("Playlist Save/Load",
+                "Available with your current license",
+                "Requires Full license tier"),
+            [FeatureKeys.VideoShaders] = ("Video Shaders",
+                "Available with your current license",
+                "Requires Full license tier"),
+            [FeatureKeys.UiTrialWatermark] = ("Trial Watermark",
+                "Visible during Trial period",
+                "Hidden outside Trial period"),
+            [FeatureKeys.UiCrashReporting] = ("Crash Reporting",
+                "Enabled",
+                "Disabled"),
+        };
+
+        foreach (var (key, (name, reasonOn, reasonOff)) in known)
+        {
+            var enabled = _featureService?.IsEnabled(key) ?? true;
+            FeatureStatuses.Add(new FeatureStatusInfo
+            {
+                DisplayName = name,
+                IsEnabled = enabled,
+                Reason = enabled ? reasonOn : reasonOff
+            });
+        }
+    }
+
 
     // ─────────────────────────────────────────────────────
     //  INotifyPropertyChanged
@@ -411,6 +528,12 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
         _player.PositionChanged -= OnPositionChanged;
         _player.PlaybackStateChangedEvent -= OnPlaybackStateChanged;
         _player.VolumeChanged -= OnVolumeChanged;
+
+        if (_featureService != null)
+            _featureService.FeatureStateChanged -= OnFeatureStateChanged;
+
+        if (_licensingService != null)
+            _licensingService.TierChanged -= OnTierChanged;
 
         if (_player is IDisposable disposable)
             disposable.Dispose();

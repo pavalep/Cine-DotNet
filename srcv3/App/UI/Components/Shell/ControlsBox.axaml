@@ -22,10 +22,14 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <!-- ROW 0: TRANSPORT BUTTONS -->
-            <StackPanel Grid.Row="0"
+            <!-- ROW 0: TRIAL BANNER -->
+            <components:TrialBanner Grid.Row="0" />
+
+            <!-- ROW 1: TRANSPORT BUTTONS -->
+            <StackPanel Grid.Row="1"
                         Orientation="Horizontal"
                         Margin="{StaticResource space-h-3},8,{StaticResource space-h-3},4"
                         HorizontalAlignment="Center">
@@ -166,8 +170,8 @@
                 </StackPanel>
             </StackPanel>
 
-            <!-- ROW 1: SEEK BAR + TIME -->
-            <components:SeekBar Grid.Row="1"
+            <!-- ROW 2: SEEK BAR + TIME -->
+            <components:SeekBar Grid.Row="2"
                                      x:Name="SeekBar"
                                      Margin="{StaticResource space-h-3}" />
         </Grid>
