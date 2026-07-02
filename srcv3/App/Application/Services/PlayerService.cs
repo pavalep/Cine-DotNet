@@ -56,6 +56,14 @@ public class PlayerService : IDisposable
 
     public IMediaPlayer? Player => _player;
 
+    // ── Role-specific accessors (ISP) — narrow dependency surface ──
+    public IPlaybackControl? Playback => _player;
+    public IAudioControl? Audio => _player;
+    public IVideoControl? Video => _player;
+    public ISubtitleControl? Subtitles => _player;
+    public IChapterNavigation? Chapters => _player;
+    public IPlaylistManagement? Playlist => _player;
+
     public event EventHandler<string>? Error;
 
     /// <summary>Initialize the player. Gracefully handles double-init (no-op).</summary>
