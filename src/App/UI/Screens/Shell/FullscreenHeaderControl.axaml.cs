@@ -18,11 +18,14 @@ public partial class FullscreenHeaderControl : UserControl
     private MainViewModel? _viewModel;
     private PrimaryMenuBuilder? _fullscreenMenuBuilder;
     private FlyoutManager? _flyoutManager;
+    private FlyoutOverlayControl? _overlay;
 
     public FullscreenHeaderControl()
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
+        // Also capture DataContext if already set before handler was attached
+        if (DataContext is MainViewModel vm) _viewModel = vm;
 
         _fullscreenMenuBuilder = BuildFullscreenMenu();
     }
@@ -80,7 +83,7 @@ public partial class FullscreenHeaderControl : UserControl
         return builder;
     }
 
-    public bool HasActiveFlyouts => _btnFlyout != null;
+    public bool HasActiveFlyouts => _flyoutManager?.HasActiveFlyouts == true;
 
     private MenuFlyout? _btnFlyout;
 
@@ -92,7 +95,9 @@ public partial class FullscreenHeaderControl : UserControl
             _flyoutManager = value;
             if (value != null)
             {
-                value.Register("fullscreen-menu", () => _btnFlyout?.Hide());
+                // Obtain overlay reference for mutual exclusion with overlay-based flyouts
+                _overlay ??= MainWindow.GetOverlay(this);
+                value.Register("fullscreen-menu", () => { _btnFlyout?.Hide(); _overlay?.HideContent(); });
                 // Pass to child track selector controls for mutual exclusion
                 if (FullscreenSubOverlay != null) FullscreenSubOverlay.FlyoutManager = value;
                 if (FullscreenAudioOverlay != null) FullscreenAudioOverlay.FlyoutManager = value;

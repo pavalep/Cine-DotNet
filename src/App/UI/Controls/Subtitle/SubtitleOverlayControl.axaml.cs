@@ -49,6 +49,8 @@ public partial class SubtitleOverlayControl : AvaloniaUserControl
         _log = global::Cine.Core.Log.ForContext<SubtitleOverlayControl>();
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
+        // Also capture DataContext if already set before handler was attached
+        if (DataContext is MainViewModel vm) _viewModel = vm;
 
         // Wire drag-drop on the button
         DragDrop.SetAllowDrop(BtnSubtitles, true);
@@ -89,13 +91,26 @@ public partial class SubtitleOverlayControl : AvaloniaUserControl
     /// <summary>Reopens the subtitle flyout on its button (call after dialog completes).</summary>
     public void ReopenFlyout()
     {
-        if (_currentFlyoutContent != null && BtnSubtitles != null)
-        {
-            _log.Trace("ReopenFlyout: reopening subtitle overlay");
-            _overlay ??= MainWindow.GetOverlay(this);
-            if (_overlay != null)
-                _overlay.ShowContent(BtnSubtitles, _currentFlyoutContent, placeAbove: true);
-        }
+        if (BtnSubtitles == null) return;
+        _log.Trace("ReopenFlyout: rebuilding and reopening subtitle overlay");
+        _overlay ??= MainWindow.GetOverlay(this);
+        if (_overlay == null) return;
+
+        // Rebuild content fresh rather than reusing stale _currentFlyoutContent
+        if (_viewModel?.Subtitles == null) return;
+        var newContent = TrackFlyoutBuilder.BuildContent(
+            tracks: _viewModel.Subtitles.SubtitleTracks,
+            "No subtitles available",
+            "Subtitle Delay",
+            () => _viewModel.Subtitles.SubtitleDelay,
+            v => _viewModel.Subtitles.SubtitleDelay = (float)Math.Clamp(v, -10, 10),
+            () => _viewModel.Subtitles.SubtitleDelay = 0,
+            appendExtra: root => AppendFlyoutFooter(root, _viewModel.Subtitles),
+            emptyIcon: global::Material.Icons.MaterialIconKind.ClosedCaptionOutline,
+            dismissOverlay: () => _flyoutManager?.CloseAll()
+        );
+        _currentFlyoutContent = newContent;
+        _overlay.ShowContent(BtnSubtitles, newContent, placeAbove: true);
     }
 
     /// <summary>
@@ -108,7 +123,7 @@ public partial class SubtitleOverlayControl : AvaloniaUserControl
         set
         {
             _flyoutManager = value;
-            value?.Register("subtitle", () => { _overlay?.HideContent(); _currentFlyoutContent = null; });
+            value?.Register("subtitle", () => _overlay?.HideContent());
         }
     }
 
@@ -134,7 +149,8 @@ public partial class SubtitleOverlayControl : AvaloniaUserControl
                 v => _viewModel.Subtitles.SubtitleDelay = (float)Math.Clamp(v, -10, 10),
                 () => _viewModel.Subtitles.SubtitleDelay = 0,
                 appendExtra: root => AppendFlyoutFooter(root, _viewModel.Subtitles),
-                emptyIcon: global::Material.Icons.MaterialIconKind.ClosedCaptionOutline
+                emptyIcon: global::Material.Icons.MaterialIconKind.ClosedCaptionOutline,
+                dismissOverlay: () => _flyoutManager?.CloseAll()
             );
 
             _overlay.OnBackgroundDismissed -= OnSubtitleOverlayDismissed;
@@ -192,7 +208,6 @@ public partial class SubtitleOverlayControl : AvaloniaUserControl
         gearBtn.Click += (_, _) =>
         {
             _overlay?.HideContent();
-            _currentFlyoutContent = null;
             _flyoutManager?.MarkClosed("subtitle");
             var w = TopLevel.GetTopLevel(this) as Window;
             if (w != null)

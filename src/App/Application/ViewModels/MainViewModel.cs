@@ -47,7 +47,7 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
     private bool _isAudioEnabled = true;
     private bool _isFullscreen;
     private bool _hasMultiplePlaylistItems;
-    private bool _hasMultipleVideoTracks;
+
 
     // Track persistence
     private int _currentAudioTrackId = -1;
@@ -61,7 +61,8 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
     private static readonly ObservableCollection<TrackMenuItem> _emptySubtitleTracks = new();
     public ObservableCollection<TrackMenuItem> AudioTracks => Audio?.AudioTracks ?? _emptyAudioTracks;
     private static readonly ObservableCollection<TrackMenuItem> _emptyAudioTracks = new();
-    public ObservableCollection<TrackMenuItem> VideoTracks { get; } = new();
+    public ObservableCollection<TrackMenuItem> VideoTracks => Video?.VideoTracks ?? _emptyVideoTracks;
+    private static readonly ObservableCollection<TrackMenuItem> _emptyVideoTracks = new();
 
     // --- Other collections ---
     public ObservableCollection<ChapterInfo> Chapters { get; } = new();
@@ -374,11 +375,6 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
     public bool HasPlaylistItems => PlaylistItems.Count > 0;
     public bool HasChapters => Chapters.Count > 0;
 
-    public bool HasMultipleVideoTracks
-    {
-        get => _hasMultipleVideoTracks;
-        set { _hasMultipleVideoTracks = value; OnPropertyChanged(); }
-    }
 
     // ─────────────────────────────────────────────────────
     //  INotifyPropertyChanged

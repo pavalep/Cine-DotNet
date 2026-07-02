@@ -4,7 +4,7 @@
              x:Class="Cine.Avalonia.Controls.PauseOverlayControl">
     <Border x:Name="PauseIndicator"
             HorizontalAlignment="Center" VerticalAlignment="Center"
-            Opacity="0" IsVisible="False"
+            Opacity="0" IsVisible="True"
             IsHitTestVisible="False"
             CornerRadius="{StaticResource radius-lg}" Padding="24"
             Background="{StaticResource AppOverlayLight}">

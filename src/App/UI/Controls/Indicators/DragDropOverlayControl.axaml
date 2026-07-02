@@ -21,9 +21,9 @@
         </Border.Transitions>
         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="8">
             <materialIcons:MaterialIcon Kind="Play" Width="48" Height="48"
-                Foreground="#4aa3ff" />
+                Foreground="{StaticResource AppAccent}" />
             <TextBlock Text="Drop to Play" Classes="md3-headline4" FontWeight="SemiBold"
-                       Foreground="#4aa3ff" HorizontalAlignment="Center" />
+                       Foreground="{StaticResource AppAccent}" HorizontalAlignment="Center" />
         </StackPanel>
     </Border>
 </UserControl>

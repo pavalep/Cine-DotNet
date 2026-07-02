@@ -37,7 +37,7 @@ public partial class HeaderBarControl : AvaloniaUserControl
         // Sync menu checkmarks when the primary menu opens
         BtnPrimaryMenu.Flyout.Opened += (_, _) =>
         {
-            TrackFlyoutOpened(null, EventArgs.Empty);
+            TrackFlyoutOpened(BtnPrimaryMenu.Flyout, EventArgs.Empty);
             _primaryMenuBuilder?.SyncCheckStates();
         };
         BtnPrimaryMenu.Flyout.Closed += TrackFlyoutClosed;
@@ -370,7 +370,7 @@ public partial class HeaderBarControl : AvaloniaUserControl
         // No counter needed — rely on IsOpen check
     }
 
-    public bool HasActiveFlyouts => _trackedFlyouts.Any(f => f.IsOpen);
+    public bool HasActiveFlyouts => _flyoutManager?.HasActiveFlyouts == true;
 
     public void CloseOpenFlyouts()
     {

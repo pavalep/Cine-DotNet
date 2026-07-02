@@ -14,6 +14,7 @@ public partial class AudioEqualizerFlyout : UserControl
     private readonly IAudioManager? _manager;
     private readonly Slider[] _eqSliders = new Slider[10];
     private readonly TextBlock[] _valueLabels = new TextBlock[10];
+    private bool _wired;
 
     /// <summary>Set by the owner to allow the close button to dismiss the flyout.</summary>
     public Action? CloseAction { get; set; }
@@ -88,6 +89,7 @@ public partial class AudioEqualizerFlyout : UserControl
             };
             slider.SetValue(global::Avalonia.Automation.AutomationProperties.HelpTextProperty, FreqLabels[i] + " equalizer band");
             slider.Classes.Add("compact");
+            slider.TabIndex = 14 + idx;
 
             var valueLabel = new TextBlock
             {

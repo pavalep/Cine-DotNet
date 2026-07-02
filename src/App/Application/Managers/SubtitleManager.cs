@@ -16,7 +16,6 @@ using Cine.Core.Services;
 using Cine.Media.Events;
 using Cine.Media.Interfaces;
 using Cine.Media.Models;
-
 namespace Cine.Avalonia.Managers;
 
 /// <summary>
@@ -1161,3 +1160,4 @@ public sealed class SubtitleManager : ISubtitleManager
         _player.Error -= OnPlayerError;
     }
 }
+

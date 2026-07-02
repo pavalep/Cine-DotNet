@@ -20,7 +20,7 @@ public partial class MainViewModel
         AudioTracks.Add(new TrackMenuItem("Add Audio Track…", TrackType.Audio, -1, OnSelectAudio));
         AudioTracks.Add(new TrackMenuItem("None", TrackType.Audio, -2, OnSelectAudio));
 
-        VideoTracks.Add(new TrackMenuItem("No video tracks", TrackType.Video, -1, OnSelectVideo));
+        // Video tracks are lazily initialized by VideoManager
     }
 
     /// <summary>
@@ -107,25 +107,7 @@ public partial class MainViewModel
 
     private void OnSelectVideo(TrackMenuItem item)
     {
-        if (item.DisplayName == "Add Video Track…")
-        {
-            return;
-        }
-
-        if (item.DisplayName == "None")
-        {
-            _player.SelectVideoTrack(-1);
-            foreach (var t in VideoTracks) t.RefreshSelection(false);
-            item.RefreshSelection(true);
-            return;
-        }
-
-        if (item.TrackIndex >= 0)
-        {
-            _player.SelectVideoTrack(item.TrackIndex);
-            foreach (var t in VideoTracks) t.RefreshSelection(false);
-            item.RefreshSelection(true);
-        }
+        Video?.OnSelectVideo(item);
     }
 
     /// <summary>
@@ -170,33 +152,8 @@ public partial class MainViewModel
             }
             IsAudioEnabled = e.AudioTracks?.Any(t => t.IsEnabled) ?? false;
 
-            // Video tracks
-            VideoTracks.Clear();
-            VideoTracks.Add(new TrackMenuItem("Add Video Track…", TrackType.Video, -1, OnSelectVideo));
-            VideoTracks.Add(new TrackMenuItem("None", TrackType.Video, -2, OnSelectVideo));
-            if (e.VideoTracks != null && e.VideoTracks.Any())
-            {
-                int idx = 0;
-                foreach (var track in e.VideoTracks)
-                {
-                    var trackId = int.TryParse(track.PathOrId, out var parsedId) ? parsedId : idx;
-                    var item = new TrackMenuItem(
-                        FormatTrack("Video", track),
-                        TrackType.Video,
-                        trackId,
-                        OnSelectVideo,
-                        track
-                    );
-                    item.IsSelected = track.IsEnabled;
-                    VideoTracks.Add(item);
-                    idx++;
-                }
-            }
-            else
-            {
-                VideoTracks.Add(new TrackMenuItem("No video tracks", TrackType.Video, -1, OnSelectVideo));
-            }
-            HasMultipleVideoTracks = e.VideoTracks?.Count() > 1;
+            // Video tracks — delegated to VideoManager
+            Video?.RefreshVideoTracks(e.VideoTracks);
 
             // Restore pending track selections (audio only — subtitle is handled by SubtitleManager)
             if (_pendingAudioTrackId.HasValue)

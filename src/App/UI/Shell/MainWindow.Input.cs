@@ -49,10 +49,9 @@ public partial class MainWindow
         // ── Escape (context-sensitive) ──
         Register(Key.Escape, () =>
         {
-            // Close any open flyout first
-            _flyoutManager.CloseAll();
-            // If no flyout was open, exit fullscreen
-            if (_playerService?.Player?.IsFullscreen == true)
+            // Close any open flyout — if one was open, don't also exit fullscreen
+            var reopen = _flyoutManager.CloseAll();
+            if (reopen == null && _playerService?.Player?.IsFullscreen == true)
                 _viewModel?.ToggleFullscreen();
         }, "Close Flyout / Exit Fullscreen");
 

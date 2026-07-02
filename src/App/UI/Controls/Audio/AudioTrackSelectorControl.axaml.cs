@@ -91,7 +91,7 @@ public partial class AudioTrackSelectorControl : AvaloniaUserControl
         set
         {
             _flyoutManager = value;
-            value?.Register("audio", () => { _overlay?.HideContent(); _currentFlyoutContent = null; });
+            value?.Register("audio", () => _overlay?.HideContent());
         }
     }
 
@@ -126,7 +126,8 @@ public partial class AudioTrackSelectorControl : AvaloniaUserControl
             () => vm.AudioDelayValue,
             v => vm.AudioDelayValue = (float)Math.Clamp(v, -10, 10),
             () => vm.ResetAudioDelay(),
-            emptyIcon: global::Material.Icons.MaterialIconKind.MusicOff
+            emptyIcon: global::Material.Icons.MaterialIconKind.MusicOff,
+            dismissOverlay: () => _flyoutManager?.CloseAll()
         );
     }
 

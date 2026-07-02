@@ -349,7 +349,10 @@ public partial class SeekBarControl : AvaloniaUserControl
             xPos = Math.Clamp(xPos, marginPx, Math.Max(marginPx, trackWidth - clampedWidth - marginPx));
 
             ChapterPreviewPopover.Width = clampedWidth;
-            ChapterPreviewPopover.Margin = new Thickness(xPos, -34, 0, 0);
+            // Compute Y offset from popover height + gap above seek bar
+            var popoverHeight = ChapterPreviewPopover.DesiredSize.Height;
+            var yOffset = -(popoverHeight > 0 ? popoverHeight + 4 : 34);
+            ChapterPreviewPopover.Margin = new Thickness(xPos, yOffset, 0, 0);
         }
     }
 

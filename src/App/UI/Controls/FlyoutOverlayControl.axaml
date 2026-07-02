@@ -3,13 +3,19 @@
              x:Class="Cine.Avalonia.Controls.FlyoutOverlayControl"
              IsHitTestVisible="False"
              Opacity="0">
+    <UserControl.Transitions>
+        <Transitions>
+            <DoubleTransition Property="Opacity" Duration="0:0:0.180" Easing="ExponentialEaseOut" />
+        </Transitions>
+    </UserControl.Transitions>
     <Border x:Name="OverlayBackground"
-            Background="#14000000"
+            Background="#40000000"
             HorizontalAlignment="Stretch"
             VerticalAlignment="Stretch"
             PointerPressed="OnBackgroundPointerPressed"
-            KeyDown="OnBackgroundKeyDown">
-        <Canvas>
+            KeyDown="OnBackgroundKeyDown"
+            AutomationProperties.Name="Overlay background">
+        <Canvas AutomationProperties.Name="Flyout overlay">
             <Border x:Name="ContentContainer"
                     UseLayoutRounding="True"
                     HorizontalAlignment="Left"

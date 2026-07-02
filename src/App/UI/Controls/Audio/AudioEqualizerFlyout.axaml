@@ -45,7 +45,7 @@
             CornerRadius="{StaticResource radius-sm}"
             Padding="14,12"
             Width="{StaticResource size-dialog-equalizer-width}">
-        <StackPanel Spacing="10">
+        <StackPanel Spacing="10" KeyboardNavigation.TabNavigation="Cycle">
             <!-- Header with close -->
             <Grid ColumnDefinitions="Auto,*,Auto,Auto">
                 <TextBlock Grid.Column="0" Text="Equalizer" Classes="md3-subtitle1"
@@ -55,10 +55,12 @@
                         Click="OnResetClick"
                         Foreground="{StaticResource AppAccent}"
                         Content="Reset"
+                        TabIndex="0"
                         VerticalAlignment="Center" />
                 <Button Grid.Column="3" x:Name="CloseBtn"
                         Classes="eq-close"
                         ToolTip.Tip="Close"
+                        TabIndex="1"
                         VerticalAlignment="Center"
                         Margin="8,0,0,0">
                     <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource size-dialog-close-icon}" Height="{StaticResource size-dialog-close-icon}"
@@ -67,17 +69,17 @@
             </Grid>
 
             <!-- Preset Buttons -->
-            <WrapPanel>
-                <Button Content="Flat" Classes="eq-preset" Click="OnPresetClick" Tag="Flat" />
-                <Button Content="Classic" Classes="eq-preset" Click="OnPresetClick" Tag="Classical" />
-                <Button Content="Rock" Classes="eq-preset" Click="OnPresetClick" Tag="Rock" />
-                <Button Content="Pop" Classes="eq-preset" Click="OnPresetClick" Tag="Pop" />
-                <Button Content="Jazz" Classes="eq-preset" Click="OnPresetClick" Tag="Jazz" />
-                <Button Content="Bass+" Classes="eq-preset" Click="OnPresetClick" Tag="Bass Boost" />
-                <Button Content="Vocal" Classes="eq-preset" Click="OnPresetClick" Tag="Vocal" />
-                <Button Content="Movie" Classes="eq-preset" Click="OnPresetClick" Tag="Movie" />
-                <Button Content="HD 800" Classes="eq-preset" Click="OnPresetClick" Tag="Headphones" />
-                <Button Content="Podcast" Classes="eq-preset" Click="OnPresetClick" Tag="Podcast" />
+            <WrapPanel x:Name="PresetWrapPanel">
+                <Button Content="Flat" Classes="eq-preset" Click="OnPresetClick" Tag="Flat" TabIndex="2" />
+                <Button Content="Classic" Classes="eq-preset" Click="OnPresetClick" Tag="Classical" TabIndex="3" />
+                <Button Content="Rock" Classes="eq-preset" Click="OnPresetClick" Tag="Rock" TabIndex="4" />
+                <Button Content="Pop" Classes="eq-preset" Click="OnPresetClick" Tag="Pop" TabIndex="5" />
+                <Button Content="Jazz" Classes="eq-preset" Click="OnPresetClick" Tag="Jazz" TabIndex="6" />
+                <Button Content="Bass+" Classes="eq-preset" Click="OnPresetClick" Tag="Bass Boost" TabIndex="7" />
+                <Button Content="Vocal" Classes="eq-preset" Click="OnPresetClick" Tag="Vocal" TabIndex="8" />
+                <Button Content="Movie" Classes="eq-preset" Click="OnPresetClick" Tag="Movie" TabIndex="9" />
+                <Button Content="HD 800" Classes="eq-preset" Click="OnPresetClick" Tag="Headphones" TabIndex="10" />
+                <Button Content="Podcast" Classes="eq-preset" Click="OnPresetClick" Tag="Podcast" TabIndex="11" />
             </WrapPanel>
 
             <!-- EQ Sliders -->
@@ -96,14 +98,14 @@
                                Foreground="{StaticResource TextSecondary}" />
                     <ToggleSwitch x:Name="NormToggle"
                                   IsChecked="{Binding IsAudioNormalizationEnabled}"
-                                  OnContent="" OffContent="" />
+                                  OnContent="" OffContent="" TabIndex="12" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Spacing="4">
                     <TextBlock Text="Dialogue Boost" Classes="md3-caption" FontWeight="SemiBold"
                                Foreground="{StaticResource TextTertiary}" />
                     <ToggleSwitch x:Name="DialogueToggle"
                                   IsChecked="{Binding IsDialogueBoostEnabled}"
-                                  OnContent="" OffContent="" />
+                                  OnContent="" OffContent="" TabIndex="13" />
                 </StackPanel>
             </Grid>
 
@@ -117,7 +119,7 @@
                         Classes="compact"
                         Minimum="-10" Maximum="10" TickFrequency="0.5"
                         Value="{Binding AudioDelay}"
-                        Foreground="{StaticResource AppAccent}" />
+                        Foreground="{StaticResource AppAccent}" TabIndex="24" />
                 <TextBlock Grid.Column="2" x:Name="DelayLabel"
                            Text="0.00s" Classes="md3-caption" MinWidth="40"
                            Foreground="{StaticResource OsdForeground}"
@@ -130,7 +132,7 @@
                                FormatString="F2"
                                FontSize="11" Classes="compact"
                                HorizontalAlignment="Right"
-                               VerticalAlignment="Center" Margin="4,0,0,0" />
+                               VerticalAlignment="Center" Margin="4,0,0,0" TabIndex="25" />
             </Grid>
         </StackPanel>
     </Border>

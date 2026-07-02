@@ -55,10 +55,11 @@ public static class TrackFlyoutBuilder
         Action<double> setDelay,
         Action resetDelay,
         int searchThreshold = 5,
-        string searchPlaceholder = "Search…",
+        string searchPlaceholder = "Search\u2026",
         string? title = null,
         Action<StackPanel>? appendExtra = null,
-        global::Material.Icons.MaterialIconKind emptyIcon = global::Material.Icons.MaterialIconKind.ClosedCaptionOutline)
+        global::Material.Icons.MaterialIconKind emptyIcon = global::Material.Icons.MaterialIconKind.ClosedCaptionOutline,
+        Action? dismissOverlay = null)
     {
         _log.Debug("Build: {Count} tracks, threshold={Threshold}, extra={HasExtra}",
             tracks.Count, searchThreshold, appendExtra != null);
@@ -96,6 +97,7 @@ public static class TrackFlyoutBuilder
                 CornerRadius = new CornerRadius(12),
                 Cursor = new Cursor(StandardCursorType.Arrow)
             };
+            closeBtn.Click += (_, _) => dismissOverlay?.Invoke();
             closeBtn.Classes.Add("hover-subtle");
             Grid.SetColumn(closeBtn, 1);
             headerGrid.Children.Add(closeBtn);
@@ -172,7 +174,7 @@ public static class TrackFlyoutBuilder
             }
 
             foreach (var track in filteredItems)
-                trackListPanel.Children.Add(BuildTrackRow(track));
+                trackListPanel.Children.Add(BuildTrackRow(track, dismissOverlay));
         }
 
         // Initial population: if there are no tracks at all, show the
@@ -219,12 +221,24 @@ public static class TrackFlyoutBuilder
             searchBox.KeyDown += (_, e) =>
             {
                 if (e.Key == Key.Escape)
-                {
+                {if (string.IsNullOrEmpty(searchBox.Text))
+                        dismissOverlay?.Invoke();
+                    else
+                        
                     searchBox.Text = "";
                     e.Handled = true;
                 }
             };
         }
+
+        // B8: Subscribe to collection changes for live refresh
+        tracks.CollectionChanged += (_, _) =>
+        {
+            if (searchBox != null)
+                RebuildTrackList(searchBox.Text);
+            else
+                RebuildTrackList(null);
+        };
 
         rootPanel.Children.Add(trackListPanel);
 
@@ -421,18 +435,19 @@ public static class TrackFlyoutBuilder
         string searchPlaceholder = "Search\u2026",
         string? title = null,
         Action<StackPanel>? appendExtra = null,
-        global::Material.Icons.MaterialIconKind emptyIcon = global::Material.Icons.MaterialIconKind.ClosedCaptionOutline)
+        global::Material.Icons.MaterialIconKind emptyIcon = global::Material.Icons.MaterialIconKind.ClosedCaptionOutline,
+        Action? dismissOverlay = null)
     {
         // Build the content using the same infrastructure, then unwrap
         var flyout = Build(tracks, emptyMessage, delayLabel, getDelay, setDelay, resetDelay,
-            searchThreshold, searchPlaceholder, title, appendExtra, emptyIcon);
+            searchThreshold, searchPlaceholder, title, appendExtra, emptyIcon, dismissOverlay);
         var border = (flyout.Content as Border) ?? new Border(); // fallback
         // Rewire placement logic: border is already correctly built
         return border;
     }
 
     /// <summary>Builds a single track row with selection dot + text label.</summary>
-    private static Button BuildTrackRow(TrackMenuItem track)
+    private static Button BuildTrackRow(TrackMenuItem track, Action? dismissOverlay = null)
     {
         // "Add Subtitle Track…" pseudo-entry → render as a secondary action button
         // Note: no redundant "+" icon — the text "Add" is self-explanatory.
@@ -454,8 +469,13 @@ public static class TrackFlyoutBuilder
                 Padding = new Thickness(8, 4),
                 MinHeight = 36,
                 HorizontalContentAlignment = AvaloniaLayout.HorizontalAlignment.Stretch,
-                Cursor = new Cursor(StandardCursorType.Arrow),
-                Command = track.SelectCommand
+                Cursor = new Cursor(StandardCursorType.Arrow)
+            };
+            addBtn.Click += (_, _) =>
+            {
+                if (track.SelectCommand.CanExecute(track))
+                    track.SelectCommand.Execute(track);
+                dismissOverlay?.Invoke();
             };
             addBtn.PointerEntered += (_, _) => addBtn.Background = AppColors.HoverSubtle;
             addBtn.PointerExited += (_, _) => addBtn.Background = AppColors.Transparent;
@@ -482,7 +502,7 @@ public static class TrackFlyoutBuilder
         // Set tooltip for the active state
         if (isNowPlaying)
         {
-            // Tooltip.SetTip(dot, "Now playing");  // CS0234 issue
+            global::Avalonia.Controls.ToolTip.SetTip(dot, "Now playing");
         }
 
         var text = new TextBlock
@@ -525,7 +545,7 @@ public static class TrackFlyoutBuilder
                 Margin = new Thickness(4, 0, 4, 0)
             };
             var codecTip = !string.IsNullOrWhiteSpace(track.Source.Codec) ? $"{track.Source.Codec} codec" : "Unknown codec";
-            // Avalonia.Controls.ToolTip.SetTip(badge, codecTip);  // CS0234 issue
+            global::Avalonia.Controls.ToolTip.SetTip(badge, codecTip);
             grid.Children.Add(badge);
             Grid.SetColumn(badge, 1);
         }
@@ -543,17 +563,22 @@ public static class TrackFlyoutBuilder
             MinHeight = 36,
             HorizontalContentAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch,
             Cursor = new global::Avalonia.Input.Cursor(global::Avalonia.Input.StandardCursorType.Arrow),
-            Opacity = track.DisplayOpacity,
-            Command = track.SelectCommand
+            Opacity = track.DisplayOpacity
         };
-        // global::Avalonia.Controls.DragDrop.SetAllowDrop(button, true);  // CS0234: DragDrop doesn't exist
+        button.Click += (_, _) =>
+        {
+            if (track.SelectCommand.CanExecute(track))
+                track.SelectCommand.Execute(track);
+            dismissOverlay?.Invoke();
+        };
+        DragDrop.SetAllowDrop(button, true);
         button.PointerEntered += (_, _) => button.Background = AppColors.HoverSubtle;
         button.PointerExited += (_, _) => button.Background = AppColors.Transparent;
 
         // Tooltip: show filename + path for external subtitles
         if (!track.IsPseudoEntry && track.Source != null)
         {
-            // Avalonia.Controls.ToolTip.SetTip(button, BuildTrackTooltip(track.Source));  // CS0234
+            global::Avalonia.Controls.ToolTip.SetTip(button, BuildTrackTooltip(track.Source));
         }
 
         return button;

@@ -8,6 +8,5 @@
         <FluentTheme />
         <materialIcons:MaterialIconStyles />
         <StyleInclude Source="avares://App/UI/Resources/App.axaml" />
-        <StyleInclude Source="avares://App/UI/Resources/MenuStyles.axaml" />
     </Application.Styles>
 </Application>

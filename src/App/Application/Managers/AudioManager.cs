@@ -317,6 +317,11 @@ public sealed class AudioManager : IAudioManager
     private async Task OnAddAudioAsync()
     {
         if (RequestAudioFileAsync == null) return;
+
+        // Dismiss flyout BEFORE opening native file dialog to avoid Windows deadlock
+        if (DismissFlyoutAsync != null)
+            await DismissFlyoutAsync();
+
         try
         {
             var path = await RequestAudioFileAsync();
@@ -340,6 +345,12 @@ public sealed class AudioManager : IAudioManager
     /// </summary>
     public void RefreshAudioTracks(IEnumerable<SubtitleSource> audioSources)
     {
+        if (!global::Avalonia.Threading.Dispatcher.UIThread.CheckAccess())
+        {
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(() => RefreshAudioTracks(audioSources));
+            return;
+        }
+
         AudioTracks.Clear();
         AudioTracks.Add(new TrackMenuItem("Add Audio Track…", TrackType.Audio, -1, OnSelectAudio));
         AudioTracks.Add(new TrackMenuItem("None", TrackType.Audio, -2, OnSelectAudio));

@@ -45,6 +45,8 @@ public partial class ControlsBoxControl : AvaloniaUserControl
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
+        // Also capture DataContext if already set before handler was attached
+        if (DataContext is MainViewModel vm) _viewModel = vm;
         // Event subscription will be set when FlyoutManager is assigned
     }
 
@@ -89,7 +91,7 @@ public partial class ControlsBoxControl : AvaloniaUserControl
 
     // --- Public API for MainWindow ---
 
-    public bool HasActiveFlyouts => _flyoutOverlay?.IsOpen == true;
+    public bool HasActiveFlyouts => _flyoutManager?.HasActiveFlyouts == true;
 
     /// <summary>
     /// Flyout ecosystem manager. When set, all flyouts controlled by this control
@@ -104,12 +106,8 @@ public partial class ControlsBoxControl : AvaloniaUserControl
             _flyoutManager = value;
             if (value == null) return;
 
-            // Cache overlay reference FIRST
-            _flyoutOverlay = MainWindow.GetOverlay(this);
-            if (_flyoutOverlay != null)
-                _flyoutOverlay.OnBackgroundDismissed += OnVolumeOverlayDismissed;
-
             // Register close actions — all hide the overlay instead of calling Flyout.Hide()
+            // Overlay lookup is deferred to first ShowContent call (lazy pattern in OnVolumeMenuClick/OpenEqualizerFlyout etc.)
             Action hideOverlay = () => _flyoutOverlay?.HideContent();
             value.Register("equalizer",   hideOverlay);
             value.Register("volume",      hideOverlay);
@@ -381,7 +379,7 @@ public partial class ControlsBoxControl : AvaloniaUserControl
         var volumePercentLabel = new TextBlock
         {
             Name = "VolumePercentLabel",
-            Text = "100%",
+            Text = _viewModel?.VolumeText ?? "100%",
             Classes = { "md3-body2" },
             FontWeight = global::Avalonia.Media.FontWeight.SemiBold,
             VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center
@@ -394,10 +392,17 @@ public partial class ControlsBoxControl : AvaloniaUserControl
         {
             Classes = { "compact" },
             Minimum = 0,
-            Maximum = 150,
+            Maximum = _viewModel?.VolumeMax ?? 150,
+            Value = _viewModel?.VolumeValue ?? 100,
             Height = 36,
             VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center,
             HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch
+        };
+        slider.ValueChanged += (_, args) =>
+        {
+            if (_viewModel != null)
+                _viewModel.VolumeValue = args.NewValue;
+            volumePercentLabel.Text = $"{args.NewValue:F0}%";
         };
         stack.Children.Add(slider);
 
@@ -668,8 +673,14 @@ public partial class ControlsBoxControl : AvaloniaUserControl
                 Padding = new Thickness(12, 8),
                 HorizontalContentAlignment = AvaloniaLayout.HorizontalAlignment.Stretch,
                 Cursor = new Cursor(StandardCursorType.Arrow),
-                Opacity = track.DisplayOpacity,
-                Command = track.SelectCommand
+                Opacity = track.DisplayOpacity
+            };
+
+            button.Click += (_, _) =>
+            {
+                if (track.SelectCommand.CanExecute(track))
+                    track.SelectCommand.Execute(track);
+                _flyoutManager?.CloseAll();
             };
 
             button.PointerEntered += (_, _) =>

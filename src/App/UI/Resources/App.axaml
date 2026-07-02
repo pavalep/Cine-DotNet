@@ -467,7 +467,7 @@
         <Setter Property="Background" Value="#CC000000" />
         <Setter Property="Opacity" Value="0" />
         <Style.Animations>
-            <Animation Duration="0:0:0.30" FillMode="Forward">
+            <Animation Duration="0:0:0.25" FillMode="Both" Easing="QuadraticEaseOut">
                 <KeyFrame Cue="0%">
                     <Setter Property="Opacity" Value="0" />
                 </KeyFrame>
@@ -487,6 +487,7 @@
     <!--  PHASE 12: FOCUS RING    -->
     <!-- ======================== -->
     <Style Selector="Button:focus-visible /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource AppAccentDim}" />
         <Setter Property="BorderBrush" Value="{StaticResource AppAccent}" />
         <Setter Property="BorderThickness" Value="2" />
         <Setter Property="CornerRadius" Value="{StaticResource radius-xs}" />
@@ -600,13 +601,6 @@
         <Setter Property="Transitions">
             <Transitions>            </Transitions>
         </Setter>
-    </Style>
-
-    <!-- Focus Visible Ring — 2px accent with 2px offset, visible on dark backgrounds -->
-    <Style Selector="Button:focus-visible /template/ ContentPresenter">
-        <Setter Property="Background" Value="{StaticResource AppAccentDim}" />
-        <Setter Property="BorderThickness" Value="2" />
-        <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
     </Style>
 
     <!-- ── Dialog Open Animation ────────────────────────────────── -->
@@ -946,22 +940,6 @@
         <Setter Property="BorderBrush" Value="#FF5252" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="CornerRadius" Value="6" />
-    </Style>
-
-    <!-- ======================== -->
-    <!--  PHASE 5: OSD SLIDE-UP   -->
-    <!-- ======================== -->
-    <Style Selector="Border.OsdNotificationStyle">
-        <Style.Animations>
-            <Animation Duration="0:0:0.25" FillMode="Both" Easing="QuadraticEaseOut">
-                <KeyFrame Cue="0%">
-                    <Setter Property="Opacity" Value="0" />
-                </KeyFrame>
-                <KeyFrame Cue="100%">
-                    <Setter Property="Opacity" Value="1" />
-                </KeyFrame>
-            </Animation>
-        </Style.Animations>
     </Style>
 
     <!-- ======================== -->

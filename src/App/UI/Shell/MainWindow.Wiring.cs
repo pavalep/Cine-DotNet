@@ -71,14 +71,8 @@ public partial class MainWindow
         }
 
         // Component events
-        _replayOverlay.ReplayRequested += (_, _) =>
-        {
-            var p = _playerService?.Player;
-            if (p == null) return;
-            p.Stop();
-            p.Seek(TimeSpan.Zero);
-            p.Play();
-        };
+        _replayOverlay.ReplayRequested -= OnReplayRequested;
+        _replayOverlay.ReplayRequested += OnReplayRequested;
 
         _osdNotification.NotificationClicked += OnOsdNotificationClicked;
 
@@ -120,5 +114,14 @@ public partial class MainWindow
         AddHandler(DragDrop.DragEnterEvent, OnWindowDragEnter);
         AddHandler(DragDrop.DragLeaveEvent, OnWindowDragLeave);
         AddHandler(DragDrop.DropEvent, OnWindowDrop);
+    }
+
+    private void OnReplayRequested(object? sender, EventArgs e)
+    {
+        var p = _playerService?.Player;
+        if (p == null) return;
+        p.Stop();
+        p.Seek(TimeSpan.Zero);
+        p.Play();
     }
 }

@@ -118,9 +118,11 @@ public sealed class VideoManager : INotifyPropertyChanged, IDisposable
     /// <summary>True if the current media has multiple video tracks.</summary>
     public bool HasMultipleVideoTracks => VideoTracks.Count(t => !t.IsPseudoEntry) > 1;
 
-    private void OnSelectVideo(TrackMenuItem item)
+    internal void OnSelectVideo(TrackMenuItem item)
     {
-        if (item.IsPseudoEntry) return;
+        // "Add Video Track…" (TrackIndex = -1) has no backend implementation yet.
+        // "None" (TrackIndex = -2) falls through to disable video output.
+        if (item.IsPseudoEntry && item.TrackIndex == -1) return;
 
         if (item.TrackIndex >= 0)
         {

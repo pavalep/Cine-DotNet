@@ -21,6 +21,12 @@ public class FlyoutManager
     private readonly object _lock = new();
     private string? _openKey;
 
+    /// <summary>Whether any flyout is currently open (single source of truth).</summary>
+    public bool HasActiveFlyouts
+    {
+        get { lock (_lock) { return _openKey != null; } }
+    }
+
     /// <summary>
     /// Register a flyout source with a close action.
     /// </summary>
@@ -36,17 +42,22 @@ public class FlyoutManager
     /// </summary>
     public void DismissOthers(string key)
     {
+        Action? closeAction;
         lock (_lock)
         {
+            closeAction = null;
             if (_openKey != null && _openKey != key && _entries.TryGetValue(_openKey, out var entry))
             {
-                entry.TryClose();
+                closeAction = entry.TryClose;
                 entry.IsOpen = false;
             }
             if (_entries.TryGetValue(key, out var thisEntry))
                 thisEntry.IsOpen = true;
             _openKey = key;
         }
+
+        // Invoke close action outside lock to prevent deadlock
+        closeAction?.Invoke();
     }
 
     /// <summary>
@@ -69,16 +80,21 @@ public class FlyoutManager
     public Action? CloseAll()
     {
         string? toReopen;
+        Action? closeAction;
         lock (_lock)
         {
             toReopen = _openKey;
+            closeAction = null;
             if (toReopen != null && _entries.TryGetValue(toReopen, out var entry))
             {
-                entry.TryClose();
+                closeAction = entry.TryClose;
                 entry.IsOpen = false;
             }
             _openKey = null;
         }
+
+        // Invoke close action outside lock to prevent deadlock
+        closeAction?.Invoke();
 
         if (toReopen == null) return null;
 
