@@ -513,6 +513,30 @@ public static class TrackFlyoutBuilder
             Foreground = isNowPlaying ? AppColors.Accent : AppColors.TextPrimary
         };
 
+        // AF2: Subscribe to property changes to update UI reactively
+        track.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(TrackMenuItem.IsSelected))
+            {
+                bool selected = track.IsSelected;
+                dot.Width = selected ? 8 : 6;
+                dot.Height = selected ? 8 : 6;
+                dot.CornerRadius = new CornerRadius(selected ? 4 : 3);
+                dot.Background = selected ? AppColors.Accent : AppColors.IconDim;
+                dot.RenderTransform = new ScaleTransform(selected ? 1.3 : 1.0, selected ? 1.3 : 1.0);
+                text.FontWeight = selected ? FontWeight.SemiBold : FontWeight.Normal;
+                text.Foreground = selected ? AppColors.Accent : AppColors.TextPrimary;
+                if (selected)
+                    global::Avalonia.Controls.ToolTip.SetTip(dot, "Now playing");
+                else
+                    global::Avalonia.Controls.ToolTip.SetTip(dot, null);
+            }
+            else if (e.PropertyName == nameof(TrackMenuItem.DisplayName))
+            {
+                text.Text = track.DisplayName;
+            }
+        };
+
         var grid = new Grid
         {
             ColumnDefinitions = new ColumnDefinitions

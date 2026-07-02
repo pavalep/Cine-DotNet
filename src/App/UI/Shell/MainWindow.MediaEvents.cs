@@ -222,7 +222,7 @@ public partial class MainWindow
         switch (category)
         {
             case "volume":
-                _controlsBox?.BtnVolumeMenu?.Focus();
+                _controlsBox?.VolumeFlyoutCtrl?.BtnVolumeMenu?.Focus();
                 break;
             case "subtitle":
             case "audio":

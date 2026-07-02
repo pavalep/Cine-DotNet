@@ -354,3 +354,19 @@ A4, A6, A8, B6, B9, D2, D5, F4, G3, G4, H1, H2, H3, H4, H6, H7
 ## Next-Step Recommendation
 
 Fix **Critical** tier first — especially **A1** (bubbling dismiss) + **B1/B2/B3** (close flyout on selection) which together make track selection actually work. See repair plan in `phase4-repair-plan.md`.
+
+---
+
+## Architectural Flaws — Implementation Plan
+
+The 5 architectural flaws identified in this audit have a separate detailed plan with step-by-step instructions:
+
+📄 [phase4-architectural-flaws.md](phase4-architectural-flaws.md)
+
+| AF | Summary | Effort | Status |
+|----|---------|--------|--------|
+| **AF1** | Unify state ownership across 4 systems | Small | Ready |
+| **AF2** | Make flyout content reactive via PropertyChanged | Medium | Ready |
+| **AF3** | Route all Show/HideContent through FlyoutManager | Medium | Blocked by AF1 |
+| **AF4** | Extract ControlsBoxControl into focused controls | Large | Blocked by AF3 |
+| **AF5** | AudioManager collection on UI thread | Small | ✅ Done (B4)

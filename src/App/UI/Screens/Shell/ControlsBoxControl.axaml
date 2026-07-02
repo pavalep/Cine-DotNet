@@ -85,32 +85,10 @@
                            VerticalAlignment="Center" Margin="{StaticResource space-h-2}" IsHitTestVisible="False" />
 
                 <StackPanel Orientation="Horizontal" Spacing="{StaticResource space-spacing-0_5}">
-                    <Button x:Name="BtnVolumeMenu"
-                            Classes="circular-menu"
-                            ToolTip.Tip="Volume (M)"
-                            AutomationProperties.Name="Volume"
-                            Click="OnVolumeMenuClick"
-                            PointerWheelChanged="OnVolumeButtonScroll">
-                        <Panel Width="22" Height="22">
-                            <materialIcons:MaterialIcon x:Name="VolumeIcon" Kind="VolumeHigh" Width="22" Height="22"
-                                Foreground="{StaticResource OsdForeground}">
-                                <materialIcons:MaterialIcon.Transitions>
-                                    <Transitions>
-                                        <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
-                                    </Transitions>
-                                </materialIcons:MaterialIcon.Transitions>
-                            </materialIcons:MaterialIcon>
-                            <materialIcons:MaterialIcon x:Name="VolumeMuteIcon" Kind="VolumeOff" Width="22" Height="22"
-                                Foreground="{StaticResource OsdForeground}"
-                                Opacity="0">
-                                <materialIcons:MaterialIcon.Transitions>
-                                    <Transitions>
-                                        <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
-                                    </Transitions>
-                                </materialIcons:MaterialIcon.Transitions>
-                            </materialIcons:MaterialIcon>
-                        </Panel>
-                    </Button>
+                    <controls:VolumeFlyoutControl x:Name="VolumeFlyout"
+                                                  Classes="circular-menu"
+                                                  VerticalAlignment="Center"
+                                                  Padding="0" />
                     <Button x:Name="BtnEqualizer"
                             Classes="circular-menu"
                             ToolTip.Tip="Equalizer"
@@ -170,14 +148,10 @@
 
                 <!-- Group 4: Tools -->
                 <StackPanel Orientation="Horizontal" Spacing="{StaticResource space-spacing-0_5}">
-                    <Button x:Name="BtnChaptersMenu"
-                            Classes="circular-menu"
-                            IsVisible="{Binding HasChapters}"
-                            ToolTip.Tip="Chapters"
-                            Click="OnChaptersMenuClick">
-                        <materialIcons:MaterialIcon Kind="BookmarkOutline" Width="16" Height="16"
-                            Foreground="{StaticResource OsdForeground}" />
-                    </Button>
+                    <controls:ChaptersFlyoutControl x:Name="ChaptersFlyout"
+                                                   Classes="circular-menu"
+                                                   VerticalAlignment="Center"
+                                                   Padding="0" />
                     <controls:SubtitleOverlayControl x:Name="SubOverlayCtrl"
                                                      Classes="circular-transport"
                                                      Padding="0"

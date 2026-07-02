@@ -110,7 +110,8 @@ public partial class SubtitleOverlayControl : AvaloniaUserControl
             dismissOverlay: () => _flyoutManager?.CloseAll()
         );
         _currentFlyoutContent = newContent;
-        _overlay.ShowContent(BtnSubtitles, newContent, placeAbove: true);
+        _flyoutManager?.ShowFlyout("subtitle", BtnSubtitles, newContent, true,
+            (a, c, p) => _overlay.ShowContent(a, c, p));
     }
 
     /// <summary>
@@ -207,8 +208,7 @@ public partial class SubtitleOverlayControl : AvaloniaUserControl
         gearBtn.PointerExited += (_, _) => { if (gearBtn.Content is TextBlock tb) tb.Foreground = AppColors.TextTertiary; };
         gearBtn.Click += (_, _) =>
         {
-            _overlay?.HideContent();
-            _flyoutManager?.MarkClosed("subtitle");
+            _flyoutManager?.HideFlyout("subtitle", () => _overlay?.HideContent());
             var w = TopLevel.GetTopLevel(this) as Window;
             if (w != null)
                 new SubtitleSettingsDialog(mgr).Show(w);

@@ -98,7 +98,6 @@ public partial class AudioTrackSelectorControl : AvaloniaUserControl
     private void OnAudioClick(object? sender, RoutedEventArgs e)
     {
         if (_viewModel == null) return;
-        _flyoutManager?.DismissOthers("audio");
         _overlay ??= MainWindow.GetOverlay(this);
         if (_overlay == null) return;
 
@@ -106,7 +105,8 @@ public partial class AudioTrackSelectorControl : AvaloniaUserControl
 
         _overlay.OnBackgroundDismissed -= OnAudioOverlayDismissed;
         _overlay.OnBackgroundDismissed += OnAudioOverlayDismissed;
-        _overlay.ShowContent(BtnAudio, _currentFlyoutContent, placeAbove: true);
+        _flyoutManager?.ShowFlyout("audio", BtnAudio, _currentFlyoutContent, true,
+            (a, c, p) => _overlay.ShowContent(a, c, p));
     }
 
     private void OnAudioOverlayDismissed()

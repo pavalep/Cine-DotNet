@@ -286,7 +286,7 @@ public partial class MainWindow
         _headerBar.UpdateMaximizeIcon(WindowState == global::Avalonia.Controls.WindowState.Maximized);
         _controlsBox?.SubtitleOverlay?.RefreshIcon();
         _controlsBox?.AudioTrackSelector?.RefreshIcon();
-        _controlsBox?.RefreshVolumeIcon();
+        _controlsBox?.VolumeFlyoutCtrl?.RefreshVolumeIcon();
 
         // Wire flyout dismissal before file dialogs open (prevents dialog overlap)
         if (_viewModel?.Subtitles is { } subMgr)

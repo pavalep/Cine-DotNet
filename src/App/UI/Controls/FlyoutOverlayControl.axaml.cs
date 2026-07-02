@@ -25,9 +25,6 @@ public partial class FlyoutOverlayControl : UserControl
         IsHitTestVisible = false;
     }
 
-    /// <summary>True when the overlay content is currently visible (opacity > 0).</summary>
-    public bool IsOpen => ContentContainer.Opacity > 0.5;
-
     public void ShowContent(global::Avalonia.Controls.Control anchor, global::Avalonia.Controls.Control content, bool placeAbove = true)
     {
         // Cancel any pending deferred hide from a previous HideContent call

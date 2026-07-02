@@ -27,6 +27,30 @@ public class FlyoutManager
         get { lock (_lock) { return _openKey != null; } }
     }
 
+    /// <summary>The key of the currently-open flyout, or null.</summary>
+    public string? CurrentOpenKey
+    {
+        get { lock (_lock) { return _openKey; } }
+    }
+
+    /// <summary>Show a flyout: dismiss others, register, then invoke the show callback.</summary>
+    public void ShowFlyout(string key,
+        global::Avalonia.Controls.Control anchor,
+        global::Avalonia.Controls.Control content,
+        bool placeAbove,
+        Action<global::Avalonia.Controls.Control, global::Avalonia.Controls.Control, bool> showContent)
+    {
+        DismissOthers(key);
+        showContent(anchor, content, placeAbove);
+    }
+
+    /// <summary>Hide a flyout: mark closed, then invoke the hide callback.</summary>
+    public void HideFlyout(string key, Action? hideContent)
+    {
+        MarkClosed(key);
+        hideContent?.Invoke();
+    }
+
     /// <summary>
     /// Register a flyout source with a close action.
     /// </summary>
