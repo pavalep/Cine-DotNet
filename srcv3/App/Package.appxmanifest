@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
+  xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+  xmlns:desktop6="http://schemas.microsoft.com/appx/manifest/desktop/windows10/6"
+  IgnorableNamespaces="uap uap3 uap10 rescap desktop desktop6">
+
+  <Identity
+    Name="Cine.CineMediaPlayer"
+    Publisher="CN=CineApp"
+    Version="1.0.0.0" />
+
+  <Properties>
+    <DisplayName>Cine</DisplayName>
+    <PublisherDisplayName>Cine Project</PublisherDisplayName>
+    <Logo>Assets\CineLogo75x75.png</Logo>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop"
+      MinVersion="10.0.19041.0"
+      MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="x-generate" />
+  </Resources>
+
+  <Applications>
+    <Application Id="App"
+      Executable="App.exe"
+      EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+        DisplayName="Cine"
+        Description="A modern, high-performance media player"
+        BackgroundColor="#1A1A2E"
+        Square150x150Logo="Assets\CineLogo150x150.png"
+        Square44x44Logo="Assets\CineLogo44x44.png">
+      </uap:VisualElements>
+
+      <Extensions>
+        <uap3:Extension Category="windows.fileTypeAssociation">
+          <uap3:FileTypeAssociation Name="cine-media"
+                                    Parameters="&quot;%1&quot;">
+            <uap:DisplayName>Cine Media</uap:DisplayName>
+            <uap:SupportedFileTypes>
+              <uap:FileType ContentType="video/mp4">.mp4</uap:FileType>
+              <uap:FileType ContentType="video/mp4">.m4v</uap:FileType>
+              <uap:FileType ContentType="video/x-matroska">.mkv</uap:FileType>
+              <uap:FileType ContentType="video/x-msvideo">.avi</uap:FileType>
+              <uap:FileType ContentType="video/quicktime">.mov</uap:FileType>
+              <uap:FileType ContentType="video/webm">.webm</uap:FileType>
+              <uap:FileType ContentType="video/mp2t">.ts</uap:FileType>
+              <uap:FileType ContentType="video/mpeg">.mpg</uap:FileType>
+              <uap:FileType ContentType="video/mpeg">.mpeg</uap:FileType>
+              <uap:FileType ContentType="video/x-ms-wmv">.wmv</uap:FileType>
+              <uap:FileType ContentType="video/x-flv">.flv</uap:FileType>
+              <uap:FileType ContentType="video/3gpp">.3gp</uap:FileType>
+              <uap:FileType ContentType="video/x-ms-asf">.asf</uap:FileType>
+              <uap:FileType ContentType="video/ogg">.ogv</uap:FileType>
+              <uap:FileType ContentType="audio/mpeg">.mp3</uap:FileType>
+              <uap:FileType ContentType="audio/flac">.flac</uap:FileType>
+              <uap:FileType ContentType="audio/x-wav">.wav</uap:FileType>
+              <uap:FileType ContentType="audio/ogg">.ogg</uap:FileType>
+              <uap:FileType ContentType="audio/aac">.aac</uap:FileType>
+              <uap:FileType ContentType="audio/x-ms-wma">.wma</uap:FileType>
+              <uap:FileType ContentType="audio/mp4">.m4a</uap:FileType>
+              <uap:FileType ContentType="audio/opus">.opus</uap:FileType>
+              <uap:FileType ContentType="audio/x-aiff">.aiff</uap:FileType>
+              <uap:FileType ContentType="text/plain">.srt</uap:FileType>
+              <uap:FileType ContentType="text/plain">.ass</uap:FileType>
+              <uap:FileType ContentType="text/plain">.ssa</uap:FileType>
+              <uap:FileType ContentType="text/plain">.vtt</uap:FileType>
+              <uap:FileType ContentType="text/plain">.sub</uap:FileType>
+              <uap:FileType ContentType="audio/x-mpegurl">.m3u</uap:FileType>
+              <uap:FileType ContentType="audio/x-mpegurl">.m3u8</uap:FileType>
+            </uap:SupportedFileTypes>
+          </uap3:FileTypeAssociation>
+        </uap3:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+</Package>

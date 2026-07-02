@@ -1,0 +1,32 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Cine.Avalonia.Components.FlyoutOverlay"
+             IsHitTestVisible="False"
+             Opacity="0">
+    <UserControl.Transitions>
+        <Transitions>
+            <DoubleTransition Property="Opacity" Duration="0:0:0.180" Easing="ExponentialEaseOut" />
+        </Transitions>
+    </UserControl.Transitions>
+    <Border x:Name="OverlayBackground"
+            Background="#40000000"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch"
+            PointerPressed="OnBackgroundPointerPressed"
+            KeyDown="OnBackgroundKeyDown"
+            AutomationProperties.Name="Overlay background">
+        <Canvas AutomationProperties.Name="Flyout overlay">
+            <Border x:Name="ContentContainer"
+                    UseLayoutRounding="True"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    Opacity="0">
+                <Border.Transitions>
+                    <Transitions>
+                        <DoubleTransition Property="Opacity" Duration="0:0:0.180" Easing="ExponentialEaseOut" />
+                    </Transitions>
+                </Border.Transitions>
+            </Border>
+        </Canvas>
+    </Border>
+</UserControl>

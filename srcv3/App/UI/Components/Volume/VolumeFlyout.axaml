@@ -1,0 +1,13 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Cine.Avalonia.Components.VolumeFlyout"
+             x:Name="VolumeFlyoutRoot">
+    <Button x:Name="BtnVolume"
+            Classes="circular-menu"
+            ToolTip.Tip="Volume (M)"
+            Click="OnVolumeClick">
+        <materialIcons:MaterialIcon x:Name="VolumeIcon" Kind="VolumeHigh" Width="18" Height="18"
+                                    Foreground="{StaticResource OsdForeground}" />
+    </Button>
+</UserControl>

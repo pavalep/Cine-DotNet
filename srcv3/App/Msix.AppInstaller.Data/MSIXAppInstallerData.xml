@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AppInstallerUX xmlns="http://schemas.microsoft.com/msix/appinstallerux"
+                xmlns:ux="http://schemas.microsoft.com/msix/appinstallerux"
+                xmlns:ux2="http://schemas.microsoft.com/msix/appinstallerux/2"
+                IgnorableNamespaces="ux ux2"
+                Version="1.0.0">
+  <UX
+    AccentColor="#6C5CE7"
+    FontFamily="Segoe UI Variable"
+    AllowUserInteraction="true"
+    BackgroundColor="#1A1A2E"
+    AppNameInTitle="true"
+    HyperLinkFontSize="12">
+
+    <Icon
+      HorizontalAlignment="center"
+      Logo="Images\CineLogo124x124.png"
+      TopMargin="60"/>
+
+    <Buttons
+      HorizontalAlignment="center"
+      Text="Light up your screen"
+      IsSecondaryButtonAccent="true"/>
+
+    <LaunchWhenReady HorizontalAlignment="center"/>
+
+    <AppInformation Mode="flyout" />
+
+    <HyperLinks TopMargin="24">
+      <HyperLink
+        Text="Terms &amp; conditions"
+        Url="https://github.com/user/Cine/blob/main/LICENSE"
+        HorizontalAlignment="center"/>
+      <HyperLink
+        Text="Privacy policy"
+        Url="https://github.com/user/Cine"
+        HorizontalAlignment="center"/>
+      <HyperLink
+        Text="GitHub"
+        Url="https://github.com/user/Cine"
+        HorizontalAlignment="center"/>
+    </HyperLinks>
+  </UX>
+</AppInstallerUX>

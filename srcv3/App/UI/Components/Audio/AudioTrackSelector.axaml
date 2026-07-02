@@ -1,0 +1,15 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Cine.Avalonia.Components.AudioTrackSelector"
+             x:Name="AudioTrackSelectorRoot">
+    <Button x:Name="BtnAudio"
+            Classes="circular-menu"
+            ToolTip.Tip="Audio Tracks"
+            AutomationProperties.Name="Audio tracks menu"
+            Click="OnAudioClick"
+            ZIndex="20">
+        <materialIcons:MaterialIcon x:Name="AudioIcon" Kind="Music" Width="18" Height="18"
+            Foreground="{StaticResource OsdForeground}" />
+    </Button>
+</UserControl>

@@ -1,0 +1,71 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:dialogs="clr-namespace:Cine.Avalonia.ViewModels.Dialogs"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        x:Class="Cine.Avalonia.Dialogs.FirstLaunchDialog"
+        x:DataType="dialogs:FirstLaunchViewModel"
+        Title="Cine — First-Time Setup"
+        Width="480" Height="360"
+        WindowStartupLocation="CenterScreen"
+        CanResize="False"
+        ExtendClientAreaToDecorationsHint="True"
+        Background="{StaticResource AppDialogSurface}">
+
+    <Grid RowDefinitions="*,Auto,Auto,Auto,Auto" Margin="32">
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <materialIcons:MaterialIcon x:Name="DownloadIcon" Kind="Download" Width="48" Height="48"
+                Foreground="{StaticResource AppAccent}" />
+            <TextBlock Text="Setting up Cine for first use"
+                       Classes="md3-headline6" FontWeight="SemiBold"
+                       Foreground="{StaticResource AppTextPrimary}"
+                       HorizontalAlignment="Center" Margin="0,12,0,4" />
+            <TextBlock Text="Cine needs to download native media components (~54 MB total)"
+                       Classes="md3-body2"
+                       Foreground="{StaticResource AppTextOnDarkSecondary}"
+                       HorizontalAlignment="Center"
+                       TextWrapping="Wrap"
+                       TextAlignment="Center" />
+        </StackPanel>
+
+        <!-- File progress list -->
+        <ItemsControl Grid.Row="1" x:Name="FileProgressList"
+                      ItemsSource="{Binding Downloads}"
+                      Margin="0,16,0,0">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="dialogs:DownloadItem">
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,4">
+                        <TextBlock Text="{Binding FileName}" Classes="md3-caption"
+                                   Foreground="{StaticResource AppTextOnDarkSecondary}" />
+                        <TextBlock Grid.Column="1" Text="{Binding Status}" Classes="md3-caption"
+                                   Foreground="{StaticResource AppTextMuted}" />
+                    </Grid>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- Overall progress bar -->
+        <ProgressBar Grid.Row="2" x:Name="OverallProgressBar"
+                     Value="{Binding OverallProgress}"
+                     Minimum="0" Maximum="100"
+                     Height="4" Margin="0,16,0,4"
+                     Foreground="{StaticResource AppAccent}"
+                     Background="{StaticResource AppHoverSubtle}" />
+
+        <!-- Status text -->
+        <TextBlock Grid.Row="3" x:Name="StatusTextBlock"
+                   Text="{Binding StatusText}"
+                   Classes="md3-caption"
+                   Foreground="{StaticResource AppTextOnDarkHint}"
+                   HorizontalAlignment="Center" />
+
+        <!-- Download / Launch button -->
+        <Button Grid.Row="4" x:Name="ActionButton"
+                Content="{Binding ButtonText}"
+                Command="{Binding DownloadCommand}"
+                HorizontalAlignment="Center" Margin="0,16,0,0"
+                Width="180"
+                Classes="primary" />
+    </Grid>
+</Window>

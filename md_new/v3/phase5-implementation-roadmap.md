@@ -6,37 +6,28 @@
 
 ---
 
-## Working Copy Strategy
+## Roadmap Overview
 
-The v3 architecture is built alongside the existing v2 codebase using a **parallel folder strategy**:
-
-```
-Cine_CSharp_DotNet/
-├── src/           ← v2 reference (unchanged, git-committed as "v2:completed")
-├── srcv3/         ← v3 working copy (built file-by-file during implementation)
-└── md_new/Phase5/ ← Architecture docs
-```
-
-**Workflow:**
-1. When a file needs modification for v3, first **copy** it from `src\` to `srcv3\` at the same relative path
-2. Then **modify** the copy in `srcv3\`
-3. New v3-only files (e.g., `CompositionRoot.cs`) are created directly in `srcv3\`
-4. `src\` remains untouched as the v2 stable reference
-5. All builds and tests run from `srcv3\`
-
-**Commit convention:** `v3: <phase> - <description>`
-
-**Example:**
-```
-v3: 5.1 - Add CompositionRoot with DI container
-v3: 5.2 - Split IMediaPlayer into role interfaces
-```
+The Phase 5 architecture changes are organized into **6 implementation phases**, designed to be deployed incrementally. Each phase is independently testable and can be merged without breaking existing functionality.
 
 ---
 
-## Roadmap Overview
+### srcv3 Strategy
 
-The Phase 5 architecture changes are organized into **6 implementation phases**, designed to be deployed incrementally. Each phase is independently testable.
+All v3 architecture work lives in a **parallel `srcv3/` folder** alongside the existing `src/`. This keeps the working v2 code intact and allows us to evolve v3 incrementally.
+
+**How it works:**
+1. `src/` — untouched v2 code (saved as git commit `v2:completed`)
+2. `srcv3/` — copy of `src/` taken at v2:completed; all v3 changes go here
+3. Each sub-phase (5.1, 5.2, ...) is implemented **entirely within `srcv3/`**, committed with a `v3:{phase}` prefix
+4. At each phase boundary we build-verify within `srcv3/`; if it compiles and runs, the phase is done
+5. No files in `src/` are ever touched during v3 development
+
+This approach:
+- Eliminates rollback risk — v2 is never modified
+- Makes code reviews trivial per phase (compare `src/` vs `srcv3/` for that phase's changes)
+- Enables parallel experimentation without destabilising the working build
+- Gives a clear git history: each `v3:5.x` commit shows exactly what changed in that phase
 
 ```
 Phase 5.1 ───► DI Container + Composition Root (2 days)

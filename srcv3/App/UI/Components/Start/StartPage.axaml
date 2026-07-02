@@ -1,0 +1,106 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cine.Avalonia.ViewModels"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Cine.Avalonia.Components.StartPage"
+             x:DataType="vm:MainViewModel">
+
+    <!-- Start Page / Welcome Screen matching Python GTK4 behavior -->
+    <Border x:Name="StartPageRoot"
+            HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+            Background="{DynamicResource StartPageBackground}"
+            CornerRadius="0">
+        <Border.Transitions>
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.3" />
+            </Transitions>
+        </Border.Transitions>
+
+        <Grid>
+            <!-- Drop Target Overlay Visuals -->
+            <Border x:Name="DropTarget"
+                    Margin="{StaticResource space-4}"
+                    BorderThickness="2"
+                    CornerRadius="{StaticResource radius-2xl}"
+                    BorderBrush="{StaticResource AppAccent}"
+                    Background="{StaticResource AppDragAccentDim}"
+                    IsHitTestVisible="False"
+                    IsVisible="False">
+                <Border.OpacityMask>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Offset="0" Color="#00000000" />
+                        <GradientStop Offset="0.3" Color="#00000000" />
+                        <GradientStop Offset="0.5" Color="#FFFFFFFF" />
+                        <GradientStop Offset="0.7" Color="#00000000" />
+                        <GradientStop Offset="1" Color="#00000000" />
+                    </LinearGradientBrush>
+                </Border.OpacityMask>
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                    <materialIcons:MaterialIcon Kind="PlayCircle" Width="48" Height="48"
+                        Foreground="{StaticResource AppAccent}" HorizontalAlignment="Center" />
+                    <TextBlock Text="Drop to Play" Classes="md3-headline4" FontWeight="Bold"
+                        Foreground="{StaticResource AppAccent}" HorizontalAlignment="Center" />
+                </StackPanel>
+            </Border>
+
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Spacing="12" Margin="0,48,0,0"
+                        MaxWidth="480">
+
+                <!-- Icon (Cine app icon — circle + triangle per canvas) -->
+                <Panel Width="128" Height="128" Margin="0,0,0,24" HorizontalAlignment="Center">
+                    <Path Data="M 64 4 A 60 60 0 1 1 64 124 A 60 60 0 1 1 64 4 Z"
+                          Fill="{StaticResource AppHoverSubtle}"
+                          Stroke="{StaticResource AppDivider}"
+                          StrokeThickness="2" />
+                    <Path Data="M 50 40 L 90 64 L 50 88 Z"
+                          Fill="{StaticResource AppTextPrimary}" />
+                </Panel>
+
+                <!-- Drop text -->
+                <TextBlock Text="Drag and Drop Files Here"
+                           Classes="md3-headline2"
+                           FontWeight="Bold"
+                           Foreground="{StaticResource AppTextOnDarkPrimary}"
+                           HorizontalAlignment="Center"
+                           LetterSpacing="-0.01"
+                           Margin="0,0,0,24" />
+
+                <!-- Open button (suggested-action pill) -->
+                <Button x:Name="BtnOpenFile"
+                        Classes="start-page-button start-page-suggested-action"
+                        Content="Open…"
+                        Padding="32,0"
+                        HorizontalAlignment="Center"
+                        AutomationProperties.Name="Open media file"
+                        Click="BtnOpenFile_Click" />
+
+                <!-- Open Folder button (pill) -->
+                <Button x:Name="BtnOpenFolder"
+                        Classes="start-page-button"
+                        Content="Open Folder"
+                        Padding="32,0"
+                        HorizontalAlignment="Center"
+                        AutomationProperties.Name="Open media folder"
+                        Click="BtnOpenFolder_Click" />
+
+                <!-- Recent files section -->
+                <StackPanel Spacing="{StaticResource space-spacing-1}" Margin="0,16,0,0"
+                            IsVisible="{Binding HasRecentFiles}">
+                    <TextBlock Text="Recent" Classes="md3-caption" FontWeight="SemiBold"
+                               Foreground="{StaticResource AppTextOnDarkTertiary}" Margin="40,0,40,4" />
+                    <ScrollViewer MaxHeight="160" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel x:Name="RecentFilesList" Spacing="0" />
+                    </ScrollViewer>
+                </StackPanel>
+            </StackPanel>
+
+            <!-- Keyboard shortcut hint -->
+            <TextBlock Text="Space to play  ·  F for fullscreen  ·  Esc to exit"
+                       Classes="md3-caption"
+                       Foreground="{StaticResource AppTextOnDarkSubtle}"
+                       HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                       Margin="0,0,0,24" />
+        </Grid>
+    </Border>
+</UserControl>
