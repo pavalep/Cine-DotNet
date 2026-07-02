@@ -1,0 +1,14 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Cine.Avalonia.Components.VideoTrackSelector"
+             x:CompileBindings="False">
+    <Button x:Name="BtnVideoMenu"
+            Classes="circular-menu"
+            ToolTip.Tip="Video Track"
+            AutomationProperties.Name="Video track menu"
+            Click="OnVideoMenuClick">
+        <materialIcons:MaterialIcon Kind="Video" Width="18" Height="18"
+            Foreground="{StaticResource OsdForeground}" />
+    </Button>
+</UserControl>

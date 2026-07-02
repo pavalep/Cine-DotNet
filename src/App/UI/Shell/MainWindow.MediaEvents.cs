@@ -4,9 +4,10 @@ using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
+using Cine.Avalonia.Components;
 using Cine.Avalonia.Controls;
 using Cine.Avalonia.Extensions;
-using Cine.Avalonia.Managers;
+using Cine.Avalonia.State;
 using Cine.Avalonia.Services;
 using Cine.Avalonia.ViewModels;
 using Cine.Core;
@@ -83,8 +84,8 @@ public partial class MainWindow
                     var seekBar = _controlsBox.SeekBarControl;
                     if (d.TotalSeconds > 0)
                     {
-                        seekBar.SetDurationText(SeekBarControl.FormatTimeSpan(d));
-                        seekBar.SetPositionText(SeekBarControl.FormatTimeSpan(_viewModel.Position));
+                        seekBar.SetDurationText(SeekBar.FormatTimeSpan(d));
+                        seekBar.SetPositionText(SeekBar.FormatTimeSpan(_viewModel.Position));
                     }
                 }
                 // Always sync icon from the manager after media opens — this is the
@@ -175,8 +176,8 @@ public partial class MainWindow
             if (Math.Abs((e.Position - _lastPositionTextTime).TotalSeconds) >= 0.1)
             {
                 _lastPositionTextTime = e.Position;
-                seekBar.SetPositionText(SeekBarControl.FormatTimeSpan(_lastPosition));
-                seekBar.SetDurationText(SeekBarControl.FormatTimeSpan(_lastDuration));
+                seekBar.SetPositionText(SeekBar.FormatTimeSpan(_lastPosition));
+                seekBar.SetDurationText(SeekBar.FormatTimeSpan(_lastDuration));
             }
 
             SyncPipPosition(sender, e);
@@ -218,11 +219,11 @@ public partial class MainWindow
         }
 
         // F17: Category-based OSD click actions
-        string category = (e as global::Cine.Avalonia.Controls.OsdNotificationControl.OsdClickedEventArgs)?.Category ?? "default";
+        string category = (e as global::Cine.Avalonia.Components.OsdNotification.OsdClickedEventArgs)?.Category ?? "default";
         switch (category)
         {
             case "volume":
-                _controlsBox?.VolumeFlyoutCtrl?.BtnVolumeMenu?.Focus();
+                _controlsBox?.VolumeFlyoutCtrl?.BtnVolume?.Focus();
                 break;
             case "subtitle":
             case "audio":

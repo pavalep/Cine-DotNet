@@ -15,7 +15,7 @@ namespace Cine.Avalonia.Services;
 /// CloseAll() before opening a native dialog. Returns a reopen action
 /// if any flyout was active.
 /// </summary>
-public class FlyoutManager
+public class FlyoutManager : IFlyoutService
 {
     private readonly Dictionary<string, FlyoutEntry> _entries = new();
     private readonly object _lock = new();

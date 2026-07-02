@@ -24,6 +24,11 @@ public class PlaylistItemViewModel : INotifyPropertyChanged
     public string FilePath => _path;
     public int Index => _index;
 
+    // Compiled binding aliases
+    public bool IsCurrent => IsPlaying;
+    public string DisplayTitle => Title;
+    public TimeSpan Duration => TimeSpan.Zero;
+
     public bool IsPlaying => _parent.PlaylistPosition == _index;
 
     public bool IsVisible

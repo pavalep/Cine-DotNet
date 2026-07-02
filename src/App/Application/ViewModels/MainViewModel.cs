@@ -9,7 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Avalonia.Threading;
-using Cine.Avalonia.Managers;
+using Cine.Avalonia.State;
 using Cine.Avalonia.Models;
 using Cine.Avalonia.Extensions;
 using Cine.Avalonia.Services;

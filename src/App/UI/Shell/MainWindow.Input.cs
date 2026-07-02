@@ -17,8 +17,8 @@ using RoutedEventArgs = Avalonia.Interactivity.RoutedEventArgs;
 using Cine.Avalonia.Controls;
 using Cine.Avalonia.Services;
 using Cine.Avalonia.ViewModels;
-using Cine.Avalonia.Views.Dialogs;
-using Cine.Avalonia.Builders;
+using Cine.Avalonia.Dialogs;
+using Cine.Avalonia.Components;
 using Material.Icons;
 using MaterialIcon = global::Material.Icons.Avalonia.MaterialIcon;
 using App = global::Avalonia.Application;
@@ -135,7 +135,7 @@ public partial class MainWindow
         }, "Go To Time");
 
         // ── Equalizer ──
-        Register(Key.E, KeyModifiers.Control | KeyModifiers.Shift, () => _controlsBox?.OpenEqualizerFlyout(), "Open Equalizer");
+        Register(Key.E, KeyModifiers.Control | KeyModifiers.Shift, () => _controlsBox?.TriggerEqualizer(), "Open Equalizer");
 
         // ── Loop ──
         Register(Key.L, KeyModifiers.Shift, () => _viewModel?.ToggleLoopFile(),                        "Toggle Loop File");

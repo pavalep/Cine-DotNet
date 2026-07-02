@@ -7,6 +7,7 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using Cine.Avalonia.Extensions;
 using Cine.Avalonia.Services;
+using Cine.Avalonia.Constants;
 using Cine.Media.Events;
 using App = global::Avalonia.Application;
 using AvaloniaLayout = Avalonia.Layout;
@@ -226,24 +227,24 @@ public partial class MainWindow
 
         bool isFullscreen = WindowState == global::Avalonia.Controls.WindowState.FullScreen;
 
-        if (_headerBar.HeaderBar != null)
+        if (_headerBar.HeaderBarElement != null)
         {
-            _headerBar.HeaderBar.IsVisible = !isFullscreen;
-            _headerBar.HeaderBar.Opacity = isFullscreen ? 0 : 1;
-            _headerBar.HeaderBar.IsHitTestVisible = !isFullscreen;
+            _headerBar.HeaderBarElement.IsVisible = !isFullscreen;
+            _headerBar.HeaderBarElement.Opacity = isFullscreen ? 0 : 1;
+            _headerBar.HeaderBarElement.IsHitTestVisible = !isFullscreen;
         }
-        if (_fullscreenHeader.FullscreenHeader != null)
+        if (_fullscreenHeader.FullscreenHeaderElement != null)
         {
-            _fullscreenHeader.FullscreenHeader.IsVisible = isFullscreen;
-            _fullscreenHeader.FullscreenHeader.Opacity = isFullscreen ? 1 : 0;
-            _fullscreenHeader.FullscreenHeader.IsHitTestVisible = isFullscreen;
+            _fullscreenHeader.FullscreenHeaderElement.IsVisible = isFullscreen;
+            _fullscreenHeader.FullscreenHeaderElement.Opacity = isFullscreen ? 1 : 0;
+            _fullscreenHeader.FullscreenHeaderElement.IsHitTestVisible = isFullscreen;
         }
-        if (_controlsBox.ControlsBox != null)
+        if (_controlsBox.ControlsBoxElement != null)
         {
-            _controlsBox.ControlsBox.IsVisible = true;
-            _controlsBox.ControlsBox.Opacity = 1;
-            _controlsBox.ControlsBox.IsHitTestVisible = true;
-            _controlsBox.ControlsBox.InvalidateMeasure();
+            _controlsBox.ControlsBoxElement.IsVisible = true;
+            _controlsBox.ControlsBoxElement.Opacity = 1;
+            _controlsBox.ControlsBoxElement.IsHitTestVisible = true;
+            _controlsBox.ControlsBoxElement.InvalidateMeasure();
         }
 
         bool hasMedia = !string.IsNullOrEmpty(_viewModel?.FilePath);
@@ -260,32 +261,32 @@ public partial class MainWindow
 
         if (isFullscreen)
         {
-            _headerBar.HeaderBar.IsVisible = false;
-            _headerBar.HeaderBar.Opacity = 0;
-            _headerBar.HeaderBar.IsHitTestVisible = false;
-            _fullscreenHeader.FullscreenHeader.IsVisible = false;
-            _fullscreenHeader.FullscreenHeader.Opacity = 0;
-            _fullscreenHeader.FullscreenHeader.IsHitTestVisible = false;
+            _headerBar.HeaderBarElement.IsVisible = false;
+            _headerBar.HeaderBarElement.Opacity = 0;
+            _headerBar.HeaderBarElement.IsHitTestVisible = false;
+            _fullscreenHeader.FullscreenHeaderElement.IsVisible = false;
+            _fullscreenHeader.FullscreenHeaderElement.Opacity = 0;
+            _fullscreenHeader.FullscreenHeaderElement.IsHitTestVisible = false;
         }
         else
         {
-            _headerBar.HeaderBar.Opacity = 0;
-            _headerBar.HeaderBar.IsHitTestVisible = false;
-            _fullscreenHeader.FullscreenHeader.IsVisible = false;
-            _fullscreenHeader.FullscreenHeader.Opacity = 0;
-            _fullscreenHeader.FullscreenHeader.IsHitTestVisible = false;
+            _headerBar.HeaderBarElement.Opacity = 0;
+            _headerBar.HeaderBarElement.IsHitTestVisible = false;
+            _fullscreenHeader.FullscreenHeaderElement.IsVisible = false;
+            _fullscreenHeader.FullscreenHeaderElement.Opacity = 0;
+            _fullscreenHeader.FullscreenHeaderElement.IsHitTestVisible = false;
         }
-        _controlsBox.ControlsBox.IsVisible = false;
-        _controlsBox.ControlsBox.Opacity = 0;
-        _controlsBox.ControlsBox.IsHitTestVisible = false;
+        _controlsBox.ControlsBoxElement.IsVisible = false;
+        _controlsBox.ControlsBoxElement.Opacity = 0;
+        _controlsBox.ControlsBoxElement.IsHitTestVisible = false;
     }
 
     private async void FadeHeaderAndControls(double targetOpacity)
     {
         Cine.Avalonia.Services.ErrorBoundary.Run(async () =>
         {
-            var headerBar = _headerBar.HeaderBar;
-            var controlsBox = _controlsBox.ControlsBox;
+            var headerBar = _headerBar.HeaderBarElement;
+            var controlsBox = _controlsBox.ControlsBoxElement;
             if (headerBar == null && controlsBox == null) return;
 
             double startHeader = headerBar?.Opacity ?? 0;

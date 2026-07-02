@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
-using Cine.Avalonia.Managers;
+using Cine.Avalonia.State;
 
 namespace Cine.Avalonia.Serialization;
 

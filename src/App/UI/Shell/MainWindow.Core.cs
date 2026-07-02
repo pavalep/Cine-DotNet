@@ -8,9 +8,9 @@ using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
-using Cine.Avalonia.Controls;
+using Cine.Avalonia.Components;
 using Cine.Avalonia.Extensions;
-using Cine.Avalonia.Managers;
+using Cine.Avalonia.State;
 using Cine.Avalonia.Models;
 using Cine.Avalonia.Services;
 using Cine.Avalonia.ViewModels;
@@ -95,20 +95,20 @@ public partial class MainWindow
     private bool _isDisposed;
 
     // Component references (set in InitializeComponent)
-    private HeaderBarControl _headerBar = null!;
-    private ControlsBoxControl _controlsBox = null!;
-    private FullscreenHeaderControl _fullscreenHeader = null!;
-    private SpinnerOverlayControl _spinnerOverlay = null!;
-    private PauseOverlayControl _pauseOverlay = null!;
-    private ReplayOverlayControl _replayOverlay = null!;
-    private DragDropOverlayControl _dropIndicator = null!;
-    private OsdNotificationControl _osdNotification = null!;
+    private HeaderBar _headerBar = null!;
+    private ControlsBox _controlsBox = null!;
+    private FullscreenHeader _fullscreenHeader = null!;
+    private SpinnerOverlay _spinnerOverlay = null!;
+    private PauseOverlay _pauseOverlay = null!;
+    private ReplayOverlay _replayOverlay = null!;
+    private DragDropOverlay _dropIndicator = null!;
+    private OsdNotification _osdNotification = null!;
 
     // File-dialog handler
     private FileDialogHandler? _dialogHandler;
 
     // Flyout ecosystem manager
-    private FlyoutManager _flyoutManager = null!;
+    private IFlyoutService _flyoutManager = null!;
 
     // ─────────────────────────────────────────────────────
     //  Debug Logging

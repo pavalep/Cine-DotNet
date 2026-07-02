@@ -1,0 +1,71 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:dlg="clr-namespace:Cine.Avalonia.Dialogs"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        mc:Ignorable="d" xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        d:DesignWidth="480" d:DesignHeight="360"
+        x:Class="Cine.Avalonia.Dialogs.CommandPaletteDialog"
+        Title="Command Palette"
+        Width="480" Height="400"
+        MinWidth="360" MinHeight="300"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource AppBackground}"
+        ExtendClientAreaToDecorationsHint="True"
+        WindowDecorations="BorderOnly"
+        CanResize="False"
+        ShowInTaskbar="False"
+        Topmost="True">
+
+    <Grid RowDefinitions="Auto,Auto,*" Margin="0">
+        <!-- Search input -->
+        <Border Grid.Row="0" Background="{StaticResource SurfaceBackground}"
+                BorderBrush="{StaticResource AppAccent}" BorderThickness="2"
+                CornerRadius="8" Margin="16,16,16,0">
+            <Grid ColumnDefinitions="Auto,*,Auto" Margin="8,0">
+                <materialIcons:MaterialIcon Grid.Column="0" Kind="Magnify"
+                    Foreground="{StaticResource TextTertiary}"
+                    Width="20" Height="20"
+                    VerticalAlignment="Center" Margin="4,0" />
+                <TextBox x:Name="SearchBox" Grid.Column="1"
+                         PlaceholderText="Search commands…"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Foreground="{StaticResource TextPrimary}"
+                         FontSize="16"
+                         TextChanged="OnSearchChanged"
+                         KeyDown="OnSearchKeyDown" />
+                <TextBlock Grid.Column="2" Text="Ctrl+K"
+                           Foreground="{StaticResource TextTertiary}"
+                           FontSize="12"
+                           VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+
+        <!-- Results count -->
+        <TextBlock x:Name="ResultsCountText" Grid.Row="1"
+                   Foreground="{StaticResource TextTertiary}"
+                   FontSize="11" Margin="20,8,20,0" />
+
+        <!-- Results list -->
+        <ScrollViewer Grid.Row="2" Margin="8,8,8,8" Background="Transparent">
+            <ItemsControl x:Name="CommandsList" Focusable="False">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="dlg:PaletteCommandEntry">
+                        <Border Padding="12,8" CornerRadius="6" Margin="0,2"
+                                Background="Transparent"
+                                PointerPressed="OnCommandItemPressed">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Grid.Column="0"
+                                           Text="{Binding Description}"
+                                           Foreground="{StaticResource TextPrimary}"
+                                           FontSize="14"
+                                           VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </Grid>
+</Window>

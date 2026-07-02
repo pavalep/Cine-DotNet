@@ -1,26 +1,27 @@
 using System;
 using System.Collections.Generic;
+using Cine.Avalonia.State;
 using Cine.Core;
 
 namespace Cine.Avalonia.Services;
 
 /// <summary>
 /// Orchestrates playlist navigation, shuffle, and loop logic.
-/// Persistence is delegated to <see cref="Managers.PlaylistSettingsStore"/>.
+/// Persistence is delegated to <see cref="PlaylistSettingsStore"/>.
 /// </summary>
 public class PlaylistCoordinator : IPlaylistService
 {
     private readonly List<string> _items = new();
     private readonly Random _rng = new();
-    private readonly Managers.PlaylistSettingsStore _store;
+    private readonly PlaylistSettingsStore _store;
     private int _currentIndex = -1;
     private bool _isShuffleEnabled;
     private bool _isLoopPlaylistEnabled;
     private bool _isLoopFileEnabled;
 
-    public PlaylistCoordinator(Managers.PlaylistSettingsStore? store = null)
+    public PlaylistCoordinator(PlaylistSettingsStore? store = null)
     {
-        _store = store ?? new Managers.PlaylistSettingsStore();
+        _store = store ?? new PlaylistSettingsStore();
     }
 
     /// <summary>Read-only view of all playlist item paths.</summary>

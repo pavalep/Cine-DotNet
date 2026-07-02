@@ -5,7 +5,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Cine.Avalonia.Extensions;
-using Cine.Avalonia.Managers;
+using Cine.Avalonia.State;
 using Cine.Avalonia.Services;
 using Cine.Media.Interfaces;
 using Material.Icons;
@@ -54,12 +54,12 @@ public partial class MainWindow
         VideoClickOverlay.PointerMoved += OnWindowPointerMoved;
 
         // Hover tracking
-        _headerBar.HeaderBar.PointerEntered += OnHeaderPointerEntered;
-        _headerBar.HeaderBar.PointerExited += OnHeaderPointerExited;
-        _controlsBox.ControlsBox.PointerEntered += OnControlsPointerEntered;
-        _controlsBox.ControlsBox.PointerExited += OnControlsPointerExited;
-        _fullscreenHeader.FullscreenHeader.PointerEntered += OnFullscreenHeaderPointerEntered;
-        _fullscreenHeader.FullscreenHeader.PointerExited += OnFullscreenHeaderPointerExited;
+        _headerBar.HeaderBarElement.PointerEntered += OnHeaderPointerEntered;
+        _headerBar.HeaderBarElement.PointerExited += OnHeaderPointerExited;
+        _controlsBox.ControlsBoxElement.PointerEntered += OnControlsPointerEntered;
+        _controlsBox.ControlsBoxElement.PointerExited += OnControlsPointerExited;
+        _fullscreenHeader.FullscreenHeaderElement.PointerEntered += OnFullscreenHeaderPointerEntered;
+        _fullscreenHeader.FullscreenHeaderElement.PointerExited += OnFullscreenHeaderPointerExited;
 
         // Window backdrop opacity
         Activated += OnWindowActivated;

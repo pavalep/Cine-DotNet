@@ -163,7 +163,7 @@ public partial class MainWindow
                     if (StartPage?.IsVisible == false) StartPage.IsVisible = true;
                     PlaybackBackground.IsVisible = true;
                     _controlsBox.SetControlsVisibility(false);
-                    _controlsBox.ControlsBox.IsVisible = false;
+                    _controlsBox.ControlsBoxElement.IsVisible = false;
                     _headerBar.HideOpenMenu();
                     _headerBar.HidePrimaryMenu();
                     _headerBar.SetPipVisibility(false);
@@ -176,14 +176,14 @@ public partial class MainWindow
             .Watch(nameof(MainViewModel.IsAudioEnabled), () => _controlsBox?.AudioTrackSelector?.RefreshIcon())
             .Watch(nameof(MainViewModel.IsMuted), () =>
             {
-                _controlsBox.VolumeFlyoutCtrl?.RefreshVolumeIcon();
+                _controlsBox.VolumeFlyoutCtrl?.RefreshIcon();
                 if (_viewModel.IsMuted || _viewModel.VolumeValue == 0)
                     ShowOsdNotification(MaterialIconKind.VolumeOff, "Muted");
                 // Unmute volume is handled by the debounced VolumeValue watcher
             })
             .Watch(() => _viewModel.VolumeValue, vol =>
             {
-                _controlsBox.VolumeFlyoutCtrl?.RefreshVolumeIcon();
+                _controlsBox.VolumeFlyoutCtrl?.RefreshIcon();
                 // Suppress volume OSD during initial file load: the player fires
                 // VolumeChanged during init which can trigger duplicate OSDs.
                 // The flag is set true when FilePath changes and cleared after

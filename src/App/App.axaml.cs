@@ -12,7 +12,8 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using Avalonia.Win32;
 using Cine.Avalonia.Services;
-using Cine.Avalonia.Managers;
+using Cine.Avalonia.Dialogs;
+using Cine.Avalonia.State;
 using Cine.Avalonia.ViewModels;
 using Cine.Core;
 using Microsoft.Extensions.DependencyInjection;
@@ -245,7 +246,7 @@ public class App : global::Avalonia.Application
                 if (!RuntimeDownloader.IsRuntimeReady())
                 {
                     var downloadVm = new ViewModels.Dialogs.FirstLaunchViewModel();
-                    var downloadDialog = new Views.Dialogs.FirstLaunchDialog
+                    var downloadDialog = new FirstLaunchDialog
                     {
                         DataContext = downloadVm
                     };

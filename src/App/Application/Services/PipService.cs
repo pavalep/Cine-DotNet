@@ -1,7 +1,7 @@
 using System;
 using Avalonia.Threading;
 using Cine.Avalonia.Controls;
-using Cine.Avalonia.Views.Dialogs;
+using Cine.Avalonia.Dialogs;
 using Cine.Core;
 
 namespace Cine.Avalonia.Services;

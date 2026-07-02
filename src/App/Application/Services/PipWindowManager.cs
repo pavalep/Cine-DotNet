@@ -1,8 +1,9 @@
 using System;
 using System.IO;
+using Cine.Avalonia.Components;
 using Cine.Avalonia.Controls;
 using Cine.Avalonia.ViewModels;
-using Cine.Avalonia.Views.Dialogs;
+using Cine.Avalonia.Dialogs;
 using Cine.Media.Events;
 using Cine.Media.Models;
 
@@ -17,8 +18,8 @@ public sealed class PipWindowManager : IDisposable
 {
     private readonly IPipService _pipService;
     private readonly MainViewModel _viewModel;
-    private readonly HeaderBarControl _headerBar;
-    private readonly ControlsBoxControl _controlsBox;
+    private readonly HeaderBar _headerBar;
+    private readonly ControlsBox _controlsBox;
     private readonly MpvVideoView _mpvVideoView;
     private readonly PlayerService _playerService;
     private readonly Action<string> _showOsdNotification;
@@ -27,8 +28,8 @@ public sealed class PipWindowManager : IDisposable
     public PipWindowManager(
         IPipService pipService,
         MainViewModel? viewModel,
-        HeaderBarControl? headerBar,
-        ControlsBoxControl? controlsBox,
+        HeaderBar? headerBar,
+        ControlsBox? controlsBox,
         MpvVideoView? mpvVideoView,
         PlayerService? playerService,
         Action<string>? showOsdNotification)

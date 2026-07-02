@@ -7,10 +7,10 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Threading;
-using Cine.Avalonia.Controls;
+using Cine.Avalonia.Components;
 using Cine.Avalonia.Services;
 using Material.Icons;
-using Cine.Avalonia.Managers;
+using Cine.Avalonia.State;
 using Cine.Avalonia.Extensions;
 using Cine.Avalonia.Models;
 using Cine.Avalonia.ViewModels;
@@ -268,12 +268,12 @@ public partial class MainWindow
 
         // Show header bar only (window controls + title), not playback controls.
         // ShowUiControls shows everything — only call when media is loaded.
-        if (_headerBar.HeaderBar != null)
+        if (_headerBar.HeaderBarElement != null)
         {
             bool isFullscreen = WindowState == global::Avalonia.Controls.WindowState.FullScreen;
-            _headerBar.HeaderBar.IsVisible = !isFullscreen;
-            _headerBar.HeaderBar.Opacity = isFullscreen ? 0 : 1;
-            _headerBar.HeaderBar.IsHitTestVisible = !isFullscreen;
+            _headerBar.HeaderBarElement.IsVisible = !isFullscreen;
+            _headerBar.HeaderBarElement.Opacity = isFullscreen ? 0 : 1;
+            _headerBar.HeaderBarElement.IsHitTestVisible = !isFullscreen;
         }
 
         // P5.1a: Restore playlist items (does not open any file — purely UI)
@@ -286,7 +286,7 @@ public partial class MainWindow
         _headerBar.UpdateMaximizeIcon(WindowState == global::Avalonia.Controls.WindowState.Maximized);
         _controlsBox?.SubtitleOverlay?.RefreshIcon();
         _controlsBox?.AudioTrackSelector?.RefreshIcon();
-        _controlsBox?.VolumeFlyoutCtrl?.RefreshVolumeIcon();
+        _controlsBox?.VolumeFlyoutCtrl?.RefreshIcon();
 
         // Wire flyout dismissal before file dialogs open (prevents dialog overlap)
         if (_viewModel?.Subtitles is { } subMgr)

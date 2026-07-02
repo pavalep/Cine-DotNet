@@ -1,0 +1,122 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cine.Avalonia.ViewModels"
+             x:Class="Cine.Avalonia.Components.SeekBar"
+             x:DataType="vm:MainViewModel"
+             x:Name="SeekBarRoot">
+    <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="{StaticResource space-spacing-1}">
+
+        <!-- Seek Area (hexpand, with chapter markers) -->
+        <Grid Grid.Column="0"
+              x:Name="SeekArea"
+              Margin="{StaticResource space-h-2}"
+              PointerMoved="OnSeekAreaPointerMoved"
+              PointerExited="OnSeekAreaPointerExited"
+              PointerWheelChanged="OnSeekAreaPointerWheelChanged"
+              PointerPressed="OnSeekAreaPointerPressed"
+              PointerReleased="OnSeekAreaPointerReleased"
+              Background="Transparent">
+
+            <Border x:Name="SeekTrack"
+                    Background="{StaticResource ProgressTroughBackground}"
+                    CornerRadius="2"
+                    Height="4"
+                    VerticalAlignment="Center"
+                    IsHitTestVisible="False" />
+
+            <Border x:Name="SeekFill"
+                    Background="{StaticResource SeekFillGradient}"
+                    CornerRadius="2"
+                    Height="4"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Left"
+                    IsHitTestVisible="False">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="8" OffsetY="0" Color="#4D5B9BD5" />
+                </Border.Effect>
+            </Border>
+
+            <Border x:Name="SeekThumb"
+                    Width="20" Height="20"
+                    CornerRadius="10"
+                    Background="{StaticResource ProgressSliderBackground}"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="6" OffsetY="1" Color="#80000000" />
+                </Border.Effect>
+                <Border.Styles>
+                    <Style Selector="Border:pointerover">
+                        <Setter Property="Width" Value="24" />
+                        <Setter Property="Height" Value="24" />
+                        <Setter Property="CornerRadius" Value="12" />
+                    </Style>
+                </Border.Styles>
+            </Border>
+
+            <ItemsControl x:Name="ChapterMarkersControl"
+                          ItemsSource="{Binding ChapterMarkers}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <Canvas IsHitTestVisible="False" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Width="3" Height="12"
+                              Background="Transparent">
+                            <Rectangle Width="3" Height="12"
+                                       Fill="{StaticResource OsdForeground}"
+                                       Opacity="0.6"
+                                       AutomationProperties.Name="Chapter marker" />
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <Border x:Name="ChapterPreviewPopover"
+                    IsVisible="False"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    Background="{StaticResource PopoverBackground}"
+                    BorderBrush="{StaticResource PopoverBorder}"
+                    BorderThickness="1"
+                    CornerRadius="{StaticResource radius-sm}"
+                    Padding="{StaticResource space-2}"
+                    Margin="0,0,0,0"
+                    BoxShadow="{StaticResource elevation-4}">
+                <TextBlock x:Name="ChapterPreviewText"
+                           Text="Chapter"
+                           Classes="md3-caption"
+                           Foreground="{StaticResource OsdForeground}" />
+            </Border>
+        </Grid>
+
+        <TextBlock Grid.Column="1"
+                   x:Name="PositionTimeLabel"
+                   Classes="time-label"
+                   MinWidth="45"
+                   Text="00:00"
+                   VerticalAlignment="Center"
+                   Margin="{StaticResource space-h-1}"
+                   PointerPressed="OnPositionTimeLabelPressed"
+                   Cursor="Hand" />
+
+        <Border Grid.Column="2"
+                Width="2" Height="16"
+                Margin="{StaticResource space-h-2}"
+                CornerRadius="2"
+                Background="{StaticResource TimeSeparatorBackground}"
+                Opacity="0.5"
+                VerticalAlignment="Center" />
+
+        <TextBlock Grid.Column="3"
+                   x:Name="DurationTimeLabel"
+                   Classes="time-label"
+                   MinWidth="45"
+                   Text="00:00"
+                   Margin="{StaticResource space-h-1}"
+                   VerticalAlignment="Center"
+                   AutomationProperties.Name="Total duration" />
+    </Grid>
+</UserControl>
