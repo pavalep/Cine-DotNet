@@ -177,27 +177,28 @@ public interface IMediaPlayer : IPlaybackControl, IAudioControl, IVideoControl,
 
 ---
 
-## Phase 5.4: Feature Flag + Licensing System
+## Phase 5.4: Feature Flag + Licensing System (✓ Completed)
 
 **Effort:** 3 days  
 **Risk:** Low–Medium  
-**Files affected:** ~10 files (+5 new)
+**Files affected:** ~10 files (+12 new, 1 modified)  
+**Commit:** `v3:5.4`
 
 ### Tasks
 
-| # | Task | Details |
-|---|------|---------|
-| 5.4.1 | Create feature model classes | `FeatureDefinition`, `FeatureToggleType`, `LicensingTier` |
-| 5.4.2 | Create `FeatureKeys` constants class | Compile-time safe feature key strings |
-| 5.4.3 | Create `feature-definitions.json` | Embedded resource with all feature definitions |
-| 5.4.4 | Implement `IFeatureStore` | Load embedded JSON + runtime overrides from config |
-| 5.4.5 | Implement `IFeatureService` | Cached evaluation with dependency resolution |
-| 5.4.6 | Create `FeatureGateAttribute` | Declarative feature gating for UI components |
-| 5.4.7 | Implement `ILicensingService` | Encrypted license validation, trial tracking |
-| 5.4.8 | Create `LicensingService` | AES-256-GCM encrypted license storage + hardware binding |
-| 5.4.9 | Wire into DI container | Register `IFeatureService`, `IFeatureStore`, `ILicensingService` |
-| 5.4.10 | Add minimal trial UI | Trial banner, upgrade CTA in ControlsBox |
-| 5.4.11 | Verify build + run | Test feature toggles by tier |
+| # | Task | Details | Status |
+|---|------|---------|--------|
+| 5.4.1 | Create feature model classes | `FeatureDefinition`, `FeatureToggleType`, `LicensingTier` | ✓ |
+| 5.4.2 | Create `FeatureKeys` constants class | Compile-time safe feature key strings | ✓ |
+| 5.4.3 | Create `feature-definitions.json` | Embedded resource with 16 feature definitions | ✓ |
+| 5.4.4 | Implement `IFeatureStore` | Load embedded JSON + runtime overrides | ✓ |
+| 5.4.5 | Implement `IFeatureService` | Cached evaluation with dependency resolution | ✓ |
+| 5.4.6 | Create `FeatureGateAttribute` | Declarative feature gating for UI components | ✓ |
+| 5.4.7 | Implement `ILicensingService` | Encrypted license validation, trial tracking | ✓ |
+| 5.4.8 | Create `LicensingService` | AES-256 encrypted license storage + hardware binding | ✓ |
+| 5.4.9 | Wire into DI container | Register `IFeatureService`, `IFeatureStore`, `ILicensingService` | ✓ |
+| 5.4.10 | Add minimal trial UI | Trial banner, upgrade CTA in ControlsBox | Pending (deferred to 5.6) |
+| 5.4.11 | Verify build + run | `dotnet build` — 0 errors | ✓ |
 
 ### Feature Evaluation Flow
 
@@ -347,7 +348,7 @@ public async Task OpenMediaAsync(string path)
 | 5.1 | 1 (CompositionRoot.cs) | ~9 | ~10 |
 | 5.2 | 6 (ISP interfaces) | ~25 | ~31 |
 | 5.3 | 8 (events, handlers, base class) | ~12 | ~20 |
-| 5.4 | 5 (FeatureService, Store, Licensing, GateAttr, JSON) | ~5 | ~10 |
+| 5.4 | 12 (FeatureService, Store, Licensing, GateAttr, JSON, models) | 1 (App.csproj) | 13 |
 | 5.5 | 8 (interfaces, providers, CodecManager, loader) | ~3 | ~11 |
 | 5.6 | 2 (TrialBanner, CTA controls) | ~13 | ~15 |
 | **Total** | **~30** | **~67** | **~97** |

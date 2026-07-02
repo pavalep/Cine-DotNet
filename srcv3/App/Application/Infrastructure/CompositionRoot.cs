@@ -2,6 +2,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Cine.Avalonia.Services;
 using Cine.Avalonia.State;
 using Cine.Avalonia.ViewModels;
+using Cine.Media.Codecs;
+using Cine.Media.Interfaces;
 
 namespace Cine.Avalonia.Infrastructure;
 
@@ -24,6 +26,13 @@ public static class CompositionRoot
         services.AddSingleton<SubtitleSettingsStore>();
         services.AddSingleton<AudioSettingsStore>();
         services.AddSingleton<PlaylistSettingsStore>();
+
+        // ── Codec providers (registered for DI resolution by CodecManager) ──
+        services.AddSingleton<ICodecProvider, MpvCodecProvider>();
+        services.AddSingleton<ICodecProvider, MFCodecProvider>();
+        services.AddSingleton<ICodecProvider, SoftwareFallbackCodecProvider>();
+        services.AddSingleton<CodecManager>();
+        services.AddSingleton<CodecPluginLoader>();
 
         // ── Player service (singleton, initialized once at startup) ──
         services.AddSingleton<PlayerService>();
