@@ -28,6 +28,12 @@ public static class CompositionRoot
         // ── Player service (singleton, initialized once at startup) ──
         services.AddSingleton<PlayerService>();
 
+        // ── Infrastructure (EventBus shared across managers & shell) ──
+        services.AddSingleton<IEventBus, EventBus>();
+
+        // ── Playback state manager (singleton — unified state) ──
+        services.AddSingleton<PlaybackStateManager>();
+
         // ── Application services (singleton, stateless or shared state) ──
         services.AddSingleton<IRendererService, RendererCoordinator>();
         services.AddSingleton<IPlaylistService, PlaylistCoordinator>();

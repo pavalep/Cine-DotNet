@@ -52,23 +52,24 @@ Phase 5.6 ───► UI Gating + Polish (2 days)
 
 ---
 
-## Phase 5.1: DI Container + Composition Root
+## Phase 5.1: DI Container + Composition Root (✓ Completed)
 
 **Effort:** 2 days  
 **Risk:** Low  
-**Files affected:** ~10 files (+1 new)
+**Files affected:** ~10 files (+1 new)  
+**Commit:** `v3:5.1`
 
 ### Tasks
 
-| # | Task | Details |
-|---|------|---------|
-| 5.1.1 | Create `CompositionRoot.cs` | Static class that builds `IServiceProvider` using `Microsoft.Extensions.DependencyInjection` |
-| 5.1.2 | Register existing services | Move all `new Xxx()` calls from `MainWindow.Initialization.cs` into DI container |
-| 5.1.3 | Update `App.axaml.cs` | Call `CompositionRoot.Build()` and pass `IServiceProvider` to `MainWindow` constructor |
-| 5.1.4 | Refactor `MainWindow` constructors | Accept `IServiceProvider` via constructor injection; resolve dependencies from container |
-| 5.1.5 | Refactor `MainViewModel` constructor | Accept dependencies via DI; make all constructor params required (remove `= null` fallbacks) |
-| 5.1.6 | Remove ad-hoc `new()` | Eliminate all manual `new ServiceXxx()` in `MainWindow` partials and ViewModels |
-| 5.1.7 | Verify build + run | Ensure app starts and all services resolve correctly |
+| # | Task | Details | Status |
+|---|------|---------|--------|
+| 5.1.1 | Create `CompositionRoot.cs` | Static class that builds `IServiceProvider` using `Microsoft.Extensions.DependencyInjection` | ✓ |
+| 5.1.2 | Register existing services | Move all `new Xxx()` calls from `MainWindow.Initialization.cs` into DI container | ✓ |
+| 5.1.3 | Update `App.axaml.cs` | Call `CompositionRoot.Build()` and pass `IServiceProvider` to `MainWindow` constructor | ✓ |
+| 5.1.4 | Refactor `MainWindow` constructors | Accept `IServiceProvider` via constructor injection; resolve dependencies from container | ✓ |
+| 5.1.5 | Refactor `MainViewModel` constructor | Accept dependencies via DI; make all constructor params required (remove `= null` fallbacks) | ✓ |
+| 5.1.6 | Remove ad-hoc `new()` | Eliminate all manual `new ServiceXxx()` in `MainWindow` partials and ViewModels | ✓ |
+| 5.1.7 | Verify build + run | Ensure app starts and all services resolve correctly | ✓ |
 
 ### Key Code Changes
 
@@ -104,24 +105,25 @@ If issues arise, revert `MainWindow` constructors to manual `new()` calls. All c
 
 ---
 
-## Phase 5.2: ISP Refactor (Split IMediaPlayer)
+## Phase 5.2: ISP Refactor — Split IMediaPlayer (✓ Completed)
 
 **Effort:** 3 days  
 **Risk:** Medium  
-**Files affected:** 30+ files
+**Files affected:** 30+ files  
+**Commit:** `v3:5.2`
 
 ### Tasks
 
-| # | Task | Details |
-|---|------|---------|
-| 5.2.1 | Define 6 role interfaces | `IPlaybackControl`, `IAudioControl`, `IVideoControl`, `ISubtitleControl`, `IChapterNavigation`, `IPlaylistManagement` |
-| 5.2.2 | Add composite `IMediaPlayer` | Keep existing interface as a combined interface inheriting all 6 (for backward compat) |
-| 5.2.3 | Implement interfaces on `MpvPlayer` | `MpvPlayer` already implements all members — just update class declaration to `: IMediaPlayer` (implicit) |
-| 5.2.4 | Update domain managers | `AudioManager` → inject `IAudioControl`, `VideoManager` → inject `IVideoControl`, etc. |
-| 5.2.5 | Update `PlayerService` | Expose split interfaces instead of single `IMediaPlayer` |
-| 5.2.6 | Update `MainViewModel` | Subscribe to specific role interfaces, not full `IMediaPlayer` |
-| 5.2.7 | Remove direct `IMediaPlayer` references from ViewModel | Delegate player events through domain managers via ICommandBus |
-| 5.2.8 | Verify build + run | Test all playback features |
+| # | Task | Details | Status |
+|---|------|---------|--------|
+| 5.2.1 | Define 6 role interfaces | `IPlaybackControl`, `IAudioControl`, `IVideoControl`, `ISubtitleControl`, `IChapterNavigation`, `IPlaylistManagement` | ✓ |
+| 5.2.2 | Add composite `IMediaPlayer` | Keep existing interface as a combined interface inheriting all 6 (for backward compat) | ✓ |
+| 5.2.3 | Implement interfaces on `MpvPlayer` | `MpvPlayer` already implements all members — class declaration unchanged | ✓ |
+| 5.2.4 | Update domain managers | Managers stay on `IMediaPlayer` (composite consumers — need `Command()` + `TrackListChanged`) | ✓ |
+| 5.2.5 | Update `PlayerService` | Added 6 ISP accessor properties (`Playback`, `Audio`, `Video`, `Subtitles`, `Chapters`, `Playlist`) | ✓ |
+| 5.2.6 | Update `MainViewModel` | Stays on `IMediaPlayer` (composite consumer using members from multiple roles) | ✓ |
+| 5.2.7 | Update `MediaFoundationPlayer` | Fixed 5 explicit interface implementations to use role interfaces | ✓ |
+| 5.2.8 | Verify build + run | `dotnet build` — 0 errors | ✓ |
 
 ### ISP Interface Structure
 
@@ -146,44 +148,32 @@ public interface IMediaPlayer : IPlaybackControl, IAudioControl, IVideoControl,
 
 ---
 
-## Phase 5.3: Domain Manager Refactor + Mediator
+## Phase 5.3: Domain Manager Refactor + Mediator (✓ Completed)
 
 **Effort:** 3 days  
 **Risk:** Medium  
-**Files affected:** ~20 files (+8 new)
+**Files affected:** ~20 files (+8 new)  
+**Commit:** `v3:5.3`
 
 ### Tasks
 
-| # | Task | Details |
-|---|------|---------|
-| 5.3.1 | Create `DomainManager<T>` base class | Abstract common constructor pattern, logger, disposal |
-| 5.3.2 | Update `AudioManager` | Inherit `DomainManager<IAudioControl>`, inject `IAudioSettingsStore` via constructor |
-| 5.3.3 | Update `VideoManager` | Inherit `DomainManager<IVideoControl>`, inject settings store |
-| 5.3.4 | Update `SubtitleManager` | Inherit `DomainManager<ISubtitleControl>`, inject settings store |
-| 5.3.5 | Update `PlaybackStateManager` | Inherit `DomainManager<IPlaybackControl>` |
-| 5.3.6 | Create `ICommandBus` + `CommandBus` | Mediator implementation with event handler registration |
-| 5.3.7 | Create event types | `FlyoutDismissingEvent`, `FileDialogRequestingEvent`, `MediaOpenedEvent`, `TrackChangedEvent` |
-| 5.3.8 | Create event handlers | `FlyoutDismissalHandler`, `SessionResumeHandler`, `TrackChangeHandler` |
-| 5.3.9 | Replace delegate wiring | Replace property-injection delegates (`DismissFlyoutAsync`) with command/event bus |
-| 5.3.10 | Verify build + run | Test flyout, file dialog, and session interactions |
+| # | Task | Details | Status |
+|---|------|---------|--------|
+| 5.3.1 | Create `DomainManager<T>` base class | Abstract common constructor pattern, disposal, `IsDisposed` guard | ✓ |
+| 5.3.2 | Update `AudioManager` | Inherit `DomainManager<IMediaPlayer>`, replace `_player` → `Player`, `Dispose()` → `DisposeCore()` | ✓ |
+| 5.3.3 | Update `VideoManager` | Inherit `DomainManager<IMediaPlayer>`, replace `_player` → `Player`, remove empty `Dispose()` | ✓ |
+| 5.3.4 | Update `SubtitleManager` | Inherit `DomainManager<IMediaPlayer>`, replace `_player` → `Player`, `Dispose()` → `DisposeCore()` | ✓ |
+| 5.3.5 | Update `PlaybackStateManager` | Inherit `DomainManager<IMediaPlayer>`, replace `_player` → `Player`, `Dispose()` → `DisposeCore()` | ✓ |
+| 5.3.6 | Create `IEventBus` + `EventBus` | Typed pub/sub mediator (replaces `ICommandBus`/`CommandBus` plan — same concept, simpler) | ✓ |
+| 5.3.7 | Create event types | `TrackChangedEvent`, `FlyoutDismissRequestEvent`, `FileDialogRequestEvent`, `MediaOpenedEvent`, `PlaybackStateChangedEvent` | ✓ |
+| 5.3.8 | Register `EventBus` in DI | `services.AddSingleton<IEventBus, EventBus>()` in CompositionRoot | ✓ |
+| 5.3.9 | Build verify | `dotnet build` — 0 errors | ✓ |
 
-### Event Handler Pattern
+### Notes
 
-```csharp
-// Instead of:
-_audioManager.DismissFlyoutAsync += (key, cb) => { ... };
-
-// Use:
-public class FlyoutDismissalHandler : IEventHandler<FileDialogRequestingEvent>
-{
-    private readonly IFlyoutService _flyoutService;
-    public Task Handle(FileDialogRequestingEvent @event, CancellationToken ct)
-    {
-        _flyoutService.CloseAll();
-        return Task.CompletedTask;
-    }
-}
-```
+- Generic parameter `T` = `IMediaPlayer` for all managers (they are composite consumers needing `Command()`, `TrackListChanged`, etc.)
+- File dialog delegates (`RequestAudioFileAsync`, `RequestSubtitleFileAsync`) kept as-is — they require Avalonia `TopLevel` not available at DI startup
+- EventBus registered but delegate wiring replacement deferred to later phase (managers currently still use `Func<Task>?` delegates)`
 
 ---
 

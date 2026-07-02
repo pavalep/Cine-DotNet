@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Cine.Avalonia.Infrastructure;
 using Cine.Media.Interfaces;
 using Cine.Media.Models;
 using Cine.Avalonia.Helpers;
@@ -16,13 +17,8 @@ namespace Cine.Avalonia.State;
 ///
 /// Each setter immediately applies the value to the player via IMediaPlayer.
 /// </summary>
-public sealed class VideoManager : INotifyPropertyChanged, IDisposable
+public sealed class VideoManager : DomainManager<IMediaPlayer>, INotifyPropertyChanged
 {
-    private readonly IMediaPlayer _player;
-    private bool _disposed;
-
-    // ── Video Filters ──
-
     // ── Video Tracks ──
     private int _currentVideoTrackId = -1;
 
@@ -38,9 +34,8 @@ public sealed class VideoManager : INotifyPropertyChanged, IDisposable
         return col;
     });
 
-    public VideoManager(IMediaPlayer player)
+    public VideoManager(IMediaPlayer player) : base(player)
     {
-        _player = player ?? throw new ArgumentNullException(nameof(player));
         // Note: track menus are lazily created on first access.
     }
 
@@ -50,32 +45,32 @@ public sealed class VideoManager : INotifyPropertyChanged, IDisposable
 
     public double ContrastValue
     {
-        get => _player.Contrast;
-        set { _player.Contrast = value; OnPropertyChanged(); }
+        get => Player.Contrast;
+        set { Player.Contrast = value; OnPropertyChanged(); }
     }
 
     public double BrightnessValue
     {
-        get => _player.Brightness;
-        set { _player.Brightness = value; OnPropertyChanged(); }
+        get => Player.Brightness;
+        set { Player.Brightness = value; OnPropertyChanged(); }
     }
 
     public double GammaValue
     {
-        get => _player.Gamma;
-        set { _player.Gamma = value; OnPropertyChanged(); }
+        get => Player.Gamma;
+        set { Player.Gamma = value; OnPropertyChanged(); }
     }
 
     public double SaturationValue
     {
-        get => _player.Saturation;
-        set { _player.Saturation = value; OnPropertyChanged(); }
+        get => Player.Saturation;
+        set { Player.Saturation = value; OnPropertyChanged(); }
     }
 
     public double HueValue
     {
-        get => _player.Hue;
-        set { _player.Hue = value; OnPropertyChanged(); }
+        get => Player.Hue;
+        set { Player.Hue = value; OnPropertyChanged(); }
     }
 
     #endregion
@@ -84,14 +79,14 @@ public sealed class VideoManager : INotifyPropertyChanged, IDisposable
 
     public double ZoomValue
     {
-        get => _player.Zoom;
-        set { _player.Zoom = value; OnPropertyChanged(); }
+        get => Player.Zoom;
+        set { Player.Zoom = value; OnPropertyChanged(); }
     }
 
     public double AspectRatioValue
     {
-        get => _player.AspectRatio;
-        set { _player.AspectRatio = value; OnPropertyChanged(); }
+        get => Player.AspectRatio;
+        set { Player.AspectRatio = value; OnPropertyChanged(); }
     }
 
     public void ResetZoom() => ZoomValue = 0;
@@ -102,12 +97,12 @@ public sealed class VideoManager : INotifyPropertyChanged, IDisposable
 
     #region Rotation & Flip
 
-    public void RotateLeft() => _player.Command("set", "video-rotate", "90");
-    public void RotateRight() => _player.Command("set", "video-rotate", "270");
-    public void ResetRotation() => _player.Command("set", "video-rotate", "0");
-    public void FlipHorizontal() => _player.Command("vf", "toggle", "hflip");
-    public void FlipVertical() => _player.Command("vf", "toggle", "vflip");
-    public void ResetFlip() => _player.Command("vf", "del", "@hflip", "@vflip");
+    public void RotateLeft() => Player.Command("set", "video-rotate", "90");
+    public void RotateRight() => Player.Command("set", "video-rotate", "270");
+    public void ResetRotation() => Player.Command("set", "video-rotate", "0");
+    public void FlipHorizontal() => Player.Command("vf", "toggle", "hflip");
+    public void FlipVertical() => Player.Command("vf", "toggle", "vflip");
+    public void ResetFlip() => Player.Command("vf", "del", "@hflip", "@vflip");
 
     #endregion
 
@@ -126,14 +121,14 @@ public sealed class VideoManager : INotifyPropertyChanged, IDisposable
 
         if (item.TrackIndex >= 0)
         {
-            _player.SelectVideoTrack(item.TrackIndex);
+            Player.SelectVideoTrack(item.TrackIndex);
             _currentVideoTrackId = item.TrackIndex;
             foreach (var t in VideoTracks) t.RefreshSelection(false);
             item.RefreshSelection(true);
         }
         else
         {
-            _player.SelectVideoTrack(-1);
+            Player.SelectVideoTrack(-1);
             _currentVideoTrackId = -1;
             foreach (var t in VideoTracks) t.RefreshSelection(false);
             item.RefreshSelection(true);
@@ -209,11 +204,4 @@ public sealed class VideoManager : INotifyPropertyChanged, IDisposable
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 
-    // ── Cleanup ──
-
-    public void Dispose()
-    {
-        if (_disposed) return;
-        _disposed = true;
-    }
 }

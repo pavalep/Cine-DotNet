@@ -9,6 +9,7 @@ using Cine.Media.Events;
 using Cine.Media.Interfaces;
 using Cine.Media.Models;
 using Cine.Avalonia.Helpers;
+using Cine.Avalonia.Infrastructure;
 using Cine.Avalonia.Models;
 using Cine.Avalonia.Services;
 
@@ -21,10 +22,8 @@ namespace Cine.Avalonia.State;
 /// Subscribes to IMediaPlayer events once and exposes unified properties + events.
 /// All UI code reads from / subscribes to this manager.
 /// </summary>
-public sealed class AudioManager : IAudioManager
+public sealed class AudioManager : DomainManager<IMediaPlayer>, IAudioManager
 {
-    private readonly IMediaPlayer _player;
-    private bool _disposed;
 
     // ── Volume / Mute ──
     private double _volume = 50;
@@ -67,18 +66,16 @@ public sealed class AudioManager : IAudioManager
         return col;
     });
 
-    public AudioManager(IMediaPlayer player)
+    public AudioManager(IMediaPlayer player) : base(player)
     {
-        _player = player ?? throw new ArgumentNullException(nameof(player));
-
         // Sync initial state from player
-        _volume = Math.Clamp(_player.Volume, 0, VolumeMax);
-        _isMuted = _player.IsMuted;
-        _audioDelay = _player.AudioDelay;
+        _volume = Math.Clamp(Player.Volume, 0, VolumeMax);
+        _isMuted = Player.IsMuted;
+        _audioDelay = Player.AudioDelay;
 
         // Subscribe to player events
-        _player.VolumeChanged += OnPlayerVolumeChanged;
-        _player.TrackListChanged += OnPlayerTrackListChanged;
+        Player.VolumeChanged += OnPlayerVolumeChanged;
+        Player.TrackListChanged += OnPlayerTrackListChanged;
 
         // Note: track menus are lazily created on first access.
     }
@@ -93,7 +90,7 @@ public sealed class AudioManager : IAudioManager
         set => VolumeValue = value;
     }
 
-    public double VolumeMax => _player.VolumeMax;
+    public double VolumeMax => Player.VolumeMax;
 
     public string VolumeText => $"{_volume:F0}%";
 
@@ -105,7 +102,7 @@ public sealed class AudioManager : IAudioManager
             var clamped = Math.Clamp(value, 0, VolumeMax);
             if (Math.Abs(_volume - clamped) < 0.001) return;
             _volume = clamped;
-            _player.Volume = clamped;
+            Player.Volume = clamped;
             OnPropertyChanged();
             OnPropertyChanged(nameof(Volume));
             OnPropertyChanged(nameof(VolumeText));
@@ -121,7 +118,7 @@ public sealed class AudioManager : IAudioManager
         {
             if (_isMuted == value) return;
             _isMuted = value;
-            _player.Mute(value);
+            Player.Mute(value);
             OnPropertyChanged();
             VolumeChanged?.Invoke(this, EventArgs.Empty);
             MarkDirty();
@@ -217,7 +214,7 @@ public sealed class AudioManager : IAudioManager
                 filters.Add("lavfi=[dialoguenhancer]");
 
             if (filters.Count > 0)
-                _player.Command("set", "af", string.Join(",", filters));
+                Player.Command("set", "af", string.Join(",", filters));
         }
         catch (Exception ex)
         {
@@ -246,7 +243,7 @@ public sealed class AudioManager : IAudioManager
         set
         {
             _audioDelay = value;
-            _player.AudioDelay = value;
+            Player.AudioDelay = value;
             OnPropertyChanged();
             MarkDirty();
         }
@@ -295,7 +292,7 @@ public sealed class AudioManager : IAudioManager
 
         if (item.DisplayName == "None")
         {
-            _player.SelectAudioTrack(-1);
+            Player.SelectAudioTrack(-1);
             _currentAudioTrackId = -1;
             foreach (var t in AudioTracks) t.RefreshSelection(false);
             item.RefreshSelection(true);
@@ -305,7 +302,7 @@ public sealed class AudioManager : IAudioManager
 
         if (item.TrackIndex >= 0)
         {
-            _player.SelectAudioTrack(item.TrackIndex);
+            Player.SelectAudioTrack(item.TrackIndex);
             _currentAudioTrackId = item.TrackIndex;
             foreach (var t in AudioTracks) t.RefreshSelection(false);
             item.RefreshSelection(true);
@@ -327,8 +324,9 @@ public sealed class AudioManager : IAudioManager
             var path = await RequestAudioFileAsync();
             if (!string.IsNullOrWhiteSpace(path))
             {
-                var player = _player;
+                var player = Player;
                 await Task.Run(() => player.AddAudio(path));
+
             }
         }
         catch (Exception ex)
@@ -473,7 +471,7 @@ public sealed class AudioManager : IAudioManager
     /// <summary>Mark state as dirty and schedule a debounced save (2s).</summary>
     private void MarkDirty()
     {
-        if (_disposed) return;
+        if (IsDisposed) return;
         _dirty = true;
         _debounceTimer?.Dispose();
         _debounceTimer = new System.Threading.Timer(_ =>
@@ -526,11 +524,11 @@ public sealed class AudioManager : IAudioManager
             return;
         }
 
-        var playerVolume = Math.Clamp(_player.Volume, 0, VolumeMax);
+        var playerVolume = Math.Clamp(Player.Volume, 0, VolumeMax);
         if (Math.Abs(_volume - playerVolume) >= 0.001)
         {
             _volume = playerVolume;
-            _isMuted = _player.IsMuted;
+            _isMuted = Player.IsMuted;
             OnPropertyChanged(nameof(VolumeValue));
             OnPropertyChanged(nameof(Volume));
             OnPropertyChanged(nameof(VolumeText));
@@ -561,11 +559,8 @@ public sealed class AudioManager : IAudioManager
 
     // ── Cleanup ──
 
-    public void Dispose()
+    protected override void DisposeCore()
     {
-        if (_disposed) return;
-        _disposed = true;
-
         // Force-save before shutdown
         try
         {
@@ -585,7 +580,7 @@ public sealed class AudioManager : IAudioManager
 
         _debounceTimer?.Dispose();
         _debounceTimer = null;
-        _player.VolumeChanged -= OnPlayerVolumeChanged;
-        _player.TrackListChanged -= OnPlayerTrackListChanged;
+        Player.VolumeChanged -= OnPlayerVolumeChanged;
+        Player.TrackListChanged -= OnPlayerTrackListChanged;
     }
 }

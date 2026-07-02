@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 using Cine.Avalonia.Helpers;
+using Cine.Avalonia.Infrastructure;
 using Cine.Avalonia.Models;
 using Cine.Avalonia.Services;
 using Cine.Core.Services;
@@ -23,12 +24,10 @@ namespace Cine.Avalonia.State;
 /// Single source of truth — subscribes directly to player events.
 /// Handles persistence with debounced auto-save and session override.
 /// </summary>
-public sealed class SubtitleManager : ISubtitleManager
+public sealed class SubtitleManager : DomainManager<IMediaPlayer>, ISubtitleManager
 {
-    private readonly IMediaPlayer _player;
     private readonly SubtitleSettingsStore _store;
     private readonly ILogger _log;
-    private bool _disposed;
 
     // ── Tracks ──
     private int _currentSubtitleTrackId = -1;
@@ -73,9 +72,8 @@ public sealed class SubtitleManager : ISubtitleManager
     // ── Track menu — populated by RebuildSubtitleTracks() on first subtitle TrackListChanged event ──
     private readonly ObservableCollection<TrackMenuItem> _subtitleTracks = new();
 
-    public SubtitleManager(IMediaPlayer player)
+    public SubtitleManager(IMediaPlayer player) : base(player)
     {
-        _player = player ?? throw new ArgumentNullException(nameof(player));
         _store = new SubtitleSettingsStore();
         _log = global::Cine.Core.Log.Default;
 
@@ -108,10 +106,10 @@ public sealed class SubtitleManager : ISubtitleManager
         // Subscribe directly to player events
         _trackListChangedHandler = OnSubtitleTrackListChanged;
         _subPropHandler = OnSubtitlePropertyChanged;
-        _player.TrackListChanged += _trackListChangedHandler;
-        _player.SubtitlePropertyChanged += _subPropHandler;
-        _player.Opened += OnPlayerOpened;
-        _player.Error += OnPlayerError;
+        Player.TrackListChanged += _trackListChangedHandler;
+        Player.SubtitlePropertyChanged += _subPropHandler;
+        Player.Opened += OnPlayerOpened;
+        Player.Error += OnPlayerError;
         _log.Debug("Constructor: subscribed to player events (TrackListChanged, SubtitlePropertyChanged, Opened, Error)");
 
         // Pre-populate track menu with pseudo entries so "+ Add Subtitles…"
@@ -138,7 +136,7 @@ public sealed class SubtitleManager : ISubtitleManager
             if (_isSubtitleEnabled == value) return;
             _isSubtitleEnabled = value;
             _log.Debug("IsSubtitleEnabled = {Enabled}", value);
-            _player.SetSubtitleVisibility(value);
+            Player.SetSubtitleVisibility(value);
             MarkDirty();
             OnPropertyChanged();
         }
@@ -163,7 +161,7 @@ public sealed class SubtitleManager : ISubtitleManager
             if (Math.Abs(_subtitleDelay - value) < 0.01f) return;
             _subtitleDelay = value;
             _log.Debug("SubtitleDelay = {Delay}s", value);
-            _player.SubtitleDelay = value;
+            Player.SubtitleDelay = value;
             MarkDirty();
             OnPropertyChanged();
         }
@@ -178,7 +176,7 @@ public sealed class SubtitleManager : ISubtitleManager
             if (_subtitlePosition == clamped) return;
             _subtitlePosition = clamped;
             _log.Debug("SubtitlePosition = {Pos}%", clamped);
-            _player.SetSubtitlePosition(clamped);
+            Player.SetSubtitlePosition(clamped);
             MarkDirty();
             OnPropertyChanged();
         }
@@ -193,7 +191,7 @@ public sealed class SubtitleManager : ISubtitleManager
             if (Math.Abs(_subtitleFontScale - value) < 0.01) return;
             _subtitleFontScale = value;
             _log.Debug("SubtitleFontScale = {Scale}× (mpv: {Mpv})", value, value * 24);
-            _player.SetSubtitleFontSize(value * 24);
+            Player.SetSubtitleFontSize(value * 24);
             MarkDirty();
             OnPropertyChanged();
         }
@@ -208,7 +206,7 @@ public sealed class SubtitleManager : ISubtitleManager
             if (_subtitleFont == value) return;
             _subtitleFont = value;
             _log.Debug("SubtitleFont = {Font}", value);
-            _player.SetSubtitleFont(value);
+            Player.SetSubtitleFont(value);
             MarkDirty();
             OnPropertyChanged();
         }
@@ -224,7 +222,7 @@ public sealed class SubtitleManager : ISubtitleManager
             if (Math.Abs(_subtitleBorderSize - clamped) < 0.01) return;
             _subtitleBorderSize = clamped;
             _log.Debug("SubtitleBorderSize = {Border}", clamped);
-            _player.SetSubtitleBorderSize(clamped);
+            Player.SetSubtitleBorderSize(clamped);
             MarkDirty();
             OnPropertyChanged();
         }
@@ -240,7 +238,7 @@ public sealed class SubtitleManager : ISubtitleManager
             if (Math.Abs(_subtitleShadowOffset - clamped) < 0.01) return;
             _subtitleShadowOffset = clamped;
             _log.Debug("SubtitleShadowOffset = {Shadow}", clamped);
-            _player.SetSubtitleShadowOffset(clamped);
+            Player.SetSubtitleShadowOffset(clamped);
             MarkDirty();
             OnPropertyChanged();
         }
@@ -255,7 +253,7 @@ public sealed class SubtitleManager : ISubtitleManager
             if (_subtitleColor == value) return;
             _subtitleColor = value;
             _log.Debug("SubtitleColor = {Color}", value);
-            _player.SetSubtitleColor(value);
+            Player.SetSubtitleColor(value);
             MarkDirty();
             OnPropertyChanged();
         }
@@ -271,7 +269,7 @@ public sealed class SubtitleManager : ISubtitleManager
             if (Math.Abs(_subtitleOpacity - clamped) < 0.01) return;
             _subtitleOpacity = clamped;
             _log.Debug("SubtitleOpacity = {Opac}", clamped);
-            _player.SetSubtitleOpacity(clamped);
+            Player.SetSubtitleOpacity(clamped);
             MarkDirty();
             OnPropertyChanged();
         }
@@ -287,7 +285,7 @@ public sealed class SubtitleManager : ISubtitleManager
             if (Math.Abs(_subtitleBlur - clamped) < 0.01) return;
             _subtitleBlur = clamped;
             _log.Debug("SubtitleBlur = {Blur}", clamped);
-            _player.SetSubtitleBlur(clamped);
+            Player.SetSubtitleBlur(clamped);
             MarkDirty();
             OnPropertyChanged();
         }
@@ -302,7 +300,7 @@ public sealed class SubtitleManager : ISubtitleManager
             if (_subtitleBold == value) return;
             _subtitleBold = value;
             _log.Debug("SubtitleBold = {Bold}", value);
-            _player.SetSubtitleBold(value);
+            Player.SetSubtitleBold(value);
             MarkDirty();
             OnPropertyChanged();
         }
@@ -673,7 +671,7 @@ public sealed class SubtitleManager : ISubtitleManager
                 if (forcedItem != null)
                 {
                     forcedItem.IsSelected = true;
-                    _player.SelectSubtitleTrack(forcedId);
+                    Player.SelectSubtitleTrack(forcedId);
                     CurrentSubtitleTrackId = forcedId;
                     IsSubtitleEnabled = true;
                     HasTextSubtitles = !forcedTrack.IsBitmap;
@@ -724,7 +722,7 @@ public sealed class SubtitleManager : ISubtitleManager
         if (item.DisplayName == "None" || item.TrackIndex == -2)
         {
             _log.Debug("OnSelectSubtitle: disabling subtitles (None)");
-            _player.SelectSubtitleTrack(-1);
+            Player.SelectSubtitleTrack(-1);
             CurrentSubtitleTrackId = -1;
             IsSubtitleEnabled = false;
             foreach (var t in SubtitleTracks) t.RefreshSelection(false);
@@ -737,7 +735,7 @@ public sealed class SubtitleManager : ISubtitleManager
         if (item.TrackIndex >= 0)
         {
             _log.Debug("OnSelectSubtitle: selecting track id={TrackId}", item.TrackIndex);
-            _player.SelectSubtitleTrack(item.TrackIndex);
+            Player.SelectSubtitleTrack(item.TrackIndex);
             CurrentSubtitleTrackId = item.TrackIndex;
             IsSubtitleEnabled = true;
             foreach (var t in SubtitleTracks) t.RefreshSelection(false);
@@ -825,17 +823,17 @@ public sealed class SubtitleManager : ISubtitleManager
             EventHandler<TrackListChangedEventArgs>? handler = null;
             handler = (_, args) =>
             {
-                _player.TrackListChanged -= handler;
+                Player.TrackListChanged -= handler;
                 tcs.TrySetResult(args.SubtitleTracks?.ToArray() ?? Array.Empty<SubtitleSource>());
             };
-            _player.TrackListChanged += handler;
+            Player.TrackListChanged += handler;
 
             // Add subtitles synchronously (no Task.Run — see note above)
             foreach (var subFile in externalFiles)
             {
                 try
                 {
-                    _player.AddSubtitle(subFile);
+                    Player.AddSubtitle(subFile);
                     _log.Debug("DispatchAddExternal: added {SubFile}", subFile);
                 }
                 catch (Exception ex)
@@ -867,9 +865,9 @@ public sealed class SubtitleManager : ISubtitleManager
             else
             {
                 _log.Warning("DispatchAddExternal: TrackListChanged timed out");
-                _player.TrackListChanged -= handler;
+                Player.TrackListChanged -= handler;
 
-                latestTracks = _player.SubtitleSources ?? Array.Empty<SubtitleSource>();
+                latestTracks = Player.SubtitleSources ?? Array.Empty<SubtitleSource>();
                 if (latestTracks.Length > 0)
                     _log.Debug("DispatchAddExternal: recovered {Count} subtitle tracks via player snapshot", latestTracks.Length);
             }
@@ -1140,11 +1138,8 @@ public sealed class SubtitleManager : ISubtitleManager
     //  Lifecycle
     // ═══════════════════════════════════════════════
 
-    public void Dispose()
+    protected override void DisposeCore()
     {
-        if (_disposed) return;
-        _disposed = true;
-
         // Force-save before disposing
         FlushSave();
 
@@ -1153,11 +1148,11 @@ public sealed class SubtitleManager : ISubtitleManager
         _saveTimer = null;
 
         if (_trackListChangedHandler != null)
-            _player.TrackListChanged -= _trackListChangedHandler;
+            Player.TrackListChanged -= _trackListChangedHandler;
         if (_subPropHandler != null)
-            _player.SubtitlePropertyChanged -= _subPropHandler;
-        _player.Opened -= OnPlayerOpened;
-        _player.Error -= OnPlayerError;
+            Player.SubtitlePropertyChanged -= _subPropHandler;
+        Player.Opened -= OnPlayerOpened;
+        Player.Error -= OnPlayerError;
     }
 }
 

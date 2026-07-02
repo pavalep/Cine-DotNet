@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using Cine.Avalonia.Infrastructure;
 using Cine.Media.Events;
 using Cine.Media.Interfaces;
 using Cine.Media.Models;
@@ -18,10 +19,8 @@ namespace Cine.Avalonia.State;
 /// This eliminates the play/pause icon desync caused by 6+ scattered code paths
 /// independently setting icon state in unpredictable order.
 /// </summary>
-public sealed class PlaybackStateManager : INotifyPropertyChanged, IDisposable
+public sealed class PlaybackStateManager : DomainManager<IMediaPlayer>, INotifyPropertyChanged
 {
-    private readonly IMediaPlayer _player;
-    private bool _disposed;
 
     // ── Backing fields ──
     private PlaybackState _state = PlaybackState.Stopped;
@@ -35,22 +34,20 @@ public sealed class PlaybackStateManager : INotifyPropertyChanged, IDisposable
     private bool _isMediaLoaded;
     private string _filePath = string.Empty;
 
-    public PlaybackStateManager(IMediaPlayer player)
+    public PlaybackStateManager(IMediaPlayer player) : base(player)
     {
-        _player = player ?? throw new ArgumentNullException(nameof(player));
-
         // Subscribe to player events — this is the ONLY place in the app where
         // player events are wired to state management. All other code reads from
         // this manager's properties or subscribes to its events.
-        _player.Opened += OnPlayerOpened;
-        _player.PlaybackStateChangedEvent += OnPlayerPlaybackStateChanged;
-        _player.PositionChanged += OnPlayerPositionChanged;
-        _player.VolumeChanged += OnPlayerVolumeChanged;
-        _player.TrackListChanged += OnPlayerTrackListChanged;
-        _player.ChapterListChanged += OnPlayerChapterListChanged;
-        _player.LoopChangedEvent += OnPlayerLoopChanged;
-        _player.PlaylistChanged += OnPlayerPlaylistChanged;
-        _player.Error += OnPlayerError;
+        Player.Opened += OnPlayerOpened;
+        Player.PlaybackStateChangedEvent += OnPlayerPlaybackStateChanged;
+        Player.PositionChanged += OnPlayerPositionChanged;
+        Player.VolumeChanged += OnPlayerVolumeChanged;
+        Player.TrackListChanged += OnPlayerTrackListChanged;
+        Player.ChapterListChanged += OnPlayerChapterListChanged;
+        Player.LoopChangedEvent += OnPlayerLoopChanged;
+        Player.PlaylistChanged += OnPlayerPlaylistChanged;
+        Player.Error += OnPlayerError;
 
         // Read initial state
         Refresh();
@@ -201,7 +198,7 @@ public sealed class PlaybackStateManager : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public double VolumeMax => _player.VolumeMax;
+    public double VolumeMax => Player.VolumeMax;
 
     // ── Events ──
 
@@ -245,16 +242,16 @@ public sealed class PlaybackStateManager : INotifyPropertyChanged, IDisposable
     {
         try
         {
-            State = _player.State;
-            _position = _player.Position;
-            _duration = _player.Duration;
+            State = Player.State;
+            _position = Player.Position;
+            _duration = Player.Duration;
             _normalizedPosition = _duration.TotalSeconds > 0
                 ? _position.TotalSeconds / _duration.TotalSeconds
                 : 0;
-            _volume = Math.Clamp(_player.Volume, 0, VolumeMax);
-            _isMuted = _player.IsMuted;
-            _speed = _player.Speed;
-            _filePath = _player.CurrentPath;
+            _volume = Math.Clamp(Player.Volume, 0, VolumeMax);
+            _isMuted = Player.IsMuted;
+            _speed = Player.Speed;
+            _filePath = Player.CurrentPath;
             _isMediaLoaded = !string.IsNullOrEmpty(_filePath);
 
             OnPropertyChanged(nameof(Position));
@@ -373,19 +370,16 @@ public sealed class PlaybackStateManager : INotifyPropertyChanged, IDisposable
 
     // ── Cleanup ──
 
-    public void Dispose()
+    protected override void DisposeCore()
     {
-        if (_disposed) return;
-        _disposed = true;
-
-        _player.Opened -= OnPlayerOpened;
-        _player.PlaybackStateChangedEvent -= OnPlayerPlaybackStateChanged;
-        _player.PositionChanged -= OnPlayerPositionChanged;
-        _player.VolumeChanged -= OnPlayerVolumeChanged;
-        _player.TrackListChanged -= OnPlayerTrackListChanged;
-        _player.ChapterListChanged -= OnPlayerChapterListChanged;
-        _player.LoopChangedEvent -= OnPlayerLoopChanged;
-        _player.PlaylistChanged -= OnPlayerPlaylistChanged;
-        _player.Error -= OnPlayerError;
+        Player.Opened -= OnPlayerOpened;
+        Player.PlaybackStateChangedEvent -= OnPlayerPlaybackStateChanged;
+        Player.PositionChanged -= OnPlayerPositionChanged;
+        Player.VolumeChanged -= OnPlayerVolumeChanged;
+        Player.TrackListChanged -= OnPlayerTrackListChanged;
+        Player.ChapterListChanged -= OnPlayerChapterListChanged;
+        Player.LoopChangedEvent -= OnPlayerLoopChanged;
+        Player.PlaylistChanged -= OnPlayerPlaylistChanged;
+        Player.Error -= OnPlayerError;
     }
 }
