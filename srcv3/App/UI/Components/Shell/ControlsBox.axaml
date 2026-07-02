@@ -10,6 +10,7 @@
     <Border x:Name="ControlsBoxBorder" Classes="controls-box"
             Background="{StaticResource ControlsGradient}"
             HorizontalAlignment="Stretch"
+            MinHeight="74"
             IsHitTestVisible="True"
             IsVisible="False"
             ZIndex="15">

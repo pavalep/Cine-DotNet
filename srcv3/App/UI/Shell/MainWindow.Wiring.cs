@@ -94,6 +94,13 @@ public partial class MainWindow
             else _viewModel?.SeekBackward();
         };
 
+        // Pause auto-hide timer while seeking to prevent flicker
+        // (time hint popover triggers show/hide cycle during seek)
+        _controlsBox.SeekBarControl.SeekStarted += (_, _) =>
+            _autoHideTimer?.Stop();
+        _controlsBox.SeekBarControl.SeekEnded += (_, _) =>
+            _autoHideTimer?.Start();
+
         InitializeAutoHide();
         InitializeSessionSave();
         InitializeResponsiveLayout();

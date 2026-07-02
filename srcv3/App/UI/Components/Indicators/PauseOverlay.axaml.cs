@@ -27,9 +27,16 @@ public partial class PauseOverlay : AvaloniaUserControl
         await FadeTo(1, fadeDurationMs, ct);
     }
 
-    public void Hide()
+    public async void Hide()
     {
         _fadeCts?.Cancel();
+        _fadeCts = new CancellationTokenSource();
+        var ct = _fadeCts.Token;
+        try
+        {
+            await FadeTo(0, 200, ct);
+        }
+        catch (OperationCanceledException) { /* expected when Show() is called mid-fade */ }
         PauseIndicator.IsVisible = false;
         PauseIndicator.Opacity = 0;
     }

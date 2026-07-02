@@ -322,6 +322,7 @@ public partial class MainWindow
             _headerBar.IsVisible = WindowState != WindowState.FullScreen;
             _fullscreenHeader.IsVisible = WindowState == WindowState.FullScreen;
             _controlsBox.IsVisible = true;
+            ShowUiControls();  // Restore proper opacity and resume auto-hide timer
             FocusModeIndicator.IsVisible = false;
             ShowOsdNotification(MaterialIconKind.MoonWaxingCrescent, "Focus Mode Off");
         }
@@ -463,10 +464,20 @@ public partial class MainWindow
     //  Pointer / Click Handlers (referenced by MainWindow.axaml)
     // ─────────────────────────────────────────────────────────────
 
+    private DateTime _lastVideoPressTime = DateTime.MinValue;
+
     private void OnVideoPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
         {
+            // Skip play/pause on the second press of a double-click —
+            // the DoubleTapped handler will handle fullscreen toggle.
+            var now = DateTime.UtcNow;
+            var elapsed = (now - _lastVideoPressTime).TotalMilliseconds;
+            _lastVideoPressTime = now;
+            if (elapsed < 500)
+                return;
+
             // If any flyout is open, the click was just dismissing the flyout —
             // don't toggle play/pause.
             if (_controlsBox.HasActiveFlyouts ||

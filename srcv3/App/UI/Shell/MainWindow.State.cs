@@ -160,10 +160,17 @@ public partial class MainWindow
                 {
                     _isLoading = false;
                     _spinnerOverlay.Stop();
-                    if (StartPage?.IsVisible == false) StartPage.IsVisible = true;
+                    if (StartPage?.IsVisible == false)
+                    {
+                        StartPage.IsVisible = true;
+                        StartPage.Opacity = 0;
+                        Dispatcher.UIThread.Post(() =>
+                        {
+                            if (StartPage != null) StartPage.Opacity = 1;
+                        }, DispatcherPriority.Render);
+                    }
                     PlaybackBackground.IsVisible = true;
-                    _controlsBox.SetControlsVisibility(false);
-                    _controlsBox.ControlsBoxElement.IsVisible = false;
+                    _controlsBox?.SetControlsVisibility(false);
                     _headerBar.HideOpenMenu();
                     _headerBar.HidePrimaryMenu();
                     _headerBar.SetPipVisibility(false);

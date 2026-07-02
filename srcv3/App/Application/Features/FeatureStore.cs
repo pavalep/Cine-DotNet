@@ -27,7 +27,7 @@ public sealed class FeatureStore : IFeatureStore
     public void Reload()
     {
         var asm = Assembly.GetExecutingAssembly();
-        var resourceName = "Cine.Avalonia.Features.feature-definitions.json";
+        var resourceName = "App.Application.Features.feature-definitions.json";
 
         using var stream = asm.GetManifestResourceStream(resourceName)
                         ?? throw new InvalidOperationException(

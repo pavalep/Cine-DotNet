@@ -3,6 +3,7 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Media;
 using Cine.Avalonia.ViewModels;
 using PointerEventArgs = Avalonia.Input.PointerEventArgs;
 using PointerPressedEventArgs = Avalonia.Input.PointerPressedEventArgs;
@@ -202,7 +203,7 @@ public partial class SeekBar : AvaloniaUserControl
             : Math.Clamp(_lastPosition.TotalSeconds / _lastDuration.TotalSeconds, 0.0, 1.0);
 
         var thumbWidth = SeekThumb.Bounds.Width;
-        if (thumbWidth <= 0) thumbWidth = 20;
+        if (thumbWidth <= 0) thumbWidth = 16;
         var thumbHalf = thumbWidth / 2.0;
 
         var thumbLeft = seekValue * (w - thumbWidth);
@@ -301,6 +302,13 @@ public partial class SeekBar : AvaloniaUserControl
             return;
         _lastSeekMove = now;
 
+        // Thumb hover expansion via ScaleTransform (no layout impact)
+        if (((ScaleTransform)SeekThumb.RenderTransform!).ScaleX < 1.2)
+        {
+            ((ScaleTransform)SeekThumb.RenderTransform!).ScaleX = 1.2;
+            ((ScaleTransform)SeekThumb.RenderTransform!).ScaleY = 1.2;
+        }
+
         var p = e.GetPosition(SeekArea);
         var normalized = GetNormalizedFromPointer(p);
 
@@ -311,7 +319,7 @@ public partial class SeekBar : AvaloniaUserControl
             UpdateSeekBar();
         }
 
-        // Chapter preview popover on hover
+        // Chapter preview popover on hover (shows immediately)
         if (_viewModel.Duration.TotalSeconds > 0)
         {
             var seconds = normalized * _viewModel.Duration.TotalSeconds;
@@ -327,38 +335,47 @@ public partial class SeekBar : AvaloniaUserControl
             else
                 ChapterPreviewText.Text = FormatChapterTime(seconds);
 
-            ChapterPreviewPopover.IsVisible = true;
-            ChapterPreviewPopover.Measure(new AvaloniaSize(double.PositiveInfinity, double.PositiveInfinity));
+            ChapterPreviewPopover.Opacity = 1;
             var trackWidth = SeekArea.Bounds.Width;
             var thumbWidth = SeekThumb.Bounds.Width;
-            if (thumbWidth <= 0) thumbWidth = 20;
+            if (thumbWidth <= 0) thumbWidth = 16;
             var thumbHalf = thumbWidth / 2.0;
             var thumbCenter = normalized * (trackWidth - thumbWidth) + thumbHalf;
 
-            var popoverWidth = ChapterPreviewPopover.DesiredSize.Width;
-            var minPopoverWidth = ChapterPreviewPopover.MinWidth > 0
-                ? ChapterPreviewPopover.MinWidth
-                : 80;
-            var safeMaxWidth = trackWidth * 0.65;
-            var boundedPopoverWidth = Math.Max(minPopoverWidth, Math.Min(popoverWidth, safeMaxWidth));
+            // Height fallback for compact popover (11px font + 3+3 padding ≈ 22px)
+            var popoverHeight = ChapterPreviewPopover.DesiredSize.Height > 0
+                ? ChapterPreviewPopover.DesiredSize.Height
+                : ChapterPreviewPopover.Bounds.Height > 0
+                    ? ChapterPreviewPopover.Bounds.Height
+                    : 22;
+            var yOffset = -(popoverHeight + 6);
 
-            // Clamp position to stay within seek bar bounds with a small margin
+            // Clamp popover within seek bar bounds using MaxWidth (no layout invalidation)
             var marginPx = 6.0;
-            var clampedWidth = Math.Max(marginPx, boundedPopoverWidth);
-            var xPos = thumbCenter - (clampedWidth / 2);
-            xPos = Math.Clamp(xPos, marginPx, Math.Max(marginPx, trackWidth - clampedWidth - marginPx));
+            var maxW = trackWidth - marginPx * 2;
+            var popW = ChapterPreviewPopover.DesiredSize.Width > 0
+                ? ChapterPreviewPopover.DesiredSize.Width
+                : ChapterPreviewPopover.Bounds.Width > 0
+                    ? ChapterPreviewPopover.Bounds.Width
+                    : 40;
+            ChapterPreviewPopover.MaxWidth = Math.Max(40, Math.Min(popW, maxW));
 
-            ChapterPreviewPopover.Width = clampedWidth;
-            // Compute Y offset from popover height + gap above seek bar
-            var popoverHeight = ChapterPreviewPopover.DesiredSize.Height;
-            var yOffset = -(popoverHeight > 0 ? popoverHeight + 4 : 34);
-            ChapterPreviewPopover.Margin = new Thickness(xPos, yOffset, 0, 0);
+            // Position via TranslateTransform — no layout invalidation
+            var xPos = thumbCenter - (ChapterPreviewPopover.MaxWidth / 2);
+            xPos = Math.Clamp(xPos, marginPx, Math.Max(marginPx, trackWidth - ChapterPreviewPopover.MaxWidth - marginPx));
+            var tx = (TranslateTransform)ChapterPreviewPopover.RenderTransform!;
+            tx.X = xPos;
+            tx.Y = yOffset;
         }
     }
 
     private void OnSeekAreaPointerExited(object? sender, PointerEventArgs e)
     {
-        ChapterPreviewPopover.IsVisible = false;
+        ChapterPreviewPopover.Opacity = 0;
+
+        // Shrink thumb back (via ScaleTransform, no layout impact)
+        ((ScaleTransform)SeekThumb.RenderTransform!).ScaleX = 1;
+        ((ScaleTransform)SeekThumb.RenderTransform!).ScaleY = 1;
     }
 
     private void OnSeekAreaPointerWheelChanged(object? sender, PointerWheelEventArgs e)

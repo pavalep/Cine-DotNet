@@ -34,7 +34,7 @@ public partial class VolumeFlyout : AvaloniaUserControl, IFlyoutSource
         set
         {
             _flyoutManager = value;
-            value?.Register("volume", () => _overlay?.HideContent());
+            value?.Register("volume", () => HideFlyout());
         }
     }
 
@@ -90,6 +90,7 @@ public partial class VolumeFlyout : AvaloniaUserControl, IFlyoutSource
             Maximum = 100,
             Value = _viewModel.Volume,
             Width = 120,
+            Height = 120,
             Orientation = global::Avalonia.Layout.Orientation.Vertical,
             IsDirectionReversed = true
         };

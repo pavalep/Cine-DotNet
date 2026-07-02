@@ -100,7 +100,7 @@ public partial class AudioTrackSelector : AvaloniaUserControl, IFlyoutSource
         set
         {
             _flyoutManager = value;
-            value?.Register("audio", () => _overlay?.HideContent());
+            value?.Register("audio", () => HideFlyout());
         }
     }
 
