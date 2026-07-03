@@ -56,6 +56,7 @@ public partial class MainWindow
         // Hover tracking
         _headerBar.HeaderBarElement.PointerEntered += OnHeaderPointerEntered;
         _headerBar.HeaderBarElement.PointerExited += OnHeaderPointerExited;
+        _headerBar.HeaderBarElement.PointerPressed += OnHeaderPointerPressed;
         _controlsBox.ControlsBoxElement.PointerEntered += OnControlsPointerEntered;
         _controlsBox.ControlsBoxElement.PointerExited += OnControlsPointerExited;
         _fullscreenHeader.FullscreenHeaderElement.PointerEntered += OnFullscreenHeaderPointerEntered;

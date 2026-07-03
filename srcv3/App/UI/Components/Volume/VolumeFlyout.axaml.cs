@@ -90,10 +90,10 @@ public partial class VolumeFlyout : AvaloniaUserControl, IFlyoutSource
             Maximum = 100,
             Value = _viewModel.Volume,
             Width = 120,
-            Height = 120,
-            Orientation = global::Avalonia.Layout.Orientation.Vertical,
-            IsDirectionReversed = true
+            Height = 24,
+            Orientation = global::Avalonia.Layout.Orientation.Horizontal,
         };
+        _volumeSlider.Classes.Add("compact");
 
         _volumeSlider.ValueChanged += (_, _) =>
         {
@@ -104,9 +104,25 @@ public partial class VolumeFlyout : AvaloniaUserControl, IFlyoutSource
         var icon = new global::Material.Icons.Avalonia.MaterialIcon
         {
             Kind = GetVolumeIconKind((int)_viewModel.Volume, _viewModel.IsMuted),
-            Width = 18,
-            Height = 18,
+            Width = 20,
+            Height = 20,
             Foreground = (IBrush?)Application.Current?.FindResource("OsdForeground")
+        };
+
+        // Mute button
+        var muteBtn = new global::Avalonia.Controls.Button
+        {
+            Content = icon,
+            Classes = { "circular", "ghost" },
+            Width = 32,
+            Height = 32,
+            Cursor = new global::Avalonia.Input.Cursor(global::Avalonia.Input.StandardCursorType.Hand),
+        };
+        global::Avalonia.Controls.ToolTip.SetTip(muteBtn, "Mute (M)");
+        muteBtn.Click += (_, _) =>
+        {
+            if (_viewModel != null)
+                _viewModel.IsMuted = !_viewModel.IsMuted;
         };
 
         // Update icon when volume or mute state changes
@@ -118,11 +134,24 @@ public partial class VolumeFlyout : AvaloniaUserControl, IFlyoutSource
             }
         };
 
+        // Percentage label
+        var percentLabel = new global::Avalonia.Controls.TextBlock
+        {
+            Text = $"{_viewModel.Volume}%",
+            FontSize = 12,
+            Foreground = (IBrush?)Application.Current?.FindResource("OsdForeground"),
+            VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center,
+            MinWidth = 32,
+        };
+        _volumeSlider.ValueChanged += (_, _) => percentLabel.Text = $"{(int)_volumeSlider.Value}%";
+
         var stack = new global::Avalonia.Controls.StackPanel
         {
-            Spacing = 8,
+            Spacing = 10,
+            Orientation = global::Avalonia.Layout.Orientation.Horizontal,
             HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Center,
-            Children = { icon, _volumeSlider }
+            VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center,
+            Children = { muteBtn, _volumeSlider, percentLabel }
         };
 
         var border = new Border
@@ -131,7 +160,7 @@ public partial class VolumeFlyout : AvaloniaUserControl, IFlyoutSource
             BorderBrush = (IBrush?)Application.Current?.FindResource("PopoverBorder"),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(12, 8),
+            Padding = new Thickness(10, 6),
             Child = stack
         };
 

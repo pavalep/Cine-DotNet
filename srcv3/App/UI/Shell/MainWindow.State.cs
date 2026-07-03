@@ -86,11 +86,13 @@ public partial class MainWindow
     private void OnWindowActivated(object? sender, EventArgs e)
     {
         FadeHeaderAndControls(FocusedOpacity);
+        UpdateFocusBorder(focused: true);
     }
 
     private void OnWindowDeactivated(object? sender, EventArgs e)
     {
         FadeHeaderAndControls(UnfocusedOpacity);
+        UpdateFocusBorder(focused: false);
     }
 
     // =========================================================================

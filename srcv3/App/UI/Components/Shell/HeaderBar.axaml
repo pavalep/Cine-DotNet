@@ -7,16 +7,30 @@
              x:DataType="vm:MainViewModel"
              x:Name="HeaderBarRoot">
     <Border x:Name="HeaderBarBorder" Classes="header-bar"
-            Background="{StaticResource HeaderGradient}"
+            Background="{StaticResource GlassBackground}"
             BorderBrush="{StaticResource AppBorderDim}"
             BorderThickness="0,0,0,1"
             VerticalAlignment="Top"
             HorizontalAlignment="Stretch"
             Height="{StaticResource size-header-bar}"
             IsHitTestVisible="True"
-            ZIndex="20"
-            PointerPressed="OnHeaderPointerPressed">
-        <Grid x:Name="HeaderGrid" Margin="{StaticResource space-h-2}">
+            ZIndex="20">
+        <Grid>
+            <!-- Glass edge highlight (top reflection) -->
+            <Rectangle Fill="{StaticResource GlassEdgeHighlight}" Height="1" VerticalAlignment="Top" />
+            
+            <!-- Glass sheen gradient -->
+            <Rectangle>
+                <Rectangle.Fill>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0.4,1">
+                        <GradientStop Offset="0" Color="{StaticResource GlassSheenStart}" />
+                        <GradientStop Offset="0.5" Color="{StaticResource GlassSheenMid}" />
+                        <GradientStop Offset="1" Color="{StaticResource GlassSheenEnd}" />
+                    </LinearGradientBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+            
+            <Grid x:Name="HeaderGrid" Margin="{StaticResource space-h-2}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
@@ -27,63 +41,14 @@
             <Button Grid.Column="0"
                     x:Name="BtnOpenMenu"
                     IsVisible="False"
+                    Classes="open-menu-trigger"
                     VerticalAlignment="Center"
-                    Margin="{StaticResource space-h-l2-r1}"
-                    Background="{StaticResource AppHover}"
-                    CornerRadius="99"
-                    BorderThickness="0"
-                    Padding="12,6">
+                    Margin="{StaticResource space-h-l2-r1}">
                 <Button.Flyout>
-                    <Flyout Placement="Bottom">
-                        <Border Padding="4"
-                                Background="{StaticResource PopoverBackground}"
-                                BorderBrush="{StaticResource PopoverBorder}"
-                                BorderThickness="1"
-                                CornerRadius="{StaticResource radius-sm}">
-                            <StackPanel x:Name="OpenMenuStack" Width="230" Spacing="2">
-                                <!-- Open File action -->
-                                <Button x:Name="BtnMenuOpenFile"
-                                        Classes="flyout-item">
-                                    <StackPanel Orientation="Horizontal" Spacing="10">
-                                        <materialIcons:MaterialIcon Kind="FileOutline"
-                                            Width="16" Height="16"
-                                            Foreground="{StaticResource TextPrimary}" />
-                                        <TextBlock Text="Open File…"
-                                                   VerticalAlignment="Center"
-                                                   Foreground="{StaticResource TextPrimary}" />
-                                    </StackPanel>
-                                </Button>
-                                <!-- Open Folder action -->
-                                <Button x:Name="BtnMenuOpenFolder"
-                                        Classes="flyout-item">
-                                    <StackPanel Orientation="Horizontal" Spacing="10">
-                                        <materialIcons:MaterialIcon Kind="FolderOutline"
-                                            Width="16" Height="16"
-                                            Foreground="{StaticResource TextPrimary}" />
-                                        <TextBlock Text="Open Folder…"
-                                                   VerticalAlignment="Center"
-                                                   Foreground="{StaticResource TextPrimary}" />
-                                    </StackPanel>
-                                </Button>
-                                <!-- Recent Files divider — populated at runtime by UpdateOpenMenuRecentFiles -->
-                                <Separator x:Name="OpenMenuRecentDivider"
-                                           IsVisible="False"
-                                           Margin="8,4" />
-                            </StackPanel>
-                        </Border>
-                    </Flyout>
+                    <Flyout Placement="Bottom"
+                            Opened="TrackFlyoutOpened"
+                            Closed="TrackFlyoutClosed" />
                 </Button.Flyout>
-                <Button.Styles>
-                    <Style Selector="Button#BtnOpenMenu /template/ ContentPresenter">
-                        <Setter Property="Background" Value="Transparent" />
-                    </Style>
-                    <Style Selector="Button#BtnOpenMenu:pointerover">
-                        <Setter Property="Background" Value="{StaticResource AppHoverStrong}" />
-                    </Style>
-                    <Style Selector="Button#BtnOpenMenu:pressed">
-                        <Setter Property="Background" Value="{StaticResource AppPressed}" />
-                    </Style>
-                </Button.Styles>
                 <StackPanel Orientation="Horizontal" Spacing="{StaticResource space-spacing-1}">
                     <TextBlock Text="Open"
                                Foreground="{StaticResource OsdForeground}"
@@ -91,7 +56,6 @@
                                VerticalAlignment="Center" />
                     <materialIcons:MaterialIcon Kind="MenuDown" Width="8" Height="8"
                         Foreground="{StaticResource OsdForeground}"
-                        Opacity="0.7"
                         VerticalAlignment="Center" />
                 </StackPanel>
             </Button>
@@ -99,7 +63,6 @@
             <!-- Col 1: Window Title (centered) -->
             <Border Grid.Column="1"
                     CornerRadius="{StaticResource radius-xs}"
-                    Background="{StaticResource AppOverlayLight}"
                     Padding="{StaticResource space-3}"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center">
@@ -115,7 +78,8 @@
             <!-- Col 2: PIP + Menu + Window Controls -->
             <StackPanel Grid.Column="2" Orientation="Horizontal"
                         VerticalAlignment="Center"
-                        Spacing="0">
+                        Spacing="0"
+                        Background="Transparent">
                 <ToggleButton x:Name="BtnPip" IsVisible="False"
                               Classes="circular-menu"
                               Margin="{StaticResource space-right-1}"
@@ -155,6 +119,7 @@
                 <!-- Native Window Controls -->
                 <StackPanel Orientation="Horizontal" Spacing="0"
                             IsVisible="True" x:Name="WindowControlsPanel"
+                            Background="Transparent"
                             Margin="{StaticResource space-right-1}">
                     <Button x:Name="BtnMinimize" Click="OnMinimizeClick"
                             Classes="window-control"
@@ -177,6 +142,7 @@
                     </Button>
                 </StackPanel>
             </StackPanel>
+        </Grid>
         </Grid>
     </Border>
 </UserControl>

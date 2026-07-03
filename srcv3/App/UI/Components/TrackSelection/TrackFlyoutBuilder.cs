@@ -411,6 +411,7 @@ public static class TrackFlyoutBuilder
             CornerRadius = new CornerRadius(8),
             Padding = new Thickness(14, 12),
             MinWidth = 220,
+            MaxWidth = 320,
             Child = scrollRoot
         };
 
@@ -510,8 +511,13 @@ public static class TrackFlyoutBuilder
             Text = track.DisplayName,
             FontWeight = isNowPlaying ? FontWeight.SemiBold : FontWeight.Normal,
             FontSize = Token.Size("font-size-body2"),
-            Foreground = isNowPlaying ? AppColors.Accent : AppColors.TextPrimary
+            Foreground = isNowPlaying ? AppColors.Accent : AppColors.TextPrimary,
+            TextTrimming = TextTrimming.CharacterEllipsis
         };
+
+        // ToolTip on the label itself shows the full display name on hover
+        global::Avalonia.Controls.ToolTip.SetTip(text, track.DisplayName);
+        global::Avalonia.Controls.ToolTip.SetShowDelay(text, 400);
 
         // AF2: Subscribe to property changes to update UI reactively
         track.PropertyChanged += (_, e) =>
@@ -534,6 +540,7 @@ public static class TrackFlyoutBuilder
             else if (e.PropertyName == nameof(TrackMenuItem.DisplayName))
             {
                 text.Text = track.DisplayName;
+                global::Avalonia.Controls.ToolTip.SetTip(text, track.DisplayName);
             }
         };
 

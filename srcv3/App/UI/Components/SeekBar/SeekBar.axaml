@@ -9,6 +9,7 @@
         <!-- Seek Area (hexpand, with chapter markers) -->
         <Grid Grid.Column="0"
               x:Name="SeekArea"
+              Height="16"
               Margin="{StaticResource space-h-2}"
               PointerMoved="OnSeekAreaPointerMoved"
               PointerExited="OnSeekAreaPointerExited"
@@ -32,24 +33,20 @@
                     HorizontalAlignment="Left"
                     IsHitTestVisible="False">
                 <Border.Effect>
-                    <DropShadowEffect BlurRadius="8" OffsetY="0" Color="#4D5B9BD5" />
+                    <DropShadowEffect BlurRadius="6" OffsetY="0" Color="#33000000" />
                 </Border.Effect>
             </Border>
 
             <Border x:Name="SeekThumb"
-                    Width="16" Height="16"
-                    CornerRadius="8"
+                    Width="14" Height="14"
+                    CornerRadius="7"
                     Background="{StaticResource ProgressSliderBackground}"
-                    BorderBrush="#33FFFFFF"
-                    BorderThickness="1"
+                    BorderBrush="#44FFFFFF"
+                    BorderThickness="1.5"
                     HorizontalAlignment="Left"
-                    VerticalAlignment="Center"
-                    RenderTransformOrigin="0.5,0.5">
-                <Border.RenderTransform>
-                    <ScaleTransform ScaleX="1" ScaleY="1" />
-                </Border.RenderTransform>
+                    VerticalAlignment="Center">
                 <Border.Effect>
-                    <DropShadowEffect BlurRadius="6" OffsetY="1.5" Color="#4D5B9BD5" />
+                    <DropShadowEffect BlurRadius="4" OffsetY="1" Color="#60000000" />
                 </Border.Effect>
             </Border>
 
@@ -110,11 +107,11 @@
                    Cursor="Hand" />
 
         <Border Grid.Column="2"
-                Width="2" Height="16"
-                Margin="{StaticResource space-h-2}"
-                CornerRadius="2"
+                Width="1" Height="18"
+                Margin="4,0,4,0"
+                CornerRadius="1"
                 Background="{StaticResource TimeSeparatorBackground}"
-                Opacity="0.5"
+                Opacity="0.3"
                 VerticalAlignment="Center" />
 
         <TextBlock Grid.Column="3"

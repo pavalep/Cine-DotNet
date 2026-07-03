@@ -8,7 +8,9 @@
              x:DataType="vm:MainViewModel"
              x:Name="ControlsBoxRoot">
     <Border x:Name="ControlsBoxBorder" Classes="controls-box"
-            Background="{StaticResource ControlsGradient}"
+            Background="{StaticResource GlassBackground}"
+            BorderBrush="{StaticResource AppBorderDim}"
+            BorderThickness="0,1,0,0"
             HorizontalAlignment="Stretch"
             MinHeight="74"
             IsHitTestVisible="True"
@@ -20,6 +22,21 @@
             </Transitions>
         </Border.Transitions>
         <Grid>
+            <!-- Bottom edge glass highlight (top edge of glass facing the content) -->
+            <Rectangle Fill="{StaticResource GlassEdgeHighlight}" Height="1" VerticalAlignment="Bottom" />
+            
+            <!-- Glass sheen gradient -->
+            <Rectangle>
+                <Rectangle.Fill>
+                    <LinearGradientBrush StartPoint="0,1" EndPoint="0.4,0">
+                        <GradientStop Offset="0" Color="{StaticResource GlassSheenStart}" />
+                        <GradientStop Offset="0.5" Color="{StaticResource GlassSheenMid}" />
+                        <GradientStop Offset="1" Color="{StaticResource GlassSheenEnd}" />
+                    </LinearGradientBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+            
+            <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -175,6 +192,7 @@
             <components:SeekBar Grid.Row="2"
                                      x:Name="SeekBar"
                                      Margin="{StaticResource space-h-3}" />
+        </Grid>
         </Grid>
     </Border>
 </UserControl>

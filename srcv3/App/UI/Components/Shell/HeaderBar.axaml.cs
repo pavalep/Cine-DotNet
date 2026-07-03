@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.VisualTree;
 using Cine.Avalonia.Services;
 using Cine.Avalonia.Constants;
 using Cine.Avalonia.ViewModels;
@@ -24,6 +25,7 @@ public partial class HeaderBar : AvaloniaUserControl
     private IFlyoutService? _flyoutManager;
     private readonly List<global::Avalonia.Controls.Primitives.FlyoutBase> _trackedFlyouts = new();
     private PrimaryMenuBuilder? _primaryMenuBuilder;
+    private MenuFlyout? _openMenuFlyout;
 
     public HeaderBar()
     {
@@ -42,30 +44,83 @@ public partial class HeaderBar : AvaloniaUserControl
         };
         BtnPrimaryMenu.Flyout.Closed += TrackFlyoutClosed;
 
-        // Wire Open Menu button actions
-        BtnMenuOpenFile.Click += (_, _) =>
-        {
-            BtnOpenMenu.Flyout?.Hide();
-            _viewModel?.OpenFilesCommand.Execute(null);
-        };
-        BtnMenuOpenFolder.Click += (_, _) =>
-        {
-            BtnOpenMenu.Flyout?.Hide();
-            _viewModel?.OpenFolderCommand.Execute(null);
-        };
+        // Build open menu from shared builder (same pattern as primary menu)
+        var openMenuBuilder = new OpenMenuBuilder();
+        openMenuBuilder
+            .AddItem("FileOutline", "Open File…", null, () =>
+            {
+                openMenuBuilder.Hide();
+                _viewModel?.OpenFilesCommand.Execute(null);
+            })
+            .AddItem("FolderOutline", "Open Folder…", null, () =>
+            {
+                openMenuBuilder.Hide();
+                _viewModel?.OpenFolderCommand.Execute(null);
+            });
+        _openMenuFlyout = openMenuBuilder.Build();
+        BtnOpenMenu.Flyout = _openMenuFlyout;
 
-        // Sync recent files and register for mutual exclusion when flyout opens
-        BtnOpenMenu.Flyout!.Opened += (sender, _) =>
+        BtnOpenMenu.Flyout.Opened += (_, _) =>
         {
-            _flyoutManager?.DismissOthers("open-menu");
-            if (sender is Flyout f) UpdateOpenMenuRecentFiles(f);
+            TrackFlyoutOpened(BtnOpenMenu.Flyout, EventArgs.Empty);
+
+            // Remove stale recent items (keep first 2: Open File, Open Folder)
+            while (_openMenuFlyout.Items.Count > 2)
+                _openMenuFlyout.Items.RemoveAt(_openMenuFlyout.Items.Count - 1);
+
+            var recentFiles = _viewModel?.RecentFiles;
+            if (recentFiles != null && recentFiles.Count > 0)
+            {
+                _openMenuFlyout.Items.Add(new Separator());
+
+                var sectionHeader = new MenuItem { Header = "RECENT" };
+                sectionHeader.Classes.Add("menu-section-header");
+                _openMenuFlyout.Items.Add(sectionHeader);
+
+                foreach (var file in recentFiles.Take(10))
+                    AddRecentFileItem(_openMenuFlyout, file);
+            }
         };
-        BtnOpenMenu.Flyout.Closed += (_, _) => _flyoutManager?.MarkClosed("open-menu");
+        BtnOpenMenu.Flyout.Closed += TrackFlyoutClosed;
     }
+
 
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
         _viewModel = DataContext as MainViewModel;
+    }
+
+    /// <summary>
+    /// Adds a recent file item to the Open menu flyout.
+    /// </summary>
+    private void AddRecentFileItem(MenuFlyout flyout, string filePath)
+    {
+        if (!System.IO.File.Exists(filePath)) return;
+
+        var fileName = System.IO.Path.GetFileName(filePath);
+        var item = new MenuItem
+        {
+            Header = new TextBlock
+            {
+                Text = fileName,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                MaxWidth = 240
+            }
+        };
+        item.Click += (_, _) =>
+        {
+            flyout.Hide();
+            _viewModel?.OpenFile(filePath);
+        };
+        flyout.Items.Add(item);
+    }
+
+    /// <summary>
+    /// Makes the "Open" button visible so the user can open files/folders.
+    /// </summary>
+    public void ShowOpenMenu()
+    {
+        BtnOpenMenu.IsVisible = true;
     }
 
     /// <summary>
@@ -142,11 +197,6 @@ public partial class HeaderBar : AvaloniaUserControl
         HeaderBarBorder.Opacity = visible ? 1 : 0;
     }
 
-    public void ShowOpenMenu()
-    {
-        BtnOpenMenu.IsVisible = true;
-    }
-
     public void HideOpenMenu()
     {
         BtnOpenMenu.IsVisible = false;
@@ -218,12 +268,17 @@ public partial class HeaderBar : AvaloniaUserControl
             value?.Register("open-menu", () => BtnOpenMenu.Flyout?.Hide());
             value?.Register("primary-menu", () => BtnPrimaryMenu.Flyout?.Hide());
 
-            // Wire Opened/Closed for PrimaryMenu mutual exclusion only
-            // (Open Menu handlers are already wired in the constructor)
+            // Wire Opened/Closed for mutual exclusion on both flyouts
             if (BtnPrimaryMenu.Flyout != null)
             {
                 BtnPrimaryMenu.Flyout.Opened += (_, _) => value?.DismissOthers("primary-menu");
                 BtnPrimaryMenu.Flyout.Closed += (_, _) => value?.MarkClosed("primary-menu");
+            }
+
+            if (BtnOpenMenu.Flyout != null)
+            {
+                BtnOpenMenu.Flyout.Opened += (_, _) => value?.DismissOthers("open-menu");
+                BtnOpenMenu.Flyout.Closed += (_, _) => value?.MarkClosed("open-menu");
             }
         }
     }
@@ -259,109 +314,6 @@ public partial class HeaderBar : AvaloniaUserControl
         {
             if (!_trackedFlyouts.Contains(flyout))
                 _trackedFlyouts.Add(flyout);
-
-            // P5.4: When Open menu flyout opens, add recent files dynamically
-            UpdateOpenMenuRecentFiles(flyout);
-        }
-    }
-
-    private void UpdateOpenMenuRecentFiles(Flyout flyout)
-    {
-        try
-        {
-            if (flyout.Content is not Border border) return;
-            if (border.Child is not StackPanel stack) return;
-            if (_viewModel == null || !_viewModel.HasRecentFiles) return;
-
-            var app = global::Avalonia.Application.Current;
-
-            // Remove old recent files section
-            var sepIndex = -1;
-            for (int i = stack.Children.Count - 1; i >= 0; i--)
-            {
-                if (stack.Children[i] is TextBlock tb && tb.Text == "Recent Files")
-                {
-                    sepIndex = i;
-                    break;
-                }
-            }
-            if (sepIndex >= 0)
-            {
-                while (stack.Children.Count > sepIndex)
-                    stack.Children.RemoveAt(stack.Children.Count - 1);
-            }
-
-            if (_viewModel.RecentFiles.Count == 0) return;
-
-            // Add separator and recent files section
-            stack.Children.Add(new Separator
-            {
-                Background = (IBrush?)app?.FindResource("PopoverBorder"),
-                Margin = new Thickness(8, 4)
-            });
-
-            var header = new TextBlock
-            {
-                Text = "Recent Files",
-                FontSize = Token.Size("font-size-caption"),
-                FontWeight = FontWeight.SemiBold,
-                Foreground = (IBrush?)app?.FindResource("OsdForeground"),
-                Opacity = 0.5,
-                Margin = new Thickness(12, 4, 0, 4)
-            };
-            stack.Children.Add(header);
-
-            foreach (var file in _viewModel.RecentFiles.Take(10))
-            {
-                if (!System.IO.File.Exists(file)) continue;
-
-                var fileName = System.IO.Path.GetFileName(file);
-                var recentBtn = new global::Avalonia.Controls.Button
-                {
-                    Classes = { "flyout-item" },
-                    Content = new Grid
-                    {
-                        ColumnDefinitions = new ColumnDefinitions
-                        {
-                            new ColumnDefinition(GridLength.Auto),
-                            new ColumnDefinition(GridLength.Star)
-                        },
-                        Children =
-                        {
-                            new TextBlock
-                            {
-                                Text = "📄",
-                                FontSize = Token.Size("font-size-body2"),
-                                VerticalAlignment = Layout.VerticalAlignment.Center
-                            },
-                            new TextBlock
-                            {
-                                Text = fileName,
-                                TextTrimming = TextTrimming.CharacterEllipsis,
-                                FontSize = Token.Size("font-size-body2"),
-                                Foreground = (IBrush?)app?.FindResource("OsdForeground"),
-                                Margin = new Thickness(12, 0, 0, 0),
-                                VerticalAlignment = Layout.VerticalAlignment.Center
-                            }
-                        }
-                    },
-                    HorizontalContentAlignment = Layout.HorizontalAlignment.Stretch,
-                    Tag = file
-                };
-                Grid.SetColumn((TextBlock)((Grid)recentBtn.Content).Children[1], 1);
-
-                recentBtn.Click += (_, _) =>
-                {
-                    if (recentBtn.Tag is string path && _viewModel != null)
-                        _ = _viewModel.OpenFile(path);
-                    flyout.Hide();
-                };
-                stack.Children.Add(recentBtn);
-            }
-        }
-        catch
-        {
-            Log.ForContext<HeaderBar>().Debug("Failed to load recent files list");
         }
     }
 
@@ -405,27 +357,6 @@ public partial class HeaderBar : AvaloniaUserControl
     private void OnFullscreenCloseClick(object? sender, RoutedEventArgs e)
     {
         GetParentWindow()?.Close();
-    }
-
-    private void OnHeaderPointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        var props = e.GetCurrentPoint(this).Properties;
-        if (props.IsLeftButtonPressed)
-        {
-            var w = GetParentWindow();
-            if (w == null) return;
-
-            // Double-click to maximize/restore
-            if (e.ClickCount >= 2)
-            {
-                w.WindowState = w.WindowState == WindowState.Maximized
-                    ? WindowState.Normal
-                    : WindowState.Maximized;
-                return;
-            }
-
-            w.BeginMoveDrag(e);
-        }
     }
 
     // --- Responsive layout ---
@@ -506,4 +437,5 @@ public partial class HeaderBar : AvaloniaUserControl
             dlg.Show(w);
         }
     }
+
 }

@@ -552,6 +552,13 @@ public partial class MainWindow
         // Handled by StartOverlayHandler
     }
 
+    /// <summary>Header bar drag — enables window dragging from the custom title bar.</summary>
+    private void OnHeaderPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed && e.Source is not Button)
+            BeginMoveDrag(e);
+    }
+
     // ─────────────────────────────────────────────────────────────
     //  Responsive Layout Init (called from Core.cs)
     // ─────────────────────────────────────────────────────────────

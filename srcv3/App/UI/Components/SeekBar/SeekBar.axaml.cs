@@ -182,7 +182,7 @@ public partial class SeekBar : AvaloniaUserControl
         var w = SeekArea.Bounds.Width;
         if (w <= 0) return 0;
         var thumbWidth = SeekThumb.Bounds.Width;
-        if (thumbWidth <= 0) thumbWidth = 20;
+        if (thumbWidth <= 0) thumbWidth = 14;
         var thumbHalf = thumbWidth / 2.0;
 
         var trackActiveWidth = w - thumbWidth;
@@ -203,7 +203,7 @@ public partial class SeekBar : AvaloniaUserControl
             : Math.Clamp(_lastPosition.TotalSeconds / _lastDuration.TotalSeconds, 0.0, 1.0);
 
         var thumbWidth = SeekThumb.Bounds.Width;
-        if (thumbWidth <= 0) thumbWidth = 16;
+        if (thumbWidth <= 0) thumbWidth = 14;
         var thumbHalf = thumbWidth / 2.0;
 
         var thumbLeft = seekValue * (w - thumbWidth);
@@ -302,12 +302,7 @@ public partial class SeekBar : AvaloniaUserControl
             return;
         _lastSeekMove = now;
 
-        // Thumb hover expansion via ScaleTransform (no layout impact)
-        if (((ScaleTransform)SeekThumb.RenderTransform!).ScaleX < 1.2)
-        {
-            ((ScaleTransform)SeekThumb.RenderTransform!).ScaleX = 1.2;
-            ((ScaleTransform)SeekThumb.RenderTransform!).ScaleY = 1.2;
-        }
+        // Thumb is a fixed-size circle — no hover scaling (avoids visual jitter)
 
         var p = e.GetPosition(SeekArea);
         var normalized = GetNormalizedFromPointer(p);
@@ -338,16 +333,16 @@ public partial class SeekBar : AvaloniaUserControl
             ChapterPreviewPopover.Opacity = 1;
             var trackWidth = SeekArea.Bounds.Width;
             var thumbWidth = SeekThumb.Bounds.Width;
-            if (thumbWidth <= 0) thumbWidth = 16;
+            if (thumbWidth <= 0) thumbWidth = 14;
             var thumbHalf = thumbWidth / 2.0;
             var thumbCenter = normalized * (trackWidth - thumbWidth) + thumbHalf;
 
-            // Height fallback for compact popover (11px font + 3+3 padding ≈ 22px)
+            // Height fallback for compact popover (11px font + 3+3 padding ≈ 17px)
             var popoverHeight = ChapterPreviewPopover.DesiredSize.Height > 0
                 ? ChapterPreviewPopover.DesiredSize.Height
                 : ChapterPreviewPopover.Bounds.Height > 0
                     ? ChapterPreviewPopover.Bounds.Height
-                    : 22;
+                    : 17;
             var yOffset = -(popoverHeight + 6);
 
             // Clamp popover within seek bar bounds using MaxWidth (no layout invalidation)
@@ -373,9 +368,7 @@ public partial class SeekBar : AvaloniaUserControl
     {
         ChapterPreviewPopover.Opacity = 0;
 
-        // Shrink thumb back (via ScaleTransform, no layout impact)
-        ((ScaleTransform)SeekThumb.RenderTransform!).ScaleX = 1;
-        ((ScaleTransform)SeekThumb.RenderTransform!).ScaleY = 1;
+        // No visual change needed on thumb — it's always the same size
     }
 
     private void OnSeekAreaPointerWheelChanged(object? sender, PointerWheelEventArgs e)

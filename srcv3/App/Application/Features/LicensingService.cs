@@ -31,7 +31,7 @@ public sealed class LicensingService : ILicensingService, IDisposable
         Encoding.UTF8.GetBytes("CineLicenseKey01"); // 16 bytes = AES-128; we pad to 32 below.
 
     // ── State ──
-    private LicensingTier _currentTier = LicensingTier.Trial;
+    private LicensingTier _currentTier = LicensingTier.Full;
     private LicenseData? _licenseData;
     private DateTime _trialStart;
 
@@ -110,15 +110,9 @@ public sealed class LicensingService : ILicensingService, IDisposable
         if (File.Exists(LicenseFilePath))
             File.Delete(LicenseFilePath);
 
-        // Revert to trial if still valid, else Free
-        if (TrialDaysRemaining > 0)
-            CurrentTier = LicensingTier.Trial;
-        else
-            CurrentTier = LicensingTier.Free;
-
-        LicenseLabel = TrialDaysRemaining > 0
-            ? $"Trial ({TrialDaysRemaining} days left)"
-            : "Free";
+        // Revert to Full (no license required for core features)
+        CurrentTier = LicensingTier.Full;
+        LicenseLabel = "Full";
     }
 
     public void Dispose()
@@ -141,12 +135,10 @@ public sealed class LicensingService : ILicensingService, IDisposable
             // Verify hardware binding
             if (_licenseData.HardwareId != GetHardwareId())
             {
-                // Hardware mismatch → ignore this license
+                // Hardware mismatch → ignore this license, default to Full
                 _licenseData = null;
-                CurrentTier = TrialDaysRemaining > 0 ? LicensingTier.Trial : LicensingTier.Free;
-                LicenseLabel = TrialDaysRemaining > 0
-                    ? $"Trial ({TrialDaysRemaining} days left)"
-                    : "Free";
+                CurrentTier = LicensingTier.Full;
+                LicenseLabel = "Full";
                 return;
             }
 
@@ -161,11 +153,9 @@ public sealed class LicensingService : ILicensingService, IDisposable
         }
         else
         {
-            LicenseLabel = TrialDaysRemaining > 0
-                ? $"Trial ({TrialDaysRemaining} days left)"
-                : "Free";
-            // Free tier = can't use paid features; Trial = all features for evaluation
-            CurrentTier = TrialDaysRemaining > 0 ? LicensingTier.Trial : LicensingTier.Free;
+            // Default to Full tier — no license required for core features
+            CurrentTier = LicensingTier.Full;
+            LicenseLabel = "Full";
         }
     }
 
