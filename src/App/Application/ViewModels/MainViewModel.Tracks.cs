@@ -29,10 +29,15 @@ public partial class MainViewModel
     /// </summary>
     private void OnPlayerOpened(object? sender, EventArgs e)
     {
-        // Notify SubtitleManager so it can load per-file settings
-        Subtitles?.NotifyMediaOpened(_filePath);
-        // Notify AudioManager so it can load per-file settings
-        Audio?.NotifyMediaOpened(_filePath);
+        // Dispatch *Managers to UI thread — they fire OnPropertyChanged and access
+        // ObservableCollections internally, which requires the UI thread in Avalonia.
+        Dispatcher.UIThread.Post(() =>
+        {
+            // Notify SubtitleManager so it can load per-file settings
+            Subtitles?.NotifyMediaOpened(_filePath);
+            // Notify AudioManager so it can load per-file settings
+            Audio?.NotifyMediaOpened(_filePath);
+        });
 
         UpdateCropFilter();
         SubtitleSource[] audioSources;

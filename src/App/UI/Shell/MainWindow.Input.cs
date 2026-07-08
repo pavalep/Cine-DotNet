@@ -7,6 +7,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Media;
+using Avalonia.Platform.Storage;
 using AvaloniaLayout = Avalonia.Layout;
 using Button = Avalonia.Controls.Button;
 using Cursor = Avalonia.Input.Cursor;
@@ -322,6 +323,7 @@ public partial class MainWindow
             _headerBar.IsVisible = WindowState != WindowState.FullScreen;
             _fullscreenHeader.IsVisible = WindowState == WindowState.FullScreen;
             _controlsBox.IsVisible = true;
+            ShowUiControls();  // Restore proper opacity and resume auto-hide timer
             FocusModeIndicator.IsVisible = false;
             ShowOsdNotification(MaterialIconKind.MoonWaxingCrescent, "Focus Mode Off");
         }
@@ -463,10 +465,20 @@ public partial class MainWindow
     //  Pointer / Click Handlers (referenced by MainWindow.axaml)
     // ─────────────────────────────────────────────────────────────
 
+    private DateTime _lastVideoPressTime = DateTime.MinValue;
+
     private void OnVideoPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
         {
+            // Skip play/pause on the second press of a double-click —
+            // the DoubleTapped handler will handle fullscreen toggle.
+            var now = DateTime.UtcNow;
+            var elapsed = (now - _lastVideoPressTime).TotalMilliseconds;
+            _lastVideoPressTime = now;
+            if (elapsed < 500)
+                return;
+
             // If any flyout is open, the click was just dismissing the flyout —
             // don't toggle play/pause.
             if (_controlsBox.HasActiveFlyouts ||
@@ -480,7 +492,11 @@ public partial class MainWindow
 
     private void OnVideoDoubleTapped(object? sender, TappedEventArgs e)
     {
+        // ToggleFullscreen toggles fullscreen mode.
+        // PlayPause() undoes the play/pause toggle from the first press of the
+        // double-click (see OnVideoPointerPressed above), preserving playback state.
         _viewModel?.ToggleFullscreen();
+        _viewModel?.PlayPause();
         e.Handled = true;
     }
 
@@ -530,15 +546,86 @@ public partial class MainWindow
         e.Handled = true;
     }
 
+    private void OnWindowDragOver(object? sender, DragEventArgs e)
+    {
+        e.DragEffects = e.DataTransfer != null && e.DataTransfer.Contains(DataFormat.File)
+            ? DragDropEffects.Copy
+            : DragDropEffects.None;
+        e.Handled = true;
+    }
+
     private void OnWindowDragLeave(object? sender, DragEventArgs e)
     {
         _dropIndicator?.Hide();
     }
 
-    private void OnWindowDrop(object? sender, DragEventArgs e)
+    private async void OnWindowDrop(object? sender, DragEventArgs e)
     {
         _dropIndicator?.Hide();
-        // Handled by StartOverlayHandler
+        await OpenDroppedFiles(e);
+    }
+
+    /// <summary>Process dropped files and folders, scanning folders recursively for media.</summary>
+    private async Task OpenDroppedFiles(DragEventArgs e)
+    {
+        var droppedFiles = e.DataTransfer.TryGetFiles();
+        if (droppedFiles == null) return;
+
+        var paths = new List<string>();
+        foreach (var item in droppedFiles)
+        {
+            var path = item.TryGetLocalPath();
+            if (string.IsNullOrEmpty(path)) continue;
+
+            if (Directory.Exists(path))
+                paths.AddRange(ScanFolderForMedia(path));
+            else if (File.Exists(path) && IsMediaFile(path))
+                paths.Add(path);
+        }
+
+        if (paths.Count > 0 && _viewModel != null)
+            await _viewModel.OpenFiles(paths.ToArray());
+    }
+
+    private static bool IsMediaFile(string path)
+    {
+        var ext = Path.GetExtension(path);
+        return !string.IsNullOrEmpty(ext) && MediaExtensions.Contains(ext);
+    }
+
+    private static List<string> ScanFolderForMedia(string folder)
+    {
+        var results = new List<string>();
+        try
+        {
+            foreach (var file in Directory.EnumerateFiles(folder))
+                if (IsMediaFile(file)) results.Add(file);
+            foreach (var subDir in Directory.EnumerateDirectories(folder))
+                results.AddRange(ScanFolderForMedia(subDir));
+        }
+        catch
+        {
+            // skip inaccessible directories
+        }
+        return results;
+    }
+
+    private static readonly HashSet<string> MediaExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        // Video
+        ".mp4", ".mkv", ".avi", ".mov", ".wmv", ".flv", ".webm",
+        ".m4v", ".mpg", ".mpeg", ".3gp", ".ts", ".mts", ".m2ts",
+        ".vob", ".ogv", ".asf", ".divx", ".f4v", ".rm", ".rmvb",
+        // Audio
+        ".mp3", ".wav", ".flac", ".aac", ".ogg", ".wma", ".m4a",
+        ".opus", ".ac3", ".dts", ".alac", ".ape", ".aiff"
+    };
+
+    /// <summary>Header bar drag — enables window dragging from the custom title bar.</summary>
+    private void OnHeaderPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed && e.Source is not Button)
+            BeginMoveDrag(e);
     }
 
     // ─────────────────────────────────────────────────────────────

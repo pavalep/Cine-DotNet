@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StartPage V2 Preview</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f0f0f2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* ===== WINDOW FRAME ===== */
+        .window {
+            width: 1280px;
+            height: 800px;
+            background: #1C1C1E;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* ===== CONTENT ===== */
+        .content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+        }
+
+        /* ---- Icon ---- */
+        .app-icon {
+            width: 80px;
+            height: 80px;
+            background: #2C2C32;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 32px;
+            flex-shrink: 0;
+        }
+
+        .app-icon svg {
+            width: 36px;
+            height: 36px;
+            display: block;
+            margin-left: 4px;
+        }
+
+        /* ---- Title ---- */
+        .title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #F5F5F7;
+            line-height: 1.3;
+            text-align: center;
+            letter-spacing: -0.01em;
+        }
+
+        /* ---- Subtitle ---- */
+        .subtitle {
+            font-size: 14px;
+            font-weight: 400;
+            color: #8E8EA0;
+            line-height: 1.4;
+            text-align: center;
+            margin-top: 8px;
+        }
+
+        /* ---- Buttons ---- */
+        .button-row {
+            display: flex;
+            gap: 14px;
+            margin-top: 36px;
+        }
+
+        .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            height: 40px;
+            padding: 0 28px;
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: default;
+            border: none;
+            transition: none;
+            text-decoration: none;
+            line-height: 1;
+        }
+
+        .btn-primary {
+            background: #5E5CE6;
+            color: #FFFFFF;
+            min-width: 148px;
+        }
+
+        .btn-secondary {
+            background: #2C2C32;
+            color: #F5F5F7;
+            border: 1px solid #3A3A42;
+            min-width: 148px;
+            font-weight: 500;
+        }
+
+        .btn svg {
+            width: 16px;
+            height: 16px;
+            display: block;
+            flex-shrink: 0;
+        }
+
+        /* ---- Recent Files ---- */
+        .recent-section {
+            margin-top: 48px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .recent-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #636366;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 12px;
+        }
+
+        .recent-item {
+            width: 480px;
+            height: 30px;
+            background: rgba(44,44,50,0.4);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            margin-bottom: 4px;
+        }
+
+        .recent-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .recent-item span {
+            font-size: 13px;
+            font-weight: 400;
+            color: #8E8EA0;
+            line-height: 1.3;
+        }
+
+        /* ---- Hint ---- */
+        .hint {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            height: 32px;
+            padding: 0 20px;
+            background: rgba(44,44,50,0.5);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 0;
+            white-space: nowrap;
+        }
+
+        .hint span {
+            font-size: 11px;
+            font-weight: 400;
+            color: #636366;
+            line-height: 1.3;
+        }
+
+        .hint .sep {
+            margin: 0 10px;
+            color: #48484A;
+        }
+
+        /* ---- label bar ---- */
+        .title-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: #48484A;
+            letter-spacing: 0.04em;
+        }
+
+        .title-bar .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .dot-close { background: #FF5F56; left: 14px; }
+        .dot-min   { background: #FFBD2E; left: 30px; }
+        .dot-max   { background: #27C93F; left: 46px; }
+    </style>
+</head>
+<body>
+    <div class="window">
+        <!-- Traffic light dots -->
+        <div class="title-bar">
+            <span class="dot dot-close"></span>
+            <span class="dot dot-min"></span>
+            <span class="dot dot-max"></span>
+            StartPage V2
+        </div>
+
+        <div class="content">
+            <!-- App Icon -->
+            <div class="app-icon">
+                <svg viewBox="0 0 24 24" fill="#5E5CE6" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8 5.14v13.72a1 1 0 001.5.86l11-6.86a1 1 0 000-1.72l-11-6.86A1 1 0 008 5.14z"/>
+                </svg>
+            </div>
+
+            <!-- Title -->
+            <div class="title">Drop a file to start</div>
+
+            <!-- Subtitle -->
+            <div class="subtitle">or browse to open a media file</div>
+
+            <!-- Buttons -->
+            <div class="button-row">
+                <div class="btn btn-primary">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    Open File
+                </div>
+                <div class="btn btn-secondary">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    Open Folder
+                </div>
+            </div>
+
+            <!-- Recent Files -->
+            <div class="recent-section">
+                <div class="recent-label">Recent files</div>
+                <div class="recent-item"><span>🎬 movie_trailer_1080p.mp4</span></div>
+                <div class="recent-item"><span>🎬 lecture_recording_01.mp4</span></div>
+                <div class="recent-item"><span>🎬 vacation_highlights.mp4</span></div>
+                <div class="recent-item"><span>🎬 music_video_4k.mkv</span></div>
+            </div>
+        </div>
+
+        <!-- Hint -->
+        <div class="hint">
+            <span>Ctrl+O  Open File</span>
+            <span class="sep">·</span>
+            <span>Ctrl+F  Open Folder</span>
+            <span class="sep">·</span>
+            <span>Ctrl+P  Play/Pause</span>
+        </div>
+    </div>
+</body>
+</html>

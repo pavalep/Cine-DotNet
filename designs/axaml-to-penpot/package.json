@@ -1,0 +1,10 @@
+{
+  "name": "axaml-to-penpot",
+  "version": "2.0.0",
+  "description": "Generic AXAML-to-Penpot converter — works with any Avalonia project structure. Converts UI screens to editable Penpot designs via MCP. Bidirectional support.",
+  "type": "module",
+  "dependencies": {
+    "fast-xml-parser": "^5.9.3",
+    "fdir": "^6.5.0"
+  }
+}

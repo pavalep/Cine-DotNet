@@ -5,8 +5,7 @@
     <UserControl.Resources>
         <Thickness x:Key="osd-bottom-margin">0,0,0,110</Thickness>
     </UserControl.Resources>
-    <Border x:Name="OsdNotificationBorder"
-            IsVisible="True"
+    <Border x:Name="OsdNotificationBorder" IsVisible="False"
             HorizontalAlignment="Center"
             VerticalAlignment="Bottom"
             Margin="{StaticResource osd-bottom-margin}"

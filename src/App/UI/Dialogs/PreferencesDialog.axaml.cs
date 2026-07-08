@@ -10,7 +10,7 @@ namespace Cine.Avalonia.Dialogs;
 
 public partial class PreferencesDialog : Window
 {
-    private readonly SubtitleSettingsStore _subStore = new();
+    private readonly SubtitleSettingsStore _subStore;
     private readonly AudioSettingsStore _audioStore = new();
 
     // Dirty-state tracking — only save if values changed
@@ -18,8 +18,11 @@ public partial class PreferencesDialog : Window
     private string _originalLangs = string.Empty;
     private string _originalDirs = string.Empty;
 
-    public PreferencesDialog()
+    public PreferencesDialog() : this(null) { }
+
+    public PreferencesDialog(SubtitleSettingsStore? subStore)
     {
+        _subStore = subStore ?? new SubtitleSettingsStore();
         InitializeComponent();
         KeyDown += OnGlobalKeyDown;
         Loaded += OnLoaded;

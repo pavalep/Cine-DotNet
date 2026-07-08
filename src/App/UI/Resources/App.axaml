@@ -239,6 +239,20 @@
         </Style>
     </Style>
 
+    <!-- ── Open Menu Trigger Button (pill-shaped, for header "Open" button) ── -->
+    <Style Selector="Button.open-menu-trigger">
+        <Setter Property="Background" Value="{StaticResource AppHover}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="99" />
+        <Setter Property="Padding" Value="12,6" />
+        <Style Selector="^:pointerover">
+            <Setter Property="Background" Value="{StaticResource AppHoverStrong}" />
+        </Style>
+        <Style Selector="^:pressed">
+            <Setter Property="Background" Value="{StaticResource AppPressed}" />
+        </Style>
+    </Style>
+
     <!-- ── Reusable Divider (P5) ────────────────────────────────── -->
     <Style Selector="Border.divider">
         <Setter Property="Height" Value="1" />
@@ -370,6 +384,33 @@
 
     <Style Selector="MenuFlyoutPresenter /template/ Border#PART_LayoutRoot">
         <Setter Property="BoxShadow" Value="0 4 16 0 #80000000" />
+    </Style>
+
+    <!-- MenuItem base style -->
+    <Style Selector="MenuItem">
+        <Setter Property="Padding" Value="8,4" />
+        <Setter Property="MinHeight" Value="28" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Foreground" Value="{StaticResource AppTextOnDarkPrimary}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    <Style Selector="MenuItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource AppHover}" />
+        <Setter Property="CornerRadius" Value="4" />
+    </Style>
+
+    <!-- MenuItem section headers (uppercase, muted, non-interactive) -->
+    <Style Selector="MenuItem.menu-section-header">
+        <Setter Property="Foreground" Value="{StaticResource AppTextOnDarkSubtle}" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Padding" Value="8,6,8,2" />
+        <Setter Property="MinHeight" Value="20" />
+        <Setter Property="Cursor" Value="Arrow" />
+    </Style>
+    <Style Selector="MenuItem.menu-section-header:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
     </Style>
 
     <!-- ======================== -->
@@ -680,12 +721,14 @@
     <!--  TEXT STYLES             -->
     <!-- ======================== -->
     
-    <!-- Time Labels (font 12 → md3-caption, with NumericFont for monospace alignment) -->
+    <!-- Time Labels — premium monospace with good weight and spacing -->
     <Style Selector="TextBlock.time-label">
         <Setter Property="FontFamily" Value="{StaticResource font-family-numeric}" />
         <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
         <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="LetterSpacing" Value="1" />
     </Style>
     
     <!-- Seek Slider -->

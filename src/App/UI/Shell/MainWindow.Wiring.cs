@@ -56,6 +56,7 @@ public partial class MainWindow
         // Hover tracking
         _headerBar.HeaderBarElement.PointerEntered += OnHeaderPointerEntered;
         _headerBar.HeaderBarElement.PointerExited += OnHeaderPointerExited;
+        _headerBar.HeaderBarElement.PointerPressed += OnHeaderPointerPressed;
         _controlsBox.ControlsBoxElement.PointerEntered += OnControlsPointerEntered;
         _controlsBox.ControlsBoxElement.PointerExited += OnControlsPointerExited;
         _fullscreenHeader.FullscreenHeaderElement.PointerEntered += OnFullscreenHeaderPointerEntered;
@@ -94,6 +95,13 @@ public partial class MainWindow
             else _viewModel?.SeekBackward();
         };
 
+        // Pause auto-hide timer while seeking to prevent flicker
+        // (time hint popover triggers show/hide cycle during seek)
+        _controlsBox.SeekBarControl.SeekStarted += (_, _) =>
+            _autoHideTimer?.Stop();
+        _controlsBox.SeekBarControl.SeekEnded += (_, _) =>
+            _autoHideTimer?.Start();
+
         InitializeAutoHide();
         InitializeSessionSave();
         InitializeResponsiveLayout();
@@ -111,9 +119,10 @@ public partial class MainWindow
         _headerBar.PipToggled += OnPipToggled;
         _fullscreenHeader.PipToggled += OnPipToggled;
 
-        AddHandler(DragDrop.DragEnterEvent, OnWindowDragEnter);
-        AddHandler(DragDrop.DragLeaveEvent, OnWindowDragLeave);
-        AddHandler(DragDrop.DropEvent, OnWindowDrop);
+        AddHandler(DragDrop.DragEnterEvent, OnWindowDragEnter, handledEventsToo: true);
+        AddHandler(DragDrop.DragOverEvent,  OnWindowDragOver,  handledEventsToo: true);
+        AddHandler(DragDrop.DragLeaveEvent, OnWindowDragLeave, handledEventsToo: true);
+        AddHandler(DragDrop.DropEvent, OnWindowDrop, handledEventsToo: true);
     }
 
     private void OnReplayRequested(object? sender, EventArgs e)

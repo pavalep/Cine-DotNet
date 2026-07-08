@@ -1,0 +1,150 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Cine.Avalonia.ViewModels"
+        xmlns:components="using:Cine.Avalonia.Components"
+        xmlns:conv="using:Cine.Avalonia.Converters"
+        xmlns:uiconsts="using:Cine.Avalonia"
+
+        xmlns:controls="clr-namespace:Cine.Avalonia.Controls"
+        xmlns:local="using:Cine.Avalonia.Controls"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        x:Class="Cine.Avalonia.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Title="Cine"
+        Width="800" Height="600"
+        MinWidth="600"
+        MinHeight="337"
+        Background="{StaticResource AppBackground}"
+        TransparencyLevelHint="None"
+        WindowStartupLocation="CenterScreen"
+        WindowDecorations="BorderOnly"
+        DragDrop.AllowDrop="True">
+
+    <Window.Styles>
+        <Style Selector="Window > Grid > StackPanel > Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Width" Value="46" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Cursor" Value="Arrow" />
+        </Style>
+    </Window.Styles>
+
+    <Window.Resources>
+        <conv:TimeSpanToStringConverter x:Key="TimeSpanToString" />
+        <conv:ChapterMarginConverter x:Key="ChapterMarginConverter" />
+    </Window.Resources>
+
+    <!-- =====================================================================
+         LAYERED LAYOUT
+         All children overlap in a single Grid cell. Elements declared later
+         render on top. No explicit Panel wrappers — using them would make
+         Panels intercept all mouse events in Avalonia (Panel is always
+         hit-testable regardless of background).
+         ===================================================================== -->
+    <Grid x:Name="MainOverlay" Background="Transparent"
+      HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <!--  LAYER 0: VIDEO + BACKDROP (renders first, behind overlays)   -->
+        <!-- ══════════════════════════════════════════════════════════════ -->
+
+        <!-- Playback background -->
+        <Border Background="{StaticResource PlaybackRadialBackground}"
+                IsHitTestVisible="False"
+                x:Name="PlaybackBackground" />
+
+        <!-- Video frame (WriteableBitmap-backed Image). Background=Transparent
+             so it passes clicks through and doesn't overlay a dark tint.
+             Renders behind StartPage. Becomes visible when a frame loads. -->
+        <controls:MpvVideoView x:Name="MpvVideoView"
+                               HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                               IsHitTestVisible="False"
+                               IsVisible="False" />
+
+        <!-- Video click overlay — fills window, captures hover/click for auto-hide,
+             play/pause toggle, and right-click context menu. -->
+        <Border x:Name="VideoClickOverlay"
+                Background="Transparent"
+                HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                IsTabStop="False"
+                PointerPressed="OnVideoPointerPressed"
+                DoubleTapped="OnVideoDoubleTapped"
+                RightTapped="OnVideoRightTapped" />
+
+        <!-- Start Page — full viewport, opaque background.
+             TOPMOST layer in this section. Always clickable. Fades out when media
+             opens, revealing VideoClickOverlay + video beneath. -->
+        <components:StartPage x:Name="StartPage" PointerPressed="OnStartPagePointerPressed" />
+
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <!--  LAYER 1: UI OVERLAYS (floats on top of video)               -->
+        <!-- ══════════════════════════════════════════════════════════════ -->
+
+        <!-- Loading Spinner — ZIndex=30 so it renders above all other overlays -->
+        <components:SpinnerOverlay x:Name="LoadingSpinnerOverlay" ZIndex="30" />
+
+        <!-- Pause Indicator -->
+        <components:PauseOverlay x:Name="PauseOverlay" />
+
+        <!-- Chapter Badge Overlay -->
+        <Border Classes="chapter-badge-overlay" IsHitTestVisible="False">
+            <TextBlock Classes="chapter-badge"
+                       Text="{Binding ChapterTitle, Mode=OneWay}" />
+        </Border>
+
+        <!-- Replay Overlay -->
+        <components:ReplayOverlay x:Name="ReplayOverlay" />
+
+        <!-- Drag-drop indicator overlay -->
+        <components:DragDropOverlay x:Name="DropIndicatorOverlay" />
+
+        <!-- HEADER BAR — ZIndex=20, top, floats over video -->
+        <components:HeaderBar x:Name="HeaderBarControl"
+                                   VerticalAlignment="Top"
+                                   HorizontalAlignment="Stretch" />
+
+        <!-- FULLSCREEN HEADER — ZIndex=25, top, floats over video -->
+        <components:FullscreenHeader x:Name="FullscreenHeaderControl"
+                                          VerticalAlignment="Top" Height="{StaticResource size-fullscreen-header}" />
+
+        <!-- CONTROLS BOX — ZIndex=15, bottom, floats over video -->
+        <components:ControlsBox x:Name="ControlsBoxControl"
+                                     VerticalAlignment="Bottom"
+                                     HorizontalAlignment="Stretch" />
+
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <!--  SIGNATURE INNOVATIONS (Phase 11)                            -->
+        <!-- ══════════════════════════════════════════════════════════════ -->
+
+        <!-- Now Playing Info Panel — bottom-right overlay, hidden by default -->
+        <components:NowPlayingInfo x:Name="NowPlayingInfoPanel"
+                                        VerticalAlignment="Bottom"
+                                        HorizontalAlignment="Right"
+                                        ZIndex="35"
+                                        IsVisible="False" />
+
+        <!-- Focus Mode indicator — a tiny thin line at the bottom when all chrome is hidden -->
+        <Border x:Name="FocusModeIndicator" ZIndex="40"
+                VerticalAlignment="Bottom" HorizontalAlignment="Center"
+                IsVisible="False" IsHitTestVisible="False"
+                Background="{StaticResource AppAccent}"
+                Width="120" Height="2"
+                CornerRadius="1"
+                Margin="0,0,0,4" />
+
+        <!-- OSD Notification — bottom center, floats above ControlsBox.
+             Bottom margin lifts it above the ControlsBox (which is ~100-110px tall). -->
+        <components:OsdNotification x:Name="OsdNotificationControl"
+                                          VerticalAlignment="Bottom"
+                                          HorizontalAlignment="Center"
+                                          Margin="0,0,0,110" />
+
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <!--  FLYOUT OVERLAY (ZIndex=50, above all interactive chrome)   -->
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <components:FlyoutOverlay x:Name="FlyoutOverlay"
+                                       ZIndex="50" />
+    </Grid>
+</Window>

@@ -17,6 +17,8 @@
          Until then, values below are placeholders — fonts inherit from
          Window default (defined in App.axaml). -->
     <FontFamily x:Key="font-family-default">Segoe UI, sans-serif</FontFamily>
+    <FontFamily x:Key="font-family-display">Outfit</FontFamily>
+    <FontFamily x:Key="font-family-ui">Inter</FontFamily>
     <FontFamily x:Key="font-family-mono">Consolas, monospace</FontFamily>
     <FontFamily x:Key="font-family-numeric">Consolas, monospace</FontFamily>
 

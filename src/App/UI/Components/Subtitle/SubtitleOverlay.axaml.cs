@@ -122,7 +122,7 @@ public partial class SubtitleOverlay : AvaloniaUserControl, IFlyoutSource
         set
         {
             _flyoutManager = value;
-            value?.Register("subtitle", () => _overlay?.HideContent());
+            value?.Register("subtitle", () => HideFlyout());
         }
     }
 

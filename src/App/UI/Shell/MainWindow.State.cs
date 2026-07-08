@@ -86,11 +86,13 @@ public partial class MainWindow
     private void OnWindowActivated(object? sender, EventArgs e)
     {
         FadeHeaderAndControls(FocusedOpacity);
+        UpdateFocusBorder(focused: true);
     }
 
     private void OnWindowDeactivated(object? sender, EventArgs e)
     {
         FadeHeaderAndControls(UnfocusedOpacity);
+        UpdateFocusBorder(focused: false);
     }
 
     // =========================================================================
@@ -152,6 +154,7 @@ public partial class MainWindow
                     // where the watcher hides StartPage before the video is ready.
                     _headerBar.ShowOpenMenu();
                     _headerBar.ShowPrimaryMenu();
+                    _headerBar.ShowBackButton();
                     _headerBar.SetPipVisibility(Bounds.Width >= MediumBreakpoint);
                     _headerBar.SetTitle(_viewModel.Title);
                     Title = $"Cine — {_viewModel.Title}";
@@ -160,17 +163,30 @@ public partial class MainWindow
                 {
                     _isLoading = false;
                     _spinnerOverlay.Stop();
-                    if (StartPage?.IsVisible == false) StartPage.IsVisible = true;
+                    // Hide replay overlay if it was shown — it would appear on top of StartPage
+                    _replayOverlay.Hide();
+                    if (StartPage?.IsVisible == false)
+                    {
+                        StartPage.IsVisible = true;
+                        StartPage.Opacity = 0;
+                        Dispatcher.UIThread.Post(() =>
+                        {
+                            if (StartPage != null) StartPage.Opacity = 1;
+                        }, DispatcherPriority.Render);
+                    }
+                    // Refresh the recent files list when returning to StartPage
+                    // This ensures cards are rebuilt with correct sizes for the current window state
+                    StartPage?.RefreshRecentList();
                     PlaybackBackground.IsVisible = true;
-                    _controlsBox.SetControlsVisibility(false);
-                    _controlsBox.ControlsBoxElement.IsVisible = false;
+                    _controlsBox?.SetControlsVisibility(false);
                     _headerBar.HideOpenMenu();
                     _headerBar.HidePrimaryMenu();
+                    _headerBar.HideBackButton();
                     _headerBar.SetPipVisibility(false);
                     _headerBar.SetTitle("Cine");
                     // ShowUiControls should NOT be called here — when file closes,
                     // controls should stay hidden since StartPage covers them.
-                }
+                }   // closes else block
             })
             .Watch(nameof(MainViewModel.IsSubtitleEnabled), () => _controlsBox?.SubtitleOverlay?.RefreshIcon())
             .Watch(nameof(MainViewModel.IsAudioEnabled), () => _controlsBox?.AudioTrackSelector?.RefreshIcon())

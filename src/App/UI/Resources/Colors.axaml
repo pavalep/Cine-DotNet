@@ -55,6 +55,18 @@
         <GradientStop Offset="0.35" Color="#22000000" />
     </LinearGradientBrush>
 
+    <!-- ======================== -->
+    <!--  GLASS EFFECT            -->
+    <!--  Simulated liquor-glass -->
+    <!--  overlay for header &   -->
+    <!--  controls bar           -->
+    <!-- ======================== -->
+    <SolidColorBrush x:Key="GlassBackground" Color="#990C121E" />
+    <SolidColorBrush x:Key="GlassEdgeHighlight" Color="#18FFFFFF" />
+    <Color x:Key="GlassSheenStart">#08FFFFFF</Color>
+    <Color x:Key="GlassSheenMid">#00FFFFFF</Color>
+    <Color x:Key="GlassSheenEnd">#03FFFFFF</Color>
+
     <!-- Reference: header+controls combined gradient from style.css -->
     <LinearGradientBrush x:Key="HeaderAndControlsGradient" StartPoint="0,0" EndPoint="0,1">
         <GradientStop Offset="0" Color="#B00A1625" />
@@ -117,11 +129,8 @@
     <SolidColorBrush x:Key="ProgressTroughBackground" Color="#39FFFFFF" />
     <SolidColorBrush x:Key="ProgressSliderBackground" Color="{StaticResource White}" />
 
-    <!-- Seek bar fill gradient — accent on left → lighter accent on right -->
-    <LinearGradientBrush x:Key="SeekFillGradient" StartPoint="0,0" EndPoint="1,0">
-        <GradientStop Offset="0" Color="{StaticResource Accent}" />
-        <GradientStop Offset="1" Color="#FF7FB8FF" />
-    </LinearGradientBrush>
+    <!-- Seek bar fill — warm off-white for premium look on dark background -->
+    <SolidColorBrush x:Key="SeekFillGradient" Color="#EDE6D8" />
     <SolidColorBrush x:Key="ProgressSliderForeground" Color="{StaticResource Accent}" />
     
     <!-- ======================== -->

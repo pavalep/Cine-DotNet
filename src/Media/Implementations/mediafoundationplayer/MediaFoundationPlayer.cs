@@ -614,7 +614,7 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
 
     #region Public Methods
 
-    void IMediaPlayer.Open(string path) => Open(path, "replace");
+    void IPlaybackControl.Open(string path) => Open(path, "replace");
     public void Open(string path, string mode = "replace")
     {
         if (string.IsNullOrEmpty(path))
@@ -898,10 +898,10 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
     public void SetSubtitleVisibility(bool visible) => SubtitleVisibility = visible;
     public void SetSubtitleBorderSize(double size) { }
     public void SetSubtitleShadowOffset(double offset) { }
-    void IMediaPlayer.SetSubtitleColor(string colorHex) { }
-    void IMediaPlayer.SetSubtitleOpacity(double opacity) { }
-    void IMediaPlayer.SetSubtitleBlur(double blur) { }
-    void IMediaPlayer.SetSubtitleBold(bool bold) { }
+    void ISubtitleControl.SetSubtitleColor(string colorHex) { }
+    void ISubtitleControl.SetSubtitleOpacity(double opacity) { }
+    void ISubtitleControl.SetSubtitleBlur(double blur) { }
+    void ISubtitleControl.SetSubtitleBold(bool bold) { }
 
     public void SelectAudioTrack(int trackIndex)
     {

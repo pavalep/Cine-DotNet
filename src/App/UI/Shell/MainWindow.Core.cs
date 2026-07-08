@@ -34,12 +34,13 @@ namespace Cine.Avalonia;
 /// </summary>
 public partial class MainWindow
 {
+    private IServiceProvider _serviceProvider = null!;
     private PlayerService? _playerService;
     private MainViewModel? _viewModel;
     private PlaybackStateManager? _stateManager;
     private AudioManager? _audioManager;
     private VideoManager? _videoManager;
-    private SubtitleManager? _subtitleManager;
+    private ISubtitleManager? _subtitleManager;
     private string? _queuedOpenPath;
     private TimeSpan _sessionResumePosition;
 

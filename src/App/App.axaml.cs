@@ -11,9 +11,8 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using Avalonia.Win32;
-using Cine.Avalonia.Services;
 using Cine.Avalonia.Dialogs;
-using Cine.Avalonia.State;
+using Cine.Avalonia.Services;
 using Cine.Avalonia.ViewModels;
 using Cine.Core;
 using Microsoft.Extensions.DependencyInjection;
@@ -328,24 +327,6 @@ public class App : global::Avalonia.Application
 
     private static IServiceProvider ConfigureServices()
     {
-        var services = new ServiceCollection();
-
-        // Core infrastructure — stateless, safe as singletons
-        services.AddSingleton<InputRoutingService>();
-        services.AddSingleton<ThemeService>();
-
-        // Settings stores — single instance shared across the app
-        services.AddSingleton<SubtitleSettingsStore>();
-        services.AddSingleton<AudioSettingsStore>();
-        services.AddSingleton<PlaylistSettingsStore>();
-
-        // Player service — singleton, initialized once
-        services.AddSingleton<PlayerService>();
-
-        // ViewModels and Windows — transient (Avalonia manages lifetime)
-        services.AddTransient<MainViewModel>();
-        services.AddTransient<MainWindow>();
-
-        return services.BuildServiceProvider();
+        return Infrastructure.CompositionRoot.Build();
     }
 }

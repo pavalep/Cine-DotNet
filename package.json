@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "archiver": "^8.0.0",
+    "uuid": "^14.0.1"
+  }
+}

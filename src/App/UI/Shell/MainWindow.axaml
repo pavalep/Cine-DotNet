@@ -17,7 +17,7 @@
         Background="{StaticResource AppBackground}"
         TransparencyLevelHint="None"
         WindowStartupLocation="CenterScreen"
-        WindowDecorations="BorderOnly"
+        WindowDecorations="None"
         DragDrop.AllowDrop="True">
 
     <Window.Styles>
@@ -37,114 +37,200 @@
     </Window.Resources>
 
     <!-- =====================================================================
-         LAYERED LAYOUT
-         All children overlap in a single Grid cell. Elements declared later
-         render on top. No explicit Panel wrappers — using them would make
-         Panels intercept all mouse events in Avalonia (Panel is always
-         hit-testable regardless of background).
+         ROOT GRID
+         Single-cell container. Children overlap — declared later = on top.
          ===================================================================== -->
-    <Grid x:Name="MainOverlay" Background="Transparent"
-      HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+    <Grid Background="Transparent"
+      HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+      DragDrop.AllowDrop="True">
 
         <!-- ══════════════════════════════════════════════════════════════ -->
-        <!--  LAYER 0: VIDEO + BACKDROP (renders first, behind overlays)   -->
+        <!--  CONTENT CLIP — Rounds all content corners when not maximized -->
         <!-- ══════════════════════════════════════════════════════════════ -->
-
-        <!-- Playback background -->
-        <Border Background="{StaticResource PlaybackRadialBackground}"
-                IsHitTestVisible="False"
-                x:Name="PlaybackBackground" />
-
-        <!-- Video frame (WriteableBitmap-backed Image). Background=Transparent
-             so it passes clicks through and doesn't overlay a dark tint.
-             Renders behind StartPage. Becomes visible when a frame loads. -->
-        <controls:MpvVideoView x:Name="MpvVideoView"
-                               HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                               IsHitTestVisible="False"
-                               IsVisible="False" />
-
-        <!-- Video click overlay — fills window, captures hover/click for auto-hide,
-             play/pause toggle, and right-click context menu. -->
-        <Border x:Name="VideoClickOverlay"
+        <Border x:Name="ContentClip" CornerRadius="8" ClipToBounds="True"
                 Background="Transparent"
-                HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                IsTabStop="False"
-                PointerPressed="OnVideoPointerPressed"
-                DoubleTapped="OnVideoDoubleTapped"
-                RightTapped="OnVideoRightTapped" />
+                DragDrop.AllowDrop="True">
 
-        <!-- Start Page — full viewport, opaque background.
-             TOPMOST layer in this section. Always clickable. Fades out when media
-             opens, revealing VideoClickOverlay + video beneath. -->
-        <components:StartPage x:Name="StartPage" PointerPressed="OnStartPagePointerPressed" />
+            <Grid x:Name="MainOverlay" Background="Transparent"
+              HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+              DragDrop.AllowDrop="True">
 
-        <!-- ══════════════════════════════════════════════════════════════ -->
-        <!--  LAYER 1: UI OVERLAYS (floats on top of video)               -->
-        <!-- ══════════════════════════════════════════════════════════════ -->
+                <!-- ══════════════════════════════════════════════════════════ -->
+                <!--  LAYER 0: VIDEO + BACKDROP (renders first, behind overlays) -->
+                <!-- ══════════════════════════════════════════════════════════ -->
 
-        <!-- Loading Spinner — ZIndex=30 so it renders above all other overlays -->
-        <components:SpinnerOverlay x:Name="LoadingSpinnerOverlay" ZIndex="30" />
+                <!-- Playback background -->
+                <Border Background="{StaticResource PlaybackRadialBackground}"
+                        IsHitTestVisible="False"
+                        x:Name="PlaybackBackground" />
 
-        <!-- Pause Indicator -->
-        <components:PauseOverlay x:Name="PauseOverlay" />
+                <!-- Video frame (WriteableBitmap-backed Image). Background=Transparent
+                     so it passes clicks through and doesn't overlay a dark tint.
+                     Renders behind StartPage. Becomes visible when a frame loads. -->
+                <controls:MpvVideoView x:Name="MpvVideoView"
+                                       HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                       IsHitTestVisible="False"
+                                       IsVisible="False" />
 
-        <!-- Chapter Badge Overlay -->
-        <Border Classes="chapter-badge-overlay" IsHitTestVisible="False">
-            <TextBlock Classes="chapter-badge"
-                       Text="{Binding ChapterTitle, Mode=OneWay}" />
+                <!-- Video click overlay — fills window, captures hover/click for auto-hide,
+                     play/pause toggle, and right-click context menu. -->
+                <Border x:Name="VideoClickOverlay"
+                        Background="Transparent"
+                        HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                        IsTabStop="False"
+                        PointerPressed="OnVideoPointerPressed"
+                        DoubleTapped="OnVideoDoubleTapped"
+                        RightTapped="OnVideoRightTapped" />
+
+                <!-- Start Page — full viewport, opaque background.
+                     TOPMOST layer in this section. Always clickable. Fades out when media
+                     opens, revealing VideoClickOverlay + video beneath. -->
+                <components:StartPage x:Name="StartPage" PointerPressed="OnStartPagePointerPressed" />
+
+                <!-- Trial Watermark — translucent overlay visible only during trial mode -->
+                <Border x:Name="TrialWatermark"
+                        IsHitTestVisible="False"
+                        IsVisible="{Binding IsTrial}"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch">
+                    <TextBlock Text="TRIAL"
+                               FontSize="72"
+                               FontWeight="Bold"
+                               Foreground="#15FFFFFF"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               IsHitTestVisible="False" />
+                    <Border.Styles>
+                        <Style Selector="Border">
+                            <Setter Property="Transitions">
+                                <Setter.Value>
+                                    <Transitions>
+                                        <DoubleTransition Property="Opacity" Duration="0:0:0.5" />
+                                    </Transitions>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </Border.Styles>
+                </Border>
+
+                <!-- ══════════════════════════════════════════════════════════ -->
+                <!--  LAYER 1: UI OVERLAYS (floats on top of video)           -->
+                <!-- ══════════════════════════════════════════════════════════ -->
+
+                <!-- Loading Spinner — ZIndex=30 so it renders above all other overlays -->
+                <components:SpinnerOverlay x:Name="LoadingSpinnerOverlay" ZIndex="30" />
+
+                <!-- Pause Indicator -->
+                <components:PauseOverlay x:Name="PauseOverlay" />
+
+                <!-- Chapter Badge Overlay -->
+                <Border Classes="chapter-badge-overlay" IsHitTestVisible="False"
+                        IsVisible="{Binding HasChapters}">
+                    <TextBlock Classes="chapter-badge"
+                               Text="{Binding ChapterTitle, Mode=OneWay}" />
+                </Border>
+
+                <!-- Replay Overlay -->
+                <components:ReplayOverlay x:Name="ReplayOverlay" />
+
+                <!-- Drag-drop indicator overlay -->
+                <components:DragDropOverlay x:Name="DropIndicatorOverlay" />
+
+                <!-- HEADER BAR — ZIndex=20, top, floats over video -->
+                <components:HeaderBar x:Name="HeaderBarControl"
+                                           VerticalAlignment="Top"
+                                           HorizontalAlignment="Stretch" />
+
+                <!-- FULLSCREEN HEADER — ZIndex=25, top, floats over video -->
+                <components:FullscreenHeader x:Name="FullscreenHeaderControl"
+                                                  VerticalAlignment="Top" Height="{StaticResource size-fullscreen-header}" />
+
+                <!-- CONTROLS BOX — ZIndex=15, bottom, floats over video -->
+                <components:ControlsBox x:Name="ControlsBoxControl"
+                                             VerticalAlignment="Bottom"
+                                             HorizontalAlignment="Stretch" />
+
+                <!-- ══════════════════════════════════════════════════════════ -->
+                <!--  SIGNATURE INNOVATIONS (Phase 11)                        -->
+                <!-- ══════════════════════════════════════════════════════════ -->
+
+                <!-- Now Playing Info Panel — bottom-right overlay, hidden by default -->
+                <components:NowPlayingInfo x:Name="NowPlayingInfoPanel"
+                                                VerticalAlignment="Bottom"
+                                                HorizontalAlignment="Right"
+                                                ZIndex="35"
+                                                IsVisible="False" />
+
+                <!-- Focus Mode indicator — a tiny thin line at the bottom when all chrome is hidden -->
+                <Border x:Name="FocusModeIndicator" ZIndex="40"
+                        VerticalAlignment="Bottom" HorizontalAlignment="Center"
+                        IsVisible="False" IsHitTestVisible="False"
+                        Background="{StaticResource AppAccent}"
+                        Width="120" Height="2"
+                        CornerRadius="1"
+                        Margin="0,0,0,4" />
+
+                <!-- OSD Notification — bottom center, floats above ControlsBox.
+                     Bottom margin lifts it above the ControlsBox (which is ~100-110px tall). -->
+                <components:OsdNotification x:Name="OsdNotificationControl"
+                                                  VerticalAlignment="Bottom"
+                                                  HorizontalAlignment="Center"
+                                                  Margin="0,0,0,110" />
+
+                <!-- ══════════════════════════════════════════════════════════ -->
+                <!--  FLYOUT OVERLAY (ZIndex=50, above all interactive chrome) -->
+                <!-- ══════════════════════════════════════════════════════════ -->
+                <components:FlyoutOverlay x:Name="FlyoutOverlay"
+                                               ZIndex="50" />
+            </Grid>
         </Border>
 
-        <!-- Replay Overlay -->
-        <components:ReplayOverlay x:Name="ReplayOverlay" />
-
-        <!-- Drag-drop indicator overlay -->
-        <components:DragDropOverlay x:Name="DropIndicatorOverlay" />
-
-        <!-- HEADER BAR — ZIndex=20, top, floats over video -->
-        <components:HeaderBar x:Name="HeaderBarControl"
-                                   VerticalAlignment="Top"
-                                   HorizontalAlignment="Stretch" />
-
-        <!-- FULLSCREEN HEADER — ZIndex=25, top, floats over video -->
-        <components:FullscreenHeader x:Name="FullscreenHeaderControl"
-                                          VerticalAlignment="Top" Height="{StaticResource size-fullscreen-header}" />
-
-        <!-- CONTROLS BOX — ZIndex=15, bottom, floats over video -->
-        <components:ControlsBox x:Name="ControlsBoxControl"
-                                     VerticalAlignment="Bottom"
-                                     HorizontalAlignment="Stretch" />
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <!--  WINDOW FRAME — 2px focus-aware border using system accent    -->
+        <!--  color. Hidden when unfocused. No hit-test (visual only).     -->
+        <!--  CornerRadius matches ContentClip for a seamless look.        -->
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <Border x:Name="WindowFrame" IsHitTestVisible="False"
+                BorderThickness="2" CornerRadius="8"
+                BorderBrush="Transparent" />
 
         <!-- ══════════════════════════════════════════════════════════════ -->
-        <!--  SIGNATURE INNOVATIONS (Phase 11)                            -->
+        <!--  RESIZE GRIPS — Invisible hit-test zones for window resize.   -->
+        <!--  Uses WindowDecorationProperties.ElementRole for native       -->
+        <!--  cursor and behavior (Avalonia 12+). ZIndex=999 to be on top  -->
+        <!--  of everything.                                               -->
         <!-- ══════════════════════════════════════════════════════════════ -->
-
-        <!-- Now Playing Info Panel — bottom-right overlay, hidden by default -->
-        <components:NowPlayingInfo x:Name="NowPlayingInfoPanel"
-                                        VerticalAlignment="Bottom"
-                                        HorizontalAlignment="Right"
-                                        ZIndex="35"
-                                        IsVisible="False" />
-
-        <!-- Focus Mode indicator — a tiny thin line at the bottom when all chrome is hidden -->
-        <Border x:Name="FocusModeIndicator" ZIndex="40"
-                VerticalAlignment="Bottom" HorizontalAlignment="Center"
-                IsVisible="False" IsHitTestVisible="False"
-                Background="{StaticResource AppAccent}"
-                Width="120" Height="2"
-                CornerRadius="1"
-                Margin="0,0,0,4" />
-
-        <!-- OSD Notification — bottom center, floats above ControlsBox.
-             Bottom margin lifts it above the ControlsBox (which is ~100-110px tall). -->
-        <components:OsdNotification x:Name="OsdNotificationControl"
-                                          VerticalAlignment="Bottom"
-                                          HorizontalAlignment="Center"
-                                          Margin="0,0,0,110" />
-
-        <!-- ══════════════════════════════════════════════════════════════ -->
-        <!--  FLYOUT OVERLAY (ZIndex=50, above all interactive chrome)   -->
-        <!-- ══════════════════════════════════════════════════════════════ -->
-        <components:FlyoutOverlay x:Name="FlyoutOverlay"
-                                       ZIndex="50" />
+        <Border WindowDecorationProperties.ElementRole="ResizeN"
+                Background="Transparent" Height="4" IsHitTestVisible="True"
+                VerticalAlignment="Top" HorizontalAlignment="Stretch"
+                ZIndex="999" />
+        <Border WindowDecorationProperties.ElementRole="ResizeS"
+                Background="Transparent" Height="4" IsHitTestVisible="True"
+                VerticalAlignment="Bottom" HorizontalAlignment="Stretch"
+                ZIndex="999" />
+        <Border WindowDecorationProperties.ElementRole="ResizeW"
+                Background="Transparent" Width="4" IsHitTestVisible="True"
+                VerticalAlignment="Stretch" HorizontalAlignment="Left"
+                ZIndex="999" />
+        <Border WindowDecorationProperties.ElementRole="ResizeE"
+                Background="Transparent" Width="4" IsHitTestVisible="True"
+                VerticalAlignment="Stretch" HorizontalAlignment="Right"
+                ZIndex="999" />
+        <Border WindowDecorationProperties.ElementRole="ResizeNW"
+                Background="Transparent" Width="8" Height="8" IsHitTestVisible="True"
+                VerticalAlignment="Top" HorizontalAlignment="Left"
+                ZIndex="999" />
+        <Border WindowDecorationProperties.ElementRole="ResizeNE"
+                Background="Transparent" Width="8" Height="8" IsHitTestVisible="True"
+                VerticalAlignment="Top" HorizontalAlignment="Right"
+                ZIndex="999" />
+        <Border WindowDecorationProperties.ElementRole="ResizeSW"
+                Background="Transparent" Width="8" Height="8" IsHitTestVisible="True"
+                VerticalAlignment="Bottom" HorizontalAlignment="Left"
+                ZIndex="999" />
+        <Border WindowDecorationProperties.ElementRole="ResizeSE"
+                Background="Transparent" Width="8" Height="8" IsHitTestVisible="True"
+                VerticalAlignment="Bottom" HorizontalAlignment="Right"
+                ZIndex="999" />
     </Grid>
 </Window>

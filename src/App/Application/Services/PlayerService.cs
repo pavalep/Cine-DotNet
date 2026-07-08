@@ -16,8 +16,10 @@ namespace Cine.Avalonia.Services;
 public class PlayerService : IDisposable
 {
     private IMediaPlayer? _player;
+    private IDecodingSession? _session;
     private bool _disposed;
     private readonly IPlayerFactory _factory;
+    private readonly CodecManager _codecManager;
     private static readonly string DebugLogFile = CreateLogFilePath();
 
     private static string CreateLogFilePath()
@@ -49,12 +51,27 @@ public class PlayerService : IDisposable
         }
     }
 
-    public PlayerService(IPlayerFactory? factory = null)
+    public PlayerService(CodecManager codecManager, IPlayerFactory? factory = null)
     {
+        _codecManager = codecManager ?? throw new ArgumentNullException(nameof(codecManager));
         _factory = factory ?? new MpvPlayerFactory();
     }
 
     public IMediaPlayer? Player => _player;
+
+    /// <summary>Current decoding session with codec diagnostics.</summary>
+    public IDecodingSession? Session => _session;
+
+    /// <summary>The active codec provider selected at startup.</summary>
+    public ICodecProvider? ActiveProvider => _codecManager.ActiveProvider;
+
+    // ── Role-specific accessors (ISP) — narrow dependency surface ──
+    public IPlaybackControl? Playback => _player;
+    public IAudioControl? Audio => _player;
+    public IVideoControl? Video => _player;
+    public ISubtitleControl? Subtitles => _player;
+    public IChapterNavigation? Chapters => _player;
+    public IPlaylistManagement? Playlist => _player;
 
     public event EventHandler<string>? Error;
 
@@ -72,6 +89,15 @@ public class PlayerService : IDisposable
             DebugLog("Initialize start");
             _player = _factory.CreatePlayer();
             DebugLog($"{_player.GetType().Name} created");
+
+            // Configure the player using the selected codec provider
+            _codecManager.ActiveProvider.Configure(_player);
+            DebugLog($"Configured with codec provider: {_codecManager.ActiveProvider.Name}");
+
+            // Create a decoding session wrapping the player
+            _session = _codecManager.CreateSession(_player);
+            DebugLog("Decoding session created");
+
             _player.Error += OnError;
             DebugLog("Initialize finish");
         }

@@ -105,5 +105,8 @@
     <!-- Pin (Material Design: pushpin) -->
     <Geometry x:Key="PinIcon">M 16 9 V 4 L 17 3 V 1 H 7 V 3 L 8 4 V 9 L 6 11 V 13 H 11.5 V 19 L 12 21 L 12.5 19 V 13 H 18 V 11 Z</Geometry>
 
+    <!-- File Document (Material Design: file-document-outline) -->
+    <Geometry x:Key="FileDocumentIcon">M 14 2 H 6 C 4.9 2 4 2.9 4 4 V 20 C 4 21.1 4.9 22 6 22 H 18 C 19.1 22 20 21.1 20 20 V 8 Z M 16 18 H 8 V 16 H 16 Z M 16 14 H 8 V 12 H 16 Z M 13 9 V 3.5 L 18.5 9 Z</Geometry>
+
     </Styles.Resources>
 </Styles>

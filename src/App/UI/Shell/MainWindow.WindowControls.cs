@@ -276,7 +276,6 @@ public partial class MainWindow
             _fullscreenHeader.FullscreenHeaderElement.Opacity = 0;
             _fullscreenHeader.FullscreenHeaderElement.IsHitTestVisible = false;
         }
-        _controlsBox.ControlsBoxElement.IsVisible = false;
         _controlsBox.ControlsBoxElement.Opacity = 0;
         _controlsBox.ControlsBoxElement.IsHitTestVisible = false;
     }

@@ -11,6 +11,7 @@ publish-sc/
 resources/
 video/
 reference/
+node_modules/
 
 # MSIX packaging output
 dist/

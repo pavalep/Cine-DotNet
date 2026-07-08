@@ -30,6 +30,63 @@
                       VerticalScrollBarVisibility="Auto">
             <StackPanel Spacing="{StaticResource space-spacing-4}" Margin="0,12">
 
+                <!-- License & Features -->
+                <TextBlock Text="License &amp; Features" Classes="md3-subtitle1"
+                           Foreground="{StaticResource TextSecondary}" />
+
+                <Border Background="{StaticResource PopoverBackground}"
+                        CornerRadius="{StaticResource radius-sm}" Padding="{StaticResource space-2}">
+                    <StackPanel Spacing="{StaticResource space-spacing-3}">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel>
+                                <TextBlock Text="License Tier" Classes="md3-body2" FontWeight="Medium"
+                                           Foreground="{StaticResource TextPrimary}" />
+                                <TextBlock Text="{Binding LicenseLabel}"
+                                           Classes="md3-caption"
+                                           Foreground="{StaticResource TextTertiary}" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding LicenseTierDisplay}"
+                                       Classes="md3-body2"
+                                       Foreground="{StaticResource TextPrimary}"
+                                       VerticalAlignment="Center" />
+                        </Grid>
+                        <Separator Background="{StaticResource PopoverBorder}" Height="1" Margin="0" />
+                        <TextBlock Text="Feature Status" Classes="md3-caption" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextTertiary}" />
+                        <ItemsControl ItemsSource="{Binding FeatureStatuses}"
+                                      BorderThickness="0"
+                                      Background="Transparent">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,2">
+                                        <TextBlock Grid.Column="0"
+                                                   Text="{Binding StatusIcon}"
+                                                   FontSize="14"
+                                                   FontWeight="Bold"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,8,0" />
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="{Binding DisplayName}"
+                                                       Classes="md3-caption"
+                                                       Foreground="{StaticResource TextPrimary}" />
+                                            <TextBlock Text="{Binding Reason}"
+                                                       Classes="md3-caption"
+                                                       Foreground="{StaticResource TextTertiary}"
+                                                       FontSize="11" />
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="2"
+                                                   Text="{Binding StatusLabel}"
+                                                   FontSize="11"
+                                                   Foreground="{StaticResource TextSecondary}"
+                                                   VerticalAlignment="Center" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
                 <!-- General -->
                 <TextBlock Text="General" Classes="md3-subtitle1"
                            Foreground="{StaticResource TextSecondary}" />

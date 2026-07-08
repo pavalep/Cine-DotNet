@@ -14,9 +14,11 @@ using Cine.Avalonia.State;
 using Cine.Avalonia.Extensions;
 using Cine.Avalonia.Models;
 using Cine.Avalonia.ViewModels;
+using Cine.Avalonia.Features;
 using Cine.Core;
 using Cine.Media.Interfaces;
 using Cine.Media.Implementations;
+using Microsoft.Extensions.DependencyInjection;
 using Cine.Media.Events;
 using Cine.Media.Models;
 
@@ -46,12 +48,12 @@ public partial class MainWindow
         ReportWindowState("MainWindow.OnWindowInitialized.AfterResolve");
 
         _startupTimer.Mark("input-router");
-        _inputRouter ??= new InputRoutingService();
+        _inputRouter = _serviceProvider.GetRequiredService<InputRoutingService>();
         RegisterKeyboardShortcuts();
 
         _startupTimer.Mark("player-init");
 
-        _playerService ??= new PlayerService();
+        _playerService = _serviceProvider.GetRequiredService<PlayerService>();
         try
         {
             _playerService.Initialize();
@@ -88,7 +90,8 @@ public partial class MainWindow
         // Create domain managers — single source of truth for their domains
         _audioManager = new AudioManager(player);
         _videoManager = new VideoManager(player);
-        _subtitleManager = new SubtitleManager(player);
+        // Resolve from DI so the shared SubtitleSettingsStore singleton is injected
+        _subtitleManager = _serviceProvider.GetRequiredService<ISubtitleManager>();
 
         // Phase 7: Wire OSD feedback for track switching
         _subtitleManager.TrackChangedMessage = msg =>
@@ -101,7 +104,7 @@ public partial class MainWindow
 
         // Flyout ecosystem manager — ensures only ONE flyout is open at a time,
         // creating the professional "close previous → open next" UX contract.
-        _flyoutManager = new FlyoutManager();
+        _flyoutManager = _serviceProvider.GetRequiredService<IFlyoutService>();
         _controlsBox.FlyoutManager = _flyoutManager;
         _headerBar.FlyoutManager = _flyoutManager;
         _fullscreenHeader.FlyoutManager = _flyoutManager;
@@ -115,10 +118,17 @@ public partial class MainWindow
         // Update OnBeforeOpen to use the centralized manager
         _dialogHandler.OnBeforeOpen = () => _flyoutManager.CloseAll();
 
+        var rendererService = _serviceProvider.GetRequiredService<IRendererService>();
+        var sessionService = _serviceProvider.GetRequiredService<ISessionService>();
+        var playlistService = _serviceProvider.GetRequiredService<IPlaylistService>();
+        var mediaFileService = _serviceProvider.GetRequiredService<IMediaFileService>();
         var fileDialogService = new FileDialogService(_dialogHandler);
+        var featureService = _serviceProvider.GetRequiredService<IFeatureService>();
+        var licensingService = _serviceProvider.GetRequiredService<ILicensingService>();
 
-        _viewModel = new MainViewModel(player, null, null, _audioManager, _videoManager, _subtitleManager,
-            rendererService: null, mediaFileService: null, fileDialogService: fileDialogService);
+        _viewModel = new MainViewModel(player, sessionService, playlistService,
+            _audioManager, _videoManager, _subtitleManager,
+            rendererService, mediaFileService, fileDialogService, featureService, licensingService);
         DataContext = _viewModel;
 
         _startupTimer.Mark("viewmodel");
