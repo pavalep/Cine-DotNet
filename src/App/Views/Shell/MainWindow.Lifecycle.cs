@@ -457,6 +457,9 @@ public partial class MainWindow
         });
 
         PlayerPage.VideoClickOverlay.PointerMoved += OnWindowPointerMoved;
+        PlayerPage.VideoClickOverlay.PointerPressed += OnVideoPointerPressed;
+        PlayerPage.VideoClickOverlay.AddHandler(InputElement.DoubleTappedEvent, OnVideoDoubleTapped, handledEventsToo: true);
+        PlayerPage.VideoClickOverlay.AddHandler(InputElement.RightTappedEvent, OnVideoRightTapped, handledEventsToo: true);
 
         // Hover tracking
         PlayerPage.HeaderBarControl.HeaderBarElement.PointerEntered += OnHeaderPointerEntered;

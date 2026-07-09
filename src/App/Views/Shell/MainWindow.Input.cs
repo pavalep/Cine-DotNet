@@ -465,34 +465,26 @@ public partial class MainWindow
 
     private void OnVideoPointerPressed(object? sender, PointerPressedEventArgs e)
     {
+        // Left-click on video does nothing (single-click pause removed per user request).
+        // Double-click handler handles fullscreen toggle independently.
         if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
         {
-            // Skip play/pause on the second press of a double-click —
-            // the DoubleTapped handler will handle fullscreen toggle.
             var now = DateTime.UtcNow;
-            var elapsed = (now - _lastVideoPressTime).TotalMilliseconds;
             _lastVideoPressTime = now;
-            if (elapsed < 500)
-                return;
 
-            // If any flyout is open, the click was just dismissing the flyout —
-            // don't toggle play/pause.
+            // If any flyout is open, the click was just dismissing the flyout.
             if (PlayerPage.ControlsBoxControl.HasActiveFlyouts ||
                 PlayerPage.HeaderBarControl.HasActiveFlyouts ||
                 PlayerPage.FullscreenHeaderControl.HasActiveFlyouts)
                 return;
-
-            _viewModel?.PlayPause();
         }
     }
 
     private void OnVideoDoubleTapped(object? sender, TappedEventArgs e)
     {
-        // ToggleFullscreen toggles fullscreen mode.
-        // PlayPause() undoes the play/pause toggle from the first press of the
-        // double-click (see OnVideoPointerPressed above), preserving playback state.
+        // Toggle fullscreen on double-click. Playback state is preserved
+        // (single-click no longer toggles play/pause, so no undo needed).
         _viewModel?.ToggleFullscreen();
-        _viewModel?.PlayPause();
         e.Handled = true;
     }
 

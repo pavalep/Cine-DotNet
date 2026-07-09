@@ -78,6 +78,26 @@ public partial class MainWindow : global::Avalonia.Controls.Window
         }
     }
 
+    private Geometry? CreateRoundedRectClip(double w, double h, CornerRadius r)
+    {
+        if (w <= 0 || h <= 0) return null;
+        double tl = r.TopLeft, tr = r.TopRight, br = r.BottomRight, bl = r.BottomLeft;
+
+        var geom = new StreamGeometry();
+        using var ctx = geom.Open();
+        ctx.BeginFigure(new global::Avalonia.Point(tl, 0), isFilled: true);
+        ctx.LineTo(new global::Avalonia.Point(w - tr, 0));
+        ctx.ArcTo(new global::Avalonia.Point(w, tr), new global::Avalonia.Size(tr, tr), 0, false, SweepDirection.Clockwise);
+        ctx.LineTo(new global::Avalonia.Point(w, h - br));
+        ctx.ArcTo(new global::Avalonia.Point(w - br, h), new global::Avalonia.Size(br, br), 0, false, SweepDirection.Clockwise);
+        ctx.LineTo(new global::Avalonia.Point(bl, h));
+        ctx.ArcTo(new global::Avalonia.Point(0, h - bl), new global::Avalonia.Size(bl, bl), 0, false, SweepDirection.Clockwise);
+        ctx.LineTo(new global::Avalonia.Point(0, tl));
+        ctx.ArcTo(new global::Avalonia.Point(tl, 0), new global::Avalonia.Size(tl, tl), 0, false, SweepDirection.Clockwise);
+        ctx.EndFigure(isClosed: true);
+        return geom;
+    }
+
     internal void UpdateCornerRadius()
     {
         bool isMaximized = WindowState == WindowState.Maximized
@@ -85,9 +105,51 @@ public partial class MainWindow : global::Avalonia.Controls.Window
         var radius = isMaximized ? new CornerRadius(0) : new CornerRadius(8);
 
         if (ContentClip != null)
+        {
             ContentClip.CornerRadius = radius;
+
+            // StreamGeometry clip prevents native ANGLE/OpenGL rendering
+            // from spilling past the rounded corners (ClipToBounds alone
+            // only clips to the rectangular area).
+            if (!isMaximized)
+                ContentClip.Clip = CreateRoundedRectClip(
+                    ContentClip.Bounds.Width, ContentClip.Bounds.Height, radius);
+            else
+                ContentClip.Clip = null;
+        }
+
+        // Apply clip directly to PlayerPage and its MpvVideoView for
+        // defense-in-depth — ensures the video surface stays within
+        // rounded corners even if ContentClip.Clip has gaps.
+        if (PlayerPage != null)
+        {
+            if (!isMaximized)
+                PlayerPage.Clip = CreateRoundedRectClip(
+                    PlayerPage.Bounds.Width, PlayerPage.Bounds.Height, radius);
+            else
+                PlayerPage.Clip = null;
+        }
+        if (PlayerPage?.MpvVideoView != null)
+        {
+            if (!isMaximized)
+                PlayerPage.MpvVideoView.Clip = CreateRoundedRectClip(
+                    PlayerPage.MpvVideoView.Bounds.Width, PlayerPage.MpvVideoView.Bounds.Height, radius);
+            else
+                PlayerPage.MpvVideoView.Clip = null;
+        }
+
         if (WindowFrame != null)
+        {
             WindowFrame.CornerRadius = radius;
+            // Hide the 2px focus border when maximized/fullscreen — it only
+            // makes sense in windowed mode.
+            WindowFrame.IsVisible = !isMaximized;
+        }
+
+        // Hide resize grips when maximized (fullscreen already handled
+        // by RefreshFullscreenUi to preserve gesture parity).
+        if (ResizeGripPanel != null)
+            ResizeGripPanel.IsVisible = !isMaximized;
     }
 
     internal void UpdateFocusBorder(bool focused)

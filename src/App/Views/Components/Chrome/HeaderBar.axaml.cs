@@ -393,6 +393,7 @@ public partial class HeaderBar : AvaloniaUserControl
         }
         else
         {
+            SetVis(BtnPip, true);
             TitleText.MaxWidth = 300;
         }
 

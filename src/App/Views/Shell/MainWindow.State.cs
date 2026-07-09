@@ -15,6 +15,7 @@ using Avalonia.Threading;
 using Cine.Avalonia.Controls;
 using Cine.Avalonia.Core.Navigation;
 using Cine.Avalonia.Extensions;
+using Cine.Avalonia.Views.Resources;
 using Cine.Avalonia.Models;
 using Cine.Avalonia.Services;
 using Cine.Avalonia.Services.UI;
@@ -74,6 +75,32 @@ public partial class MainWindow
     protected override void OnSizeChanged(SizeChangedEventArgs e)
     {
         base.OnSizeChanged(e);
+
+        bool isMaximized = WindowState == WindowState.Maximized
+                        || WindowState == WindowState.FullScreen;
+
+        // Keep rounded-rect clip in sync with ContentClip size so the
+        // native video surface doesn't overflow the rounded corners.
+        if (ContentClip != null && !isMaximized)
+        {
+            ContentClip.Clip = CreateRoundedRectClip(
+                ContentClip.Bounds.Width, ContentClip.Bounds.Height,
+                ContentClip.CornerRadius);
+        }
+
+        // Also keep PlayerPage and MpvVideoView clips in sync.
+        if (PlayerPage != null && !isMaximized)
+        {
+            PlayerPage.Clip = CreateRoundedRectClip(
+                PlayerPage.Bounds.Width, PlayerPage.Bounds.Height,
+                new CornerRadius(8));
+        }
+        if (PlayerPage?.MpvVideoView != null && !isMaximized)
+        {
+            PlayerPage.MpvVideoView.Clip = CreateRoundedRectClip(
+                PlayerPage.MpvVideoView.Bounds.Width, PlayerPage.MpvVideoView.Bounds.Height,
+                new CornerRadius(8));
+        }
     }
 
     // =========================================================================
@@ -184,7 +211,7 @@ public partial class MainWindow
         PlayerPage.HeaderBarControl.ShowOpenMenu();
         PlayerPage.HeaderBarControl.ShowPrimaryMenu();
         PlayerPage.HeaderBarControl.ShowBackButton();
-        PlayerPage.HeaderBarControl.SetPipVisibility(Bounds.Width >= MediumBreakpoint);
+        PlayerPage.HeaderBarControl.SetPipVisibility(Bounds.Width >= UiConstants.BreakpointCompact);
         PlayerPage.HeaderBarControl.SetTitle(_viewModel!.Title);
         Title = $"Cine — {_viewModel.Title}";
     }
