@@ -1,0 +1,197 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cine.Avalonia.ViewModels"
+             xmlns:controls="clr-namespace:Cine.Avalonia.Controls"
+             xmlns:components="using:Cine.Avalonia.Views.Components"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Cine.Avalonia.Views.Components.ControlsBox"
+             x:DataType="vm:MainViewModel"
+             x:Name="ControlsBoxRoot">
+    <Border x:Name="ControlsBoxBorder" Classes="controls-box"
+            Background="{StaticResource GlassBackground}"
+            BorderBrush="{StaticResource AppBorderDim}"
+            BorderThickness="0,1,0,0"
+            HorizontalAlignment="Stretch"
+            MinHeight="74"
+            IsHitTestVisible="True"
+            IsVisible="False"
+            ZIndex="15">
+        <Border.Transitions>
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.25" />
+            </Transitions>
+        </Border.Transitions>
+        <Grid>
+            <!-- Bottom edge glass highlight (top edge of glass facing the content) -->
+            <Rectangle Fill="{StaticResource GlassEdgeHighlight}" Height="1" VerticalAlignment="Bottom" />
+            
+            <!-- Glass sheen gradient -->
+            <Rectangle>
+                <Rectangle.Fill>
+                    <LinearGradientBrush StartPoint="0,1" EndPoint="0.4,0">
+                        <GradientStop Offset="0" Color="{StaticResource GlassSheenStart}" />
+                        <GradientStop Offset="0.5" Color="{StaticResource GlassSheenMid}" />
+                        <GradientStop Offset="1" Color="{StaticResource GlassSheenEnd}" />
+                    </LinearGradientBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+            
+            <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- ROW 0: TRIAL BANNER -->
+            <components:TrialBanner Grid.Row="0" />
+
+            <!-- ROW 1: TRANSPORT BUTTONS -->
+            <StackPanel Grid.Row="1"
+                        Orientation="Horizontal"
+                        Margin="{StaticResource space-h-3},8,{StaticResource space-h-3},4"
+                        HorizontalAlignment="Center">
+                <StackPanel.Styles>
+                    <Style Selector="Button, ToggleButton">
+                        <Setter Property="Margin" Value="0" />
+                        <Setter Property="Background" Value="Transparent" />
+                    </Style>
+                </StackPanel.Styles>
+
+                <!-- Group 1: Transport -->
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource space-spacing-0_5}">
+                    <Button x:Name="BtnPrevious"
+                            Classes="circular-transport"
+                            Click="OnPrevious"
+                            ToolTip.Tip="Previous (Shift+P)"
+                            AutomationProperties.Name="Previous track">
+                        <materialIcons:MaterialIcon Kind="SkipPrevious" Width="22" Height="22"
+                            Foreground="{StaticResource OsdForeground}" />
+                    </Button>
+                    <Button x:Name="BtnPlayPause"
+                            Classes="circular-play"
+                            Click="OnPlayPause"
+                            ToolTip.Tip="Play/Pause (Space)"
+                            AutomationProperties.Name="Play or pause">
+                        <Panel Width="24" Height="24">
+                            <materialIcons:MaterialIcon x:Name="PlayPauseIcon" Kind="Play" Width="24" Height="24"
+                                Foreground="{StaticResource OsdForeground}">
+                                <materialIcons:MaterialIcon.Transitions>
+                                    <Transitions>
+                                        <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
+                                    </Transitions>
+                                </materialIcons:MaterialIcon.Transitions>
+                            </materialIcons:MaterialIcon>
+                            <materialIcons:MaterialIcon x:Name="PlayPauseAltIcon" Kind="Pause" Width="24" Height="24"
+                                Foreground="{StaticResource OsdForeground}"
+                                Opacity="0">
+                                <materialIcons:MaterialIcon.Transitions>
+                                    <Transitions>
+                                        <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
+                                    </Transitions>
+                                </materialIcons:MaterialIcon.Transitions>
+                            </materialIcons:MaterialIcon>
+                        </Panel>
+                    </Button>
+                    <Button x:Name="BtnNext"
+                            Classes="circular-transport"
+                            Click="OnNext"
+                            ToolTip.Tip="Next (P)"
+                            AutomationProperties.Name="Next track">
+                        <materialIcons:MaterialIcon Kind="SkipNext" Width="22" Height="22"
+                            Foreground="{StaticResource OsdForeground}" />
+                    </Button>
+                </StackPanel>
+
+                <!-- Separator -->
+                <Rectangle Width="1" Height="20" Fill="{StaticResource AppDivider}"
+                           VerticalAlignment="Center" Margin="{StaticResource space-h-2}" IsHitTestVisible="False" />
+
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource space-spacing-0_5}">
+                    <components:VolumeFlyout x:Name="VolumeFlyoutField"
+                                                  Classes="circular-menu"
+                                                  VerticalAlignment="Center"
+                                                  Padding="0" />
+                    <Button x:Name="BtnEqualizer"
+                            Classes="circular-menu"
+                            ToolTip.Tip="Equalizer"
+                            Click="OnEqualizerClick"
+                            AutomationProperties.Name="Equalizer">
+                        <materialIcons:MaterialIcon Kind="Tune" Width="20" Height="20"
+                            Foreground="{StaticResource OsdForeground}" />
+                    </Button>
+                    <!-- VideoTrackSelector removed — not meaningful for audio files -->
+                </StackPanel>
+
+                <!-- Separator -->
+                <Rectangle Width="1" Height="20" Fill="{StaticResource AppDivider}"
+                           VerticalAlignment="Center" Margin="{StaticResource space-h-2}" IsHitTestVisible="False" />
+
+                <!-- Group 3: Mode -->
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource space-spacing-0_5}">
+                    <ToggleButton x:Name="BtnShufflePlaylist"
+                                  Classes="circular-toggle"
+                                  IsChecked="{Binding IsShuffleEnabled}"
+                                  IsVisible="{Binding HasMultiplePlaylistItems}"
+                                  Click="OnToggleShuffle"
+                                  ToolTip.Tip="Shuffle Playlist"
+                                  AutomationProperties.Name="Shuffle playlist">
+                        <materialIcons:MaterialIcon Kind="ShuffleVariant" Width="18" Height="18"
+                            Foreground="{StaticResource OsdForeground}" />
+                    </ToggleButton>
+                    <ToggleButton x:Name="BtnLoopFile"
+                                  Classes="circular-toggle"
+                                  IsChecked="{Binding IsLoopFileEnabled}"
+                                  Click="OnToggleLoopFile"
+                                  ToolTip.Tip="Loop File (L)"
+                                  AutomationProperties.Name="Loop current file">
+                        <materialIcons:MaterialIcon Kind="RepeatOnce" Width="16" Height="16"
+                            Foreground="{StaticResource OsdForeground}" />
+                    </ToggleButton>
+                    <Button x:Name="BtnPlaylistDialog"
+                            Classes="circular-menu"
+                            Click="OnOpenPlaylistDialog"
+                            ToolTip.Tip="Playlist"
+                            AutomationProperties.Name="Playlist dialog">
+                        <materialIcons:MaterialIcon Kind="PlaylistMusic" Width="16" Height="16"
+                            Foreground="{StaticResource OsdForeground}" />
+                    </Button>
+                </StackPanel>
+
+                <!-- Separator -->
+                <Rectangle Width="1" Height="20" Fill="{StaticResource AppDivider}"
+                           VerticalAlignment="Center" Margin="{StaticResource space-h-2}" IsHitTestVisible="False" />
+
+                <!-- Group 4: Tools -->
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource space-spacing-0_5}">
+                    <components:ChaptersFlyout x:Name="ChaptersFlyoutField"
+                                                  Classes="circular-menu"
+                                                  VerticalAlignment="Center"
+                                                  Padding="0" />
+                    <components:SubtitleOverlay x:Name="SubOverlayCtrl"
+                                                     Classes="circular-transport"
+                                                     Padding="0"
+                                                     VerticalAlignment="Center" />
+                    <components:AudioTrackSelector x:Name="AudioOverlay"
+                                                        Classes="circular-transport"
+                                                        Padding="0"
+                                                        VerticalAlignment="Center" />
+                    <ToggleButton x:Name="BtnFullscreen"
+                                  Classes="circular-toggle"
+                                  Click="OnToggleFullscreen"
+                                  ToolTip.Tip="Fullscreen (F)"
+                                  AutomationProperties.Name="Toggle fullscreen">
+                        <materialIcons:MaterialIcon x:Name="FullscreenIcon" Kind="Fullscreen" Width="16" Height="16"
+                            Foreground="{StaticResource OsdForeground}" />
+                    </ToggleButton>
+                </StackPanel>
+            </StackPanel>
+
+            <!-- ROW 2: SEEK BAR + TIME -->
+            <components:SeekBar Grid.Row="2"
+                                     x:Name="SeekBar"
+                                     Margin="{StaticResource space-h-3}" />
+        </Grid>
+        </Grid>
+    </Border>
+</UserControl>

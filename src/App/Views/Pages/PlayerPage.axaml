@@ -1,0 +1,102 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:components="clr-namespace:Cine.Avalonia.Views.Components"
+             xmlns:controls="clr-namespace:Cine.Avalonia.Controls"
+             xmlns:vm="using:Cine.Avalonia.ViewModels"
+             x:Class="Cine.Avalonia.Views.Pages.PlayerPage"
+             x:DataType="vm:MainViewModel"
+             ClipToBounds="True">
+
+    <Grid>
+        <!-- Video surface. Initially hidden; shown by MainWindow when a frame loads. -->
+        <controls:MpvVideoView x:Name="MpvVideoView"
+                               IsVisible="False" />
+
+        <!-- Click-to-play / pause overlay. Event handlers (PointerPressed, DoubleTapped,
+             RightTapped) are wired by MainWindow in code via PlayerPage.VideoClickOverlay. -->
+        <Border x:Name="VideoClickOverlay"
+                Background="Transparent"
+                IsTabStop="False" />
+
+        <!-- Trial watermark — translucent overlay visible only during trial mode -->
+        <Border x:Name="TrialWatermark"
+                IsHitTestVisible="False"
+                IsVisible="{Binding IsTrial}"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch">
+            <TextBlock Text="TRIAL"
+                       FontSize="72"
+                       FontWeight="Bold"
+                       Foreground="#15FFFFFF"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       IsHitTestVisible="False" />
+            <Border.Styles>
+                <Style Selector="Border">
+                    <Setter Property="Transitions">
+                        <Setter.Value>
+                            <Transitions>
+                                <DoubleTransition Property="Opacity" Duration="0:0:0.5" />
+                            </Transitions>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </Border.Styles>
+        </Border>
+
+        <!-- Loading spinner -->
+        <components:SpinnerOverlay x:Name="SpinnerOverlay" />
+
+        <!-- Pause indicator overlay -->
+        <components:PauseOverlay x:Name="PauseOverlay" />
+
+        <!-- Chapter badge overlay -->
+        <Border Classes="chapter-badge-overlay" IsHitTestVisible="False"
+                IsVisible="{Binding HasChapters}">
+            <TextBlock Classes="chapter-badge"
+                       Text="{Binding ChapterTitle, Mode=OneWay}" />
+        </Border>
+
+        <!-- Replay overlay -->
+        <components:ReplayOverlay x:Name="ReplayOverlay" />
+
+        <!-- Header bar -->
+        <components:HeaderBar x:Name="HeaderBarControl"
+                              VerticalAlignment="Top"
+                              HorizontalAlignment="Stretch" />
+
+        <!-- Fullscreen header -->
+        <components:FullscreenHeader x:Name="FullscreenHeaderControl"
+                                     VerticalAlignment="Top"
+                                     Height="{StaticResource size-fullscreen-header}" />
+
+        <!-- Controls box -->
+        <components:ControlsBox x:Name="ControlsBoxControl"
+                                VerticalAlignment="Bottom"
+                                HorizontalAlignment="Stretch" />
+
+        <!-- Now‑playing info panel -->
+        <components:NowPlayingInfo x:Name="NowPlayingInfoPanel"
+                                   VerticalAlignment="Bottom"
+                                   HorizontalAlignment="Right"
+                                   IsVisible="False" />
+
+        <!-- Focus mode indicator -->
+        <Border x:Name="FocusModeIndicator"
+                VerticalAlignment="Bottom"
+                HorizontalAlignment="Center"
+                IsVisible="False"
+                IsHitTestVisible="False"
+                Background="{StaticResource AppAccent}"
+                Width="120" Height="2"
+                CornerRadius="{StaticResource radius-xs}"
+                Margin="{StaticResource space-bottom-2}" />
+
+        <!-- OSD notification -->
+        <components:OsdNotification x:Name="OsdNotificationControl"
+                                    VerticalAlignment="Bottom"
+                                    HorizontalAlignment="Center"
+                                    Margin="0,0,0,110" />
+    </Grid>
+
+</UserControl>

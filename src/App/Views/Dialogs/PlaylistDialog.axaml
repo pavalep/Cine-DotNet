@@ -1,0 +1,236 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:Cine.Avalonia.ViewModels"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="450"
+        x:Class="Cine.Avalonia.Views.Dialogs.PlaylistDialog"
+        x:DataType="vm:MainViewModel"
+        Title="Cine — Playlist"
+        Width="520" Height="420"
+        MinWidth="360" MinHeight="300"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource AppBackground}"
+        ExtendClientAreaToDecorationsHint="True"
+        WindowDecorations="BorderOnly">
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="0">
+        <!-- Header -->
+        <Grid Grid.Row="0" Classes="dialog-header" ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto,Auto,Auto">
+            <Button Grid.Column="0"
+                    Classes="flat"
+                    Margin="4,0"
+                    Click="OnAddFilesClick"
+                    ToolTip.Tip="Add Files" AutomationProperties.Name="Add files to playlist">
+                <materialIcons:MaterialIcon Kind="PlaylistPlus" Width="14" Height="14"
+                    Foreground="{StaticResource OsdForeground}" />
+            </Button>
+            <TextBlock Grid.Column="1" Text="Playlist" Classes="dialog-title" />
+            <Button Grid.Column="3"
+                    Classes="flat"
+                    Margin="0,0,2,0"
+                    x:Name="SortBtn"
+                    Click="OnSortClick"
+                    ToolTip.Tip="Sort by Title"
+                    AutomationProperties.Name="Sort by title">
+                <materialIcons:MaterialIcon Kind="SortAlphabeticalAscending" Width="14" Height="14"
+                    Foreground="{StaticResource OsdForeground}" />
+            </Button>
+            <Button Grid.Column="4"
+                    Classes="flat"
+                    Margin="0,0,2,0"
+                    x:Name="QueueBtn"
+                    Click="OnQueueModeClick"
+                    ToolTip.Tip="Queue Mode: Add files after current"
+                    AutomationProperties.Name="Toggle queue mode">
+                <materialIcons:MaterialIcon Kind="PlaylistPlay" Width="14" Height="14"
+                    Foreground="{StaticResource OsdForeground}" />
+            </Button>
+            <Button Grid.Column="5"
+                    Classes="flat"
+                    Margin="0,0,2,0"
+                    Click="OnClearPlaylistClick"
+                    ToolTip.Tip="Clear All"
+                    AutomationProperties.Name="Clear all playlist items">
+                <materialIcons:MaterialIcon Kind="PlaylistRemove" Width="14" Height="14"
+                    Foreground="{StaticResource OsdForeground}" />
+            </Button>
+            <Button Grid.Column="6"
+                    Classes="flat"
+                    Margin="0,0,2,0"
+                    Click="OnSavePlaylistClick"
+                    ToolTip.Tip="Save Playlist (.m3u8)" AutomationProperties.Name="Save playlist">
+                <materialIcons:MaterialIcon Kind="ContentSave" Width="14" Height="14"
+                    Foreground="{StaticResource OsdForeground}" />
+            </Button>
+            <Button Grid.Column="7" 
+                    Classes="flat" 
+                    Margin="0,0,8,0"
+                    Click="OnCloseClick"
+                    ToolTip.Tip="Close"
+                    AutomationProperties.Name="Close playlist dialog">
+                <materialIcons:MaterialIcon Kind="Close" Width="14" Height="14"
+                    Foreground="{StaticResource OsdForeground}" />
+            </Button>
+        </Grid>
+
+        <!-- Search Bar -->
+        <Border Grid.Row="1" Height="36" Margin="8,4,8,0"
+                Background="{StaticResource PopoverBackground}"
+                CornerRadius="{StaticResource radius-sm}"
+                BorderBrush="{StaticResource PopoverBorder}"
+                BorderThickness="1">
+            <Grid ColumnDefinitions="Auto,*,Auto" Margin="8,0">
+                <materialIcons:MaterialIcon Grid.Column="0" Kind="Magnify" Width="14" Height="14"
+                    Foreground="{StaticResource OsdForeground}"
+                    VerticalAlignment="Center" />
+                <TextBox Grid.Column="1"
+                         x:Name="SearchTextBox"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Foreground="{StaticResource OsdForeground}"
+                         PlaceholderText="Search playlist..."
+                         Classes="md3-caption"
+                         Margin="8,0,0,0"
+                         VerticalAlignment="Center"
+                         TextChanged="OnSearchTextChanged" />
+                <Button Grid.Column="2"
+                        x:Name="SearchClearButton"
+                        Classes="flat"
+                        Width="20" Height="20"
+                        IsVisible="False"
+                        Click="OnSearchClearClick"
+                        ToolTip.Tip="Clear"
+                        AutomationProperties.Name="Clear search">
+                    <materialIcons:MaterialIcon Kind="Close" Width="12" Height="12"
+                        Foreground="{StaticResource OsdForeground}" />
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- Playlist Items -->
+        <Grid Grid.Row="2" Margin="4,4,4,4">
+            <!-- Empty state overlay -->
+            <Border x:Name="EmptyStateOverlay"
+                    Background="Transparent"
+                    IsVisible="False"
+                    IsHitTestVisible="False">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="8">
+                    <materialIcons:MaterialIcon Kind="PlaylistMusic" Width="40" Height="40"
+                        Foreground="{StaticResource TextTertiary}" />
+                    <TextBlock Text="Your playlist is empty"
+                               Classes="md3-subtitle1"
+                               Foreground="{StaticResource TextTertiary}"
+                               HorizontalAlignment="Center" />
+                    <TextBlock Text="Open files or drop them here to start playing."
+                               Classes="md3-caption"
+                               Foreground="{StaticResource TextTertiary}"
+                               HorizontalAlignment="Center" />
+                </StackPanel>
+            </Border>
+
+            <!-- Results not found overlay -->
+            <Border x:Name="NoResultsOverlay"
+                    Background="Transparent"
+                    IsVisible="False"
+                    IsHitTestVisible="False">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="4">
+                    <materialIcons:MaterialIcon Kind="MagnifyClose" Width="28" Height="28"
+                        Foreground="{StaticResource TextTertiary}" />
+                    <TextBlock Text="No matching items"
+                               Classes="md3-body2"
+                               Foreground="{StaticResource TextTertiary}"
+                               HorizontalAlignment="Center" />
+                </StackPanel>
+            </Border>
+
+            <!-- List box -->
+            <ListBox x:Name="PlaylistListBox"
+                     SelectionMode="Multiple"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     DoubleTapped="OnListBoxDoubleTapped"
+                     KeyDown="OnListBoxKeyDown"
+                     PointerPressed="OnPlaylistListBoxPointerPressed"
+                     PointerMoved="OnPlaylistListBoxPointerMoved"
+                     PointerReleased="OnPlaylistListBoxPointerReleased">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:PlaylistItemViewModel">
+                        <Border Padding="4,2">
+                            <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto"
+                                  Height="32">
+                                <!-- Current track indicator -->
+                                <Border Grid.Column="0" Width="3" CornerRadius="2"
+                                        Margin="0,4,4,4"
+                                        Background="{Binding IsCurrent, Converter={StaticResource BoolToAccentBrush}}" />
+
+                                <!-- Drag handle -->
+                                <Border Grid.Column="1"
+                                        Width="16"
+                                        Cursor="SizeAll"
+                                        VerticalAlignment="Center">
+                                    <materialIcons:MaterialIcon Kind="Drag" Width="10" Height="10"
+                                        Foreground="{StaticResource TextTertiary}" />
+                                </Border>
+
+                                <!-- Title -->
+                                <StackPanel Grid.Column="2"
+                                            VerticalAlignment="Center"
+                                            Margin="4,0,0,0">
+                                    <TextBlock Text="{Binding DisplayTitle}"
+                                               Classes="md3-body2"
+                                               Foreground="{StaticResource OsdForeground}"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Duration, StringFormat='{}{0:mm\\:ss}'}"
+                                               Classes="md3-caption"
+                                               Foreground="{StaticResource TextTertiary}" />
+                                </StackPanel>
+
+                                <!-- Play button -->
+                                <Button Grid.Column="3"
+                                        Classes="flat icon-only"
+                                        VerticalAlignment="Center"
+                                        Click="OnItemPlayClick"
+                                        ToolTip.Tip="Play"
+                                        AutomationProperties.Name="Play this item">
+                                    <materialIcons:MaterialIcon Kind="Play" Width="14" Height="14"
+                                        Foreground="{StaticResource OsdForeground}" />
+                                </Button>
+
+                                <!-- Remove button -->
+                                <Button Grid.Column="4"
+                                        Classes="flat icon-only"
+                                        VerticalAlignment="Center"
+                                        Click="OnItemRemoveClick"
+                                        ToolTip.Tip="Remove"
+                                        AutomationProperties.Name="Remove from playlist">
+                                    <materialIcons:MaterialIcon Kind="Close" Width="12" Height="12"
+                                        Foreground="{StaticResource OsdForeground}" />
+                                </Button>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+                <ListBox.ContextFlyout>
+                    <MenuFlyout>
+                        <MenuItem Header="Reveal in File Explorer"
+                                  Click="OnItemRevealClick" />
+                        <MenuItem Header="Properties"
+                                  Click="OnItemPropertiesClick" />
+                    </MenuFlyout>
+                </ListBox.ContextFlyout>
+            </ListBox>
+        </Grid>
+
+        <!-- Footer: item count -->
+        <Grid Grid.Row="3" Height="32" Margin="12,2,12,8" VerticalAlignment="Center">
+            <TextBlock x:Name="ItemCountText"
+                       Classes="md3-caption"
+                       Foreground="{StaticResource TextTertiary}"
+                       VerticalAlignment="Center"
+                       HorizontalAlignment="Center"
+                       Text="{Binding PlaylistPosition, StringFormat='Track {0} / {1}'}" />
+        </Grid>
+    </Grid>
+</Window>

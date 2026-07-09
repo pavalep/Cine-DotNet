@@ -11,9 +11,11 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using Avalonia.Win32;
-using Cine.Avalonia.Dialogs;
+using Cine.Avalonia.Core;
 using Cine.Avalonia.Services;
 using Cine.Avalonia.ViewModels;
+using Cine.Avalonia.Views.Dialogs;
+using Cine.Avalonia.Views.Shell;
 using Cine.Core;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -105,6 +107,9 @@ public class App : global::Avalonia.Application
         CrashReporter.LogError(msg);
         Cine.Core.Log.ForContext<App>().Debug("{Message}", msg);
     }
+
+    /// <summary>Provides access to the root DI container.</summary>
+    public static IServiceProvider Services => ((App)Current!)!._serviceProvider!;
 
     /// <summary>True when running as an MSIX packaged app (installed to WindowsApps).</summary>
     private static bool IsRunningAsPackaged()
@@ -302,6 +307,13 @@ public class App : global::Avalonia.Application
             desktop.MainWindow = mainWindow;
             Log("MainWindow created and assigned successfully.");
 
+            // Dispose the DI container when the app exits (Phase 5.3)
+            desktop.Exit += (_, _) =>
+            {
+                if (_serviceProvider is IDisposable d)
+                    d.Dispose();
+            };
+
             // Register file associations for double-click support
             try
             {
@@ -327,6 +339,6 @@ public class App : global::Avalonia.Application
 
     private static IServiceProvider ConfigureServices()
     {
-        return Infrastructure.CompositionRoot.Build();
+        return CompositionRoot.Build();
     }
 }

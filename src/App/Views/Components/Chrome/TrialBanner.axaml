@@ -1,0 +1,51 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:Cine.Avalonia.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="60"
+             x:Class="Cine.Avalonia.Views.Components.TrialBanner"
+             IsVisible="{Binding IsTrial}"
+             x:DataType="vm:MainViewModel">
+    <Border Background="{StaticResource AppBackground}"
+            BorderBrush="#FFA500"
+            BorderThickness="0 0 0 1"
+            Padding="12 6">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+            <!-- Trial icon -->
+            <Border Grid.Column="0"
+                    Background="#FFA500"
+                    CornerRadius="{StaticResource radius-xs}"
+                    Width="20" Height="20"
+                    VerticalAlignment="Center"
+                    Margin="0 0 8 0">
+                <TextBlock Text="&#x26A0;"
+                           Classes="md3-caption"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Foreground="#1A1A1A"
+                           FontWeight="Bold" />
+            </Border>
+
+            <!-- Message -->
+            <TextBlock Grid.Column="1"
+                       Text="{Binding LicenseLabel}"
+                       Foreground="{StaticResource AppTextOnDarkPrimary}"
+                       Classes="md3-caption"
+                       VerticalAlignment="Center"
+                       TextTrimming="CharacterEllipsis" />
+
+            <!-- Upgrade button -->
+            <Button Grid.Column="2"
+                    Content="Upgrade"
+                    Classes="md3-caption"
+                    Padding="8 2"
+                    Background="#FFA500"
+                    Foreground="#1A1A1A"
+                    BorderThickness="0"
+                    CornerRadius="{StaticResource radius-xs}"
+                    Cursor="Hand"
+                    Click="OnUpgradeClick" />
+        </Grid>
+    </Border>
+</UserControl>

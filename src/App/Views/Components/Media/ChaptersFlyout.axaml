@@ -1,0 +1,16 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cine.Avalonia.ViewModels"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Cine.Avalonia.Views.Components.ChaptersFlyout"
+             x:DataType="vm:MainViewModel"
+             x:Name="ChaptersFlyoutRoot">
+    <Button x:Name="BtnChapters"
+            Classes="circular-menu"
+            IsVisible="{Binding HasChapters}"
+            ToolTip.Tip="Chapters"
+            Click="OnChaptersMenuClick">
+        <materialIcons:MaterialIcon Kind="BookmarkOutline" Width="16" Height="16"
+            Foreground="{StaticResource OsdForeground}" />
+    </Button>
+</UserControl>

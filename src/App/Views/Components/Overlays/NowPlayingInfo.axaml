@@ -1,0 +1,83 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             mc:Ignorable="d" xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             d:DesignWidth="320" d:DesignHeight="240"
+             x:Class="Cine.Avalonia.Views.Components.NowPlayingInfo"
+             IsVisible="False"
+             IsHitTestVisible="False">
+
+    <Border Background="{StaticResource OverlayBackground}"
+            CornerRadius="{StaticResource radius-md}"
+            BorderBrush="{StaticResource PopoverBorder}"
+            BorderThickness="1"
+            Padding="{StaticResource space-4}"
+            MaxWidth="340"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Bottom"
+            Margin="0,0,16,80">
+        <StackPanel Spacing="8">
+            <!-- Header -->
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <materialIcons:MaterialIcon Grid.Column="0" Kind="InformationOutline"
+                    Foreground="{StaticResource AppAccent}"
+                    Width="18" Height="18" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Text="Now Playing"
+                           Foreground="{StaticResource TextPrimary}"
+                           Classes="md3-subtitle1"
+                           Margin="8,0,0,0" VerticalAlignment="Center" />
+                <TextBlock x:Name="CloseHint" Grid.Column="2"
+                           Text="Ctrl+J"
+                           Foreground="{StaticResource TextTertiary}"
+                           Classes="md3-caption" VerticalAlignment="Center" />
+            </Grid>
+
+            <!-- Separator -->
+            <Border Background="{StaticResource PopoverBorder}" Height="1" Opacity="0.4" />
+
+            <!-- File name -->
+            <TextBlock x:Name="FileNameText"
+                       Foreground="{StaticResource TextPrimary}"
+                       Classes="md3-body2"
+                       TextWrapping="NoWrap"
+                       TextTrimming="CharacterEllipsis" />
+
+            <!-- Info rows -->
+            <StackPanel Spacing="4">
+                <StackPanel x:Name="VideoInfoSection" Spacing="4">
+                    <Grid ColumnDefinitions="Auto,*">
+                        <TextBlock Grid.Column="0" Text="Resolution"
+                                   Foreground="{StaticResource TextTertiary}" Classes="md3-caption" MinWidth="80" />
+                        <TextBlock x:Name="ResolutionText" Grid.Column="1"
+                                   Foreground="{StaticResource TextPrimary}" Classes="md3-caption" />
+                    </Grid>
+                    <Grid ColumnDefinitions="Auto,*">
+                        <TextBlock Grid.Column="0" Text="Frame Rate"
+                                   Foreground="{StaticResource TextTertiary}" Classes="md3-caption" MinWidth="80" />
+                        <TextBlock x:Name="FrameRateText" Grid.Column="1"
+                                   Foreground="{StaticResource TextPrimary}" Classes="md3-caption" />
+                    </Grid>
+                    <Grid ColumnDefinitions="Auto,*">
+                        <TextBlock Grid.Column="0" Text="Video Codec"
+                                   Foreground="{StaticResource TextTertiary}" Classes="md3-caption" MinWidth="80" />
+                        <TextBlock x:Name="VideoCodecText" Grid.Column="1"
+                                   Foreground="{StaticResource TextPrimary}" Classes="md3-caption" />
+                    </Grid>
+                </StackPanel>
+                <Grid ColumnDefinitions="Auto,*">
+                    <TextBlock Grid.Column="0" Text="Audio"
+                               Foreground="{StaticResource TextTertiary}" Classes="md3-caption" MinWidth="80" />
+                    <TextBlock x:Name="AudioText" Grid.Column="1"
+                               Foreground="{StaticResource TextPrimary}" Classes="md3-caption" />
+                </Grid>
+                <Grid ColumnDefinitions="Auto,*">
+                    <TextBlock Grid.Column="0" Text="Duration"
+                               Foreground="{StaticResource TextTertiary}" Classes="md3-caption" MinWidth="80" />
+                    <TextBlock x:Name="DurationText" Grid.Column="1"
+                               Foreground="{StaticResource TextPrimary}" Classes="md3-caption" />
+                </Grid>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</UserControl>
