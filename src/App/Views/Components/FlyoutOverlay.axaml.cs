@@ -42,20 +42,7 @@ public partial class FlyoutOverlay : UserControl
         content.Measure(global::Avalonia.Size.Infinity);
         var cs = content.DesiredSize;
 
-        var overlayPoint = ((Visual)anchor).TranslatePoint(new global::Avalonia.Point(0, 0), this).GetValueOrDefault();
-        var anchorRect = anchor.Bounds;
-
-        double x = overlayPoint.X + (anchorRect.Width - cs.Width) / 2;
-        double y = placeAbove
-            ? overlayPoint.Y - cs.Height - 8
-            : overlayPoint.Y + anchorRect.Height + 8;
-
-        var winSize = Bounds.Size;
-
-        if (x + cs.Width > winSize.Width - 8) x = winSize.Width - cs.Width - 8;
-        if (x < 8) x = 8;
-        if (y + cs.Height > winSize.Height - 8) y = placeAbove ? overlayPoint.Y + anchorRect.Height + 8 : winSize.Height - cs.Height - 8;
-        if (y < 8) y = 8;
+        var (x, y) = CalculatePosition(anchor, content, placeAbove, Bounds.Size);
 
         global::Avalonia.Controls.Canvas.SetLeft(ContentContainer, x);
         global::Avalonia.Controls.Canvas.SetTop(ContentContainer, y);
@@ -97,6 +84,75 @@ public partial class FlyoutOverlay : UserControl
         SizeChanged -= OnOverlaySizeChanged;
     }
 
+    /// <summary>
+    /// Calculate a position for the flyout content that guarantees it is
+    /// fully visible within the overlay bounds (i.e. inside the window).
+    /// Tries the preferred side first (above the anchor) and falls back
+    /// to the opposite side if there isn't enough room.
+    /// </summary>
+    private (double x, double y) CalculatePosition(
+        global::Avalonia.Controls.Control anchor,
+        global::Avalonia.Controls.Control content,
+        bool placeAbove,
+        global::Avalonia.Size winSize)
+    {
+        const double margin = 8;
+        var cs = content.DesiredSize;
+        var overlayPoint = ((Visual)anchor).TranslatePoint(new global::Avalonia.Point(0, 0), this).GetValueOrDefault();
+        var anchorRect = anchor.Bounds;
+
+        double x = overlayPoint.X + (anchorRect.Width - cs.Width) / 2;
+        double y = placeAbove
+            ? overlayPoint.Y - cs.Height - margin
+            : overlayPoint.Y + anchorRect.Height + margin;
+
+        // ── Clamp X: guarantee horizontal containment ──
+        if (cs.Width > winSize.Width - margin * 2)
+        {
+            x = margin;
+        }
+        else
+        {
+            if (x + cs.Width > winSize.Width - margin)
+                x = winSize.Width - cs.Width - margin;
+            if (x < margin)
+                x = margin;
+            // Re-check right edge after left clamp
+            if (x + cs.Width > winSize.Width - margin)
+                x = winSize.Width - cs.Width - margin;
+        }
+
+        // ── Clamp Y: guarantee vertical containment ──
+        if (cs.Height > winSize.Height - margin * 2)
+        {
+            y = margin;
+        }
+        else
+        {
+            // If content spills past the top edge, flip to the opposite side
+            if (y < margin)
+            {
+                y = placeAbove
+                    ? overlayPoint.Y + anchorRect.Height + margin  // flip below
+                    : overlayPoint.Y - cs.Height - margin;         // flip above
+            }
+            // If content still spills past the bottom edge after flipping, re-flip
+            if (y + cs.Height > winSize.Height - margin)
+            {
+                y = placeAbove
+                    ? overlayPoint.Y - cs.Height - margin          // try above
+                    : overlayPoint.Y + anchorRect.Height + margin; // try below
+            }
+            // Final force-clamp: ensure we are never outside window bounds
+            if (y < margin)
+                y = margin;
+            if (y + cs.Height > winSize.Height - margin)
+                y = winSize.Height - cs.Height - margin;
+        }
+
+        return (x, y);
+    }
+
     // A8: Reposition flyout content when window is resized
     private void OnOverlaySizeChanged(object? sender, global::Avalonia.Controls.SizeChangedEventArgs e)
     {
@@ -105,21 +161,7 @@ public partial class FlyoutOverlay : UserControl
         if (anchor == null || content == null || ContentContainer.Child == null)
             return;
 
-        var cs = content.DesiredSize;
-        var overlayPoint = ((Visual)anchor).TranslatePoint(new global::Avalonia.Point(0, 0), this).GetValueOrDefault();
-        var anchorRect = anchor.Bounds;
-
-        double x = overlayPoint.X + (anchorRect.Width - cs.Width) / 2;
-        double y = _placeAbove
-            ? overlayPoint.Y - cs.Height - 8
-            : overlayPoint.Y + anchorRect.Height + 8;
-
-        var winSize = e.NewSize;
-
-        if (x + cs.Width > winSize.Width - 8) x = winSize.Width - cs.Width - 8;
-        if (x < 8) x = 8;
-        if (y + cs.Height > winSize.Height - 8) y = _placeAbove ? overlayPoint.Y + anchorRect.Height + 8 : winSize.Height - cs.Height - 8;
-        if (y < 8) y = 8;
+        var (x, y) = CalculatePosition(anchor, content, _placeAbove, e.NewSize);
 
         global::Avalonia.Controls.Canvas.SetLeft(ContentContainer, x);
         global::Avalonia.Controls.Canvas.SetTop(ContentContainer, y);

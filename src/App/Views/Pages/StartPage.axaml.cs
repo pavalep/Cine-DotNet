@@ -557,4 +557,36 @@ public partial class StartPage : global::Avalonia.Controls.UserControl, INavigab
                 vm.OpenFiles();
         }
     }
+
+    // ── Window Controls ────────────────────────────────────────────
+
+    private Window? GetParentWindow() => TopLevel.GetTopLevel(this) as Window;
+
+    private void OnStartMinimizeClick(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        GetParentWindow()!.WindowState = WindowState.Minimized;
+    }
+
+    private void OnStartMaximizeRestoreClick(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        var w = GetParentWindow();
+        if (w == null) return;
+        w.WindowState = w.WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+    }
+
+    private void OnStartCloseClick(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        GetParentWindow()?.Close();
+    }
+
+    /// <summary>
+    /// Updates the maximize/restore icon to match the current window state.
+    /// Called from MainWindow when window state changes.
+    /// </summary>
+    public void UpdateMaximizeIcon(bool isMaximized)
+    {
+        var kind = isMaximized ? Material.Icons.MaterialIconKind.WindowRestore : Material.Icons.MaterialIconKind.WindowMaximize;
+        if (StartMaximizeRestoreIcon != null)
+            StartMaximizeRestoreIcon.Kind = kind;
+    }
 }

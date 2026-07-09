@@ -75,6 +75,7 @@ public partial class MainWindow : global::Avalonia.Controls.Window
         {
             UpdateCornerRadius();
             UpdateDwmCornerPreference();
+            StartPage?.UpdateMaximizeIcon(WindowState == WindowState.Maximized);
         }
     }
 
@@ -118,9 +119,8 @@ public partial class MainWindow : global::Avalonia.Controls.Window
                 ContentClip.Clip = null;
         }
 
-        // Apply clip directly to PlayerPage and its MpvVideoView for
-        // defense-in-depth — ensures the video surface stays within
-        // rounded corners even if ContentClip.Clip has gaps.
+        // Apply clip directly to PlayerPage for defense-in-depth.
+        // MpvVideoView handles its own internal clip via ArrangeOverride.
         if (PlayerPage != null)
         {
             if (!isMaximized)
@@ -131,11 +131,10 @@ public partial class MainWindow : global::Avalonia.Controls.Window
         }
         if (PlayerPage?.MpvVideoView != null)
         {
-            if (!isMaximized)
-                PlayerPage.MpvVideoView.Clip = CreateRoundedRectClip(
-                    PlayerPage.MpvVideoView.Bounds.Width, PlayerPage.MpvVideoView.Bounds.Height, radius);
-            else
-                PlayerPage.MpvVideoView.Clip = null;
+            // Set CornerRadius — MpvVideoView.ArrangeOverride applies the
+            // StreamGeometry clip directly to the internal _videoImage,
+            // which is the only reliable way to clip native ANGLE rendering.
+            PlayerPage.MpvVideoView.CornerRadius = radius;
         }
 
         if (WindowFrame != null)

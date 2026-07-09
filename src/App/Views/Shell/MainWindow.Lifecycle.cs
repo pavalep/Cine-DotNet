@@ -286,6 +286,7 @@ public partial class MainWindow
             _viewModel?.LoadSession();
 
         PlayerPage.HeaderBarControl.UpdateMaximizeIcon(WindowState == global::Avalonia.Controls.WindowState.Maximized);
+        StartPage?.UpdateMaximizeIcon(WindowState == global::Avalonia.Controls.WindowState.Maximized);
         PlayerPage.ControlsBoxControl?.SubtitleOverlay?.RefreshIcon();
         PlayerPage.ControlsBoxControl?.AudioTrackSelector?.RefreshIcon();
         PlayerPage.ControlsBoxControl?.VolumeFlyoutCtrl?.RefreshIcon();

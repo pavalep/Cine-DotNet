@@ -88,18 +88,18 @@ public partial class MainWindow
                 ContentClip.CornerRadius);
         }
 
-        // Also keep PlayerPage and MpvVideoView clips in sync.
+        // Also keep PlayerPage clip in sync.
+        // MpvVideoView handles its own internal clip via ArrangeOverride.
         if (PlayerPage != null && !isMaximized)
         {
             PlayerPage.Clip = CreateRoundedRectClip(
                 PlayerPage.Bounds.Width, PlayerPage.Bounds.Height,
                 new CornerRadius(8));
         }
-        if (PlayerPage?.MpvVideoView != null && !isMaximized)
+        if (PlayerPage?.MpvVideoView != null)
         {
-            PlayerPage.MpvVideoView.Clip = CreateRoundedRectClip(
-                PlayerPage.MpvVideoView.Bounds.Width, PlayerPage.MpvVideoView.Bounds.Height,
-                new CornerRadius(8));
+            // CornerRadius drives the internal _videoImage clip in ArrangeOverride.
+            PlayerPage.MpvVideoView.CornerRadius = isMaximized ? new CornerRadius(0) : new CornerRadius(8);
         }
     }
 

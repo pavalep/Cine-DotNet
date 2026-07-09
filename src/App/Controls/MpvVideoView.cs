@@ -11,6 +11,7 @@ using Cine.Avalonia.Services;
 using Cine.Media.Implementations;
 using Cine.Media.Models;
 using Image = Avalonia.Controls.Image;
+using LayoutInformation = Avalonia.Layout.LayoutInformation;
 
 namespace Cine.Avalonia.Controls;
 
@@ -43,6 +44,16 @@ public class MpvVideoView : Decorator
     /// without needing a second mpv instance or ANGLE context.
     /// </summary>
     public event Action<byte[], int, int>? FrameRendered;
+
+    // ── Corner radius for clipping video inside rounded corners ──
+    public static readonly StyledProperty<CornerRadius> CornerRadiusProperty =
+        AvaloniaProperty.Register<MpvVideoView, CornerRadius>(nameof(CornerRadius), new CornerRadius(8));
+
+    public CornerRadius CornerRadius
+    {
+        get => GetValue(CornerRadiusProperty);
+        set => SetValue(CornerRadiusProperty, value);
+    }
 
     // Display
     private readonly Image _videoImage;
@@ -98,6 +109,47 @@ public class MpvVideoView : Decorator
             IsVisible = false              // Hide until first frame renders
         };
         Child = _videoImage;
+    }
+
+    /// <summary>
+    /// Arrange override — applies a rounded-rect clip to the video Image
+    /// so native ANGLE-rendered frames stay inside the rounded corners.
+    /// </summary>
+    protected override global::Avalonia.Size ArrangeOverride(global::Avalonia.Size finalSize)
+    {
+        var size = base.ArrangeOverride(finalSize);
+
+        if (_videoImage != null && finalSize.Width > 0 && finalSize.Height > 0)
+        {
+            var r = CornerRadius;
+            var w = finalSize.Width;
+            var h = finalSize.Height;
+
+            // Only apply clip if corner radius is actually rounded
+            if (r.TopLeft > 0 || r.TopRight > 0 || r.BottomRight > 0 || r.BottomLeft > 0)
+            {
+                double tl = r.TopLeft, tr = r.TopRight, br = r.BottomRight, bl = r.BottomLeft;
+                var geom = new StreamGeometry();
+                using var ctx = geom.Open();
+                ctx.BeginFigure(new global::Avalonia.Point(tl, 0), isFilled: true);
+                ctx.LineTo(new global::Avalonia.Point(w - tr, 0));
+                ctx.ArcTo(new global::Avalonia.Point(w, tr), new global::Avalonia.Size(tr, tr), 0, false, global::Avalonia.Media.SweepDirection.Clockwise);
+                ctx.LineTo(new global::Avalonia.Point(w, h - br));
+                ctx.ArcTo(new global::Avalonia.Point(w - br, h), new global::Avalonia.Size(br, br), 0, false, global::Avalonia.Media.SweepDirection.Clockwise);
+                ctx.LineTo(new global::Avalonia.Point(bl, h));
+                ctx.ArcTo(new global::Avalonia.Point(0, h - bl), new global::Avalonia.Size(bl, bl), 0, false, global::Avalonia.Media.SweepDirection.Clockwise);
+                ctx.LineTo(new global::Avalonia.Point(0, tl));
+                ctx.ArcTo(new global::Avalonia.Point(tl, 0), new global::Avalonia.Size(tl, tl), 0, false, global::Avalonia.Media.SweepDirection.Clockwise);
+                ctx.EndFigure(isClosed: true);
+                _videoImage.Clip = geom;
+            }
+            else
+            {
+                _videoImage.Clip = null;
+            }
+        }
+
+        return size;
     }
 
     /// <summary>

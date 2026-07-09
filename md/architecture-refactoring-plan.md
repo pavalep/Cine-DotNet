@@ -888,6 +888,159 @@ This phase was a comprehensive, AI-driven refactor addressing all user-reported 
 
 ---
 
+## ⏳ Phase 15 — Menu Architecture Overhaul: Grid-Based Inline Panels + Preferences Window
+
+**Status:** Planned ◐  
+**Dependencies:** Phase 14 (completed)  
+
+### Rationale
+
+The current `FlyoutOverlay` + `FlyoutManager` system uses a Canvas overlay with manual coordinate math (`TranslatePoint`, `TranslatePoint`, clamping) to position menus near their anchor buttons. This has caused persistent positioning bugs (flyouts opening partially off-screen), requires complex lifecycle management (`_hideStamp`, deferred posts), and adds unnecessary indirection (`IFlyoutSource`, `IFlyoutService`) for what are essentially simple list panels.
+
+A simpler approach: place menu panels directly in a `Canvas` sibling to the controls bar (same pattern as `HeaderBar` — a grid with toggled visibility). The only thing that genuinely needs floating behavior is the right-click context menu (must appear at pointer position) and the volume slider (single slider, lightweight popup). Everything else works better as inline panels or a proper Preferences window.
+
+### Menu Classification
+
+| Category | Items | New Approach | Why |
+|---|---|---|---|
+| **Preferences Window** | Equalizer, About, Subtitle Settings, Audio Settings, General settings, (future: Codecs, Language, Shortcuts, Network, Advanced) | Standalone `PreferencesWindow : Window` with left sidebar + content panel | Needs real estate, persistent across tab switches, scales to N sections |
+| **Grid-based inline panels** | Subtitle track selector, Audio track selector, Chapters list, Primary menu (3-dot), Open menu, Volume slider | `Canvas` panels toggled by `IsVisible`, placed in controls bar area or header bar | Simple list of buttons/controls, no floating needed, zero coordinate math |
+| **Keep as-is** | Right-click context menu | Native `MenuFlyout` with `PlacementMode.Pointer` | Must appear at pointer position — can't be grid-based |
+
+### Preferences Window Design
+
+```
+PreferencesWindow : Window (680×480, center owner)
+  └── Grid (2 columns: 200* / *)
+        ├── Sidebar (ListBox/RadioButtons)
+        │     ├── General
+        │     ├── Audio
+        │     ├── Subtitles
+        │     ├── Equalizer
+        │     └── About
+        │
+        └── ContentPanel (ContentControl bound to selection)
+              ├── GeneralPage     — auto-resume, DWM corners, behavior
+              ├── AudioPage       — default track, audio delay, device
+              ├── SubtitlesPage   — font, size, position, sync delay
+              ├── EqualizerPage   — 10-band sliders, presets, delay
+              └── AboutPage       — logo, version, build info, license
+```
+
+- `PreferencesWindow` replaces the existing `PreferencesDialog` (which currently hosts only About)
+- Does NOT need ViewModel — simple code-behind with `SelectedIndex` switching is sufficient
+- Launched from: Primary menu ("Preferences"), HeaderBar gear icon
+- Modeless — stays open while user interacts with main window
+
+### Inline Panel Design (Controls Bar Area)
+
+```
+ControlsBox (Grid)
+  └── Canvas (same cell, fills space, no background)
+        ├── Panel.Subtitles  (IsVisible toggle)
+        │     └── Border (rounded, dark bg)
+        │           ├── ScrollViewer > StackPanel of track buttons
+        │           └── "Add subtitle file" button
+        │
+        ├── Panel.AudioTracks (IsVisible toggle)
+        │     └── Border (same style)
+        │           ├── ScrollViewer > StackPanel of track buttons
+        │           └── "Add audio file" button
+        │
+        ├── Panel.Chapters (IsVisible toggle)
+        │     └── Border (same style)
+        │           └── ScrollViewer > StackPanel of chapter buttons
+        │
+        ├── Panel.OpenMenu (IsVisible toggle) — attached to Open button in header bar
+        │     └── Border (same style)
+        │           ├── "Open File..." button
+        │           ├── "Open Folder..." button
+        │           ├── "Open URL..." button
+        │           └── Separator
+        │           └── "Recently Opened" sub-list
+        │
+        ├── Panel.PrimaryMenu (IsVisible toggle)
+        │     └── Border (same style)
+        │           ├── "Open File" button
+        │           ├── "Open Folder" button
+        │           ├── Separator
+        │           ├── "Preferences" button
+        │           ├── "Keyboard Shortcuts" button
+        │           └── "About" button
+        │
+        └── Panel.Volume (IsVisible toggle)
+              └── Border (same style, narrower)
+                    └── Slider (vertical, 0-100)
+                    └── Mute toggle button
+```
+
+- Each panel is a `Border` with `CornerRadius="8"`, dark background, padding
+- Dismiss: click outside panel → hide all panels (add transparent overlay Border behind Canvas when any panel is active)
+- Only one panel open at a time (mutual exclusion, managed by a simple field `_activePanel`)
+- No `TranslatePoint`, no coordinate math — Canvas is in the same Grid cell as controls, so `Canvas.Left/Top` positions relative to the controls area
+- Position values are simple constants (e.g., `Canvas.Left="100" Canvas.Top="-200"` for a panels that opens above the controls)
+- Resize handling: automatic (child of the window layout tree)
+
+### What Happens to FlyoutOverlay System
+
+- `FlyoutOverlay.axaml` / `.axaml.cs` — removed entirely (nothing uses it anymore)
+- `FlyoutManager` — removed entirely
+- `IFlyoutSource` / `IFlyoutService` — removed entirely
+- `FlyoutManagerExtensions` — removed entirely
+- `VolumeFlyout.axaml` — content moves to inline panel
+- `SubtitleOverlay.axaml` — content moves to inline panel
+- `AudioTrackSelector.axaml` — content moves to inline panel
+- `ChaptersFlyout.axaml` — content moves to inline panel
+- `AudioEqualizerFlyout.axaml` — content moves to Preferences Window
+- `SubtitleSettingsDialog` — content moves to Preferences Window
+- `PreferencesDialog.axaml` — replaced by `PreferencesWindow`
+- `OpenMenuBuilder` — removed (Open menu becomes inline panel)
+- `PrimaryMenuBuilder` — removed (Primary menu becomes inline panel)
+- `VideoContextMenuBuilder` — retained (right-click is the only native menu left)
+
+### Changes Planned
+
+| # | Change | Details |
+|---|--------|---------|
+| 1 | Create `PreferencesWindow` | New `Window` subclass with sidebar + content panel. Ports: About, Equalizer, Subtitle Settings. |
+| 2 | Add General settings page | Auto-resume, DWM corners, playback behavior. Reads/writes `PlayerSettingsStore`. |
+| 3 | Add Equalizer page | 10-band sliders, presets dropdown, delay controls. Ported from `AudioEqualizerFlyout`. |
+| 4 | Add Subtitle Settings page | Font picker, size slider, position dropdown, sync delay. Ported from `SubtitleSettingsDialog`. |
+| 5 | Add Audio Settings page | Default track selection, audio delay, device selector. |
+| 6 | Add About page | Logo, version, build info, license link. Ported from `PreferencesDialog` About section. |
+| 7 | Wire Preferences Window | Launch from Primary menu + HeaderBar gear. |
+| 8 | Create inline panels in ControlsBox | `Canvas` with Subtitle, Audio, Chapters, PrimaryMenu panels in controls bar area. |
+| 9 | Migrate subtitle content | Move from `SubtitleOverlay` to inline panel. Remove `SubtitleOverlay.axaml`. |
+| 10 | Migrate audio track content | Move from `AudioTrackSelector` to inline panel. Remove `AudioTrackSelector.axaml`. |
+| 11 | Migrate chapters content | Move from `ChaptersFlyout` to inline panel. Remove `ChaptersFlyout.axaml`. |
+| 12 | Migrate Open menu | Move from `MenuFlyout` to inline panel attached to Open button. Remove `OpenMenuBuilder`. |
+| 13 | Migrate primary menu | Move from `MenuFlyout` to inline panel. Remove `PrimaryMenuBuilder`. |
+| 14 | Add panel dismiss logic | Transparent overlay behind Canvas; click outside → hide all. |
+| 15 | Remove FlyoutOverlay system | Delete `FlyoutOverlay.axaml/.cs`, `FlyoutManager.cs`, `IFlyoutSource.cs`, `IFlyoutService.cs`, `FlyoutManagerExtensions.cs`. |
+| 16 | Delete flyout XAML/cs files | Remove `VolumeFlyout.axaml/.cs`, `SubtitleOverlay.axaml/.cs`, `AudioTrackSelector.axaml/.cs`, `ChaptersFlyout.axaml/.cs`, `AudioEqualizerFlyout.axaml/.cs`. |
+| 17 | Remove MenuBuilders | Delete `OpenMenuBuilder.cs`, `PrimaryMenuBuilder.cs`. Retain `VideoContextMenuBuilder.cs`. |
+| 18 | Build & test | Verify all menus work, no regressions, zero build errors. |
+
+### Deferred / Future
+
+- **Codecs page** — hardware acceleration toggle, codec priority list
+- **Language page** — UI language picker
+- **Keyboard Shortcuts page** — view/remap all keybindings
+- **Network page** — proxy settings, update channel
+- **Advanced page** — log level, cache size, mpv config overrides
+
+### Key Outcome
+
+```
+Zero overlay coordinate math for menus.
+Zero TranslatePoint calls.
+Zero flyout positioning bugs.
+Clean Preferences Window that scales to N sections.
+Inline panels that can't overflow because they're in the layout tree.
+```
+
+---
+
 ## ✅ Phase 13 — Remove Nonsensical UI Elements (Clean UI) — **Completed**
 
 **Started:** 09 July 2026  

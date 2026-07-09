@@ -87,6 +87,9 @@ public partial class MainWindow
             if (hasMedia) ShowUiControls();
         }
         PlayerPage.HeaderBarControl.UpdateMaximizeIcon(WindowState == WindowState.Maximized);
+
+        // Sync StartPage window control icon if it's visible
+        StartPage?.UpdateMaximizeIcon(WindowState == WindowState.Maximized);
     }
 
     private void OnToggleFullscreen(object? sender, RoutedEventArgs e) => _viewModel?.ToggleFullscreen();
