@@ -98,8 +98,7 @@ public partial class HeaderBar : AvaloniaUserControl
     {
         var host = PanelHost;
         if (host == null) return;
-        host.MainOpenMenuPanel.IsVisible = false;
-        host.MainPrimaryMenuPanel.IsVisible = false;
+        host.HideAllPanels();
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)

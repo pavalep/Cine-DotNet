@@ -214,6 +214,22 @@ public partial class MainWindow : global::Avalonia.Controls.Window
     // ════════════════════════════════════════════════════════════════
 
     /// <summary>
+    /// Returns true if any inline panel is currently visible.
+    /// Used by the auto-hide timer to prevent hiding header/controls bar
+    /// while a panel is open.
+    /// </summary>
+    public bool AreAnyPanelsOpen()
+    {
+        return MainVolumePanel.IsVisible
+            || MainSubtitlePanel.IsVisible
+            || MainAudioTrackPanel.IsVisible
+            || MainChaptersPanel.IsVisible
+            || MainPlaylistPanel.IsVisible
+            || MainOpenMenuPanel.IsVisible
+            || MainPrimaryMenuPanel.IsVisible;
+    }
+
+    /// <summary>
     /// Hides ALL inline panels (both header and controls bar panels)
     /// and disables the light-dismiss overlay.
     /// </summary>

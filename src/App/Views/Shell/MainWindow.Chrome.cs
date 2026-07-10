@@ -205,6 +205,12 @@ public partial class MainWindow
             return;
         }
 
+        if (AreAnyPanelsOpen())
+        {
+            _autoHideTimer?.Start();
+            return;
+        }
+
         HideUiControls();
     }
 

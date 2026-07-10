@@ -168,11 +168,7 @@ public partial class ControlsBox : AvaloniaUserControl
     {
         var host = PanelHost;
         if (host == null) return;
-        host.MainVolumePanel.IsVisible = false;
-        host.MainSubtitlePanel.IsVisible = false;
-        host.MainAudioTrackPanel.IsVisible = false;
-        host.MainChaptersPanel.IsVisible = false;
-        host.MainPlaylistPanel.IsVisible = false;
+        host.HideAllPanels();
     }
 
     public void TogglePlaylistPanel()
