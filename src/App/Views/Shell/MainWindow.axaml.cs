@@ -37,17 +37,6 @@ public partial class MainWindow : global::Avalonia.Controls.Window
         }
     }
 
-    /// <summary>
-    /// Finds the window-level FlyoutOverlay from any control in the tree.
-    /// Returns null if not inside a MainWindow.
-    /// </summary>
-    public static FlyoutOverlay? GetOverlay(global::Avalonia.Visual from)
-    {
-        if (global::Avalonia.Controls.TopLevel.GetTopLevel(from) is MainWindow mw)
-            return mw.FlyoutOverlay;
-        return null;
-    }
-
     // ─────────────────────────────────────────────────────────────
     //  Window Frame (focus-aware border + rounded corners)
     // ─────────────────────────────────────────────────────────────
@@ -225,6 +214,7 @@ public partial class MainWindow : global::Avalonia.Controls.Window
             || MainAudioTrackPanel.IsVisible
             || MainChaptersPanel.IsVisible
             || MainPlaylistPanel.IsVisible
+            || MainEqualizerPanel.IsVisible
             || MainOpenMenuPanel.IsVisible
             || MainPrimaryMenuPanel.IsVisible;
     }
@@ -240,9 +230,11 @@ public partial class MainWindow : global::Avalonia.Controls.Window
         MainAudioTrackPanel.IsVisible = false;
         MainChaptersPanel.IsVisible = false;
         MainPlaylistPanel.IsVisible = false;
+        MainEqualizerPanel.IsVisible = false;
         MainOpenMenuPanel.IsVisible = false;
         MainPrimaryMenuPanel.IsVisible = false;
         PanelDismissBackground.IsHitTestVisible = false;
+        PanelDismissBackground.IsVisible = false;
     }
 
     /// <summary>
@@ -251,6 +243,7 @@ public partial class MainWindow : global::Avalonia.Controls.Window
     /// </summary>
     public void EnablePanelDismiss()
     {
+        PanelDismissBackground.IsVisible = true;
         PanelDismissBackground.IsHitTestVisible = true;
     }
 
@@ -266,9 +259,11 @@ public partial class MainWindow : global::Avalonia.Controls.Window
             || MainAudioTrackPanel.IsVisible
             || MainChaptersPanel.IsVisible
             || MainPlaylistPanel.IsVisible
+            || MainEqualizerPanel.IsVisible
             || MainOpenMenuPanel.IsVisible
             || MainPrimaryMenuPanel.IsVisible;
 
+        PanelDismissBackground.IsVisible = anyVisible;
         PanelDismissBackground.IsHitTestVisible = anyVisible;
     }
 

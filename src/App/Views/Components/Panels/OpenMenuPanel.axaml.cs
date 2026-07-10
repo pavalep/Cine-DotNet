@@ -1,3 +1,4 @@
+using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -10,6 +11,7 @@ public partial class OpenMenuPanel : UserControl
 
     public event EventHandler<RoutedEventArgs>? OpenFileClicked;
     public event EventHandler<RoutedEventArgs>? OpenFolderClicked;
+    public event EventHandler<string>? RecentFileClicked;
 
     public OpenMenuPanel()
     {
@@ -24,5 +26,13 @@ public partial class OpenMenuPanel : UserControl
     private void OnOpenFolderClick(object? sender, RoutedEventArgs e)
     {
         OpenFolderClicked?.Invoke(sender, e);
+    }
+
+    private void OnRecentFileClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.DataContext is string filePath)
+        {
+            RecentFileClicked?.Invoke(this, filePath);
+        }
     }
 }

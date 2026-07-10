@@ -17,7 +17,7 @@ using PointerPressedEventArgs = Avalonia.Input.PointerPressedEventArgs;
 using RoutedEventArgs = Avalonia.Interactivity.RoutedEventArgs;
 using Cine.Avalonia.Controls;
 using Cine.Avalonia.Services;
-using Cine.Avalonia.Services.UI;
+using Microsoft.Extensions.DependencyInjection;
 using Cine.Avalonia.ViewModels;
 using Cine.Avalonia.Views.Dialogs;
 using Cine.Avalonia.Views.Components;
@@ -51,11 +51,12 @@ public partial class MainWindow
         // ── Escape (context-sensitive) ──
         Register(Key.Escape, () =>
         {
-            // Close any open flyout — if one was open, don't also exit fullscreen
-            var reopen = _flyoutManager.CloseAll();
-            if (reopen == null && _playerService?.Player?.IsFullscreen == true)
+            // Close any open panel — if one was open, don't also exit fullscreen
+            if (AreAnyPanelsOpen())
+                HideAllPanels();
+            else if (_playerService?.Player?.IsFullscreen == true)
                 _viewModel?.ToggleFullscreen();
-        }, "Close Flyout / Exit Fullscreen");
+        }, "Close Panel / Exit Fullscreen");
 
         // ── Fullscreen ──
         Register(Key.F,    KeyModifiers.None, () => _viewModel?.ToggleFullscreen(), "Toggle Fullscreen");
@@ -188,7 +189,8 @@ public partial class MainWindow
         // ── Dialogs ──
         Register(Key.OemComma, KeyModifiers.Control, () => ShowDialogWithScope(() =>
         {
-            var prefs = new PreferencesWindow();
+            var audioManager = _serviceProvider.GetRequiredService<IAudioManager>();
+            var prefs = new PreferencesWindow(null, audioManager);
             prefs.Show(this);
         }), "Preferences");
         Register(Key.OemQuestion, KeyModifiers.Control, () => ShowDialogWithScope(() =>
@@ -266,7 +268,11 @@ public partial class MainWindow
         AddPalette("Screenshot (no subs)", () => _playerService?.Player?.ScreenshotWithoutSubtitles());
         // Dialogs
         // Go to Time palette command removed
-        AddPalette("Preferences", () => ShowDialogWithScope(() => new PreferencesWindow().Show(this)));
+        AddPalette("Preferences", () => ShowDialogWithScope(() =>
+        {
+            var audioManager = _serviceProvider.GetRequiredService<IAudioManager>();
+            new PreferencesWindow(null, audioManager).Show(this);
+        }));
         AddPalette("Keyboard Shortcuts", () => ShowDialogWithScope(() => new KeyboardShortcutsDialog().Show(this)));
         // Zoom
         AddPalette("Zoom In", () => { if (_playerService?.Player != null) _playerService.Player.Zoom += 0.05; });
@@ -448,15 +454,6 @@ public partial class MainWindow
         showDialog();
     }
 
-    private void CloseOpenFlyouts()
-    {
-        // Close all via FlyoutManager — handles all registered flyouts
-        _flyoutManager.CloseAll();
-        // Also close any inline flyouts not managed by FlyoutManager
-        PlayerPage.ControlsBoxControl?.SubtitleOverlay?.HideFlyout();
-        PlayerPage.ControlsBoxControl?.AudioTrackSelector?.HideFlyout();
-    }
-
     // ─────────────────────────────────────────────────────────────
     //  Pointer / Click Handlers (referenced by MainWindow.axaml)
     // ─────────────────────────────────────────────────────────────
@@ -472,10 +469,8 @@ public partial class MainWindow
             var now = DateTime.UtcNow;
             _lastVideoPressTime = now;
 
-            // If any flyout is open, the click was just dismissing the flyout.
-            if (PlayerPage.ControlsBoxControl.HasActiveFlyouts ||
-                PlayerPage.HeaderBarControl.HasActiveFlyouts ||
-                PlayerPage.FullscreenHeaderControl.HasActiveFlyouts)
+            // If any panel is open, the click was just dismissing the panel.
+            if (AreAnyPanelsOpen())
                 return;
         }
     }

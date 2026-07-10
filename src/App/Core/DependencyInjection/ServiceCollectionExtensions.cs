@@ -26,7 +26,6 @@ public static class CompositionRoot
         // ── Core infrastructure (stateless singletons) ──
         services.AddSingleton<InputRoutingService>();
         services.AddSingleton<ThemeService>();
-        services.AddSingleton<IFlyoutService, FlyoutManager>();
         services.AddSingleton<INavigationService, NavigationService>();
 
         // ── Settings stores (shared state singletons) ──

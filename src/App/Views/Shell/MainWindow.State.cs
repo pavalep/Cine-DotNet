@@ -18,7 +18,6 @@ using Cine.Avalonia.Extensions;
 using Cine.Avalonia.Views.Resources;
 using Cine.Avalonia.Models;
 using Cine.Avalonia.Services;
-using Cine.Avalonia.Services.UI;
 using Cine.Avalonia.ViewModels;
 using Cine.Core;
 using Cine.Media.Events;
@@ -158,17 +157,15 @@ public partial class MainWindow
         _propertyWatcher = new PropertyWatcher(_viewModel);
 
         _propertyWatcher
-            .Watch(() => _viewModel.IsSubtitleEnabled, _ => PlayerPage.ControlsBoxControl?.SubtitleOverlay?.RefreshIcon())
-            .Watch(() => _viewModel.IsAudioEnabled, _ => PlayerPage.ControlsBoxControl?.AudioTrackSelector?.RefreshIcon())
+            .Watch(() => _viewModel.IsSubtitleEnabled, _ => { })
+            .Watch(() => _viewModel.IsAudioEnabled, _ => { })
             .Watch(() => _viewModel.IsMuted, _ =>
             {
-                PlayerPage.ControlsBoxControl.VolumeFlyoutCtrl?.RefreshIcon();
                 if (_viewModel.IsMuted || _viewModel.VolumeValue == 0)
                     _osdService.ShowWithIcon(MaterialIconKind.VolumeOff, "Muted");
             })
             .Watch(() => _viewModel.VolumeValue, vol =>
             {
-                PlayerPage.ControlsBoxControl.VolumeFlyoutCtrl?.RefreshIcon();
                 if (_suppressFirstVolumeOsd)
                 {
                     _suppressFirstVolumeOsd = false;

@@ -19,14 +19,26 @@
                        FontWeight="SemiBold"
                        VerticalAlignment="Center" />
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="{StaticResource space-spacing-1}">
-                <components:SubtitleOverlay x:Name="FullscreenSubOverlay"
-                                                 Classes="circular-transport"
-                                                 Padding="0"
-                                                 VerticalAlignment="Center" />
-                <components:AudioTrackSelector x:Name="FullscreenAudioOverlay"
-                                                    Classes="circular-transport"
-                                                    Padding="0"
-                                                    VerticalAlignment="Center" />
+                <Button x:Name="BtnFsSubtitles"
+                        Classes="circular-transport"
+                        Padding="0"
+                        VerticalAlignment="Center"
+                        Click="OnFsSubtitleClick"
+                        ToolTip.Tip="Subtitles"
+                        AutomationProperties.Name="Subtitles">
+                    <materialIcons:MaterialIcon Kind="ClosedCaption" Width="16" Height="16"
+                        Foreground="{StaticResource OsdForeground}" />
+                </Button>
+                <Button x:Name="BtnFsAudio"
+                        Classes="circular-transport"
+                        Padding="0"
+                        VerticalAlignment="Center"
+                        Click="OnFsAudioClick"
+                        ToolTip.Tip="Audio Track"
+                        AutomationProperties.Name="Audio track">
+                    <materialIcons:MaterialIcon Kind="Music" Width="16" Height="16"
+                        Foreground="{StaticResource OsdForeground}" />
+                </Button>
                 <Button x:Name="BtnFullscreenMenu"
                         Classes="circular-menu"
                         ToolTip.Tip="Menu"

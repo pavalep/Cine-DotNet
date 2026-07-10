@@ -31,7 +31,6 @@ public partial class HeaderBar : AvaloniaUserControl
     public IEventBus? EventBus { get; set; }
 
     private MainViewModel? _viewModel;
-    private IFlyoutService? _flyoutManager;
 
     public HeaderBar()
     {
@@ -201,14 +200,6 @@ public partial class HeaderBar : AvaloniaUserControl
     {
         BtnPip.IsVisible = visible;
     }
-
-    public IFlyoutService? FlyoutManager
-    {
-        get => _flyoutManager;
-        set => _flyoutManager = value;
-    }
-
-    public bool HasActiveFlyouts => _flyoutManager?.HasActiveFlyouts == true;
 
     // --- Window-level operations ---
 

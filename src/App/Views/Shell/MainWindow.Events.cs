@@ -201,14 +201,9 @@ public partial class MainWindow
         switch (category)
         {
             case "volume":
-                PlayerPage.ControlsBoxControl?.VolumeFlyoutCtrl?.BtnVolume?.Focus();
                 break;
             case "subtitle":
             case "audio":
-                if (category == "subtitle")
-                    PlayerPage.ControlsBoxControl?.SubtitleOverlay?.Focus();
-                else
-                    PlayerPage.ControlsBoxControl?.AudioTrackSelector?.Focus();
                 break;
             case "speed":
                 _playerService?.Player?.ResetSpeed();

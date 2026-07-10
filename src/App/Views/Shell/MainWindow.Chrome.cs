@@ -196,9 +196,7 @@ public partial class MainWindow
         bool hasMedia = !string.IsNullOrEmpty(_viewModel?.FilePath);
         if (!hasMedia) return;
 
-        bool isFlyoutOpen = PlayerPage.ControlsBoxControl.HasActiveFlyouts ||
-                            PlayerPage.FullscreenHeaderControl.HasActiveFlyouts ||
-                            PlayerPage.HeaderBarControl.HasActiveFlyouts;
+        bool isFlyoutOpen = AreAnyPanelsOpen();
         if (isFlyoutOpen)
         {
             _autoHideTimer?.Start();

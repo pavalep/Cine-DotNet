@@ -107,25 +107,17 @@ public partial class MainWindow
         // Init centralized file-dialog handler (Avalonia #21433 workaround applied)
         _dialogHandler = new FileDialogHandler(this);
 
-        // Flyout ecosystem manager — ensures only ONE flyout is open at a time,
-        // creating the professional "close previous → open next" UX contract.
-        _flyoutManager = _serviceProvider.GetRequiredService<IFlyoutService>();
-        PlayerPage.ControlsBoxControl.FlyoutManager = _flyoutManager;
-        PlayerPage.HeaderBarControl.FlyoutManager = _flyoutManager;
-        PlayerPage.FullscreenHeaderControl.FlyoutManager = _flyoutManager;
-
         // Set EventBus on components that publish events (Phase 9)
         PlayerPage.HeaderBarControl.EventBus = eventBus;
         PlayerPage.FullscreenHeaderControl.EventBus = eventBus;
         PlayerPage.ReplayOverlay.EventBus = eventBus;
         PlayerPage.OsdNotificationControl.EventBus = eventBus;
-        if (PlayerPage.ControlsBoxControl.SubtitleOverlay != null) PlayerPage.ControlsBoxControl.SubtitleOverlay.EventBus = eventBus;
-        if (PlayerPage.ControlsBoxControl.AudioTrackSelector != null) PlayerPage.ControlsBoxControl.AudioTrackSelector.EventBus = eventBus;
 
-        // Wire reopen actions for flyouts that trigger native dialogs (Avalonia #18969):
-        // after the dialog completes, the flyout is shown again automatically.
-        _flyoutManager.SetReopen("subtitle", () => PlayerPage.ControlsBoxControl.SubtitleOverlay?.ReopenFlyout());
-        _flyoutManager.SetReopen("audio", () => PlayerPage.ControlsBoxControl.AudioTrackSelector?.ReopenFlyout());
+        // Wire fullscreen header panel toggle requests → ControlsBox
+        PlayerPage.FullscreenHeaderControl.SubtitlePanelRequested += (_, _) =>
+            PlayerPage.ControlsBoxControl.ToggleSubtitlePanel();
+        PlayerPage.FullscreenHeaderControl.AudioTrackPanelRequested += (_, _) =>
+            PlayerPage.ControlsBoxControl.ToggleAudioTrackPanel();
 
         // Wire HeaderBar primary menu events → window-level handlers
         PlayerPage.HeaderBarControl.PrimaryPipToggled += (_, _) =>
@@ -133,14 +125,81 @@ public partial class MainWindow
         PlayerPage.HeaderBarControl.PrimaryAlwaysOnTopToggled += (_, _) =>
             Topmost = !Topmost;
         PlayerPage.HeaderBarControl.PrimaryShortcutsRequested += (_, _) =>
-            new KeyboardShortcutsDialog().Show(this);
+            new KeyboardShortcutsDialog().Show();
         PlayerPage.HeaderBarControl.PrimaryPreferencesRequested += (_, _) =>
-            new PreferencesWindow().Show(this);
+        {
+            try
+            {
+                HideAllPanels();
+                new PreferencesWindow(null, audioManager).Show();
+            }
+            catch (Exception ex)
+            {
+                DebugLog($"PrimaryPreferencesRequested FAILED: {ex}");
+            }
+        };
         PlayerPage.HeaderBarControl.PrimaryAboutRequested += (_, _) =>
-            new PreferencesWindow().Show(this);
+        {
+            try
+            {
+                HideAllPanels();
+                new PreferencesWindow(null, audioManager).Show();
+            }
+            catch (Exception ex)
+            {
+                DebugLog($"PrimaryAboutRequested FAILED: {ex}");
+            }
+        };
 
-        // Update OnBeforeOpen to use the centralized manager
-        _dialogHandler.OnBeforeOpen = () => _flyoutManager.CloseAll();
+        // ─────────────────────────────────────────────────────
+        //  Direct panel wiring — bypasses HeaderBar forwarding
+        //  HeaderBar.WireMenuPanelEvents() is unreliable because
+        //  TopLevel.GetTopLevel(this) returns null when DataContextChanged
+        //  fires before the child control is on the visual tree.
+        // ─────────────────────────────────────────────────────
+
+        // Primary Menu — window-level actions
+        MainPrimaryMenuPanel.PreferencesClicked += (_, _) =>
+        {
+            DebugLog("PreferencesClicked DIRECT handler invoked");
+            HideAllPanels();
+            try
+            {
+                new PreferencesWindow(null, audioManager).Show();
+                DebugLog("PreferencesWindow.Show returned successfully");
+            }
+            catch (Exception ex)
+            {
+                DebugLog($"PreferencesWindow.Show FAILED: {ex}");
+            }
+        };
+        MainPrimaryMenuPanel.AboutClicked += (_, _) =>
+        {
+            DebugLog("AboutClicked DIRECT handler invoked");
+            HideAllPanels();
+            try
+            {
+                new PreferencesWindow(null, audioManager).Show();
+                DebugLog("AboutWindow.Show returned successfully");
+            }
+            catch (Exception ex)
+            {
+                DebugLog($"AboutWindow.Show FAILED: {ex}");
+            }
+        };
+        MainPrimaryMenuPanel.ShortcutsClicked += (_, _) =>
+            new KeyboardShortcutsDialog().Show();
+        MainPrimaryMenuPanel.PipClicked += (_, _) =>
+            OnPipToggled(null, EventArgs.Empty);
+        MainPrimaryMenuPanel.AlwaysOnTopClicked += (_, _) =>
+            Topmost = !Topmost;
+
+        // Update OnBeforeOpen to hide inline panels before file dialogs
+        _dialogHandler.OnBeforeOpen = () =>
+        {
+            HideAllPanels();
+            return (Action?)null;
+        };
 
         // Navigation abstraction — commands flow through here instead of file-path watchers
         _navigationService = _serviceProvider.GetRequiredService<INavigationService>();
@@ -162,6 +221,24 @@ public partial class MainWindow
             recentFilesService, _osdService, fileDialogService, featureService, licensingService);
         DataContext = _viewModel;
         ((OsdService)_osdService).NotificationControl = PlayerPage.OsdNotificationControl;
+
+        // Direct panel wiring — ViewModel-bound actions (ViewModel must be set first)
+        MainPrimaryMenuPanel.LoopFileClicked += (_, _) =>
+            _viewModel?.ToggleLoopFile();
+        MainPrimaryMenuPanel.LoopPlaylistClicked += (_, _) =>
+            _viewModel?.ToggleLoopPlaylist();
+        MainPrimaryMenuPanel.ShuffleClicked += (_, _) =>
+            _viewModel?.ToggleShuffle();
+        MainOpenMenuPanel.OpenFileClicked += (_, _) =>
+            _viewModel?.OpenFilesCommand?.Execute(null);
+        MainOpenMenuPanel.OpenFolderClicked += (_, _) =>
+            _viewModel?.OpenFolderCommand?.Execute(null);
+        MainOpenMenuPanel.RecentFileClicked += (_, filePath) =>
+        {
+            HideAllPanels();
+            _viewModel?.OpenFile(filePath);
+        };
+        MainOpenMenuPanel.RecentFilesControl.ItemsSource = recentFilesService.RecentFiles;
 
         // Resolve StartPageViewModel and assign as StartPage's DataContext (Phase 4)
         if (StartPage != null)
@@ -299,23 +376,7 @@ public partial class MainWindow
 
         PlayerPage.HeaderBarControl.UpdateMaximizeIcon(WindowState == global::Avalonia.Controls.WindowState.Maximized);
         StartPage?.UpdateMaximizeIcon(WindowState == global::Avalonia.Controls.WindowState.Maximized);
-        PlayerPage.ControlsBoxControl?.SubtitleOverlay?.RefreshIcon();
-        PlayerPage.ControlsBoxControl?.AudioTrackSelector?.RefreshIcon();
-        PlayerPage.ControlsBoxControl?.VolumeFlyoutCtrl?.RefreshIcon();
 
-        // Wire flyout dismissal before file dialogs open (prevents dialog overlap)
-        if (_viewModel?.Subtitles is { } subMgr)
-            subMgr.DismissFlyoutAsync = () =>
-            {
-                PlayerPage.ControlsBoxControl?.SubtitleOverlay?.HideFlyout();
-                return Task.CompletedTask;
-            };
-        if (_viewModel?.Audio is { } audMgr)
-            audMgr.DismissFlyoutAsync = () =>
-            {
-                PlayerPage.ControlsBoxControl?.AudioTrackSelector?.HideFlyout();
-                return Task.CompletedTask;
-            };
         ReportWindowState("MainWindow.OnOpened.AfterInitialState");
         Dispatcher.UIThread.OnUiThread(() => ReportWindowState("MainWindow.OnOpened.PostLayout"), DispatcherPriority.Background);
 
@@ -564,7 +625,6 @@ public partial class MainWindow
     private PlaybackStateManager? _stateManager;
     private PipWindowManager? _pipWindowManager;
     private InputRoutingService? _inputRouter;
-    private IFlyoutService _flyoutManager = null!;
     private IOsdService _osdService = null!;
     private FileDialogHandler? _dialogHandler;
     private INavigationService? _navigationService;

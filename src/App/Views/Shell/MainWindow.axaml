@@ -72,11 +72,6 @@
                      opens, revealing video beneath. -->
                 <components:StartPage x:Name="StartPage" PointerPressed="OnStartPagePointerPressed" />
 
-                <!-- ══════════════════════════════════════════════════════════ -->
-                <!--  FLYOUT OVERLAY (ZIndex=50, above all interactive chrome) -->
-                <!-- ══════════════════════════════════════════════════════════ -->
-                <components:FlyoutOverlay x:Name="FlyoutOverlay"
-                                               ZIndex="50" />
             </Grid>
         </Border>
 
@@ -136,6 +131,11 @@
                                   VerticalAlignment="Bottom"
                                   Margin="0,0,0,90"
                                   IsVisible="False" />
+            <panels:EqualizerPanel x:Name="MainEqualizerPanel"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Bottom"
+                                   Margin="0,0,0,90"
+                                   IsVisible="False" />
         </Grid>
 
         <!-- ══════════════════════════════════════════════════════════════ -->

@@ -112,10 +112,16 @@
 
                     <StackPanel Orientation="Horizontal" Spacing="{StaticResource space-spacing-0_5}">
                         <!-- Volume button (panel moved to overlay layer below) -->
-                        <components:VolumeFlyout x:Name="VolumeFlyoutField"
-                                                      Classes="circular-menu"
-                                                      VerticalAlignment="Center"
-                                                      Padding="0" />
+                        <Button x:Name="BtnVolume"
+                                Classes="circular-menu"
+                                VerticalAlignment="Center"
+                                Padding="0"
+                                Click="OnVolumeBtnClick"
+                                ToolTip.Tip="Volume"
+                                AutomationProperties.Name="Volume">
+                            <materialIcons:MaterialIcon Kind="VolumeHigh" Width="20" Height="20"
+                                Foreground="{StaticResource OsdForeground}" />
+                        </Button>
                         <Button x:Name="BtnEqualizer"
                                 Classes="circular-menu"
                                 ToolTip.Tip="Equalizer"
@@ -168,18 +174,37 @@
 
                     <!-- Group 4: Tools -->
                     <StackPanel Orientation="Horizontal" Spacing="{StaticResource space-spacing-0_5}">
-                        <components:ChaptersFlyout x:Name="ChaptersFlyoutField"
-                                                      Classes="circular-menu"
-                                                      VerticalAlignment="Center"
-                                                      Padding="0" />
-                        <components:SubtitleOverlay x:Name="SubOverlayCtrl"
-                                                         Classes="circular-transport"
-                                                         Padding="0"
-                                                         VerticalAlignment="Center" />
-                        <components:AudioTrackSelector x:Name="AudioOverlay"
-                                                            Classes="circular-transport"
-                                                            Padding="0"
-                                                            VerticalAlignment="Center" />
+                        <Button x:Name="BtnChapters"
+                                Classes="circular-menu"
+                                VerticalAlignment="Center"
+                                Padding="0"
+                                IsVisible="{Binding HasChapters, x:CompileBindings=False}"
+                                Click="OnChaptersBtnClick"
+                                ToolTip.Tip="Chapters"
+                                AutomationProperties.Name="Chapters">
+                            <materialIcons:MaterialIcon Kind="BookmarkOutline" Width="20" Height="20"
+                                Foreground="{StaticResource OsdForeground}" />
+                        </Button>
+                        <Button x:Name="BtnSubtitles"
+                                Classes="circular-transport"
+                                Padding="0"
+                                VerticalAlignment="Center"
+                                Click="OnSubtitlesBtnClick"
+                                ToolTip.Tip="Subtitles"
+                                AutomationProperties.Name="Subtitles">
+                            <materialIcons:MaterialIcon Kind="ClosedCaption" Width="20" Height="20"
+                                Foreground="{StaticResource OsdForeground}" />
+                        </Button>
+                        <Button x:Name="BtnAudio"
+                                Classes="circular-transport"
+                                Padding="0"
+                                VerticalAlignment="Center"
+                                Click="OnAudioBtnClick"
+                                ToolTip.Tip="Audio Track"
+                                AutomationProperties.Name="Audio track">
+                            <materialIcons:MaterialIcon Kind="Music" Width="20" Height="20"
+                                Foreground="{StaticResource OsdForeground}" />
+                        </Button>
                         <ToggleButton x:Name="BtnFullscreen"
                                       Classes="circular-toggle"
                                       Click="OnToggleFullscreen"

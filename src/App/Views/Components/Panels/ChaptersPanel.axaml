@@ -4,7 +4,8 @@
              x:Class="Cine.Avalonia.Views.Components.Panels.ChaptersPanel">
     <containers:PanelContainer CornerRadius="12" Padding="8"
                                Width="320" MaxHeight="400"
-                               Background="{StaticResource PopoverBackground}">
+                               Background="{StaticResource PopoverBackground}"
+                               IsVisible="{Binding HasChapters, x:CompileBindings=False}">
         <Grid RowDefinitions="Auto,*">
             <TextBlock Grid.Row="0" Text="Chapters" Classes="md3-caption"
                        Foreground="{StaticResource TextSecondary}"

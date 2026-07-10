@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Cine.Avalonia.Services;
 using Cine.Avalonia.Storage;
 using KeyEventArgs = Avalonia.Input.KeyEventArgs;
 
@@ -16,12 +17,16 @@ public partial class PreferencesWindow : Window
     private string _originalLangs = string.Empty;
     private string _originalDirs = string.Empty;
 
-    public PreferencesWindow() : this(null) { }
+    public PreferencesWindow() : this(null, null) { }
 
-    public PreferencesWindow(SubtitleSettingsStore? subStore)
+    public PreferencesWindow(SubtitleSettingsStore? subStore) : this(subStore, null) { }
+
+    public PreferencesWindow(SubtitleSettingsStore? subStore, IAudioManager? audioManager)
     {
         _subStore = subStore ?? new SubtitleSettingsStore();
         InitializeComponent();
+        if (audioManager != null && PrefEqualizerPanel != null)
+            PrefEqualizerPanel.SetAudioManager(audioManager);
         KeyDown += OnGlobalKeyDown;
         Loaded += OnLoaded;
         Closing += OnClosing;
@@ -106,6 +111,9 @@ public partial class PreferencesWindow : Window
 
     private void OnSidebarSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
+        // Guard: controls may not be resolved yet during XAML initialization
+        if (PanelGeneral == null) return;
+
         // Show/hide panels based on selected sidebar index
         PanelGeneral.IsVisible = SidebarList.SelectedIndex == 0;
         PanelAudio.IsVisible = SidebarList.SelectedIndex == 1;

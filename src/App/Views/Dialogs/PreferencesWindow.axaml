@@ -2,11 +2,12 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         xmlns:containers="using:Cine.Avalonia.Views.Components.Containers"
+        xmlns:panels="using:Cine.Avalonia.Views.Components.Panels"
         x:Class="Cine.Avalonia.Views.Dialogs.PreferencesWindow"
         Title="Preferences"
         Width="680" Height="480"
         MinWidth="600" MinHeight="400"
-        WindowStartupLocation="CenterOwner"
+        WindowStartupLocation="CenterScreen"
         Background="{StaticResource AppBackground}"
         ExtendClientAreaToDecorationsHint="True"
         WindowDecorations="BorderOnly">
@@ -24,7 +25,7 @@
             <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
         </Style>
         <Style Selector="ListBoxItem.sidebar-item:pointerover">
-            <Setter Property="Background" Value="{StaticResource AppHoverBackground}" />
+            <Setter Property="Background" Value="{StaticResource AppHover}" />
         </Style>
     </Window.Styles>
 
@@ -209,17 +210,7 @@
                                            CornerRadius="8" Padding="20"
                                            Background="{StaticResource PopoverBackground}"
                                            IsVisible="False">
-                    <StackPanel Spacing="{StaticResource space-spacing-4}">
-                        <TextBlock Text="Equalizer" Classes="md3-subtitle1"
-                                   Foreground="{StaticResource OsdForeground}" FontWeight="SemiBold" />
-                        <TextBlock Text="Equalizer controls will be available here."
-                                   Classes="md3-body2"
-                                   Foreground="{StaticResource TextTertiary}" />
-                        <TextBlock Text="Coming in a future update."
-                                   Classes="md3-caption"
-                                   Foreground="{StaticResource TextSecondary}"
-                                   FontStyle="Italic" />
-                    </StackPanel>
+                    <panels:EqualizerPanel x:Name="PrefEqualizerPanel" />
                 </containers:PanelContainer>
 
                 <!-- ════════════════════════════════════════ -->

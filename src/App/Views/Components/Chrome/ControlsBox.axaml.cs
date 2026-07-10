@@ -5,6 +5,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Cine.Avalonia.Services;
 using Cine.Avalonia.Constants;
+using Cine.Core.Services;
 using Cine.Avalonia.ViewModels;
 using Cine.Avalonia.Views.Resources;
 using Cine.Avalonia.Views.Dialogs;
@@ -22,13 +23,8 @@ public partial class ControlsBox : AvaloniaUserControl
 {
     private MainViewModel? _viewModel;
     private bool _replayMode;
-    private IFlyoutService? _flyoutManager;
 
     public SeekBar SeekBarControl => SeekBar;
-    public SubtitleOverlay? SubtitleOverlay => SubOverlayCtrl;
-    public AudioTrackSelector? AudioTrackSelector => AudioOverlay;
-    public VolumeFlyout? VolumeFlyoutCtrl => VolumeFlyoutField;
-    public ChaptersFlyout? ChaptersFlyoutCtrl => ChaptersFlyoutField;
     public global::Avalonia.Controls.Border ControlsBoxElement => ControlsBoxBorder;
 
     // Events for primary menu actions that need window-level handling
@@ -74,33 +70,6 @@ public partial class ControlsBox : AvaloniaUserControl
         _hasPendingPlayPauseSync = false;
     }
 
-    // --- Public API for MainWindow ---
-
-    public bool HasActiveFlyouts => _flyoutManager?.HasActiveFlyouts == true;
-
-    /// <summary>
-    /// Flyout ecosystem manager. When set, all flyouts controlled by this control
-    /// are registered for mutual exclusion — opening one auto-closes all others.
-    /// Also forwarded to SubtitleOverlayCtrl and AudioTrackSelectorCtrl.
-    /// </summary>
-    public IFlyoutService? FlyoutManager
-    {
-        get => _flyoutManager;
-        set
-        {
-            _flyoutManager = value;
-            if (value == null) return;
-
-            if (SubOverlayCtrl != null) SubOverlayCtrl.FlyoutManager = value;
-            if (AudioOverlay != null) AudioOverlay.FlyoutManager = value;
-            if (VolumeFlyoutField != null) VolumeFlyoutField.FlyoutManager = value;
-            if (ChaptersFlyoutField != null) ChaptersFlyoutField.FlyoutManager = value;
-
-            // Wire inline panel toggle on all flyout buttons
-            SetupInlinePanelToggle();
-        }
-    }
-
     private bool _hasPendingPlayPauseSync;
 
     // ====================================================================
@@ -111,16 +80,73 @@ public partial class ControlsBox : AvaloniaUserControl
 
     private MainWindow? PanelHost => TopLevel.GetTopLevel(this) as MainWindow;
 
-    private void SetupInlinePanelToggle()
+    public void ToggleSubtitlePanel()
     {
-        if (VolumeFlyoutField != null)
-            VolumeFlyoutField.OnToggleInlinePanel = ToggleVolumePanel;
-        if (SubOverlayCtrl != null)
-            SubOverlayCtrl.OnToggleInlinePanel = () => TogglePanel(PanelHost?.MainSubtitlePanel);
-        if (AudioOverlay != null)
-            AudioOverlay.OnToggleInlinePanel = () => TogglePanel(PanelHost?.MainAudioTrackPanel);
-        if (ChaptersFlyoutField != null)
-            ChaptersFlyoutField.OnToggleInlinePanel = () => TogglePanel(PanelHost?.MainChaptersPanel);
+        var host = PanelHost;
+        var panel = host?.MainSubtitlePanel;
+        if (host == null || panel == null || _viewModel == null) return;
+
+        if (panel.IsVisible)
+        {
+            panel.IsVisible = false;
+            host.UpdatePanelDismissState();
+        }
+        else
+        {
+            HideAllInlinePanels();
+
+            panel.SetTrackData(
+                tracks: _viewModel.SubtitleTracks,
+                manager: _viewModel.Subtitles,
+                getDelay: () => _viewModel.Subtitles?.SubtitleDelay ?? 0,
+                setDelay: value =>
+                {
+                    if (_viewModel.Subtitles != null)
+                        _viewModel.Subtitles.SubtitleDelay = (float)value;
+                },
+                resetDelay: () =>
+                {
+                    if (_viewModel.Subtitles != null)
+                        _viewModel.Subtitles.SubtitleDelay = 0;
+                },
+                dismiss: () => { panel.IsVisible = false; host.UpdatePanelDismissState(); }
+            );
+
+            panel.IsVisible = true;
+            host.EnablePanelDismiss();
+        }
+    }
+
+    public void ToggleAudioTrackPanel()
+    {
+        var host = PanelHost;
+        var panel = host?.MainAudioTrackPanel;
+        if (host == null || panel == null || _viewModel == null) return;
+
+        if (panel.IsVisible)
+        {
+            panel.IsVisible = false;
+            host.UpdatePanelDismissState();
+        }
+        else
+        {
+            HideAllInlinePanels();
+
+            panel.SetTrackData(
+                tracks: _viewModel.AudioTracks,
+                getDelay: () => _viewModel.Audio?.AudioDelay ?? 0,
+                setDelay: value =>
+                {
+                    if (_viewModel.Audio != null)
+                        _viewModel.Audio.AudioDelay = (float)value;
+                },
+                resetDelay: () => _viewModel.Audio?.ResetAudioDelay(),
+                dismiss: () => { panel.IsVisible = false; host.UpdatePanelDismissState(); }
+            );
+
+            panel.IsVisible = true;
+            host.EnablePanelDismiss();
+        }
     }
 
     private void ToggleVolumePanel()
@@ -367,24 +393,31 @@ public partial class ControlsBox : AvaloniaUserControl
         if (w != null) new PreferencesWindow().Show(w);
     }
 
-    // --- Track menu handlers ---
+    // --- Equalizer inline panel ---
 
     public void TriggerEqualizer()
     {
         if (_viewModel == null) return;
 
-        if (!_viewModel.IsEqualizerEnabled)
+        var host = PanelHost;
+        if (host == null) return;
+        var panel = host.MainEqualizerPanel;
+
+        // Set audio manager on the panel (safe to call multiple times)
+        if (_viewModel.Audio != null)
+            panel.SetAudioManager(_viewModel.Audio);
+
+        if (panel.IsVisible)
         {
-            var anchor = BtnEqualizer ?? BtnFullscreen;
-            if (anchor != null)
-                UpgradeCtaContent.Show(_flyoutManager, "equalizer.upgrade", anchor, this, "Equalizer");
-            return;
+            panel.IsVisible = false;
+            host.UpdatePanelDismissState();
         }
-
-        var eqAnchor = BtnEqualizer ?? BtnFullscreen;
-        if (eqAnchor == null) return;
-
-        AudioEqualizerFlyout.Show(_flyoutManager, _viewModel.Audio, eqAnchor, this);
+        else
+        {
+            HideAllInlinePanels();
+            panel.IsVisible = true;
+            host.EnablePanelDismiss();
+        }
     }
 
     private void OnEqualizerClick(object? sender, RoutedEventArgs e)
@@ -401,14 +434,13 @@ public partial class ControlsBox : AvaloniaUserControl
 
     private void OnOpenPlaylistDialog(object? sender, RoutedEventArgs e)
     {
-        if (_viewModel != null && !_viewModel.IsPlaylistSaveLoadEnabled)
-        {
-            var anchor = BtnPlaylistDialog ?? BtnFullscreen;
-            if (anchor != null)
-                UpgradeCtaContent.Show(_flyoutManager, "playlist.upgrade", anchor, this, "Playlist");
-            return;
-        }
-
         TogglePlaylistPanel();
     }
+
+    // --- Inline panel toggle buttons (replacing old flyout controls) ---
+
+    private void OnVolumeBtnClick(object? sender, RoutedEventArgs e) => ToggleVolumePanel();
+    private void OnChaptersBtnClick(object? sender, RoutedEventArgs e) => TogglePanel(PanelHost?.MainChaptersPanel);
+    private void OnSubtitlesBtnClick(object? sender, RoutedEventArgs e) => ToggleSubtitlePanel();
+    private void OnAudioBtnClick(object? sender, RoutedEventArgs e) => ToggleAudioTrackPanel();
 }

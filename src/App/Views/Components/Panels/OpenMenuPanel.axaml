@@ -30,7 +30,26 @@
             <!-- Recent Files list (populated dynamically) -->
             <ItemsControl x:Name="RecentFilesList"
                           BorderThickness="0"
-                          Background="Transparent" />
+                          Background="Transparent"
+                          MaxHeight="240">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Classes="flyout-item"
+                                Padding="8,6"
+                                HorizontalContentAlignment="Left"
+                                Click="OnRecentFileClick">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <materialIcons:MaterialIcon Kind="FileVideoOutline" Width="16" Height="16"
+                                    Foreground="{StaticResource TextSecondary}" />
+                                <TextBlock Text="{Binding}"
+                                           Foreground="{StaticResource OsdForeground}"
+                                           TextTrimming="CharacterEllipsis"
+                                           MaxWidth="200" />
+                            </StackPanel>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
         </StackPanel>
     </containers:PanelContainer>
 </UserControl>

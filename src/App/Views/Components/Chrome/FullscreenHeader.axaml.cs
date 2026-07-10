@@ -2,11 +2,8 @@ using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Threading;
 using Cine.Avalonia.Core;
-using Cine.Avalonia.Services;
 using Cine.Avalonia.ViewModels;
-using Cine.Avalonia.Views.Components;
 using Cine.Avalonia.Views.Dialogs;
 using Cine.Avalonia.Views.Shell;
 using RoutedEventArgs = Avalonia.Interactivity.RoutedEventArgs;
@@ -17,11 +14,10 @@ public partial class FullscreenHeader : UserControl
 {
     public IEventBus? EventBus { get; set; }
     public event EventHandler? PipToggled;
+    public event EventHandler? SubtitlePanelRequested;
+    public event EventHandler? AudioTrackPanelRequested;
 
     private MainViewModel? _viewModel;
-    private PrimaryMenuBuilder? _fullscreenMenuBuilder;
-    private IFlyoutService? _flyoutManager;
-    private FlyoutOverlay? _overlay;
 
     public FullscreenHeader()
     {
@@ -29,8 +25,6 @@ public partial class FullscreenHeader : UserControl
         DataContextChanged += OnDataContextChanged;
         // Also capture DataContext if already set before handler was attached
         if (DataContext is MainViewModel vm) _viewModel = vm;
-
-        _fullscreenMenuBuilder = BuildFullscreenMenu();
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
@@ -38,95 +32,96 @@ public partial class FullscreenHeader : UserControl
         _viewModel = DataContext as MainViewModel;
     }
 
-    /// <summary>Builds the fullscreen menu using shared PrimaryMenuBuilder.</summary>
-    private PrimaryMenuBuilder BuildFullscreenMenu()
-    {
-        var builder = new PrimaryMenuBuilder();
-        builder
-            .AddSection("PLAYBACK")
-            .AddItem("Play", "Play / Pause", "Space", () => _viewModel?.PlayPause())
-            .AddItem("Stop", "Stop", "Ctrl+S", () => _viewModel?.Stop())
-            .AddItem("SkipPrevious", "Seek -10s", "Left", () => _viewModel?.SeekBackward())
-            .AddItem("SkipNext", "Seek +10s", "Right", () => _viewModel?.SeekForward())
-            .AddSeparator()
-            .AddSection("TOOLS")
-            .AddItem("Keyboard", "Keyboard Shortcuts", null, () =>
-            {
-                var w = TopLevel.GetTopLevel(this) as Window;
-                if (w != null) new KeyboardShortcutsDialog().Show(w);
-            })
-            .AddItem("Cog", "Preferences", null, () =>
-            {
-                var w = TopLevel.GetTopLevel(this) as Window;
-                if (w != null) new PreferencesWindow().Show(w);
-            })
-            .AddItem("Information", "About Cine", null, () =>
-            {
-                var w = TopLevel.GetTopLevel(this) as Window;
-                if (w != null) new PreferencesWindow().Show(w);
-            })
-            .AddSeparator()
-            .AddSection("VIEW")
-            .AddItem("Fullscreen", "Exit Fullscreen", "F", () =>
-            {
-                _viewModel?.ToggleFullscreen();
-            })
-            .AddItem("PictureInPictureBottomRight", "Picture in Picture", "Ctrl+Shift+P", () =>
-            {
-                EventBus?.Publish(new PipToggleEvent());
-                PipToggled?.Invoke(this, EventArgs.Empty);
-            })
-            .AddSeparator()
-            .AddItem("PinOutline", "Always on Top", null, () =>
-            {
-                var w = TopLevel.GetTopLevel(this) as Window;
-                if (w != null) w.Topmost = !w.Topmost;
-            });
-        return builder;
-    }
-
-    public bool HasActiveFlyouts => _flyoutManager?.HasActiveFlyouts == true;
-
-    private MenuFlyout? _btnFlyout;
-
-    public IFlyoutService? FlyoutManager
-    {
-        get => _flyoutManager;
-        set
-        {
-            _flyoutManager = value;
-            if (value != null)
-            {
-                // Obtain overlay reference for mutual exclusion with overlay-based flyouts
-                _overlay ??= MainWindow.GetOverlay(this);
-                value.Register("fullscreen-menu", () => { _btnFlyout?.Hide(); _overlay?.HideContent(); });
-                // Pass to child track selector controls for mutual exclusion
-                if (FullscreenSubOverlay != null) FullscreenSubOverlay.FlyoutManager = value;
-                if (FullscreenAudioOverlay != null) FullscreenAudioOverlay.FlyoutManager = value;
-            }
-        }
-    }
-
     // P12: Expose inner FullscreenHeader Border for overlay hover tracking
     public global::Avalonia.Controls.Border FullscreenHeaderElement => FullscreenHeaderBorder;
 
     private void OnFullscreenMenuClick(object? sender, RoutedEventArgs e)
     {
-        _fullscreenMenuBuilder?.SyncCheckStates();
-        _flyoutManager?.DismissOthers("fullscreen-menu");
-        _btnFlyout = _fullscreenMenuBuilder!.Build();
-        _btnFlyout.Placement = PlacementMode.Bottom;
-        _btnFlyout.Opened += (_, _) => { _flyoutManager?.DismissOthers("fullscreen-menu"); };
-        _btnFlyout.Closed += (_, _) => { _flyoutManager?.MarkClosed("fullscreen-menu"); _btnFlyout = null; };
+        var flyout = new MenuFlyout();
+        flyout.Items.Add(new MenuItem { Header = "PLAYBACK", IsEnabled = false });
+
+        var playItem = new MenuItem { Header = "Play / Pause" };
+        playItem.Click += (_, _) => _viewModel?.PlayPause();
+        flyout.Items.Add(playItem);
+
+        var stopItem = new MenuItem { Header = "Stop" };
+        stopItem.Click += (_, _) => _viewModel?.Stop();
+        flyout.Items.Add(stopItem);
+
+        var seekBackItem = new MenuItem { Header = "Seek -10s" };
+        seekBackItem.Click += (_, _) => _viewModel?.SeekBackward();
+        flyout.Items.Add(seekBackItem);
+
+        var seekFwdItem = new MenuItem { Header = "Seek +10s" };
+        seekFwdItem.Click += (_, _) => _viewModel?.SeekForward();
+        flyout.Items.Add(new MenuItem { Header = "-" });
+
+        flyout.Items.Add(new MenuItem { Header = "TOOLS", IsEnabled = false });
+
+        var shortcutsItem = new MenuItem { Header = "Keyboard Shortcuts" };
+        shortcutsItem.Click += (_, _) =>
+        {
+            var w = TopLevel.GetTopLevel(this) as Window;
+            if (w != null) new KeyboardShortcutsDialog().Show(w);
+        };
+        flyout.Items.Add(shortcutsItem);
+
+        var prefsItem = new MenuItem { Header = "Preferences" };
+        prefsItem.Click += (_, _) =>
+        {
+            var w = TopLevel.GetTopLevel(this) as Window;
+            if (w != null) new PreferencesWindow().Show(w);
+        };
+        flyout.Items.Add(prefsItem);
+
+        var aboutItem = new MenuItem { Header = "About Cine" };
+        aboutItem.Click += (_, _) =>
+        {
+            var w = TopLevel.GetTopLevel(this) as Window;
+            if (w != null) new PreferencesWindow().Show(w);
+        };
+        flyout.Items.Add(new MenuItem { Header = "-" });
+
+        flyout.Items.Add(new MenuItem { Header = "VIEW", IsEnabled = false });
+
+        var fsItem = new MenuItem { Header = "Exit Fullscreen" };
+        fsItem.Click += (_, _) => _viewModel?.ToggleFullscreen();
+        flyout.Items.Add(fsItem);
+
+        var pipItem = new MenuItem { Header = "Picture in Picture" };
+        pipItem.Click += (_, _) =>
+        {
+            EventBus?.Publish(new PipToggleEvent());
+            PipToggled?.Invoke(this, EventArgs.Empty);
+        };
+        flyout.Items.Add(pipItem);
+
+        flyout.Items.Add(new MenuItem { Header = "-" });
+
+        var ontopItem = new MenuItem { Header = "Always on Top" };
+        ontopItem.Click += (_, _) =>
+        {
+            var w = TopLevel.GetTopLevel(this) as Window;
+            if (w != null) w.Topmost = !w.Topmost;
+        };
+        flyout.Items.Add(ontopItem);
+
+        flyout.Placement = PlacementMode.Bottom;
         try
         {
-            _btnFlyout.ShowAt(BtnFullscreenMenu);
+            flyout.ShowAt(BtnFullscreenMenu);
         }
         catch (Exception ex)
         {
-                        global::Cine.Core.Log.ForContext<FullscreenHeader>().Error(ex, "OnFullscreenMenuClick ShowAt failed (BtnFullscreenMenu)");
+            global::Cine.Core.Log.ForContext<FullscreenHeader>().Error(ex, "OnFullscreenMenuClick ShowAt failed (BtnFullscreenMenu)");
         }
     }
+
+    private void OnFsSubtitleClick(object? sender, RoutedEventArgs e)
+        => SubtitlePanelRequested?.Invoke(this, EventArgs.Empty);
+
+    private void OnFsAudioClick(object? sender, RoutedEventArgs e)
+        => AudioTrackPanelRequested?.Invoke(this, EventArgs.Empty);
 
     public void Show()
     {

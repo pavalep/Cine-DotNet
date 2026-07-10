@@ -8,11 +8,16 @@
                                Width="280"
                                Background="{StaticResource PopoverBackground}">
         <StackPanel Spacing="8">
-            <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Text="Volume" Classes="md3-caption"
+            <Grid ColumnDefinitions="*,Auto,Auto">
+                <TextBlock Grid.Column="0" Text="Volume" Classes="md3-caption"
                            Foreground="{StaticResource TextSecondary}"
                            VerticalAlignment="Center" />
-                <Button Grid.Column="1" Content="Mute"
+                <TextBlock Grid.Column="1" x:Name="VolumePercentLabel"
+                           Text="{Binding VolumeValue, StringFormat='\{0\}%'}"
+                           Classes="md3-caption"
+                           Foreground="{StaticResource OsdForeground}"
+                           VerticalAlignment="Center" Margin="0,0,8,0" />
+                <Button Grid.Column="2" Content="Mute"
                         Classes="text-button-small"
                         Click="OnToggleMute" />
             </Grid>

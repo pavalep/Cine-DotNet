@@ -1041,6 +1041,182 @@ Inline panels that can't overflow because they're in the layout tree.
 
 ---
 
+## ✅ Phase 15 — Completed
+
+The inline panel approach was implemented successfully — but with a key architectural difference from the original plan:
+
+| Planned (Phase 15 doc) | Actual Implementation | Reason |
+|---|---|---|
+| Panels in a `Canvas` inside `ControlsBox` | Panels at **MainWindow root** in `PanelOverlayHost` Grid | `ClipToBounds="True"` on `PlayerPage` / `ContentClip` would clip panels placed inside the controls bar area. MainWindow root is the only level outside the clip |
+| Popups for some panels | All panels are **regular visual elements** (UserControls), no Popups | User explicitly rejected Popups — panels must be same nature as HeaderBar/ControlsBox, just positioned differently |
+| `FlyoutOverlay` + `FlyoutManager` completely removed | Still present because `AudioEqualizerFlyout` still uses them | Phase 16 will finish the migration |
+
+### What Phase 15 Actually Achieved
+
+| Feature | Status |
+|---|---|
+| All 7 inline panels at MainWindow root (`PanelOverlayHost` Grid) | ✅ Done |
+| IsVisible-based toggle from ControlsBox and HeaderBar | ✅ Done |
+| Same-button toggle-off (click again to close) | ✅ Done |
+| Light dismiss (click outside → close all) via `PanelDismissBackground` | ✅ Done |
+| Cross-zone mutual exclusion (header + controls bar share one panel slot) | ✅ Done |
+| Auto-hide prevention while panels are open (`AreAnyPanelsOpen()` in timer) | ✅ Done |
+| `PreferencesWindow` with sidebar + 5 tab pages (General, Audio, Subtitles, Equalizer, About) | ✅ Done |
+| Old flyout cleanup (Phase 15 items 9-17) | ❌ Deferred to Phase 16 |
+| Equalizer migration to PreferencesWindow | ❌ Deferred to Phase 16 |
+
+---
+
+## 🚧 Phase 16 — Clean Architecture: Dead Code Removal, Equalizer Migration, DRY/KISS/SOLID
+
+**Status:** Planned 🚧  
+**Dependencies:** Phase 15 (completed)
+
+### Rationale
+
+Phase 15 delivered the functional panel system, but the codebase now has a **dual architecture** problem:
+
+```
+Old System (still alive)              New System (active)
+─────────────────────────             ────────────────────
+VolumeFlyout.axaml/.cs                VolumePanel (inline)
+SubtitleOverlay.axaml/.cs             SubtitlePanel (inline)
+AudioTrackSelector.axaml/.cs          AudioTrackPanel (inline)
+ChaptersFlyout.axaml/.cs              ChaptersPanel (inline)
+AudioEqualizerFlyout.axaml/.cs        ❌ no inline equivalent yet
+FlyoutManager + IFlyoutService        MainWindow.AreAnyPanelsOpen()
+FlyoutOverlay                         PanelOverlayHost + PanelDismissBackground
+```
+
+The old files still exist, are still referenced in the visual tree, and still have `FlyoutManager` properties injected — but their click handlers are all redirected via `OnToggleInlinePanel` callbacks to the new panels. This violates:
+- **DRY** — toggle logic duplicated across ControlsBox, HeaderBar, and every old flyout control
+- **KISS** — too many indirections (button → old flyout → callback → ControlsBox → MainWindow → panel visibility)
+- **SOLID (SRP)** — old flyout controls serve dual purpose (overlay flyout + inline panel relay)
+- **SOLID (DIP)** — AudioEqualizerFlyout directly depends on FlyoutManager concrete
+
+Additionally:
+- **Preferences from primary menu** — the primary menu panel stays open when Preferences is clicked (no `HideAllPanels()` call before showing dialog)
+- **Equalizer** — still uses old FlyoutOverlay overlay system with coordinate math (`TranslatePoint`)
+- **PreferencesWindow Equalizer tab** — has placeholder text ("Coming in a future update") instead of the real equalizer UI from `AudioEqualizerFlyout.axaml`
+
+### Menu Classification (Final, Post-Phase 16)
+
+| Category | Items | Implementation | Why |
+|---|---|---|---|
+| **Preferences Window** | Equalizer, About, Subtitle Settings, Audio Settings, General | `PreferencesWindow : Window` with sidebar | Needs real estate, persistent state, scales to N sections |
+| **Inline panels** | Subtitle tracks, Audio tracks, Chapters, Volume, Open menu, Primary menu, Playlist | MainWindow-level UserControls in `PanelOverlayHost` | Simple lists/controls, zero coordinate math |
+| **Inline panel (to create)** | Equalizer (quick-access from controls bar) | `EqualizerPanel : UserControl` in `Panels/` | Provides quick EQ access without opening full Preferences window |
+| **Native flyout (keep)** | Right-click context menu, FullscreenHeader menu | `MenuFlyout` with `PlacementMode.Pointer` | Must appear at pointer position |
+| **Removed** | All FlyoutOverlay-based flyouts | Deleted | Replaced by inline panels + PreferencesWindow |
+
+### Changes Planned
+
+| # | Change | Details | Principles |
+|---|--------|---------|------------|
+| 1 | **Mark Phase 15 complete** | Update status to ✅ Done | Housekeeping |
+| 2 | **Fix Preferences from primary menu** | Call `HideAllPanels()` before `new PreferencesWindow().Show(this)` so the primary menu panel closes first | Bug fix |
+| 3 | **Create EqualizerPanel inline panel** | New `EqualizerPanel.axaml/.cs` in `Views/Components/Panels/` with the real 10-band equalizer UI (ported from `AudioEqualizerFlyout.axaml` — preset buttons, sliders, normalization/dialogue toggles, audio delay) | DRY (EQ UI should be reusable) |
+| 4 | **Wire EqualizerPanel into ControlsBox** | Add `MainEqualizerPanel` to `PanelOverlayHost` in `MainWindow.axaml`; wire `BtnEqualizer` → `TogglePanel(MainEqualizerPanel)` | KISS (consistent with other panels) |
+| 5 | **Replace PreferencesWindow equalizer placeholder** | Replace the placeholder "Coming in a future update" in `PanelEqualizer` with a hosted instance of `EqualizerPanel` | DRY (same EQ UI in both places) |
+| 6 | **Delete VolumeFlyout.axaml/.cs** | Remove from project; remove from `ControlsBox.axaml` visual tree; remove `FlyoutManager` property | Dead code cleanup |
+| 7 | **Delete SubtitleOverlay.axaml/.cs** | Remove from project; remove from `ControlsBox.axaml` visual tree; remove `FlyoutManager` property + `ReopenFlyout` | Dead code cleanup |
+| 8 | **Delete AudioTrackSelector.axaml/.cs** | Remove from project; remove from `ControlsBox.axaml` visual tree; remove `FlyoutManager` property + `ReopenFlyout` | Dead code cleanup |
+| 9 | **Delete ChaptersFlyout.axaml/.cs** | Remove from project; remove from `ControlsBox.axaml` visual tree; remove `FlyoutManager` property | Dead code cleanup |
+| 10 | **Delete AudioEqualizerFlyout.axaml/.cs** | Remove only AFTER its content is ported to `EqualizerPanel` (see #3) | Dead code cleanup |
+| 11 | **Delete FlyoutOverlay.axaml/.cs** | Remove from project; remove from `MainWindow.axaml` visual tree | Dead code cleanup |
+| 12 | **Delete FlyoutManager.cs** | Remove entire file | Dead code cleanup |
+| 13 | **Delete IFlyoutService.cs** | Remove entire file | Dead code cleanup |
+| 14 | **Delete IFlyoutSource.cs** | Remove entire file | Dead code cleanup |
+| 15 | **Delete FlyoutManagerExtensions.cs** | Remove entire file | Dead code cleanup |
+| 16 | **Delete OpenMenuBuilder.cs** | Open menu is now an inline panel | Dead code cleanup |
+| 17 | **Delete PrimaryMenuBuilder.cs** | Primary menu is now an inline panel | Dead code cleanup |
+| 18 | **Remove FlyoutManager DI registration** | Remove `services.AddSingleton<IFlyoutService, FlyoutManager>()` from `CompositionRoot` | Cleanup |
+| 19 | **Simplify ControlsBox.axaml.cs** | Remove `FlyoutManager` property, `HasActiveFlyouts`, `SetupInlinePanelToggle()` indirection. Wire panel toggle directly to MainWindow panels. Remove old `TriggerEqualizer()` overlay path | SRP, KISS |
+| 20 | **Simplify HeaderBar.axaml.cs** | Remove `FlyoutManager` property, `HasActiveFlyouts`. Wire panel toggle directly | SRP, KISS |
+| 21 | **Simplify FullscreenHeader.axaml.cs** | Remove `FlyoutManager` property, `HasActiveFlyouts`. Use native `MenuFlyout` alone | SRP, KISS |
+| 22 | **Simplify MainWindow.Chrome.cs** | Replace `HasActiveFlyouts` checks in `OnAutoHideTimerTick` with `AreAnyPanelsOpen()` (inline panels) + native menu flyout state (right-click context menu, fullscreen header) | KISS |
+| 23 | **Simplify MainWindow.Lifecycle.cs** | Remove FlyoutManager injection, reopen actions, `CloseAll()` wiring. Inject panels directly | DRY |
+| 24 | **Simplify MainWindow.Input.cs** | Replace `_flyoutManager.CloseAll()` in Escape handler with `HideAllPanels()`. Remove `CloseOpenFlyouts()` method | KISS |
+| 25 | **Fix file dialog panel handling** | Update `_dialogHandler.OnBeforeOpen` to also hide all inline panels (not just old flyouts) | Bug fix |
+| 26 | **Add panel toggle helper on MainWindow** | Create `TogglePanel(Control? panel)` method on MainWindow to centralize toggle logic (mutual exclusion, dismiss state). Use from both ControlsBox and HeaderBar | DRY |
+| 27 | **Remove `OnToggleInlinePanel` callback pattern** | After old flyout files are deleted, this pattern is gone | DRY |
+| 28 | **Build & test** | Verify all menus work, no regressions, zero build errors | Verification |
+
+### EqualizerPanel Design
+
+Rather than making the equalizer exclusively a PreferencesWindow tab (which requires opening a separate window), the equalizer should also be available as a quick-access inline panel (like VolumePanel):
+
+```
+EqualizerPanel.axaml (reuses AudioEqualizerFlyout XAML content)
+  └── Border (PopoverBackground, rounded)
+        ├── Header: "Equalizer" + Reset button + Close button
+        ├── Preset buttons (Flat, Classic, Rock, Pop, Jazz, Bass+, Vocal, Movie, Headphones, Podcast)
+        ├── 10-band slider row (scrollable)
+        ├── Normalization toggle
+        ├── Dialogue Boost toggle
+        └── Audio Delay slider + numeric
+```
+
+This same panel is then **hosted inline** in the PreferencesWindow Equalizer tab (change #5), so the EQ UI is defined once, used in two places — a DRY win.
+
+### ⚠️ Important: No Premature Deletion
+
+**Do NOT delete any old flyout file until its new inline panel replacement has feature parity.** The old files (VolumeFlyout, SubtitleOverlay, AudioTrackSelector, ChaptersFlyout, AudioEqualizerFlyout) still contain `OnClick` handlers, drag-drop support, and other UI logic that the current new inline panels do not yet replicate.
+
+**Safe deletion order:**
+1. First: Create `EqualizerPanel` + backfill missing features to SubtitlePanel, AudioTrackPanel, ChaptersPanel, VolumePanel
+2. Second: Verify feature parity (search boxes, delay controls, add-track entries, drag-drop, presets)
+3. Third: Only then delete old flyout files + FlyoutManager system
+
+**Known feature gaps in current new panels (must be ported before deletion):**
+
+| New Panel | Missing Features from Old Flyout |
+|---|---|
+| VolumePanel | Volume percentage text label |
+| SubtitlePanel | Search box, Subtitle Delay controls (--/value/+/Reset), "Add Subtitle Track..." entry, drag-drop for external .srt/.ass files |
+| AudioTrackPanel | Search box, Audio Delay controls (--/value/+/Reset), drag-drop for external audio files |
+| ChaptersPanel | `IsVisible="{Binding HasChapters}"` binding |
+| EqualizerPanel | **Entire content** — 10 presets, 10-band sliders, Normalization toggle, Dialogue Boost toggle, Audio Delay slider + NumericUpDown |
+
+### What Happens to the Old System (After Phase 16)
+
+```
+Files removed:
+  - VolumeFlyout.axaml + .cs
+  - SubtitleOverlay.axaml + .cs  
+  - AudioTrackSelector.axaml + .cs
+  - ChaptersFlyout.axaml + .cs
+  - AudioEqualizerFlyout.axaml + .cs
+  - FlyoutOverlay.axaml + .cs
+  - FlyoutManager.cs
+  - IFlyoutService.cs
+  - IFlyoutSource.cs
+  - FlyoutManagerExtensions.cs
+  - OpenMenuBuilder.cs
+  - PrimaryMenuBuilder.cs
+
+DI removed:
+  - services.AddSingleton<IFlyoutService, FlyoutManager>()
+
+What remains:
+  - VideoContextMenuBuilder.cs (right-click context menu — keep, uses native MenuFlyout)
+  - FullscreenHeader native MenuFlyout (keep, uses native flyout, not FlyoutOverlay)
+```
+
+### Key Outcomes
+
+```
+Zero FlyoutOverlay coordinate math.
+Zero FlyoutManager indirection.
+Zero dead flyout files.
+Zero DI registrations for the old system.
+Equalizer available as both quick-access panel AND Preferences tab (DRY).
+Preferences properly closes panels before opening.
+All panel toggle logic centralized in MainWindow (DRY).
+```
+
+---
+
 ## ✅ Phase 13 — Remove Nonsensical UI Elements (Clean UI) — **Completed**
 
 **Started:** 09 July 2026  
