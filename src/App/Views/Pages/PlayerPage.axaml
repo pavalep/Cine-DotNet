@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:components="clr-namespace:Cine.Avalonia.Views.Components"
+             xmlns:panels="clr-namespace:Cine.Avalonia.Views.Components.Panels"
              xmlns:controls="clr-namespace:Cine.Avalonia.Controls"
              xmlns:vm="using:Cine.Avalonia.ViewModels"
              x:Class="Cine.Avalonia.Views.Pages.PlayerPage"

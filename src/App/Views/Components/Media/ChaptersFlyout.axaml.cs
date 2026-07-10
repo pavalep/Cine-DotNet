@@ -34,6 +34,12 @@ public partial class ChaptersFlyout : AvaloniaUserControl, IFlyoutSource
     bool IFlyoutSource.CanOpen => _viewModel != null && _viewModel.Chapters.Count > 0;
     Border IFlyoutSource.BuildContent() => BuildChaptersContent(_viewModel!.Chapters);
 
+    /// <summary>
+    /// Callback for inline panel toggle. When set, the flyout button toggles
+    /// the inline panel instead of showing the FlyoutOverlay.
+    /// </summary>
+    public Action? OnToggleInlinePanel { get; set; }
+
     public ChaptersFlyout()
     {
         InitializeComponent();
@@ -59,6 +65,13 @@ public partial class ChaptersFlyout : AvaloniaUserControl, IFlyoutSource
     private void OnChaptersMenuClick(object? sender, RoutedEventArgs e)
     {
         if (_viewModel == null || _viewModel.Chapters.Count == 0) return;
+
+        if (OnToggleInlinePanel != null)
+        {
+            OnToggleInlinePanel();
+            return;
+        }
+
         _overlay ??= MainWindow.GetOverlay(this);
         if (_overlay == null) return;
 

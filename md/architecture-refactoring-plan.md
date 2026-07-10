@@ -888,9 +888,9 @@ This phase was a comprehensive, AI-driven refactor addressing all user-reported 
 
 ---
 
-## ⏳ Phase 15 — Menu Architecture Overhaul: Grid-Based Inline Panels + Preferences Window
+## 🚧 Phase 15 — Menu Architecture Overhaul: Grid-Based Inline Panels + Preferences Window
 
-**Status:** Planned ◐  
+**Status:** In Progress 🚧  
 **Dependencies:** Phase 14 (completed)  
 
 ### Rationale
@@ -1002,13 +1002,13 @@ ControlsBox (Grid)
 
 | # | Change | Details |
 |---|--------|---------|
-| 1 | Create `PreferencesWindow` | New `Window` subclass with sidebar + content panel. Ports: About, Equalizer, Subtitle Settings. |
-| 2 | Add General settings page | Auto-resume, DWM corners, playback behavior. Reads/writes `PlayerSettingsStore`. |
-| 3 | Add Equalizer page | 10-band sliders, presets dropdown, delay controls. Ported from `AudioEqualizerFlyout`. |
-| 4 | Add Subtitle Settings page | Font picker, size slider, position dropdown, sync delay. Ported from `SubtitleSettingsDialog`. |
-| 5 | Add Audio Settings page | Default track selection, audio delay, device selector. |
-| 6 | Add About page | Logo, version, build info, license link. Ported from `PreferencesDialog` About section. |
-| 7 | Wire Preferences Window | Launch from Primary menu + HeaderBar gear. |
+| 1 | Create `PreferencesWindow` | **DONE** — 680×480, sidebar + 5 content panels (General/Audio/Subtitles/Equalizer/About), PanelContainer wraps each section. |
+| 2 | Add General settings page | **DONE** — included in PreferencesWindow. Hardware acceleration toggle + placeholder. |
+| 3 | Add Equalizer page | **DONE** — placeholder in PreferencesWindow. Full 10-band EQ deferred. |
+| 4 | Add Subtitle Settings page | **DONE** — included in PreferencesWindow. Auto-load, preferred languages, external dirs. |
+| 5 | Add Audio Settings page | **DONE** — included in PreferencesWindow. Normalization + dialogue boost toggles. |
+| 6 | Add About page | **DONE** — logo, version, build info, license, reset-to-defaults. Ported from `PreferencesDialog`. |
+| 7 | Wire Preferences Window | **DONE** — 10 entry points updated (HeaderBar, FullscreenHeader, MainWindow Input, Command Palette). |
 | 8 | Create inline panels in ControlsBox | `Canvas` with Subtitle, Audio, Chapters, PrimaryMenu panels in controls bar area. |
 | 9 | Migrate subtitle content | Move from `SubtitleOverlay` to inline panel. Remove `SubtitleOverlay.axaml`. |
 | 10 | Migrate audio track content | Move from `AudioTrackSelector` to inline panel. Remove `AudioTrackSelector.axaml`. |

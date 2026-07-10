@@ -24,6 +24,7 @@ using Cine.Avalonia.Storage;
 using Cine.Avalonia.ViewModels;
 using Cine.Avalonia.ViewModels.Pages;
 using Cine.Avalonia.Views.Components;
+using Cine.Avalonia.Views.Dialogs;
 using Cine.Core;
 using Material.Icons;
 using Cine.Media.Events;
@@ -123,9 +124,20 @@ public partial class MainWindow
 
         // Wire reopen actions for flyouts that trigger native dialogs (Avalonia #18969):
         // after the dialog completes, the flyout is shown again automatically.
-        _flyoutManager.SetReopen("open-menu", () => PlayerPage.HeaderBarControl.ReopenFlyout());
         _flyoutManager.SetReopen("subtitle", () => PlayerPage.ControlsBoxControl.SubtitleOverlay?.ReopenFlyout());
         _flyoutManager.SetReopen("audio", () => PlayerPage.ControlsBoxControl.AudioTrackSelector?.ReopenFlyout());
+
+        // Wire HeaderBar primary menu events → window-level handlers
+        PlayerPage.HeaderBarControl.PrimaryPipToggled += (_, _) =>
+            OnPipToggled(null, EventArgs.Empty);
+        PlayerPage.HeaderBarControl.PrimaryAlwaysOnTopToggled += (_, _) =>
+            Topmost = !Topmost;
+        PlayerPage.HeaderBarControl.PrimaryShortcutsRequested += (_, _) =>
+            new KeyboardShortcutsDialog().Show(this);
+        PlayerPage.HeaderBarControl.PrimaryPreferencesRequested += (_, _) =>
+            new PreferencesWindow().Show(this);
+        PlayerPage.HeaderBarControl.PrimaryAboutRequested += (_, _) =>
+            new PreferencesWindow().Show(this);
 
         // Update OnBeforeOpen to use the centralized manager
         _dialogHandler.OnBeforeOpen = () => _flyoutManager.CloseAll();

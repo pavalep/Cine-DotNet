@@ -51,6 +51,12 @@ public partial class SubtitleOverlay : AvaloniaUserControl, IFlyoutSource
     }
     void IFlyoutSource.OnDismissed() => _currentFlyoutContent = null;
 
+    /// <summary>
+    /// Callback for inline panel toggle. When set, the flyout button toggles
+    /// the inline panel instead of showing the FlyoutOverlay.
+    /// </summary>
+    public Action? OnToggleInlinePanel { get; set; }
+
     private static readonly string[] SubtitleExtensions = { ".srt", ".ass", ".ssa", ".vtt", ".sub", ".idx" };
 
     /// <summary>
@@ -133,6 +139,11 @@ public partial class SubtitleOverlay : AvaloniaUserControl, IFlyoutSource
 
     private void OnSubtitlesClick(object? sender, RoutedEventArgs e)
     {
+        if (OnToggleInlinePanel != null)
+        {
+            OnToggleInlinePanel();
+            return;
+        }
         try
         {
             if (_viewModel?.Subtitles == null)

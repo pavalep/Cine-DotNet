@@ -1,0 +1,36 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cine.Avalonia.ViewModels"
+             xmlns:containers="using:Cine.Avalonia.Views.Components.Containers"
+             x:Class="Cine.Avalonia.Views.Components.Panels.VolumePanel"
+             x:DataType="vm:MainViewModel">
+    <containers:PanelContainer CornerRadius="12" Padding="12"
+                               Width="280"
+                               Background="{StaticResource PopoverBackground}">
+        <StackPanel Spacing="8">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="Volume" Classes="md3-caption"
+                           Foreground="{StaticResource TextSecondary}"
+                           VerticalAlignment="Center" />
+                <Button Grid.Column="1" Content="Mute"
+                        Classes="text-button-small"
+                        Click="OnToggleMute" />
+            </Grid>
+            <Slider x:Name="VolumeSlider"
+                    Minimum="0" Maximum="100"
+                    Value="{Binding VolumeValue}"
+                    Width="240" />
+            <Grid ColumnDefinitions="*,*,*">
+                <Button Content="25%" Classes="text-button-small"
+                        HorizontalAlignment="Center"
+                        Click="OnPresetVolume25" />
+                <Button Grid.Column="1" Content="50%" Classes="text-button-small"
+                        HorizontalAlignment="Center"
+                        Click="OnPresetVolume50" />
+                <Button Grid.Column="2" Content="100%" Classes="text-button-small"
+                        HorizontalAlignment="Center"
+                        Click="OnPresetVolume100" />
+            </Grid>
+        </StackPanel>
+    </containers:PanelContainer>
+</UserControl>

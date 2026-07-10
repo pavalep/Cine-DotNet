@@ -1,0 +1,36 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:containers="using:Cine.Avalonia.Views.Components.Containers"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Cine.Avalonia.Views.Components.Panels.OpenMenuPanel">
+    <containers:PanelContainer CornerRadius="12" Padding="8"
+                               Width="260"
+                               Background="{StaticResource PopoverBackground}">
+        <StackPanel Spacing="2">
+            <!-- Open File -->
+            <Button x:Name="BtnOpenFile" Classes="flyout-item"
+                    Click="OnOpenFileClick">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <materialIcons:MaterialIcon Kind="FileOutline" Width="18" Height="18"
+                        Foreground="{StaticResource TextSecondary}" />
+                    <TextBlock Text="Open File…" Foreground="{StaticResource OsdForeground}" />
+                </StackPanel>
+            </Button>
+            <!-- Open Folder -->
+            <Button x:Name="BtnOpenFolder" Classes="flyout-item"
+                    Click="OnOpenFolderClick">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <materialIcons:MaterialIcon Kind="FolderOutline" Width="18" Height="18"
+                        Foreground="{StaticResource TextSecondary}" />
+                    <TextBlock Text="Open Folder…" Foreground="{StaticResource OsdForeground}" />
+                </StackPanel>
+            </Button>
+            <!-- Separator -->
+            <Rectangle Height="1" Fill="{StaticResource AppDivider}" Margin="8,4" />
+            <!-- Recent Files list (populated dynamically) -->
+            <ItemsControl x:Name="RecentFilesList"
+                          BorderThickness="0"
+                          Background="Transparent" />
+        </StackPanel>
+    </containers:PanelContainer>
+</UserControl>

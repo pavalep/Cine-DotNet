@@ -29,6 +29,12 @@ public partial class VolumeFlyout : AvaloniaUserControl, IFlyoutSource
     Border IFlyoutSource.BuildContent() => BuildVolumeContent();
     void IFlyoutSource.OnDismissed() => _isFlyoutOpen = false;
 
+    /// <summary>
+    /// Callback for inline panel toggle. When set, the flyout button toggles
+    /// the inline panel instead of showing the FlyoutOverlay.
+    /// </summary>
+    public Action? OnToggleInlinePanel { get; set; }
+
     public IFlyoutService? FlyoutManager
     {
         get => _flyoutManager;
@@ -66,6 +72,11 @@ public partial class VolumeFlyout : AvaloniaUserControl, IFlyoutSource
 
     private void OnVolumeClick(object? sender, RoutedEventArgs e)
     {
+        if (OnToggleInlinePanel != null)
+        {
+            OnToggleInlinePanel();
+            return;
+        }
         if (_viewModel == null) return;
 
         if (_isFlyoutOpen)

@@ -1,0 +1,268 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        xmlns:containers="using:Cine.Avalonia.Views.Components.Containers"
+        x:Class="Cine.Avalonia.Views.Dialogs.PreferencesWindow"
+        Title="Preferences"
+        Width="680" Height="480"
+        MinWidth="600" MinHeight="400"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource AppBackground}"
+        ExtendClientAreaToDecorationsHint="True"
+        WindowDecorations="BorderOnly">
+
+    <Window.Styles>
+        <Style Selector="ListBoxItem.sidebar-item">
+            <Setter Property="Padding" Value="16,10" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{StaticResource TextSecondary}" />
+            <Setter Property="FontSize" Value="14" />
+        </Style>
+        <Style Selector="ListBoxItem.sidebar-item:selected">
+            <Setter Property="Background" Value="{StaticResource AppHoverSubtle}" />
+            <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
+        </Style>
+        <Style Selector="ListBoxItem.sidebar-item:pointerover">
+            <Setter Property="Background" Value="{StaticResource AppHoverBackground}" />
+        </Style>
+    </Window.Styles>
+
+    <Grid ColumnDefinitions="200,*">
+        <!-- ── Sidebar ── -->
+        <Border Grid.Column="0" Background="{StaticResource AppBackgroundAlt}">
+            <Grid RowDefinitions="Auto,*,Auto">
+                <!-- Sidebar header -->
+                <TextBlock Grid.Row="0" Text="Preferences"
+                           Classes="md3-title1"
+                           Foreground="{StaticResource OsdForeground}"
+                           Margin="16,16,16,8" FontWeight="SemiBold" />
+
+                <!-- Navigation items -->
+                <ListBox x:Name="SidebarList"
+                         Grid.Row="1"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         SelectedIndex="0"
+                         SelectionChanged="OnSidebarSelectionChanged">
+                    <ListBoxItem x:Name="SidebarGeneral" Classes="sidebar-item" Content="General" />
+                    <ListBoxItem x:Name="SidebarAudio" Classes="sidebar-item" Content="Audio" />
+                    <ListBoxItem x:Name="SidebarSubtitles" Classes="sidebar-item" Content="Subtitles" />
+                    <ListBoxItem x:Name="SidebarEqualizer" Classes="sidebar-item" Content="Equalizer" />
+                    <ListBoxItem x:Name="SidebarAbout" Classes="sidebar-item" Content="About" />
+                </ListBox>
+
+                <!-- Window close button at bottom -->
+                <Button Grid.Row="2" Content="Close"
+                        Classes="primary"
+                        Margin="12,8,12,12"
+                        HorizontalAlignment="Stretch"
+                        Click="OnCloseClick" />
+            </Grid>
+        </Border>
+
+        <!-- ── Content Area ── -->
+        <Border Grid.Column="1" Background="{StaticResource AppBackground}" Padding="24">
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                          VerticalScrollBarVisibility="Auto">
+                <StackPanel Spacing="{StaticResource space-spacing-4}">
+
+                <!-- ════════════════════════════════════════ -->
+                <!-- GENERAL                                  -->
+                <!-- ════════════════════════════════════════ -->
+                <containers:PanelContainer x:Name="PanelGeneral"
+                                           CornerRadius="8" Padding="20"
+                                           Background="{StaticResource PopoverBackground}">
+                    <StackPanel Spacing="{StaticResource space-spacing-4}">
+                        <TextBlock Text="General Settings" Classes="md3-subtitle1"
+                                   Foreground="{StaticResource OsdForeground}" FontWeight="SemiBold" />
+
+                        <!-- Hardware Acceleration -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel>
+                                <TextBlock Text="Hardware Acceleration" Classes="md3-body2" FontWeight="Medium"
+                                           Foreground="{StaticResource TextPrimary}" />
+                                <TextBlock Text="Use GPU for video decoding and rendering. Disable if experiencing playback issues."
+                                           Classes="md3-caption"
+                                           Foreground="{StaticResource TextTertiary}" />
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          VerticalAlignment="Center" OnContent="" OffContent="" />
+                        </Grid>
+
+                        <Separator Background="{StaticResource PopoverBorder}" Height="1" Margin="0" />
+
+                        <!-- Keyboard Shortcuts placeholder -->
+                        <TextBlock Text="Keyboard shortcuts are managed via the main window."
+                                   Classes="md3-caption"
+                                   Foreground="{StaticResource TextTertiary}" />
+                    </StackPanel>
+                </containers:PanelContainer>
+
+                <!-- ════════════════════════════════════════ -->
+                <!-- AUDIO                                    -->
+                <!-- ════════════════════════════════════════ -->
+                <containers:PanelContainer x:Name="PanelAudio"
+                                           CornerRadius="8" Padding="20"
+                                           Background="{StaticResource PopoverBackground}"
+                                           IsVisible="False">
+                    <StackPanel Spacing="{StaticResource space-spacing-4}">
+                        <TextBlock Text="Audio Settings" Classes="md3-subtitle1"
+                                   Foreground="{StaticResource OsdForeground}" FontWeight="SemiBold" />
+
+                        <!-- Audio Normalization -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel>
+                                <TextBlock Text="Audio Normalization" Classes="md3-body2" FontWeight="Medium"
+                                           Foreground="{StaticResource TextPrimary}" />
+                                <TextBlock Text="Dynamic range compression for consistent volume"
+                                           Classes="md3-caption"
+                                           Foreground="{StaticResource TextTertiary}" />
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          VerticalAlignment="Center" OnContent="" OffContent="" />
+                        </Grid>
+
+                        <!-- Dialogue Boost -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel>
+                                <TextBlock Text="Dialogue Boost" Classes="md3-body2" FontWeight="Medium"
+                                           Foreground="{StaticResource TextPrimary}" />
+                                <TextBlock Text="Enhance speech clarity using spectral compression"
+                                           Classes="md3-caption"
+                                           Foreground="{StaticResource TextTertiary}" />
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          VerticalAlignment="Center" OnContent="" OffContent="" />
+                        </Grid>
+                    </StackPanel>
+                </containers:PanelContainer>
+
+                <!-- ════════════════════════════════════════ -->
+                <!-- SUBTITLES                                -->
+                <!-- ════════════════════════════════════════ -->
+                <containers:PanelContainer x:Name="PanelSubtitles"
+                                           CornerRadius="8" Padding="20"
+                                           Background="{StaticResource PopoverBackground}"
+                                           IsVisible="False">
+                    <StackPanel Spacing="{StaticResource space-spacing-4}">
+                        <TextBlock Text="Subtitle Settings" Classes="md3-subtitle1"
+                                   Foreground="{StaticResource OsdForeground}" FontWeight="SemiBold" />
+
+                        <!-- Auto-load External Subtitles -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel>
+                                <TextBlock Text="Auto-load External Subtitles" Classes="md3-body2" FontWeight="Medium"
+                                           Foreground="{StaticResource TextPrimary}" />
+                                <TextBlock Text="Automatically scan for .srt / .ass files in media directory"
+                                           Classes="md3-caption"
+                                           Foreground="{StaticResource TextTertiary}" />
+                            </StackPanel>
+                            <ToggleSwitch x:Name="AutoLoadSubsToggle"
+                                          VerticalAlignment="Center" OnContent="" OffContent="" />
+                        </Grid>
+
+                        <Separator Background="{StaticResource PopoverBorder}" Height="1" Margin="0" />
+
+                        <!-- Preferred Languages -->
+                        <StackPanel Spacing="{StaticResource space-spacing-1}">
+                            <TextBlock Text="Preferred Languages" Classes="md3-caption" FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextTertiary}" />
+                            <TextBox x:Name="PreferredLangInput"
+                                     Text="eng, jpn, und"
+                                     Classes="md3-caption"
+                                     Padding="{StaticResource space-1}"
+                                     Background="{StaticResource AppBackground}"
+                                     BorderBrush="{StaticResource PopoverBorder}"
+                                     BorderThickness="1" CornerRadius="{StaticResource radius-xs}"
+                                     Foreground="{StaticResource TextPrimary}"
+                                     AutomationProperties.Name="Preferred subtitle languages" />
+                            <TextBlock Text="Comma-separated language codes. First match is auto-selected."
+                                       Classes="md3-caption"
+                                       Foreground="{StaticResource TextTertiary}" />
+                        </StackPanel>
+
+                        <!-- External Subtitle Directories -->
+                        <StackPanel Spacing="{StaticResource space-spacing-1}">
+                            <TextBlock Text="External Subtitle Directories" Classes="md3-caption" FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextTertiary}" />
+                            <TextBox x:Name="SubDirsInput"
+                                     Text="./subs, ./subtitles"
+                                     Classes="md3-caption"
+                                     Padding="{StaticResource space-1}"
+                                     Background="{StaticResource AppBackground}"
+                                     BorderBrush="{StaticResource PopoverBorder}"
+                                     BorderThickness="1" CornerRadius="{StaticResource radius-xs}"
+                                     Foreground="{StaticResource TextPrimary}"
+                                     AutomationProperties.Name="Subtitle directory paths" />
+                            <TextBlock Text="Relative to media file directory. Comma-separated."
+                                       Classes="md3-caption"
+                                       Foreground="{StaticResource TextTertiary}" />
+                        </StackPanel>
+                    </StackPanel>
+                </containers:PanelContainer>
+
+                <!-- ════════════════════════════════════════ -->
+                <!-- EQUALIZER                                -->
+                <!-- ════════════════════════════════════════ -->
+                <containers:PanelContainer x:Name="PanelEqualizer"
+                                           CornerRadius="8" Padding="20"
+                                           Background="{StaticResource PopoverBackground}"
+                                           IsVisible="False">
+                    <StackPanel Spacing="{StaticResource space-spacing-4}">
+                        <TextBlock Text="Equalizer" Classes="md3-subtitle1"
+                                   Foreground="{StaticResource OsdForeground}" FontWeight="SemiBold" />
+                        <TextBlock Text="Equalizer controls will be available here."
+                                   Classes="md3-body2"
+                                   Foreground="{StaticResource TextTertiary}" />
+                        <TextBlock Text="Coming in a future update."
+                                   Classes="md3-caption"
+                                   Foreground="{StaticResource TextSecondary}"
+                                   FontStyle="Italic" />
+                    </StackPanel>
+                </containers:PanelContainer>
+
+                <!-- ════════════════════════════════════════ -->
+                <!-- ABOUT                                    -->
+                <!-- ════════════════════════════════════════ -->
+                <containers:PanelContainer x:Name="PanelAbout"
+                                           CornerRadius="8" Padding="20"
+                                           Background="{StaticResource PopoverBackground}"
+                                           IsVisible="False">
+                    <StackPanel Spacing="{StaticResource space-spacing-3}" HorizontalAlignment="Center">
+                        <Panel Width="56" Height="56" HorizontalAlignment="Center">
+                            <Path Data="M 32 2 A 30 30 0 1 1 32 62 A 30 30 0 1 1 32 2 Z"
+                                  Fill="{StaticResource AppHoverSubtle}"
+                                  Stroke="{StaticResource AppDivider}"
+                                  StrokeThickness="2" />
+                            <Path Data="M 25 20 L 45 32 L 25 44 Z"
+                                  Fill="{StaticResource OsdForeground}" />
+                        </Panel>
+                        <TextBlock Text="Cine Media Player" Classes="md3-subtitle1" FontWeight="Bold"
+                                   Foreground="{StaticResource OsdForeground}" HorizontalAlignment="Center" />
+                        <TextBlock Text="Version 1.0.0" Classes="md3-body2"
+                                   Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center" />
+                        <TextBlock Text="Built with Avalonia UI &amp; libmpv" Classes="md3-caption"
+                                   Foreground="{StaticResource TextTertiary}" HorizontalAlignment="Center" />
+                        <Separator Background="{StaticResource PopoverBorder}" Height="1" Margin="8" />
+                        <TextBlock Text="License &amp; Feature Status" Classes="md3-body2" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Center" />
+                        <TextBlock Text="Open Source · MIT License"
+                                   Classes="md3-caption"
+                                   Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center" />
+                        <TextBlock Text="All features active"
+                                   Classes="md3-caption"
+                                   Foreground="{StaticResource TextTertiary}" HorizontalAlignment="Center" />
+                        <Separator Background="{StaticResource PopoverBorder}" Height="1" Margin="8" />
+                        <Button Content="Reset to Defaults"
+                                Classes="flyout-item destructive"
+                                HorizontalAlignment="Center"
+                                Click="OnResetDefaults" />
+                    </StackPanel>
+                </containers:PanelContainer>
+
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</Window>

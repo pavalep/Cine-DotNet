@@ -3,6 +3,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Media;
 using Cine.Avalonia.Views.Components;
 using Cine.Avalonia.Controls;
@@ -207,4 +208,56 @@ public partial class MainWindow : global::Avalonia.Controls.Window
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(nint hwnd, int attr, ref int attrValue, int attrSize);
+
+    // ════════════════════════════════════════════════════════════════
+    //  PANEL MANAGEMENT — hide/show all inline panels + light dismiss
+    // ════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Hides ALL inline panels (both header and controls bar panels)
+    /// and disables the light-dismiss overlay.
+    /// </summary>
+    public void HideAllPanels()
+    {
+        MainVolumePanel.IsVisible = false;
+        MainSubtitlePanel.IsVisible = false;
+        MainAudioTrackPanel.IsVisible = false;
+        MainChaptersPanel.IsVisible = false;
+        MainPlaylistPanel.IsVisible = false;
+        MainOpenMenuPanel.IsVisible = false;
+        MainPrimaryMenuPanel.IsVisible = false;
+        PanelDismissBackground.IsHitTestVisible = false;
+    }
+
+    /// <summary>
+    /// Enables the light-dismiss overlay so clicking anywhere outside
+    /// the panels closes them.
+    /// </summary>
+    public void EnablePanelDismiss()
+    {
+        PanelDismissBackground.IsHitTestVisible = true;
+    }
+
+    /// <summary>
+    /// Re-evaluates whether any panel is visible and updates the
+    /// light-dismiss overlay accordingly. Call after manually hiding
+    /// a panel (e.g. on same-button toggle-off or panel-internal close).
+    /// </summary>
+    public void UpdatePanelDismissState()
+    {
+        bool anyVisible = MainVolumePanel.IsVisible
+            || MainSubtitlePanel.IsVisible
+            || MainAudioTrackPanel.IsVisible
+            || MainChaptersPanel.IsVisible
+            || MainPlaylistPanel.IsVisible
+            || MainOpenMenuPanel.IsVisible
+            || MainPrimaryMenuPanel.IsVisible;
+
+        PanelDismissBackground.IsHitTestVisible = anyVisible;
+    }
+
+    private void OnPanelDismissBackgroundPressed(object? sender, PointerPressedEventArgs e)
+    {
+        HideAllPanels();
+    }
 }

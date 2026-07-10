@@ -58,12 +58,12 @@ public partial class FullscreenHeader : UserControl
             .AddItem("Cog", "Preferences", null, () =>
             {
                 var w = TopLevel.GetTopLevel(this) as Window;
-                if (w != null) new PreferencesDialog { DataContext = _viewModel }.Show(w);
+                if (w != null) new PreferencesWindow().Show(w);
             })
             .AddItem("Information", "About Cine", null, () =>
             {
                 var w = TopLevel.GetTopLevel(this) as Window;
-                if (w != null) new PreferencesDialog { DataContext = _viewModel }.Show(w);
+                if (w != null) new PreferencesWindow().Show(w);
             })
             .AddSeparator()
             .AddSection("VIEW")
@@ -163,12 +163,12 @@ public partial class FullscreenHeader : UserControl
     private void OnPreferencesClick(object? sender, RoutedEventArgs e)
     {
         var w = TopLevel.GetTopLevel(this) as Window;
-        if (w != null) new PreferencesDialog { DataContext = _viewModel }.Show(w);
+        if (w != null) new PreferencesWindow().Show(w);
     }
 
     private void OnAboutClick(object? sender, RoutedEventArgs e)
     {
         var w = TopLevel.GetTopLevel(this) as Window;
-        if (w != null) new PreferencesDialog { DataContext = _viewModel }.Show(w);
+        if (w != null) new PreferencesWindow().Show(w);
     }
 }

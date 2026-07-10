@@ -1,7 +1,6 @@
 using System;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Cine.Avalonia.Services;
@@ -10,6 +9,7 @@ using Cine.Avalonia.ViewModels;
 using Cine.Avalonia.Views.Resources;
 using Cine.Avalonia.Views.Dialogs;
 using Cine.Avalonia.Views.Components;
+using Cine.Avalonia.Views.Shell;
 using AvaloniaLayout = Avalonia.Layout;
 using Button = global::Avalonia.Controls.Button;
 using PointerPressedEventArgs = Avalonia.Input.PointerPressedEventArgs;
@@ -22,7 +22,6 @@ public partial class ControlsBox : AvaloniaUserControl
 {
     private MainViewModel? _viewModel;
     private bool _replayMode;
-    private PlaylistDialog? _playlistDialog;
     private IFlyoutService? _flyoutManager;
 
     public SeekBar SeekBarControl => SeekBar;
@@ -32,25 +31,47 @@ public partial class ControlsBox : AvaloniaUserControl
     public ChaptersFlyout? ChaptersFlyoutCtrl => ChaptersFlyoutField;
     public global::Avalonia.Controls.Border ControlsBoxElement => ControlsBoxBorder;
 
+    // Events for primary menu actions that need window-level handling
+    // (now handled via HeaderBar.PrimaryPipToggled etc.)
+
     public ControlsBox()
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
-        // Also capture DataContext if already set before handler was attached
         if (DataContext is MainViewModel vm) _viewModel = vm;
-        // Event subscription will be set when FlyoutManager is assigned
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
         _viewModel = DataContext as MainViewModel;
+        WireMenuPanelEvents();
+    }
+
+    private void WireMenuPanelEvents()
+    {
+        if (_viewModel == null) return;
+
+        var host = PanelHost;
+        if (host == null) return;
+
+        // Volume Panel
+        host.MainVolumePanel.MuteClicked += OnToggleMute;
+        host.MainVolumePanel.Volume25Clicked += OnPresetVolume25;
+        host.MainVolumePanel.Volume50Clicked += OnPresetVolume50;
+        host.MainVolumePanel.Volume100Clicked += OnPresetVolume100;
+
+        // Playlist Panel — hide request
+        host.MainPlaylistPanel.HideRequested += (_, _) =>
+        {
+            host.MainPlaylistPanel.IsVisible = false;
+            host.UpdatePanelDismissState();
+        };
     }
 
     private void OnFirstLoadedForPlayPause(object? sender, EventArgs e)
     {
         Loaded -= OnFirstLoadedForPlayPause;
         _hasPendingPlayPauseSync = false;
-        // The icon update will be triggered by the next state change from MainWindow
     }
 
     // --- Public API for MainWindow ---
@@ -70,16 +91,98 @@ public partial class ControlsBox : AvaloniaUserControl
             _flyoutManager = value;
             if (value == null) return;
 
-            // Pass to child controls (volume and chapters register their own keys)
             if (SubOverlayCtrl != null) SubOverlayCtrl.FlyoutManager = value;
             if (AudioOverlay != null) AudioOverlay.FlyoutManager = value;
             if (VolumeFlyoutField != null) VolumeFlyoutField.FlyoutManager = value;
             if (ChaptersFlyoutField != null) ChaptersFlyoutField.FlyoutManager = value;
-            // VideoTrackSelector removed
+
+            // Wire inline panel toggle on all flyout buttons
+            SetupInlinePanelToggle();
         }
     }
 
     private bool _hasPendingPlayPauseSync;
+
+    // ====================================================================
+    //  PANEL TOGGLE — toggle IsVisible on MainWindow-root panels
+    //  Panels live at the MainWindow root level (outside ContentClip),
+    //  so they are never clipped. We reference them through PanelHost.
+    // ====================================================================
+
+    private MainWindow? PanelHost => TopLevel.GetTopLevel(this) as MainWindow;
+
+    private void SetupInlinePanelToggle()
+    {
+        if (VolumeFlyoutField != null)
+            VolumeFlyoutField.OnToggleInlinePanel = ToggleVolumePanel;
+        if (SubOverlayCtrl != null)
+            SubOverlayCtrl.OnToggleInlinePanel = () => TogglePanel(PanelHost?.MainSubtitlePanel);
+        if (AudioOverlay != null)
+            AudioOverlay.OnToggleInlinePanel = () => TogglePanel(PanelHost?.MainAudioTrackPanel);
+        if (ChaptersFlyoutField != null)
+            ChaptersFlyoutField.OnToggleInlinePanel = () => TogglePanel(PanelHost?.MainChaptersPanel);
+    }
+
+    private void ToggleVolumePanel()
+    {
+        var host = PanelHost;
+        var panel = host?.MainVolumePanel;
+        if (host == null || panel == null) return;
+
+        if (panel.IsVisible)
+        {
+            // Same button -> close this panel
+            panel.IsVisible = false;
+            host.UpdatePanelDismissState();
+        }
+        else
+        {
+            // Different button -> hide siblings, show this one
+            HideAllInlinePanels();
+            panel.IsVisible = true;
+            host.EnablePanelDismiss();
+        }
+    }
+
+    private void TogglePanel(Control? panel)
+    {
+        var host = PanelHost;
+        if (host == null || panel == null) return;
+
+        if (panel.IsVisible)
+        {
+            // Same button -> close this panel
+            panel.IsVisible = false;
+            host.UpdatePanelDismissState();
+        }
+        else
+        {
+            // Different button -> hide siblings, show this one
+            HideAllInlinePanels();
+            panel.IsVisible = true;
+            host.EnablePanelDismiss();
+        }
+    }
+
+    public void HideAllInlinePanels()
+    {
+        var host = PanelHost;
+        if (host == null) return;
+        host.MainVolumePanel.IsVisible = false;
+        host.MainSubtitlePanel.IsVisible = false;
+        host.MainAudioTrackPanel.IsVisible = false;
+        host.MainChaptersPanel.IsVisible = false;
+        host.MainPlaylistPanel.IsVisible = false;
+    }
+
+    public void TogglePlaylistPanel()
+    {
+        TogglePanel(PanelHost?.MainPlaylistPanel);
+    }
+
+    // ====================================================================
+    //  PLAY/PAUSE
+    // ====================================================================
 
     /// <summary>
     /// SINGLE authoritative method for updating the play/pause icon.
@@ -90,8 +193,6 @@ public partial class ControlsBox : AvaloniaUserControl
     {
         if (PlayPauseIcon == null)
         {
-            // Control tree not ready yet — defer once via UI thread.
-            // Use a flag to avoid accumulating multiple Loaded handlers.
             if (!this.IsLoaded && !_hasPendingPlayPauseSync)
             {
                 _hasPendingPlayPauseSync = true;
@@ -99,7 +200,6 @@ public partial class ControlsBox : AvaloniaUserControl
                 return;
             }
 
-            // If loaded but still null (e.g. template not applied), defer once
             global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
             {
                 if (PlayPauseIcon != null) SyncPlayPauseIcon(isPlaying);
@@ -119,7 +219,6 @@ public partial class ControlsBox : AvaloniaUserControl
         else
         {
             Cine.Core.Log.ForContext<ControlsBox>().Debug("SyncPlayPauseIcon: isPlaying={IsPlaying}", isPlaying);
-            // Crossfade: show play icon when paused, pause icon when playing
             var showPlay = !isPlaying;
             PlayPauseIcon.Kind = Material.Icons.MaterialIconKind.Play;
             PlayPauseAltIcon.Kind = Material.Icons.MaterialIconKind.Pause;
@@ -128,15 +227,10 @@ public partial class ControlsBox : AvaloniaUserControl
         }
     }
 
-    /// <summary>
-    /// Set replay mode flag without calling SyncPlayPauseIcon.
-    /// Call SyncPlayPauseIcon separately to update the icon.
-    /// </summary>
     public void SetReplayMode(bool replayMode)
     {
         _replayMode = replayMode;
         Cine.Core.Log.ForContext<ControlsBox>().Debug("SetReplayMode({ReplayMode})", replayMode);
-
     }
 
     public void SetControlsVisibility(bool visible)
@@ -197,17 +291,13 @@ public partial class ControlsBox : AvaloniaUserControl
     {
         if (_viewModel == null) return;
         Cine.Core.Log.ForContext<ControlsBox>().Debug("OnPlayPause CLICKED. _replayMode={ReplayMode}", _replayMode);
-        // If in replay mode, clicking play restarts the video from beginning
         if (_replayMode)
         {
             _replayMode = false;
-            _viewModel.PlayPause(); // ViewModel handles stop+seek+play internally
+            _viewModel.PlayPause();
             Cine.Core.Log.ForContext<ControlsBox>().Debug("OnPlayPause replay mode: _viewModel.PlayPause() called");
             return;
         }
-        // Do NOT optimistically toggle the icon — let PlaybackStateManager's StateChanged
-        // event update the icon through SyncPlayPauseIcon. This avoids the double-press
-        // bug where the icon shows Pause before mpv has actually started playing.
         Cine.Core.Log.ForContext<ControlsBox>().Debug("OnPlayPause: _viewModel.PlayPause() called");
         _viewModel.PlayPause();
     }
@@ -238,9 +328,6 @@ public partial class ControlsBox : AvaloniaUserControl
 
     // --- Volume handlers ---
 
-    // Volume controls are now shown via FlyoutOverlay (no inline Flyout)
-    // Handlers left stubbed for now:
-
     private double _volumeBeforeMute = 50;
 
     private void OnToggleMute(object? sender, RoutedEventArgs e)
@@ -248,22 +335,18 @@ public partial class ControlsBox : AvaloniaUserControl
         if (_viewModel == null) return;
         if (_viewModel.IsMuted)
         {
-            // Restore previous volume
             _viewModel.IsMuted = false;
             _viewModel.VolumeValue = _volumeBeforeMute > 0 ? _volumeBeforeMute : 50;
         }
         else
         {
-            // Save current volume and mute
             _volumeBeforeMute = _viewModel.VolumeValue;
             _viewModel.IsMuted = true;
             _viewModel.VolumeValue = 0;
         }
     }
-    
-    private void OnVolumeSliderPointerPressed(object? sender, PointerPressedEventArgs e) => e.Handled = true;
 
-    // --- Volume preset handlers ---
+    private void OnVolumeSliderPointerPressed(object? sender, PointerPressedEventArgs e) => e.Handled = true;
 
     private void OnPresetVolume25(object? sender, RoutedEventArgs e)
     {
@@ -280,17 +363,20 @@ public partial class ControlsBox : AvaloniaUserControl
         if (_viewModel != null) _viewModel.VolumeValue = 100;
     }
 
+    // --- Subtitle preferences ---
+
+    private void OnSubtitlePreferences(object? sender, RoutedEventArgs e)
+    {
+        var w = TopLevel.GetTopLevel(this) as Window;
+        if (w != null) new PreferencesWindow().Show(w);
+    }
+
     // --- Track menu handlers ---
 
-    /// <summary>
-    /// Opens the audio equalizer flyout. Called from the equalizer button click
-    /// or via the Ctrl+Shift+E keyboard shortcut.
-    /// </summary>
     public void TriggerEqualizer()
     {
         if (_viewModel == null) return;
 
-        // Show upgrade CTA if equalizer is not available under current tier
         if (!_viewModel.IsEqualizerEnabled)
         {
             var anchor = BtnEqualizer ?? BtnFullscreen;
@@ -310,13 +396,8 @@ public partial class ControlsBox : AvaloniaUserControl
         TriggerEqualizer();
     }
 
-    
+    // --- Playlist inline panel ---
 
-    // --- Playlist dialog ---
-
-    /// <summary>
-    /// Public entry point for keyboard shortcut (Ctrl+P) to open/activate playlist.
-    /// </summary>
     public void OpenPlaylistDialog()
     {
         OnOpenPlaylistDialog(this, new RoutedEventArgs());
@@ -324,7 +405,6 @@ public partial class ControlsBox : AvaloniaUserControl
 
     private void OnOpenPlaylistDialog(object? sender, RoutedEventArgs e)
     {
-        // Show upgrade CTA if playlist save/load is not available under current tier
         if (_viewModel != null && !_viewModel.IsPlaylistSaveLoadEnabled)
         {
             var anchor = BtnPlaylistDialog ?? BtnFullscreen;
@@ -333,18 +413,6 @@ public partial class ControlsBox : AvaloniaUserControl
             return;
         }
 
-        var w = TopLevel.GetTopLevel(this) as Window;
-        if (w == null) return;
-
-        if (_playlistDialog == null)
-        {
-            _playlistDialog = new PlaylistDialog { DataContext = _viewModel };
-            _playlistDialog.Closed += (s, args) => _playlistDialog = null;
-            _playlistDialog.Show(w);
-        }
-        else
-        {
-            _playlistDialog.Activate();
-        }
+        TogglePlaylistPanel();
     }
 }

@@ -188,7 +188,7 @@ public partial class MainWindow
         // ── Dialogs ──
         Register(Key.OemComma, KeyModifiers.Control, () => ShowDialogWithScope(() =>
         {
-            var prefs = new PreferencesDialog { DataContext = _viewModel };
+            var prefs = new PreferencesWindow();
             prefs.Show(this);
         }), "Preferences");
         Register(Key.OemQuestion, KeyModifiers.Control, () => ShowDialogWithScope(() =>
@@ -266,7 +266,7 @@ public partial class MainWindow
         AddPalette("Screenshot (no subs)", () => _playerService?.Player?.ScreenshotWithoutSubtitles());
         // Dialogs
         // Go to Time palette command removed
-        AddPalette("Preferences", () => ShowDialogWithScope(() => new PreferencesDialog { DataContext = _viewModel }.Show(this)));
+        AddPalette("Preferences", () => ShowDialogWithScope(() => new PreferencesWindow().Show(this)));
         AddPalette("Keyboard Shortcuts", () => ShowDialogWithScope(() => new KeyboardShortcutsDialog().Show(this)));
         // Zoom
         AddPalette("Zoom In", () => { if (_playerService?.Player != null) _playerService.Player.Zoom += 0.05; });

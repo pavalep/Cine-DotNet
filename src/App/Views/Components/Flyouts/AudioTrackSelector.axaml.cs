@@ -37,6 +37,12 @@ public partial class AudioTrackSelector : AvaloniaUserControl, IFlyoutSource
     }
     void IFlyoutSource.OnDismissed() => _currentFlyoutContent = null;
 
+    /// <summary>
+    /// Callback for inline panel toggle. When set, the flyout button toggles
+    /// the inline panel instead of showing the FlyoutOverlay.
+    /// </summary>
+    public Action? OnToggleInlinePanel { get; set; }
+
     private static readonly string[] AudioExtensions = { ".mp3", ".aac", ".flac", ".ogg", ".wav", ".m4a", ".opus" };
 
     /// <summary>
@@ -111,6 +117,13 @@ public partial class AudioTrackSelector : AvaloniaUserControl, IFlyoutSource
     private void OnAudioClick(object? sender, RoutedEventArgs e)
     {
         if (_viewModel == null) return;
+
+        if (OnToggleInlinePanel != null)
+        {
+            OnToggleInlinePanel();
+            return;
+        }
+
         _overlay ??= MainWindow.GetOverlay(this);
         if (_overlay == null) return;
 

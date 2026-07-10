@@ -9,6 +9,7 @@
         xmlns:local="using:Cine.Avalonia.Controls"
         xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         xmlns:pages="using:Cine.Avalonia.Views.Pages"
+        xmlns:panels="using:Cine.Avalonia.Views.Components.Panels"
         x:Class="Cine.Avalonia.Views.Shell.MainWindow"
         x:DataType="vm:MainViewModel"
         Title="Cine"
@@ -78,6 +79,64 @@
                                                ZIndex="50" />
             </Grid>
         </Border>
+
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <!--  PANEL OVERLAY HOST — regular visual elements (not Popups)   -->
+        <!--  positioned at the MainWindow root level, outside            -->
+        <!--  ContentClip to avoid clipping. Control visibility from      -->
+        <!--  ControlsBox and HeaderBar code-behind.                      -->
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <Grid x:Name="PanelOverlayHost" ZIndex="100">
+
+            <!-- ── Light dismiss layer ──
+                 Transparent border over the center area (excluding header
+                 and controls bar zones) that captures clicks outside panels
+                 and trigger buttons to close all open panels.              -->
+            <Border x:Name="PanelDismissBackground"
+                    Background="Transparent"
+                    IsHitTestVisible="False"
+                    Margin="0,60,0,100"
+                    PointerPressed="OnPanelDismissBackgroundPressed" />
+
+            <!-- ── Header panels (top area) ── -->
+            <panels:OpenMenuPanel x:Name="MainOpenMenuPanel"
+                                  HorizontalAlignment="Left"
+                                  VerticalAlignment="Top"
+                                  Margin="10,56,0,0"
+                                  IsVisible="False" />
+            <panels:PrimaryMenuPanel x:Name="MainPrimaryMenuPanel"
+                                     HorizontalAlignment="Right"
+                                     VerticalAlignment="Top"
+                                     Margin="0,56,10,0"
+                                     IsVisible="False" />
+
+            <!-- ── Controls bar panels (bottom area) ── -->
+            <panels:VolumePanel x:Name="MainVolumePanel"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Bottom"
+                                Margin="0,0,0,90"
+                                IsVisible="False" />
+            <panels:SubtitlePanel x:Name="MainSubtitlePanel"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Bottom"
+                                  Margin="0,0,0,90"
+                                  IsVisible="False" />
+            <panels:AudioTrackPanel x:Name="MainAudioTrackPanel"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Bottom"
+                                    Margin="0,0,0,90"
+                                    IsVisible="False" />
+            <panels:ChaptersPanel x:Name="MainChaptersPanel"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Bottom"
+                                  Margin="0,0,0,90"
+                                  IsVisible="False" />
+            <panels:PlaylistPanel x:Name="MainPlaylistPanel"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Bottom"
+                                  Margin="0,0,0,90"
+                                  IsVisible="False" />
+        </Grid>
 
         <!-- ══════════════════════════════════════════════════════════════ -->
         <!--  WINDOW FRAME — 2px focus-aware border using system accent    -->
