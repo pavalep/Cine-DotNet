@@ -4,10 +4,9 @@
              xmlns:containers="using:Cine.Avalonia.Views.Components.Containers"
              x:Class="Cine.Avalonia.Views.Components.Panels.VolumePanel"
              x:DataType="vm:MainViewModel">
-    <containers:PanelContainer CornerRadius="12" Padding="12"
-                               Width="280"
-                               Background="{StaticResource PopoverBackground}">
-        <StackPanel Spacing="8">
+    <containers:PanelContainer CornerRadius="12"
+                               Width="280">
+        <StackPanel Spacing="10">
             <Grid ColumnDefinitions="*,Auto,Auto">
                 <TextBlock Grid.Column="0" Text="Volume" Classes="md3-caption"
                            Foreground="{StaticResource TextSecondary}"
@@ -25,15 +24,15 @@
                     Minimum="0" Maximum="100"
                     Value="{Binding VolumeValue}"
                     Width="240" />
-            <Grid ColumnDefinitions="*,*,*">
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="4">
                 <Button Content="25%" Classes="text-button-small"
-                        HorizontalAlignment="Center"
+                        HorizontalAlignment="Stretch"
                         Click="OnPresetVolume25" />
                 <Button Grid.Column="1" Content="50%" Classes="text-button-small"
-                        HorizontalAlignment="Center"
+                        HorizontalAlignment="Stretch"
                         Click="OnPresetVolume50" />
                 <Button Grid.Column="2" Content="100%" Classes="text-button-small"
-                        HorizontalAlignment="Center"
+                        HorizontalAlignment="Stretch"
                         Click="OnPresetVolume100" />
             </Grid>
         </StackPanel>

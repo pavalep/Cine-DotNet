@@ -6,8 +6,7 @@
              x:Class="Cine.Avalonia.Views.Components.Panels.PlaylistPanel"
              x:DataType="vm:MainViewModel">
     <containers:PanelContainer CornerRadius="12" Padding="0"
-                               Width="520"
-                               Background="{StaticResource PopoverBackground}">
+                               Width="520">
         <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="0">
             <!-- Header -->
             <Grid Grid.Row="0" Classes="dialog-header"

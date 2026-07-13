@@ -19,32 +19,33 @@
               Background="Transparent">
 
             <Border x:Name="SeekTrack"
-                    Background="{StaticResource ProgressTroughBackground}"
+                    Background="{StaticResource AppSurfaceRaised}"
+                    Opacity="0.9"
                     CornerRadius="{StaticResource radius-xs}"
                     Height="4"
                     VerticalAlignment="Center"
                     IsHitTestVisible="False" />
 
             <Border x:Name="SeekFill"
-                    Background="{StaticResource SeekFillGradient}"
+                    Background="{StaticResource AppAccent}"
                     CornerRadius="{StaticResource radius-xs}"
                     Height="4"
                     VerticalAlignment="Center"
                     HorizontalAlignment="Left"
                     IsHitTestVisible="False">
                 <Border.Effect>
-                    <DropShadowEffect BlurRadius="6" OffsetY="0" Color="#33000000" />
+                    <DropShadowEffect BlurRadius="8" OffsetY="0" Color="#33B88C4A" />
                 </Border.Effect>
             </Border>
 
             <Border x:Name="SeekThumb"
-                    Width="14" Height="14"
-                    CornerRadius="7"
-                    Background="{StaticResource ProgressSliderBackground}"
-                    BorderBrush="#44FFFFFF"
-                    BorderThickness="1.5"
-                    HorizontalAlignment="Left"
-                    VerticalAlignment="Center">
+                Width="14" Height="14"
+                CornerRadius="7"
+                Background="{StaticResource AppSurfaceOverlay}"
+                BorderBrush="{StaticResource AppAccent}"
+                BorderThickness="1.5"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Center">
                 <Border.Effect>
                     <DropShadowEffect BlurRadius="4" OffsetY="1" Color="#60000000" />
                 </Border.Effect>
@@ -76,9 +77,11 @@
                     IsHitTestVisible="False"
                     HorizontalAlignment="Left"
                     VerticalAlignment="Top"
-                    Background="{StaticResource PopoverBackground}"
-                    CornerRadius="{StaticResource radius-xs}"
-                    Padding="6,3"
+                    Background="{StaticResource AppSurfaceOverlay}"
+                    BorderBrush="{StaticResource AppBorderSubtle}"
+                    BorderThickness="1"
+                    CornerRadius="{StaticResource radius-sm}"
+                    Padding="8,4"
                     BoxShadow="{StaticResource elevation-4}"
                     RenderTransformOrigin="0,0">
                 <Border.RenderTransform>

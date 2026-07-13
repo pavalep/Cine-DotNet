@@ -123,7 +123,7 @@ public static class TrackFlyoutBuilder
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(4),
                 Background = AppColors.Transparent,
-                BorderBrush = (IBrush?)global::Avalonia.Application.Current?.FindResource("PopoverBorder"),
+                BorderBrush = (IBrush?)global::Avalonia.Application.Current?.FindResource("AppBorderSubtle"),
                 Foreground = AppColors.TextPrimary,
                 PlaceholderForeground = AppColors.TextTertiary
             };
@@ -406,8 +406,8 @@ public static class TrackFlyoutBuilder
 
         var border = new Border
         {
-            Background = (IBrush?)global::Avalonia.Application.Current?.FindResource("PopoverBackground"),
-            BorderBrush = (IBrush?)global::Avalonia.Application.Current?.FindResource("PopoverBorder"),
+            Background = (IBrush?)global::Avalonia.Application.Current?.FindResource("AppSurfaceOverlay"),
+            BorderBrush = (IBrush?)global::Avalonia.Application.Current?.FindResource("AppBorderSubtle"),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(8),
             Padding = new Thickness(14, 12),
@@ -468,11 +468,12 @@ public static class TrackFlyoutBuilder
                 Content = addText,
                 Background = AppColors.Transparent,
                 BorderThickness = new Thickness(0),
-                Padding = new Thickness(8, 4),
-                MinHeight = 36,
+                Padding = new Thickness(12, 10),
+                MinHeight = 40,
                 HorizontalContentAlignment = AvaloniaLayout.HorizontalAlignment.Stretch,
                 Cursor = new Cursor(StandardCursorType.Arrow)
             };
+            addBtn.Classes.Add("flyout-item-row");
             addBtn.Click += (_, _) =>
             {
                 if (track.SelectCommand.CanExecute(track))
@@ -565,12 +566,13 @@ public static class TrackFlyoutBuilder
             Content = grid,
             Background = AppColors.Transparent,
             BorderThickness = new global::Avalonia.Thickness(0),
-            Padding = new global::Avalonia.Thickness(12, 8),
-            MinHeight = 36,
+            Padding = new global::Avalonia.Thickness(12, 10),
+            MinHeight = 40,
             HorizontalContentAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch,
             Cursor = new global::Avalonia.Input.Cursor(global::Avalonia.Input.StandardCursorType.Arrow),
             Opacity = track.DisplayOpacity
         };
+        button.Classes.Add("flyout-item-row");
         button.Click += (_, _) =>
         {
             if (track.SelectCommand.CanExecute(track))

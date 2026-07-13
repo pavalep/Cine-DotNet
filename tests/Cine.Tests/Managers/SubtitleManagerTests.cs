@@ -1,4 +1,6 @@
 using Cine.Avalonia.Managers;
+using Cine.Avalonia.Storage;
+using Cine.Avalonia.Core;
 using Cine.Media.Events;
 using Cine.Media.Interfaces;
 using Cine.Media.Models;
@@ -16,7 +18,9 @@ public class SubtitleManagerTests
     public SubtitleManagerTests()
     {
         _player = Substitute.For<IMediaPlayer>();
-        _sut = new SubtitleManager(_player);
+        var store = new SubtitleSettingsStore();
+        var eventBus = Substitute.For<IEventBus>();
+        _sut = new SubtitleManager(_player, store, eventBus);
     }
 
     // ── Constructor ──────────────────────────────────────────────
@@ -107,8 +111,8 @@ public class SubtitleManagerTests
     [Fact]
     public void SubtitleFont_SetsPlayerFont()
     {
-        _sut.SubtitleFont = "Segoe UI";
-        _player.Received(1).SetSubtitleFont("Segoe UI");
+        _sut.SubtitleFont = "Roboto";
+        _player.Received(1).SetSubtitleFont("Roboto");
     }
 
     [Fact]
@@ -174,8 +178,8 @@ public class SubtitleManagerTests
                 Array.Empty<SubtitleSource>(),
                 sources));
 
-        _sut.SubtitleTracks.Any(t => t.DisplayName.Contains("eng")).ShouldBeTrue();
-        _sut.SubtitleTracks.Any(t => t.DisplayName.Contains("jpn")).ShouldBeTrue();
+        _sut.SubtitleTracks.Any(t => t.DisplayName.Contains("English")).ShouldBeTrue();
+        _sut.SubtitleTracks.Any(t => t.DisplayName.Contains("Japanese")).ShouldBeTrue();
     }
 
     // ── Player Event: SubtitlePropertyChanged ────────────────────
@@ -214,7 +218,7 @@ public class SubtitleManagerTests
     [Fact]
     public void SelectTrackById_SetsCurrentTrackId()
     {
-        _sut.SelectTrackById(1);
+        _sut.SelectSubtitleTrackById(1);
         _sut.CurrentSubtitleTrackId.ShouldBe(1);
     }
 
@@ -249,10 +253,10 @@ public class SubtitleManagerTests
 
         _sut.SubtitleDelay.ShouldBe(0f);
         _sut.SubtitlePosition.ShouldBe(100);
-        _sut.SubtitleFontScale.ShouldBe(1.0);
-        _sut.SubtitleBorderSize.ShouldBe(2.0);
-        _sut.SubtitleShadowOffset.ShouldBe(1.0);
-        _sut.SubtitleFont.ShouldBe("Arial");
+        _sut.SubtitleFontScale.ShouldBe(1.1);
+        _sut.SubtitleBorderSize.ShouldBe(2.5);
+        _sut.SubtitleShadowOffset.ShouldBe(1.5);
+        _sut.SubtitleFont.ShouldBe("Segoe UI");
         _sut.SubtitleColor.ShouldBe("#FFFFFF");
     }
 

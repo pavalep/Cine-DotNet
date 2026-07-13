@@ -1,7 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
-        xmlns:containers="using:Cine.Avalonia.Views.Components.Containers"
         xmlns:panels="using:Cine.Avalonia.Views.Components.Panels"
         x:Class="Cine.Avalonia.Views.Dialogs.PreferencesWindow"
         Title="Preferences"
@@ -14,18 +13,20 @@
 
     <Window.Styles>
         <Style Selector="ListBoxItem.sidebar-item">
-            <Setter Property="Padding" Value="16,10" />
+            <Setter Property="Padding" Value="16,12" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="{StaticResource TextSecondary}" />
             <Setter Property="FontSize" Value="14" />
+            <Setter Property="Margin" Value="8,0" />
+            <Setter Property="CornerRadius" Value="{StaticResource radius-sm}" />
         </Style>
         <Style Selector="ListBoxItem.sidebar-item:selected">
-            <Setter Property="Background" Value="{StaticResource AppHoverSubtle}" />
+            <Setter Property="Background" Value="{StaticResource AppAccentSoft}" />
             <Setter Property="Foreground" Value="{StaticResource OsdForeground}" />
         </Style>
         <Style Selector="ListBoxItem.sidebar-item:pointerover">
-            <Setter Property="Background" Value="{StaticResource AppHover}" />
+            <Setter Property="Background" Value="{StaticResource AppHoverSubtle}" />
         </Style>
     </Window.Styles>
 
@@ -34,10 +35,16 @@
         <Border Grid.Column="0" Background="{StaticResource AppBackgroundAlt}">
             <Grid RowDefinitions="Auto,*,Auto">
                 <!-- Sidebar header -->
-                <TextBlock Grid.Row="0" Text="Preferences"
-                           Classes="md3-title1"
-                           Foreground="{StaticResource OsdForeground}"
-                           Margin="16,16,16,8" FontWeight="SemiBold" />
+                <StackPanel Grid.Row="0" Margin="16,20,16,12">
+                    <TextBlock Text="Preferences"
+                               Classes="md3-title1"
+                               Foreground="{StaticResource OsdForeground}"
+                               FontWeight="SemiBold" />
+                    <TextBlock Text="Appearance &amp; playback settings"
+                               Classes="md3-caption"
+                               Foreground="{StaticResource TextSecondary}"
+                               Margin="0,2,0,0" />
+                </StackPanel>
 
                 <!-- Navigation items -->
                 <ListBox x:Name="SidebarList"
@@ -71,9 +78,8 @@
                 <!-- ════════════════════════════════════════ -->
                 <!-- GENERAL                                  -->
                 <!-- ════════════════════════════════════════ -->
-                <containers:PanelContainer x:Name="PanelGeneral"
-                                           CornerRadius="8" Padding="20"
-                                           Background="{StaticResource PopoverBackground}">
+                <Border x:Name="PanelGeneral" Classes="settings-card"
+                        Padding="20">
                     <StackPanel Spacing="{StaticResource space-spacing-4}">
                         <TextBlock Text="General Settings" Classes="md3-subtitle1"
                                    Foreground="{StaticResource OsdForeground}" FontWeight="SemiBold" />
@@ -91,22 +97,21 @@
                                           VerticalAlignment="Center" OnContent="" OffContent="" />
                         </Grid>
 
-                        <Separator Background="{StaticResource PopoverBorder}" Height="1" Margin="0" />
+                        <Separator Background="{StaticResource AppBorderSubtle}" Height="1" Margin="0" Opacity="0.6" />
 
                         <!-- Keyboard Shortcuts placeholder -->
                         <TextBlock Text="Keyboard shortcuts are managed via the main window."
                                    Classes="md3-caption"
                                    Foreground="{StaticResource TextTertiary}" />
                     </StackPanel>
-                </containers:PanelContainer>
+                </Border>
 
                 <!-- ════════════════════════════════════════ -->
                 <!-- AUDIO                                    -->
                 <!-- ════════════════════════════════════════ -->
-                <containers:PanelContainer x:Name="PanelAudio"
-                                           CornerRadius="8" Padding="20"
-                                           Background="{StaticResource PopoverBackground}"
-                                           IsVisible="False">
+                <Border x:Name="PanelAudio" Classes="settings-card"
+                        Padding="20"
+                        IsVisible="False">
                     <StackPanel Spacing="{StaticResource space-spacing-4}">
                         <TextBlock Text="Audio Settings" Classes="md3-subtitle1"
                                    Foreground="{StaticResource OsdForeground}" FontWeight="SemiBold" />
@@ -137,15 +142,14 @@
                                           VerticalAlignment="Center" OnContent="" OffContent="" />
                         </Grid>
                     </StackPanel>
-                </containers:PanelContainer>
+                </Border>
 
                 <!-- ════════════════════════════════════════ -->
                 <!-- SUBTITLES                                -->
                 <!-- ════════════════════════════════════════ -->
-                <containers:PanelContainer x:Name="PanelSubtitles"
-                                           CornerRadius="8" Padding="20"
-                                           Background="{StaticResource PopoverBackground}"
-                                           IsVisible="False">
+                <Border x:Name="PanelSubtitles" Classes="settings-card"
+                        Padding="20"
+                        IsVisible="False">
                     <StackPanel Spacing="{StaticResource space-spacing-4}">
                         <TextBlock Text="Subtitle Settings" Classes="md3-subtitle1"
                                    Foreground="{StaticResource OsdForeground}" FontWeight="SemiBold" />
@@ -163,7 +167,7 @@
                                           VerticalAlignment="Center" OnContent="" OffContent="" />
                         </Grid>
 
-                        <Separator Background="{StaticResource PopoverBorder}" Height="1" Margin="0" />
+                        <Separator Background="{StaticResource AppBorderSubtle}" Height="1" Margin="0" Opacity="0.6" />
 
                         <!-- Preferred Languages -->
                         <StackPanel Spacing="{StaticResource space-spacing-1}">
@@ -174,7 +178,7 @@
                                      Classes="md3-caption"
                                      Padding="{StaticResource space-1}"
                                      Background="{StaticResource AppBackground}"
-                                     BorderBrush="{StaticResource PopoverBorder}"
+                                     BorderBrush="{StaticResource AppBorderSubtle}"
                                      BorderThickness="1" CornerRadius="{StaticResource radius-xs}"
                                      Foreground="{StaticResource TextPrimary}"
                                      AutomationProperties.Name="Preferred subtitle languages" />
@@ -192,7 +196,7 @@
                                      Classes="md3-caption"
                                      Padding="{StaticResource space-1}"
                                      Background="{StaticResource AppBackground}"
-                                     BorderBrush="{StaticResource PopoverBorder}"
+                                     BorderBrush="{StaticResource AppBorderSubtle}"
                                      BorderThickness="1" CornerRadius="{StaticResource radius-xs}"
                                      Foreground="{StaticResource TextPrimary}"
                                      AutomationProperties.Name="Subtitle directory paths" />
@@ -201,56 +205,77 @@
                                        Foreground="{StaticResource TextTertiary}" />
                         </StackPanel>
                     </StackPanel>
-                </containers:PanelContainer>
+                </Border>
 
                 <!-- ════════════════════════════════════════ -->
                 <!-- EQUALIZER                                -->
                 <!-- ════════════════════════════════════════ -->
-                <containers:PanelContainer x:Name="PanelEqualizer"
-                                           CornerRadius="8" Padding="20"
-                                           Background="{StaticResource PopoverBackground}"
-                                           IsVisible="False">
+                <Border x:Name="PanelEqualizer" Classes="settings-card"
+                        Padding="20"
+                        IsVisible="False">
                     <panels:EqualizerPanel x:Name="PrefEqualizerPanel" />
-                </containers:PanelContainer>
+                </Border>
 
                 <!-- ════════════════════════════════════════ -->
                 <!-- ABOUT                                    -->
                 <!-- ════════════════════════════════════════ -->
-                <containers:PanelContainer x:Name="PanelAbout"
-                                           CornerRadius="8" Padding="20"
-                                           Background="{StaticResource PopoverBackground}"
-                                           IsVisible="False">
-                    <StackPanel Spacing="{StaticResource space-spacing-3}" HorizontalAlignment="Center">
-                        <Panel Width="56" Height="56" HorizontalAlignment="Center">
-                            <Path Data="M 32 2 A 30 30 0 1 1 32 62 A 30 30 0 1 1 32 2 Z"
-                                  Fill="{StaticResource AppHoverSubtle}"
-                                  Stroke="{StaticResource AppDivider}"
-                                  StrokeThickness="2" />
-                            <Path Data="M 25 20 L 45 32 L 25 44 Z"
-                                  Fill="{StaticResource OsdForeground}" />
-                        </Panel>
+                <Border x:Name="PanelAbout" Classes="settings-card"
+                        Padding="24"
+                        IsVisible="False">
+                    <StackPanel Spacing="0" HorizontalAlignment="Center" MinWidth="280">
+                        <!-- Logo area -->
+                        <Border CornerRadius="12" Width="64" Height="64"
+                                HorizontalAlignment="Center"
+                                Background="{StaticResource AppAccentSoft}"
+                                BorderBrush="{StaticResource AppBorderSubtle}"
+                                BorderThickness="1">
+                            <Path Data="M 24 16 L 48 32 L 24 48 Z"
+                                  Fill="{StaticResource AppAccent}" />
+                        </Border>
+
                         <TextBlock Text="Cine Media Player" Classes="md3-subtitle1" FontWeight="Bold"
-                                   Foreground="{StaticResource OsdForeground}" HorizontalAlignment="Center" />
-                        <TextBlock Text="Version 1.0.0" Classes="md3-body2"
-                                   Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center" />
+                                   Foreground="{StaticResource OsdForeground}"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,12,0,2" />
+                        <TextBlock Text="Version 1.0.0" Classes="md3-caption"
+                                   Foreground="{StaticResource TextSecondary}"
+                                   HorizontalAlignment="Center" />
                         <TextBlock Text="Built with Avalonia UI &amp; libmpv" Classes="md3-caption"
-                                   Foreground="{StaticResource TextTertiary}" HorizontalAlignment="Center" />
-                        <Separator Background="{StaticResource PopoverBorder}" Height="1" Margin="8" />
-                        <TextBlock Text="License &amp; Feature Status" Classes="md3-body2" FontWeight="SemiBold"
-                                   Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Center" />
+                                   Foreground="{StaticResource TextTertiary}"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,0,0,20" />
+
+                        <!-- Divider -->
+                        <Separator Background="{StaticResource AppBorderSubtle}" Height="1"
+                                   Margin="0,0,0,20" Opacity="0.6" />
+
+                        <!-- License section -->
+                        <TextBlock Text="License" Classes="md3-body2" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextPrimary}"
+                                   HorizontalAlignment="Center" />
                         <TextBlock Text="Open Source · MIT License"
                                    Classes="md3-caption"
-                                   Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center" />
-                        <TextBlock Text="All features active"
+                                   Foreground="{StaticResource TextSecondary}"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,4,0,0" />
+                        <TextBlock Text="All features active in this build"
                                    Classes="md3-caption"
-                                   Foreground="{StaticResource TextTertiary}" HorizontalAlignment="Center" />
-                        <Separator Background="{StaticResource PopoverBorder}" Height="1" Margin="8" />
-                        <Button Content="Reset to Defaults"
+                                   Foreground="{StaticResource TextTertiary}"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,2,0,20" />
+
+                        <!-- Divider -->
+                        <Separator Background="{StaticResource AppBorderSubtle}" Height="1"
+                                   Margin="0,0,0,20" Opacity="0.6" />
+
+                        <!-- Reset button -->
+                        <Button Content="Reset All Settings to Defaults"
                                 Classes="flyout-item destructive"
                                 HorizontalAlignment="Center"
+                                MinWidth="220"
                                 Click="OnResetDefaults" />
                     </StackPanel>
-                </containers:PanelContainer>
+                </Border>
 
                 </StackPanel>
             </ScrollViewer>

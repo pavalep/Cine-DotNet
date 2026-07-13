@@ -1,7 +1,7 @@
 using System;
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Cine.Avalonia.Models;
 
 namespace Cine.Avalonia.Views.Components.Panels;
 
@@ -30,9 +30,7 @@ public partial class OpenMenuPanel : UserControl
 
     private void OnRecentFileClick(object? sender, RoutedEventArgs e)
     {
-        if (sender is Button button && button.DataContext is string filePath)
-        {
-            RecentFileClicked?.Invoke(this, filePath);
-        }
+        if (sender is Button button && button.DataContext is RecentFileEntry entry)
+            RecentFileClicked?.Invoke(this, entry.FilePath);
     }
 }

@@ -186,6 +186,12 @@ public partial class MainViewModel
             _player.SubtitleDelay,
             _player.AudioDelay,
             Renderer.RendererMode.ToString());
+
+        // Sync playback position to the recent-files entry.
+        // Skip when position is 0 (file hasn't started or playback has ended)
+        // to avoid overwriting the saved resume position.
+        if (!string.IsNullOrEmpty(_filePath) && _player.Position.Ticks > 0)
+            _recentFiles.UpdatePosition(_filePath, _player.Position.Ticks, _player.Duration.Ticks);
     }
 
     public void LoadSession()

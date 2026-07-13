@@ -138,6 +138,9 @@ public partial class MainViewModel
     /// <summary>Stop playback and navigate to the start page.</summary>
     public void NavigateHome()
     {
+        // Persist the current resume point before stopping playback.
+        SaveSession();
+        CaptureCurrentThumbnailForRecent();
         _player.Stop();
         _navigationService.Navigate(AppRoute.Start);
     }
@@ -159,13 +162,14 @@ public partial class MainViewModel
         // ── Avalonia / app-layer bookkeeping (no mpv coupling) ──
         Audio?.OnFileClosing();
         Subtitles?.OnFileClosing();
-        _recentFiles.AddRecentFile(path);
+        _recentFiles.AddRecentFile(path, positionTicks: 0);
         FilePath = path;
         _currentAudioTrackId = -1;
 
         // ── mpv hand-off ──
         try
         {
+            CaptureThumbnailForRecent(path);
             _player.Open(path);
             _navigationService.Navigate(AppRoute.Player);
         }
@@ -178,6 +182,115 @@ public partial class MainViewModel
         finally
         {
             RefreshState();
+        }
+    }
+
+    /// <summary>
+    /// After a file opens, capture a thumbnail screenshot for the recent-files list.
+    /// Hooks the Opened event (fires once per load) so we capture the first frame.
+    /// </summary>
+    private void CaptureThumbnailForRecent(string filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+            return;
+        // Only capture thumbnails for video files
+        if (!_mediaFile.IsVideoFile(filePath))
+            return;
+
+        EventHandler? handler = null;
+        handler = (_, _) =>
+        {
+            _player.Opened -= handler;
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    // Give the renderer a brief moment to present the first frame.
+                    await Task.Delay(300);
+                    var thumbPath = CreateRecentThumbnailPath(filePath);
+                    _player.TakeScreenshot(thumbPath);
+
+                    // screenshot-to-file is asynchronous — poll briefly for the file to appear.
+                    for (int i = 0; i < 20 && !File.Exists(thumbPath); i++)
+                        await Task.Delay(50);
+
+                    if (File.Exists(thumbPath))
+                    {
+                        // Dispatch to UI thread — RecentFilesService modifies an
+                        // ObservableCollection that the ViewModel / UI binding depends on.
+                        Dispatcher.UIThread.OnUiThread(() =>
+                            _recentFiles.UpdateThumbnail(filePath, thumbPath));
+                        CleanupOldRecentThumbnails(filePath, thumbPath);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.ForContext<MainViewModel>().Error(ex, "Thumbnail capture failed for {Path}", filePath);
+                }
+            });
+        };
+        _player.Opened += handler;
+    }
+
+    public void CaptureCurrentThumbnailForRecent()
+    {
+        if (string.IsNullOrWhiteSpace(_filePath) || !_mediaFile.IsVideoFile(_filePath))
+            return;
+
+        try
+        {
+            var thumbPath = CreateRecentThumbnailPath(_filePath);
+            _player.TakeScreenshot(thumbPath);
+
+            // screenshot-to-file is asynchronous — poll briefly for the file to appear.
+            for (int i = 0; i < 20 && !File.Exists(thumbPath); i++)
+                Thread.Sleep(50);
+
+            if (File.Exists(thumbPath))
+            {
+                _recentFiles.UpdateThumbnail(_filePath, thumbPath);
+                CleanupOldRecentThumbnails(_filePath, thumbPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.ForContext<MainViewModel>().Error(ex, "Current thumbnail capture failed for {Path}", _filePath);
+        }
+    }
+
+    private static string CreateRecentThumbnailPath(string filePath)
+    {
+        var thumbDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Cine", "thumbnails");
+        Directory.CreateDirectory(thumbDir);
+
+        var hash = filePath.GetHashCode().ToString("x8") + "_" +
+                   Path.GetFileNameWithoutExtension(filePath).GetHashCode().ToString("x8");
+        return Path.Combine(thumbDir, $"{hash}_{DateTime.Now:yyyyMMddHHmmssfff}.png");
+    }
+
+    private static void CleanupOldRecentThumbnails(string filePath, string keepPath)
+    {
+        try
+        {
+            var dir = Path.GetDirectoryName(keepPath);
+            if (string.IsNullOrWhiteSpace(dir) || !Directory.Exists(dir))
+                return;
+
+            var hashPrefix = filePath.GetHashCode().ToString("x8") + "_" +
+                             Path.GetFileNameWithoutExtension(filePath).GetHashCode().ToString("x8") + "_";
+
+            foreach (var path in Directory.EnumerateFiles(dir, $"{hashPrefix}*.png"))
+            {
+                if (!string.Equals(path, keepPath, StringComparison.OrdinalIgnoreCase))
+                    File.Delete(path);
+            }
+        }
+        catch
+        {
+            // Best-effort cleanup only.
         }
     }
 

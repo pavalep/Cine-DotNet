@@ -169,7 +169,7 @@ public class VideoManagerTests
 
         _sut.RefreshVideoTracks(sources);
 
-        _sut.VideoTracks.Any(t => t.DisplayName.Contains("eng")).ShouldBeTrue();
+        _sut.VideoTracks.Any(t => t.DisplayName.Contains("English")).ShouldBeTrue();
     }
 
     [Fact]

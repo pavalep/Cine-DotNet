@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:containers="using:Cine.Avalonia.Views.Components.Containers"
+             xmlns:models="using:Cine.Avalonia.Models"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Cine.Avalonia.Views.Components.Panels.OpenMenuPanel">
     <containers:PanelContainer CornerRadius="12" Padding="8"
@@ -33,19 +34,27 @@
                           Background="Transparent"
                           MaxHeight="240">
                 <ItemsControl.ItemTemplate>
-                    <DataTemplate>
+                    <DataTemplate x:DataType="models:RecentFileEntry">
                         <Button Classes="flyout-item"
                                 Padding="8,6"
                                 HorizontalContentAlignment="Left"
                                 Click="OnRecentFileClick">
-                            <StackPanel Orientation="Horizontal" Spacing="10">
-                                <materialIcons:MaterialIcon Kind="FileVideoOutline" Width="16" Height="16"
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                <materialIcons:MaterialIcon Grid.Column="0"
+                                    Kind="FileVideoOutline" Width="16" Height="16"
+                                    VerticalAlignment="Center"
                                     Foreground="{StaticResource TextSecondary}" />
-                                <TextBlock Text="{Binding}"
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding Title}"
                                            Foreground="{StaticResource OsdForeground}"
                                            TextTrimming="CharacterEllipsis"
-                                           MaxWidth="200" />
-                            </StackPanel>
+                                           VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="2"
+                                           Text="{Binding LastOpenedFormatted}"
+                                           Foreground="{StaticResource TextTertiary}"
+                                           FontSize="11"
+                                           VerticalAlignment="Center" />
+                            </Grid>
                         </Button>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>

@@ -1,5 +1,7 @@
+using Cine.Avalonia.Core.Navigation;
 using Cine.Avalonia.Managers;
 using Cine.Avalonia.Services;
+using Cine.Avalonia.Services.UI;
 using Cine.Avalonia.ViewModels;
 using Cine.Media.Interfaces;
 using Cine.Media.Models;
@@ -24,10 +26,24 @@ public class MainViewModelTests
         _audio = Substitute.For<IAudioManager>();
         _video = new VideoManager(_player);
         _subtitles = Substitute.For<ISubtitleManager>();
-        _sut = new MainViewModel(_player,
+        var session = Substitute.For<ISessionService>();
+        var playlist = Substitute.For<IPlaylistService>();
+        var renderer = Substitute.For<IRendererService>();
+        var mediaFile = Substitute.For<IMediaFileService>();
+        var dragDrop = Substitute.For<IDragDropService>();
+        var navigation = Substitute.For<INavigationService>();
+        var recentFiles = Substitute.For<IRecentFilesService>();
+        var osd = Substitute.For<IOsdService>();
+        _sut = new MainViewModel(_player, session, playlist,
             audioManager: _audio,
             videoManager: _video,
-            subtitleManager: _subtitles);
+            subtitleManager: _subtitles,
+            rendererService: renderer,
+            mediaFileService: mediaFile,
+            dragDropService: dragDrop,
+            navigationService: navigation,
+            recentFilesService: recentFiles,
+            osdService: osd);
     }
 
     // ── Constructor ──────────────────────────────────────────────

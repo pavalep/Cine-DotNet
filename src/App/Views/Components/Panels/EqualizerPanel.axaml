@@ -69,7 +69,7 @@
                            HorizontalAlignment="Left" />
             </ScrollViewer>
 
-            <Separator Background="{StaticResource PopoverBorder}" Height="1" Opacity="0.5" />
+            <Separator Background="{StaticResource AppBorderSubtle}" Height="1" />
 
             <!-- Toggles -->
             <Grid ColumnDefinitions="*,*" RowDefinitions="Auto">

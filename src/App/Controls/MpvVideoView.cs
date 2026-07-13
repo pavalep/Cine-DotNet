@@ -192,6 +192,7 @@ public class MpvVideoView : Decorator
                     {
                         // Called from mpv's internal thread when new frame ready
                         _frameReady = true;
+                        Log("mpv update callback fired → _frameReady=true");
                     });
                 Log("Render API initialized");
             }
@@ -291,6 +292,7 @@ public class MpvVideoView : Decorator
                     _frameReady = false;
                     _lastFrameTime = now;
                     _frameCount++;
+                    Log($"Frame #{_frameCount} consumed from callback — calling RenderFrame...");
 
                     // Periodic debug: log stats every ~2 seconds
                     if ((now - _lastDebugLog) > DebugLogInterval)
@@ -317,11 +319,13 @@ public class MpvVideoView : Decorator
                         _angleContext!.BindFbo();
 
                         // 3. Tell mpv to render into our FBO
-                        _player!.RenderFrame(
-                            _angleContext.FboHandle,
-                            _angleContext.Width,
-                            _angleContext.Height);
+                        int renderFbo = _angleContext.FboHandle;
+                        int renderW = _angleContext.Width;
+                        int renderH = _angleContext.Height;
+                        Log($"  step 3: RenderFrame(fbo={renderFbo}, {renderW}x{renderH})");
+                        _player!.RenderFrame(renderFbo, renderW, renderH);
                         _renderCount++;
+                        Log($"  step 3 done: renderCount={_renderCount}");
 
                         // 4. Re-bind FBO before readback (mpv may have unbound it)
                         _angleContext!.BindFbo();
@@ -371,12 +375,16 @@ public class MpvVideoView : Decorator
     /// </summary>
     private void UpdateDisplay(byte[] pixels, int width, int height)
     {
+        Log($"UpdateDisplay called — {width}x{height} pixels.Length={pixels.Length}");
+        Console.WriteLine($"[VIDEO] UpdateDisplay — {width}x{height}");
+
         // When DisplayEnabled is false (PiP active), skip display rendering
         // but still fire FrameRendered so the PiP window gets frames.
         if (!DisplayEnabled)
         {
             _videoImage.IsVisible = false;
             FrameRendered?.Invoke(pixels, width, height);
+            Log("UpdateDisplay: DisplayEnabled=false, skipping");
             return;
         }
 

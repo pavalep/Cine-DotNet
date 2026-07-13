@@ -1,15 +1,14 @@
 using System.Collections.ObjectModel;
+using Cine.Avalonia.Models;
 
 namespace Cine.Avalonia.Services;
 
-/// <summary>
-/// Manages the recent files list with persistence.
-/// Singleton — shared across MainViewModel, StartPageViewModel, and HeaderBar.
-/// </summary>
 public interface IRecentFilesService
 {
-    ObservableCollection<string> RecentFiles { get; }
+    ObservableCollection<RecentFileEntry> RecentFiles { get; }
     bool HasRecentFiles { get; }
-    void AddRecentFile(string path);
+    void AddRecentFile(string path, long positionTicks = 0, string? thumbnailPath = null);
+    void UpdatePosition(string filePath, long positionTicks, long durationTicks = 0);
+    void UpdateThumbnail(string filePath, string thumbnailPath);
     void LoadRecentFiles();
 }

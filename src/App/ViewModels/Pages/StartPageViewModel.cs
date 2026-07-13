@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using Avalonia.Threading;
 using Cine.Avalonia.Core.Navigation;
 using Cine.Avalonia.Models;
 using Cine.Avalonia.Services;
@@ -22,16 +23,20 @@ public sealed class StartPageViewModel : INotifyPropertyChanged
     private readonly INavigationService _navigation;
     private readonly IRecentFilesService _recentFiles;
     private readonly IFileDialogService _fileDialog;
+    private readonly DispatcherTimer _relativeTimeRefreshTimer;
 
     public IMediaFileService MediaFileService => _mediaFileService;
 
-    public ObservableCollection<string> RecentFiles => _recentFiles.RecentFiles;
+    public ObservableCollection<RecentFileEntry> RecentFiles => _recentFiles.RecentFiles;
 
     /// <summary>Display models for the ItemsRepeater (synced with RecentFiles).</summary>
     public ObservableCollection<RecentFileItem> RecentFileItems { get; } = new();
 
     /// <summary>Command to open a recent file by path.</summary>
     public ICommand OpenRecentFileCommand { get; }
+
+    /// <summary>Command to open a recent file and resume from saved position.</summary>
+    public ICommand ResumeRecentFileCommand { get; }
 
     public bool HasRecentFiles => _recentFiles.HasRecentFiles;
 
@@ -46,15 +51,39 @@ public sealed class StartPageViewModel : INotifyPropertyChanged
         _recentFiles = recentFiles ?? throw new ArgumentNullException(nameof(recentFiles));
         _fileDialog = fileDialog ?? throw new ArgumentNullException(nameof(fileDialog));
 
-        OpenRecentFileCommand = new RelayCommand(path =>
+        OpenRecentFileCommand = new RelayCommand(param =>
         {
-            if (path is string p && !string.IsNullOrWhiteSpace(p) && File.Exists(p))
-                _navigation.Navigate(AppRoute.Player, p);
+            switch (param)
+            {
+                case RecentFileItem item when !string.IsNullOrWhiteSpace(item.FilePath) && File.Exists(item.FilePath):
+                    if (item.ResumePositionTicks > 0)
+                        _navigation.Navigate(AppRoute.Player, (item.FilePath, item.ResumePositionTicks));
+                    else
+                        _navigation.Navigate(AppRoute.Player, item.FilePath);
+                    break;
+
+                case string path when !string.IsNullOrWhiteSpace(path) && File.Exists(path):
+                    _navigation.Navigate(AppRoute.Player, path);
+                    break;
+            }
+        });
+
+        ResumeRecentFileCommand = new RelayCommand(param =>
+        {
+            if (param is RecentFileItem item && !string.IsNullOrWhiteSpace(item.FilePath) && File.Exists(item.FilePath))
+                _navigation.Navigate(AppRoute.Player, (item.FilePath, item.ResumePositionTicks));
         });
 
         // Sync RecentFileItems from RecentFiles, and keep in sync
         SyncRecentFileItems();
         RecentFiles.CollectionChanged += OnRecentFilesCollectionChanged;
+
+        _relativeTimeRefreshTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(30)
+        };
+        _relativeTimeRefreshTimer.Tick += (_, _) => RefreshRecentFileItems();
+        _relativeTimeRefreshTimer.Start();
     }
 
     /// <summary>Open a recent file — navigates to Player with the file path.</summary>
@@ -89,18 +118,34 @@ public sealed class StartPageViewModel : INotifyPropertyChanged
     public void LoadRecentFiles() => _recentFiles.LoadRecentFiles();
 
     /// <summary>Adds a file to the recent files list.</summary>
-    public void AddRecentFile(string path) => _recentFiles.AddRecentFile(path);
+    public void AddRecentFile(string path, long positionTicks = 0, string? thumbnailPath = null)
+        => _recentFiles.AddRecentFile(path, positionTicks, thumbnailPath);
 
     // ── Collection sync ────────────────────────────────────────────
 
-    private RecentFileItem CreateItem(string filePath)
-        => new(filePath, _mediaFileService.IsVideoFile(filePath));
+    private RecentFileItem CreateItem(RecentFileEntry entry)
+        => new(
+            entry.FilePath,
+            _mediaFileService.IsVideoFile(entry.FilePath),
+            entry.LastOpened,
+            entry.ThumbnailPath,
+            entry.PositionTicks,
+            entry.DurationTicks);
 
     private void SyncRecentFileItems()
     {
         RecentFileItems.Clear();
-        foreach (var path in RecentFiles)
-            RecentFileItems.Add(CreateItem(path));
+        foreach (var entry in RecentFiles)
+            RecentFileItems.Add(CreateItem(entry));
+    }
+
+    private void RefreshRecentFileItems()
+    {
+        for (int i = 0; i < RecentFiles.Count; i++)
+        {
+            if (i < RecentFileItems.Count)
+                RecentFileItems[i] = CreateItem(RecentFiles[i]);
+        }
     }
 
     private void OnRecentFilesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -109,7 +154,7 @@ public sealed class StartPageViewModel : INotifyPropertyChanged
         {
             case NotifyCollectionChangedAction.Add when e.NewItems is not null:
                 for (int i = 0; i < e.NewItems.Count; i++)
-                    RecentFileItems.Insert(e.NewStartingIndex + i, CreateItem((string)e.NewItems[i]!));
+                    RecentFileItems.Insert(e.NewStartingIndex + i, CreateItem((RecentFileEntry)e.NewItems[i]!));
                 break;
 
             case NotifyCollectionChangedAction.Remove when e.OldItems is not null:
@@ -119,7 +164,7 @@ public sealed class StartPageViewModel : INotifyPropertyChanged
 
             case NotifyCollectionChangedAction.Replace when e.NewItems is not null:
                 for (int i = 0; i < e.NewItems.Count; i++)
-                    RecentFileItems[e.NewStartingIndex + i] = CreateItem((string)e.NewItems[i]!);
+                    RecentFileItems[e.NewStartingIndex + i] = CreateItem((RecentFileEntry)e.NewItems[i]!);
                 break;
 
             case NotifyCollectionChangedAction.Reset:

@@ -38,6 +38,14 @@ public partial class MainWindow
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "Cine", "window_state.json");
 
+    protected override void OnClosing(WindowClosingEventArgs e)
+    {
+        // Persist the latest resume point before shutdown tears down playback state.
+        _viewModel?.CaptureCurrentThumbnailForRecent();
+        _viewModel?.SaveSession();
+        base.OnClosing(e);
+    }
+
     protected override void OnClosed(EventArgs e)
     {
         // P5.2: Save window position, size, and state
@@ -262,6 +270,27 @@ public partial class MainWindow
                 // If a file path was passed (e.g. from StartPageViewModel), open it
                 if (request.Parameter is string path && !string.IsNullOrWhiteSpace(path))
                     _viewModel?.OpenFile(path);
+                // If a (path, positionTicks) tuple was passed for resume
+                else if (request.Parameter is ValueTuple<string, long> resumeTuple)
+                {
+                    var (resumePath, resumePosTicks) = resumeTuple;
+                    if (!string.IsNullOrWhiteSpace(resumePath))
+                    {
+                        var resumePos = TimeSpan.FromTicks(resumePosTicks);
+                        if (resumePosTicks > 0)
+                        {
+                            var playerInstance = _playerService?.Player;
+                            EventHandler? handler = null;
+                            handler = (s, args) =>
+                            {
+                                playerInstance?.Seek(resumePos);
+                                if (playerInstance != null) playerInstance.Opened -= handler;
+                            };
+                            if (playerInstance != null) playerInstance.Opened += handler;
+                        }
+                        _ = _viewModel?.OpenFile(resumePath);
+                    }
+                }
                 break;
         }
     }

@@ -452,23 +452,23 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
     }
     public void SelectSubtitleTrack(int trackIndex)
     {
+        Console.WriteLine($"[MPV] SelectSubtitleTrack({trackIndex})");
         if (trackIndex >= 0)
         {
             SetFlag("sub-visibility", true);
             SetInt64("sid", trackIndex);
+            SubtitlePropertyChanged?.Invoke(this, new SubtitlePropertyChangedEventArgs("sid", trackIndex));
+            SubtitlePropertyChanged?.Invoke(this, new SubtitlePropertyChangedEventArgs("sub-visibility", true));
+            Console.WriteLine($"[MPV] SelectSubtitleTrack done → sub-visibility=true, sid={trackIndex}");
         }
         else
         {
             SetFlag("sub-visibility", false);
-            SetInt64("sid", -1);
+            SetInt64("sid", 0); // sid=0 = disabled in mpv (sid=-1 is "auto", not "disabled")
+            SubtitlePropertyChanged?.Invoke(this, new SubtitlePropertyChangedEventArgs("sid", 0));
+            SubtitlePropertyChanged?.Invoke(this, new SubtitlePropertyChangedEventArgs("sub-visibility", false));
+            Console.WriteLine($"[MPV] SelectSubtitleTrack done → sub-visibility=false, sid=0");
         }
-        // Fire event manually — mpv may not deliver observe_property callbacks
-        // when properties are set from outside the event-loop thread (mpv render
-        // API requirement).  Without this, SubtitleManager never learns about
-        // the sid/sub-visibility change and the UI subtitle track list stays
-        // inconsistent.
-        SubtitlePropertyChanged?.Invoke(this, new SubtitlePropertyChangedEventArgs("sid", trackIndex >= 0 ? trackIndex : -1));
-        SubtitlePropertyChanged?.Invoke(this, new SubtitlePropertyChangedEventArgs("sub-visibility", trackIndex >= 0));
     }
     public void SelectAudioTrack(int trackIndex) => SetInt64("aid", trackIndex);
 
@@ -830,7 +830,31 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
     public void TakeScreenshot(string outputPath, bool includeSubtitles = true)
     {
         EnsureInitializedOrError("TakeScreenshot");
-        CommandInternal("screenshot-to-file", outputPath, includeSubtitles ? "subtitles" : "video");
+        if (!_initialized || _mpv == IntPtr.Zero || string.IsNullOrWhiteSpace(outputPath))
+            return;
+
+        try
+        {
+            var dir = Path.GetDirectoryName(outputPath);
+            if (!string.IsNullOrWhiteSpace(dir))
+                Directory.CreateDirectory(dir);
+
+            if (TryTakeScreenshotToFile(outputPath, includeSubtitles))
+                return;
+
+            var rawData = CaptureScreenshotRaw(includeSubtitles, out var width, out var height);
+            if (rawData == null || width <= 0 || height <= 0)
+            {
+                Error?.Invoke(this, "TakeScreenshot failed: no frame data was captured.");
+                return;
+            }
+
+            SaveBgraAsPng(rawData, width, height, outputPath);
+        }
+        catch (Exception ex)
+        {
+            Error?.Invoke(this, $"TakeScreenshot failed: {ex.Message}");
+        }
     }
 
     public void ScreenshotWithSubtitles() => TakeScreenshot(GetDefaultScreenshotPath(), includeSubtitles: true);
@@ -872,6 +896,101 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
         {
             return null;
         }
+    }
+
+    private bool TryTakeScreenshotToFile(string outputPath, bool includeSubtitles)
+    {
+        try
+        {
+            if (File.Exists(outputPath))
+                File.Delete(outputPath);
+
+            CommandInternal("screenshot-to-file", outputPath, includeSubtitles ? "subtitles" : "video");
+
+            for (int i = 0; i < 20; i++)
+            {
+                if (File.Exists(outputPath))
+                {
+                    var info = new FileInfo(outputPath);
+                    if (info.Length > 0)
+                        return true;
+                }
+
+                Thread.Sleep(50);
+            }
+        }
+        catch (Exception ex)
+        {
+            DebugLog($"TryTakeScreenshotToFile failed: {ex.Message}");
+        }
+
+        return false;
+    }
+
+    private byte[]? CaptureScreenshotRaw(bool includeSubtitles, out int width, out int height)
+    {
+        width = 0;
+        height = 0;
+
+        var previousVisibility = true;
+        var restoreVisibility = false;
+
+        try
+        {
+            if (!includeSubtitles)
+            {
+                previousVisibility = GetFlag("sub-visibility");
+                if (previousVisibility)
+                {
+                    SetFlag("sub-visibility", false);
+                    restoreVisibility = true;
+                    Thread.Sleep(30);
+                }
+            }
+
+            return ScreenshotRaw(out width, out height);
+        }
+        finally
+        {
+            if (restoreVisibility)
+                SetFlag("sub-visibility", previousVisibility);
+        }
+    }
+
+    private static void SaveBgraAsPng(byte[] data, int width, int height, string outputPath)
+    {
+        using var bitmap = new System.Drawing.Bitmap(
+            width,
+            height,
+            System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+
+        var rect = new System.Drawing.Rectangle(0, 0, width, height);
+        var bmpData = bitmap.LockBits(
+            rect,
+            System.Drawing.Imaging.ImageLockMode.WriteOnly,
+            System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+
+        try
+        {
+            var srcStride = width * 4;
+            var dstStride = bmpData.Stride;
+            var copyBytes = Math.Min(srcStride, dstStride);
+
+            for (int y = 0; y < height; y++)
+            {
+                Marshal.Copy(
+                    data,
+                    y * srcStride,
+                    IntPtr.Add(bmpData.Scan0, y * dstStride),
+                    copyBytes);
+            }
+        }
+        finally
+        {
+            bitmap.UnlockBits(bmpData);
+        }
+
+        bitmap.Save(outputPath, System.Drawing.Imaging.ImageFormat.Png);
     }
 
     private static byte[]? ParseScreenshotNode(MpvNative.mpv_node node, out int width, out int height)
@@ -1198,9 +1317,18 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
 
     public unsafe void RenderFrame(int fbo, int width, int height)
     {
-        if (_renderContext == IntPtr.Zero || !_renderApiReady) return;
+        if (_renderContext == IntPtr.Zero || !_renderApiReady)
+        {
+            Console.WriteLine($"[MPV] RenderFrame SKIP — context=0x{_renderContext:X} ready={_renderApiReady}");
+            return;
+        }
         var flags = MpvRenderNative.mpv_render_context_update(_renderContext);
-        if ((flags & MpvRenderNative.MPV_RENDER_UPDATE_FRAME) == 0) return;
+        if ((flags & MpvRenderNative.MPV_RENDER_UPDATE_FRAME) == 0)
+        {
+            Console.WriteLine($"[MPV] RenderFrame SKIP — no MPV_RENDER_UPDATE_FRAME (flags={flags})");
+            return;
+        }
+        Console.WriteLine($"[MPV] RenderFrame PROCEED — fbo={fbo} {width}x{height}");
 
         // FLIP_Y = 0 because GL FBOs have origin at bottom-left.
         // glReadPixels reads bottom-row-first, so mpv's output must NOT be flipped.
@@ -1534,10 +1662,12 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
                 break;
             case "sid":
                 var sid = (int)GetInt64("sid");
+                Console.WriteLine($"[MPV] event: sid={sid}");
                 SubtitlePropertyChanged?.Invoke(this, new SubtitlePropertyChangedEventArgs("sid", sid));
                 break;
             case "sub-visibility":
                 var visible = GetFlag("sub-visibility");
+                Console.WriteLine($"[MPV] event: sub-visibility={visible}");
                 SubtitlePropertyChanged?.Invoke(this, new SubtitlePropertyChangedEventArgs("sub-visibility", visible));
                 break;
             case "sub-pos":
@@ -1673,6 +1803,8 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
     {
         if (!_initialized)
             return;
+        if (name.StartsWith("sub") || name == "sid")
+            Console.WriteLine($"[MPV] SetString({name}, {value})");
 
         var err = MpvNative.mpv_set_property_string(_mpv, name, value);
         if (err < 0)
@@ -1694,6 +1826,8 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
     {
         if (!_initialized)
             return;
+        if (name.StartsWith("sub") || name == "sid")
+            Console.WriteLine($"[MPV] SetInt64({name}, {value})");
 
         var v = value;
         var err = MpvNative.mpv_set_property(_mpv, name, MpvNative.mpv_format.MPV_FORMAT_INT64, ref v);
@@ -1705,6 +1839,8 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
     {
         if (!_initialized)
             return;
+        if (name.StartsWith("sub") || name == "sid")
+            Console.WriteLine($"[MPV] SetFlag({name}, {value})");
 
         var v = value ? 1 : 0;
         var err = MpvNative.mpv_set_property(_mpv, name, MpvNative.mpv_format.MPV_FORMAT_FLAG, ref v);

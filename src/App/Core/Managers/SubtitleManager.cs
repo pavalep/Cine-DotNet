@@ -133,15 +133,7 @@ public sealed class SubtitleManager : DomainManager<IMediaPlayer>, ISubtitleMana
     public bool IsSubtitleEnabled
     {
         get => _isSubtitleEnabled;
-        set
-        {
-            if (_isSubtitleEnabled == value) return;
-            _isSubtitleEnabled = value;
-            _log.Debug("IsSubtitleEnabled = {Enabled}", value);
-            Player.SetSubtitleVisibility(value);
-            MarkDirty();
-            OnPropertyChanged();
-        }
+        set => SetSubtitleEnabledState(value, pushToPlayer: true, markDirty: true);
     }
 
     public int CurrentSubtitleTrackId
@@ -153,6 +145,22 @@ public sealed class SubtitleManager : DomainManager<IMediaPlayer>, ISubtitleMana
             _currentSubtitleTrackId = value;
             OnPropertyChanged();
         }
+    }
+
+    private void SetSubtitleEnabledState(bool value, bool pushToPlayer, bool markDirty)
+    {
+        if (_isSubtitleEnabled == value) return;
+
+        _isSubtitleEnabled = value;
+        _log.Debug("IsSubtitleEnabled = {Enabled} (pushToPlayer={PushToPlayer})", value, pushToPlayer);
+
+        if (pushToPlayer)
+            Player.SetSubtitleVisibility(value);
+
+        if (markDirty)
+            MarkDirty();
+
+        OnPropertyChanged(nameof(IsSubtitleEnabled));
     }
 
     public float SubtitleDelay
@@ -484,7 +492,7 @@ public sealed class SubtitleManager : DomainManager<IMediaPlayer>, ISubtitleMana
             // Bold is a toggle — apply whatever was saved
             SubtitleBold = perFile.StyleOverrides.Bold;
             if (perFile.SubtitleVisible.HasValue)
-                IsSubtitleEnabled = perFile.SubtitleVisible.Value;
+                SetSubtitleEnabledState(perFile.SubtitleVisible.Value, pushToPlayer: true, markDirty: false);
         }
 
         // Track selection via TrackListChanged will happen next
@@ -571,13 +579,11 @@ public sealed class SubtitleManager : DomainManager<IMediaPlayer>, ISubtitleMana
                     var sid = (int)e.Value;
                     _log.Debug("OnSubtitlePropertyChanged: sid={Sid}", sid);
                     CurrentSubtitleTrackId = sid;
-                    IsSubtitleEnabled = sid >= 0;
+                    SetSubtitleEnabledState(sid > 0, pushToPlayer: false, markDirty: true);
                     UpdateSubtitleTrackSelection(sid);
-                    MarkDirty();
                     break;
                 case "sub-visibility":
-                    IsSubtitleEnabled = (bool)e.Value;
-                    MarkDirty();
+                    SetSubtitleEnabledState((bool)e.Value, pushToPlayer: false, markDirty: true);
                     break;
                 case "sub-pos":
                     var pos = (int)e.Value;
@@ -654,7 +660,7 @@ public sealed class SubtitleManager : DomainManager<IMediaPlayer>, ISubtitleMana
         SubtitleTracks.Add(new TrackMenuItem("+ Add Subtitles\u2026", TrackType.Subtitle, -1, OnSelectSubtitle));
         SubtitleTracks.Add(new TrackMenuItem("None", TrackType.Subtitle, -2, OnSelectSubtitle));
 
-        IsSubtitleEnabled = sourceArray?.Any(t => t.IsEnabled) ?? false;
+        SetSubtitleEnabledState(sourceArray?.Any(t => t.IsEnabled) ?? false, pushToPlayer: false, markDirty: false);
 
         // Update bitmap/text detection
         var selected = SubtitleTracks.FirstOrDefault(t => t.IsSelected && !t.IsPseudoEntry);
@@ -675,7 +681,7 @@ public sealed class SubtitleManager : DomainManager<IMediaPlayer>, ISubtitleMana
                     forcedItem.IsSelected = true;
                     Player.SelectSubtitleTrack(forcedId);
                     CurrentSubtitleTrackId = forcedId;
-                    IsSubtitleEnabled = true;
+                    SetSubtitleEnabledState(true, pushToPlayer: false, markDirty: true);
                     HasTextSubtitles = !forcedTrack.IsBitmap;
                 }
             }
@@ -695,7 +701,7 @@ public sealed class SubtitleManager : DomainManager<IMediaPlayer>, ISubtitleMana
         // (e.g. from NotifyMediaOpened before TrackListChanged fires), the saved
         // track ID was stored in _currentSubtitleTrackId but never sent to mpv.
         // Now that the menu is populated, apply it.
-        if (!IsSubtitleEnabled && _currentSubtitleTrackId >= 0 &&
+        if (!IsSubtitleEnabled && _currentSubtitleTrackId > 0 &&
             !SubtitleTracks.Any(t => t.IsSelected && !t.IsPseudoEntry))
         {
             var saved = SubtitleTracks.FirstOrDefault(t =>
@@ -722,10 +728,18 @@ public sealed class SubtitleManager : DomainManager<IMediaPlayer>, ISubtitleMana
     {
         _log.Trace("UpdateSubtitleTrackSelection: selectedId={SelectedId}", selectedId);
         foreach (var item in SubtitleTracks)
-            item.RefreshSelection(item.TrackIndex == selectedId);
+        {
+            if (selectedId <= 0)
+                // No subtitle selected (sid=0 or sid=-1): only the "None" entry (TrackIndex=-2) should appear selected
+                item.RefreshSelection(item.TrackIndex == -2);
+            else
+                item.RefreshSelection(item.TrackIndex == selectedId);
+        }
 
         // Update bitmap / text detection for the selected track
-        var selected = SubtitleTracks.FirstOrDefault(t => t.TrackIndex == selectedId && !t.IsPseudoEntry);
+        var selected = selectedId > 0
+            ? SubtitleTracks.FirstOrDefault(t => t.TrackIndex == selectedId && !t.IsPseudoEntry)
+            : null;
         HasTextSubtitles = selected?.Source == null || !selected.Source.IsBitmap;
     }
 
@@ -749,8 +763,8 @@ public sealed class SubtitleManager : DomainManager<IMediaPlayer>, ISubtitleMana
         {
             _log.Debug("OnSelectSubtitle: disabling subtitles (None)");
             Player.SelectSubtitleTrack(-1);
-            CurrentSubtitleTrackId = -1;
-            IsSubtitleEnabled = false;
+            CurrentSubtitleTrackId = 0;
+            SetSubtitleEnabledState(false, pushToPlayer: false, markDirty: true);
             foreach (var t in SubtitleTracks) t.RefreshSelection(false);
             item.RefreshSelection(true);
             MarkDirty();
@@ -763,7 +777,7 @@ public sealed class SubtitleManager : DomainManager<IMediaPlayer>, ISubtitleMana
             _log.Debug("OnSelectSubtitle: selecting track id={TrackId}", item.TrackIndex);
             Player.SelectSubtitleTrack(item.TrackIndex);
             CurrentSubtitleTrackId = item.TrackIndex;
-            IsSubtitleEnabled = true;
+            SetSubtitleEnabledState(true, pushToPlayer: false, markDirty: true);
             foreach (var t in SubtitleTracks) t.RefreshSelection(false);
             item.RefreshSelection(true);
             MarkDirty();

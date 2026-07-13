@@ -263,22 +263,21 @@ public partial class MainWindow
                     var resumePos = _sessionResumePosition;
                     _queuedOpenPath = null;
                     _sessionResumePosition = TimeSpan.Zero;
+                    if (resumePos.TotalSeconds > 0)
+                    {
+                        var playerInstance = _playerService?.Player;
+                        EventHandler? handler = null;
+                        handler = (s, args) =>
+                        {
+                            playerInstance?.Seek(resumePos);
+                            if (playerInstance != null) playerInstance.Opened -= handler;
+                        };
+                        if (playerInstance != null) playerInstance.Opened += handler;
+                    }
                     if (_viewModel != null)
                     {
                         _ = _viewModel.OpenFile(p);
                         _viewModel.ClearSession();
-                    }
-                    if (resumePos.TotalSeconds > 0)
-                    {
-                        EventHandler? handler = null;
-                        handler = (s, args) =>
-                        {
-                            _playerService?.Player?.Seek(resumePos);
-                            var playerInstance = _playerService?.Player;
-                            if (playerInstance != null) playerInstance.Opened -= handler;
-                        };
-                        var playerInstance = _playerService?.Player;
-                        if (playerInstance != null) playerInstance.Opened += handler;
                     }
                 }
             });

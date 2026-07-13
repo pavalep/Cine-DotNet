@@ -1,5 +1,8 @@
 using System;
+using Cine.Avalonia.Core.Navigation;
+using Cine.Avalonia.Managers;
 using Cine.Avalonia.Services;
+using Cine.Avalonia.Services.UI;
 using Cine.Avalonia.ViewModels;
 using Cine.Media.Interfaces;
 using NSubstitute;
@@ -17,7 +20,28 @@ public class PipWindowManagerTests
     {
         _mockPipService = Substitute.For<IPipService>();
         var mockPlayer = Substitute.For<IMediaPlayer>();
-        _viewModel = new MainViewModel(mockPlayer);
+        mockPlayer.VolumeMax.Returns(150.0);
+        var session = Substitute.For<ISessionService>();
+        var playlist = Substitute.For<IPlaylistService>();
+        var audio = Substitute.For<IAudioManager>();
+        var video = new VideoManager(mockPlayer);
+        var subtitles = Substitute.For<ISubtitleManager>();
+        var renderer = Substitute.For<IRendererService>();
+        var mediaFile = Substitute.For<IMediaFileService>();
+        var dragDrop = Substitute.For<IDragDropService>();
+        var navigation = Substitute.For<INavigationService>();
+        var recentFiles = Substitute.For<IRecentFilesService>();
+        var osd = Substitute.For<IOsdService>();
+        _viewModel = new MainViewModel(mockPlayer, session, playlist,
+            audioManager: audio,
+            videoManager: video,
+            subtitleManager: subtitles,
+            rendererService: renderer,
+            mediaFileService: mediaFile,
+            dragDropService: dragDrop,
+            navigationService: navigation,
+            recentFilesService: recentFiles,
+            osdService: osd);
     }
 
     private PipWindowManager CreateSut(Action<string>? onOsd = null)

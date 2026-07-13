@@ -116,13 +116,16 @@ public static class MpvConfig
             ["hwdec"] = "no",
 
             // ── Subtitle styling ──
-            // sub-ass-override=force ensures SRT subtitles use mpv styling rather
-            // than the internal libass defaults which can be too small/dim to see.
+            // sub-ass-override is NOT set here (defaults to "yes") — that allows
+            // libass to respect subtitle-file ASS styling while still applying
+            // user overrides (font, size, color) where the subtitle doesn't
+            // specify its own.  "force" would override ALL ASS styles including
+            // positioning and alignment, which can break rendering for some
+            // subtitle formats.
             ["sub-font-size"] = "24",
             ["sub-color"] = "#FFFFFF",
             ["sub-border-size"] = "2",
-            ["sub-shadow-offset"] = "1",
-            ["sub-ass-override"] = "force"
+            ["sub-shadow-offset"] = "1"
         };
     }
 

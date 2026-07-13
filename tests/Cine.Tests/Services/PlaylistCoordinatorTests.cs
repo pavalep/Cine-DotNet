@@ -1,6 +1,7 @@
 using System.IO;
 using Cine.Avalonia.Managers;
 using Cine.Avalonia.Services;
+using Cine.Avalonia.Storage;
 using Shouldly;
 using Xunit;
 

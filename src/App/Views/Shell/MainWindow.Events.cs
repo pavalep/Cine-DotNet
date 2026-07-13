@@ -177,8 +177,6 @@ public partial class MainWindow
             var pos = _sessionResumePosition;
             _queuedOpenPath = null;
             _sessionResumePosition = TimeSpan.Zero;
-            _ = _viewModel?.OpenFile(path);
-            _viewModel?.ClearSession();
             if (pos.TotalSeconds > 0)
             {
                 var player = _playerService?.Player;
@@ -193,6 +191,8 @@ public partial class MainWindow
                 };
                 player.Opened += handler;
             }
+            _ = _viewModel?.OpenFile(path);
+            _viewModel?.ClearSession();
             return;
         }
 

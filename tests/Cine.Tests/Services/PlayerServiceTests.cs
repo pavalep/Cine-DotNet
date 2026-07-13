@@ -1,5 +1,6 @@
 using Cine.Avalonia.Services;
 using Cine.Media.Interfaces;
+using Cine.Media.Models;
 using NSubstitute;
 using Shouldly;
 using Xunit;
@@ -17,7 +18,12 @@ public class PlayerServiceTests
         _mockPlayer = Substitute.For<IMediaPlayer>();
         _factory = Substitute.For<IPlayerFactory>();
         _factory.CreatePlayer().Returns(_mockPlayer);
-        _sut = new PlayerService(_factory);
+        var codecProvider = Substitute.For<ICodecProvider>();
+        codecProvider.IsAvailable.Returns(true);
+        codecProvider.Name.Returns("Test");
+        codecProvider.GetCapabilities().Returns([new CodecCapability { Codec = "h264" }]);
+        var codecManager = new CodecManager([codecProvider]);
+        _sut = new PlayerService(codecManager, _factory);
     }
 
     [Fact]

@@ -1,4 +1,7 @@
 using Cine.Avalonia.Managers;
+using Cine.Avalonia.Services;
+using Cine.Avalonia.Storage;
+using Cine.Avalonia.Core;
 using Cine.Media.Events;
 using Cine.Media.Interfaces;
 using Cine.Media.Models;
@@ -17,7 +20,9 @@ public class AudioManagerTests
     {
         _player = Substitute.For<IMediaPlayer>();
         _player.VolumeMax.Returns(150.0);
-        _sut = new AudioManager(_player);
+        var audioStore = new AudioSettingsStore();
+        var eventBus = Substitute.For<IEventBus>();
+        _sut = new AudioManager(_player, audioStore, eventBus);
     }
 
     // ── Constructor ──────────────────────────────────────────────
@@ -207,8 +212,8 @@ public class AudioManagerTests
             new TrackListChangedEventArgs(sources, Array.Empty<SubtitleSource>(), Array.Empty<SubtitleSource>()));
 
         _sut.AudioTracks.Count.ShouldBeGreaterThan(2);
-        _sut.AudioTracks.Any(t => t.DisplayName.Contains("eng")).ShouldBeTrue();
-        _sut.AudioTracks.Any(t => t.DisplayName.Contains("jpn")).ShouldBeTrue();
+        _sut.AudioTracks.Any(t => t.DisplayName.Contains("English")).ShouldBeTrue();
+        _sut.AudioTracks.Any(t => t.DisplayName.Contains("Japanese")).ShouldBeTrue();
     }
 
     // ── Reset ────────────────────────────────────────────────────

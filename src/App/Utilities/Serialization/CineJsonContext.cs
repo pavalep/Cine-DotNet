@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using Cine.Avalonia.Models;
 using Cine.Avalonia.Storage;
 
 namespace Cine.Avalonia.Serialization;
@@ -13,6 +14,7 @@ namespace Cine.Avalonia.Serialization;
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
     GenerationMode = JsonSourceGenerationMode.Metadata)]
 [JsonSerializable(typeof(List<string>))]
+[JsonSerializable(typeof(List<RecentFileEntry>))]
 [JsonSerializable(typeof(Dictionary<string, string>))]
 [JsonSerializable(typeof(PipState))]
 [JsonSerializable(typeof(PlaylistData))]

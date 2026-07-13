@@ -8,7 +8,6 @@
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:svg="clr-namespace:Avalonia.Svg.Skia;assembly=Svg.Controls.Skia.Avalonia"
              xmlns:shapes="clr-namespace:Avalonia.Controls.Shapes;assembly=Avalonia.Controls"
-             xmlns:labs="clr-namespace:Avalonia.Labs.Panels;assembly=Avalonia.Labs.Panels"
              x:Class="Cine.Avalonia.Views.Components.StartPage"
              x:Name="root"
              x:DataType="pages:StartPageViewModel">
@@ -49,7 +48,9 @@
         <sys:Double x:Key="ThumbWidth">156</sys:Double>
         <sys:Double x:Key="ThumbHeight">97.5</sys:Double>
         <utils:NegateBoolConverter x:Key="NegateConverter" />
-        <Thickness x:Key="StartCardPadding">0</Thickness>
+        <utils:FilePathToBitmapConverter x:Key="FilePathToBitmapConverter" />
+        <utils:StringNotEmptyConverter x:Key="StringNotEmptyConverter" />
+        <Thickness x:Key="StartCardPadding">10,8,10,10</Thickness>
         <sys:Double x:Key="StartPlayIconSize">20</sys:Double>
 
         <!-- Thumb gradient brush -->
@@ -495,9 +496,9 @@
                     <ScrollViewer Grid.Row="2"
                                   HorizontalScrollBarVisibility="Hidden"
                                   VerticalScrollBarVisibility="Disabled"
-                                  Padding="0,8,0,4">
-                        <ItemsRepeater x:Name="RecentTracks"
-                                       ItemsSource="{Binding RecentFileItems}">
+                                  ClipToBounds="False"
+                                  Padding="0,6,0,4">
+                        <ItemsRepeater ItemsSource="{Binding RecentFileItems}" ClipToBounds="False">
                             <ItemsRepeater.Layout>
                                 <StackLayout Orientation="Horizontal" Spacing="10" />
                             </ItemsRepeater.Layout>
@@ -512,18 +513,28 @@
                                             BorderThickness="0.5"
                                             Cursor="Hand"
                                             Command="{Binding #root.DataContext.OpenRecentFileCommand}"
-                                            CommandParameter="{Binding FilePath}">
-                                        <labs:FlexPanel Direction="Column" ColumnSpacing="6">
+                                            CommandParameter="{Binding .}">
+                                        <StackPanel Spacing="5">
                                             <!-- Thumb area -->
                                             <Border Width="{Binding ThumbWidth, ElementName=root}"
                                                     Height="{Binding ThumbHeight, ElementName=root}"
                                                     CornerRadius="{StaticResource radius-md}"
-                                                    Background="{StaticResource ThumbGradient}"
                                                     ClipToBounds="True">
                                                 <Grid>
+                                                    <!-- Thumbnail image when available -->
+                                                    <Image Source="{Binding ThumbnailPath, Converter={StaticResource FilePathToBitmapConverter}}"
+                                                           Stretch="UniformToFill"
+                                                           IsVisible="{Binding HasThumbnail}" />
+                                                    <!-- Fallback gradient when no thumbnail -->
+                                                    <Border Background="{StaticResource ThumbGradient}"
+                                                            IsHitTestVisible="False"
+                                                            IsVisible="{Binding HasThumbnail, Converter={StaticResource NegateConverter}}" />
+                                                    <!-- Dim overlay -->
                                                     <Border Background="#0A000000" IsHitTestVisible="False" />
+                                                    <!-- Fallback play/audio icon (shown only when no thumbnail) -->
                                                     <Panel HorizontalAlignment="Center"
-                                                           VerticalAlignment="Center">
+                                                           VerticalAlignment="Center"
+                                                           IsVisible="{Binding HasThumbnail, Converter={StaticResource NegateConverter}}">
                                                         <shapes:Path Data="M8 5v14l11-7z"
                                                                      Width="20" Height="20"
                                                                      Stretch="Uniform"
@@ -547,6 +558,42 @@
                                                             </shapes:Path.Effect>
                                                         </shapes:Path>
                                                     </Panel>
+                                                    <!-- Timestamp badge -->
+                                                    <Border CornerRadius="3"
+                                                            Padding="4,2"
+                                                            Background="#AA0A0A0C"
+                                                            HorizontalAlignment="Left"
+                                                            VerticalAlignment="Bottom"
+                                                            Margin="4"
+                                                            IsVisible="{Binding LastOpenedFormatted, Converter={StaticResource StringNotEmptyConverter}}">
+                                                        <TextBlock Text="{Binding LastOpenedFormatted}"
+                                                                   FontSize="9"
+                                                                   FontWeight="Medium"
+                                                                   Foreground="#CCFFFFFF" />
+                                                    </Border>
+                                                    <!-- Continue overlay button -->
+                                                    <Button Command="{Binding #root.DataContext.ResumeRecentFileCommand}"
+                                                            CommandParameter="{Binding .}"
+                                                            IsVisible="{Binding HasResumePosition}"
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center"
+                                                            Background="#CC141416"
+                                                            BorderThickness="0"
+                                                            CornerRadius="6"
+                                                            Padding="8,4"
+                                                            Cursor="Hand"
+                                                            Opacity="0.9">
+                                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                                            <shapes:Path Data="M8 5v14l11-7z"
+                                                                         Width="10" Height="10"
+                                                                         Stretch="Uniform"
+                                                                         Fill="White" />
+                                                            <TextBlock Text="Continue"
+                                                                       FontSize="10"
+                                                                       FontWeight="SemiBold"
+                                                                       Foreground="White" />
+                                                        </StackPanel>
+                                                    </Button>
                                                 </Grid>
                                             </Border>
                                             <!-- Title -->
@@ -596,8 +643,17 @@
                                                                FontWeight="Medium"
                                                                Foreground="{StaticResource AppTextOnDarkHint}" />
                                                 </Border>
+                                                <Border CornerRadius="3"
+                                                        Background="#14101012"
+                                                        Padding="4,1"
+                                                        IsVisible="{Binding PlaybackTimeText, Converter={StaticResource StringNotEmptyConverter}}">
+                                                    <TextBlock Text="{Binding PlaybackTimeText}"
+                                                               FontSize="9"
+                                                               FontWeight="Medium"
+                                                               Foreground="{StaticResource AppTextOnDarkHint}" />
+                                                </Border>
                                             </StackPanel>
-                                        </labs:FlexPanel>
+                                        </StackPanel>
                                     </Button>
                                 </DataTemplate>
                             </ItemsRepeater.ItemTemplate>
