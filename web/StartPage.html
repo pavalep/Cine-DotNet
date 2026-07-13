@@ -419,6 +419,9 @@ body {
     padding-bottom: var(--space-lg);
     opacity: 0;
     animation: fadeSlideIn 500ms var(--ease-out) 450ms forwards;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
 }
 
 .recent-header {
@@ -426,6 +429,7 @@ body {
     align-items: center;
     justify-content: space-between;
     margin-bottom: var(--space-md);
+    flex-shrink: 0;
 }
 
 .recent-label {
@@ -454,6 +458,7 @@ body {
     padding-bottom: var(--space-sm);
     scrollbar-width: none;
     -ms-overflow-style: none;
+    flex-shrink: 0;
 }
 
 .recent-track::-webkit-scrollbar {

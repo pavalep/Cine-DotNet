@@ -18,6 +18,7 @@ using Cine.Avalonia.Extensions;
 using Cine.Avalonia.Views.Resources;
 using Cine.Avalonia.Models;
 using Cine.Avalonia.Services;
+using Cine.Avalonia.Services.UI;
 using Cine.Avalonia.ViewModels;
 using Cine.Core;
 using Cine.Media.Events;
@@ -75,31 +76,42 @@ public partial class MainWindow
     {
         base.OnSizeChanged(e);
 
+        this.Title = $"Cine — {e.NewSize.Width:F0}x{e.NewSize.Height:F0}";
+
         bool isMaximized = WindowState == WindowState.Maximized
                         || WindowState == WindowState.FullScreen;
 
-        // Keep rounded-rect clip in sync with ContentClip size so the
-        // native video surface doesn't overflow the rounded corners.
-        if (ContentClip != null && !isMaximized)
-        {
-            ContentClip.Clip = CreateRoundedRectClip(
-                ContentClip.Bounds.Width, ContentClip.Bounds.Height,
-                ContentClip.CornerRadius);
-        }
+        // 1. Update responsive layout FIRST — fast, just setting double values.
+        StartPage?.UpdateResponsiveLayout(e.NewSize.Width, e.NewSize.Height);
 
-        // Also keep PlayerPage clip in sync.
-        // MpvVideoView handles its own internal clip via ArrangeOverride.
-        if (PlayerPage != null && !isMaximized)
+        // 2. Defer expensive P/Invoke (corner radius, DWM, clip) to next UI cycle
+        //    so the layout changes render immediately without lag.
+        Dispatcher.UIThread.Post(() =>
         {
-            PlayerPage.Clip = CreateRoundedRectClip(
-                PlayerPage.Bounds.Width, PlayerPage.Bounds.Height,
-                new CornerRadius(8));
-        }
+            if (!isMaximized)
+            {
+                UpdateCornerRadius();
+                UpdateDwmCornerPreference();
+
+                if (ContentClip != null)
+                {
+                    ContentClip.Clip = CreateRoundedRectClip(
+                        ContentClip.Bounds.Width, ContentClip.Bounds.Height,
+                        ContentClip.CornerRadius);
+                }
+
+                if (PlayerPage != null)
+                {
+                    PlayerPage.Clip = CreateRoundedRectClip(
+                        PlayerPage.Bounds.Width, PlayerPage.Bounds.Height,
+                        new CornerRadius(8));
+                }
+            }
+        }, DispatcherPriority.Background);
+
+        // CornerRadius drives the internal _videoImage clip in ArrangeOverride.
         if (PlayerPage?.MpvVideoView != null)
-        {
-            // CornerRadius drives the internal _videoImage clip in ArrangeOverride.
             PlayerPage.MpvVideoView.CornerRadius = isMaximized ? new CornerRadius(0) : new CornerRadius(8);
-        }
     }
 
     // =========================================================================

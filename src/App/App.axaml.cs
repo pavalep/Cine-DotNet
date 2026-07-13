@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -106,6 +107,7 @@ public class App : global::Avalonia.Application
     {
         CrashReporter.LogError(msg);
         Cine.Core.Log.ForContext<App>().Debug("{Message}", msg);
+        try { File.AppendAllText(Path.Combine(Path.GetTempPath(), "cine-startup.log"), $"{DateTime.Now:HH:mm:ss.fff} {msg}{Environment.NewLine}"); } catch { }
     }
 
     /// <summary>Provides access to the root DI container.</summary>
@@ -119,16 +121,20 @@ public class App : global::Avalonia.Application
 
     public static void Main(string[] args)
     {
+        try { File.WriteAllText(Path.Combine(Path.GetTempPath(), "cine-startup.log"), $"=== CINE STARTUP LOG ==={Environment.NewLine}"); } catch { }
+
         // ── Six-Layer Exception Defense ──
         // Layer 4: Thread-pool / non-task exceptions (informational — can't prevent termination)
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
         {
+            Log($"AppDomain.UnhandledException: {(Exception)e.ExceptionObject}");
             CrashReporter.Dump((Exception)e.ExceptionObject, "AppDomain.UnhandledException");
         };
 
         // Layer 3: Forgotten task exceptions (fire on finalizer — delayed)
         TaskScheduler.UnobservedTaskException += (_, e) =>
         {
+            Log($"UnobservedTaskException: {e.Exception}");
             CrashReporter.Log(e.Exception, isWarning: true);
             e.SetObserved(); // prevent process teardown
         };
@@ -172,6 +178,7 @@ public class App : global::Avalonia.Application
         }
         catch (Exception ex)
         {
+            Log($"FATAL MAIN: {ex}");
             CrashReporter.Dump(ex, "FATAL: Main entry point");
             Log($"FATAL: {ex.Message}");
         }
@@ -186,7 +193,7 @@ public class App : global::Avalonia.Application
         builder = builder.With(new Win32PlatformOptions
         {
             RenderingMode = new[] { Win32RenderingMode.AngleEgl, Win32RenderingMode.Software },
-            CompositionMode = new[] { Win32CompositionMode.RedirectionSurface }
+            CompositionMode = new[] { Win32CompositionMode.LowLatencyDxgiSwapChain }
         });
 #endif
 
@@ -297,6 +304,7 @@ public class App : global::Avalonia.Application
         try
         {
             var mainWindow = _serviceProvider!.GetRequiredService<MainWindow>();
+            Log($"MainWindow resolved from DI. Type={mainWindow.GetType().FullName}");
             DebugReport("A", "App.OnFrameworkInitializationCompleted", "MainWindow resolved from DI.", new
             {
                 type = mainWindow.GetType().FullName,

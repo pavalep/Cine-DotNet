@@ -15,9 +15,10 @@
         Title="Cine"
         Width="800" Height="600"
         MinWidth="600"
-        MinHeight="337"
+        MinHeight="420"
         Background="{StaticResource AppBackground}"
         TransparencyLevelHint="None"
+        UseLayoutRounding="False"
         WindowStartupLocation="CenterScreen"
         WindowDecorations="None"
         DragDrop.AllowDrop="True">

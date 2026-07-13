@@ -49,6 +49,14 @@ public class MpvVideoView : Decorator
     public static readonly StyledProperty<CornerRadius> CornerRadiusProperty =
         AvaloniaProperty.Register<MpvVideoView, CornerRadius>(nameof(CornerRadius), new CornerRadius(8));
 
+    static MpvVideoView()
+    {
+        CornerRadiusProperty.Changed.AddClassHandler<MpvVideoView>((view, e) =>
+        {
+            view.InvalidateArrange();
+        });
+    }
+
     public CornerRadius CornerRadius
     {
         get => GetValue(CornerRadiusProperty);

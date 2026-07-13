@@ -5,6 +5,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
+using Cine.Avalonia.Services.UI;
 using Cine.Avalonia.Views.Components;
 using Cine.Avalonia.Controls;
 using Cine.Avalonia.Services;
@@ -49,6 +50,13 @@ public partial class MainWindow : global::Avalonia.Controls.Window
         // DWM rounded corners require the native HWND, which is only
         // available after the window is opened.
         Opened += OnWindowOpened;
+
+        // Listen for layout size changes on the clipping containers themselves
+        // to ensure the clip geometry is recalculated with the correct updated bounds.
+        if (ContentClip != null)
+            ContentClip.SizeChanged += (s, e) => UpdateCornerRadius();
+        if (PlayerPage != null)
+            PlayerPage.SizeChanged += (s, e) => UpdateCornerRadius();
 
         // Set initial state
         UpdateCornerRadius();
