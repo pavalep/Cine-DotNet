@@ -1,0 +1,104 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:containers="using:Cine.Avalonia.Views.Components.Containers"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Cine.Avalonia.Views.Components.Panels.PrimaryMenuPanel">
+    <containers:PanelContainer CornerRadius="12" Padding="8"
+                               Width="260"
+                               Background="{StaticResource PopoverBackground}">
+        <StackPanel Spacing="2">
+            <!-- VIEW Section Header -->
+            <TextBlock Text="VIEW" Classes="md3-caption"
+                       Foreground="{StaticResource TextSecondary}"
+                       Margin="12,8,12,4" />
+            <!-- Picture in Picture -->
+            <Button x:Name="BtnPip" Classes="flyout-item"
+                    Click="OnPipClick">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <materialIcons:MaterialIcon Kind="PictureInPictureBottomRight" Width="18" Height="18"
+                        Foreground="{StaticResource TextSecondary}" />
+                    <TextBlock Text="Picture in Picture" Foreground="{StaticResource OsdForeground}" />
+                </StackPanel>
+            </Button>
+            <!-- Always on Top -->
+            <Button x:Name="BtnAlwaysOnTop" Classes="menu-item-button"
+                    Click="OnAlwaysOnTopClick">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <materialIcons:MaterialIcon Kind="PinOutline" Width="18" Height="18"
+                        Foreground="{StaticResource TextSecondary}" />
+                    <TextBlock Text="Always on Top" Foreground="{StaticResource OsdForeground}" />
+                </StackPanel>
+            </Button>
+
+            <!-- Separator -->
+            <Rectangle Height="1" Fill="{StaticResource AppDivider}" Margin="8,4" />
+
+            <!-- LOOP Section Header -->
+            <TextBlock Text="LOOP" Classes="md3-caption"
+                       Foreground="{StaticResource TextSecondary}"
+                       Margin="12,8,12,4" />
+            <!-- Loop File -->
+            <Button x:Name="BtnLoopFile" Classes="menu-item-button"
+                    Click="OnLoopFileClick">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <materialIcons:MaterialIcon x:Name="LoopFileIcon" Kind="RepeatOnce" Width="18" Height="18"
+                        Foreground="{StaticResource TextSecondary}" />
+                    <TextBlock Text="Loop File" Foreground="{StaticResource OsdForeground}" />
+                </StackPanel>
+            </Button>
+            <!-- Loop Playlist -->
+            <Button x:Name="BtnLoopPlaylist" Classes="menu-item-button"
+                    Click="OnLoopPlaylistClick">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <materialIcons:MaterialIcon x:Name="LoopPlaylistIcon" Kind="Repeat" Width="18" Height="18"
+                        Foreground="{StaticResource TextSecondary}" />
+                    <TextBlock Text="Loop Playlist" Foreground="{StaticResource OsdForeground}" />
+                </StackPanel>
+            </Button>
+            <!-- Shuffle -->
+            <Button x:Name="BtnShuffle" Classes="menu-item-button"
+                    Click="OnShuffleClick">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <materialIcons:MaterialIcon x:Name="ShuffleIcon" Kind="ShuffleVariant" Width="18" Height="18"
+                        Foreground="{StaticResource TextSecondary}" />
+                    <TextBlock Text="Shuffle" Foreground="{StaticResource OsdForeground}" />
+                </StackPanel>
+            </Button>
+
+            <!-- Separator -->
+            <Rectangle Height="1" Fill="{StaticResource AppDivider}" Margin="8,4" />
+
+            <!-- TOOLS Section Header -->
+            <TextBlock Text="TOOLS" Classes="md3-caption"
+                       Foreground="{StaticResource TextSecondary}"
+                       Margin="12,8,12,4" />
+            <!-- Keyboard Shortcuts -->
+            <Button x:Name="BtnShortcuts" Classes="menu-item-button"
+                    Click="OnShortcutsClick">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <materialIcons:MaterialIcon Kind="Keyboard" Width="18" Height="18"
+                        Foreground="{StaticResource TextSecondary}" />
+                    <TextBlock Text="Keyboard Shortcuts" Foreground="{StaticResource OsdForeground}" />
+                </StackPanel>
+            </Button>
+            <!-- Preferences -->
+            <Button x:Name="BtnPreferences" Classes="menu-item-button"
+                    Click="OnPreferencesClick">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <materialIcons:MaterialIcon Kind="Cog" Width="18" Height="18"
+                        Foreground="{StaticResource TextSecondary}" />
+                    <TextBlock Text="Preferences" Foreground="{StaticResource OsdForeground}" />
+                </StackPanel>
+            </Button>
+            <!-- About -->
+            <Button x:Name="BtnAbout" Classes="menu-item-button"
+                    Click="OnAboutClick">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <materialIcons:MaterialIcon Kind="Information" Width="18" Height="18"
+                        Foreground="{StaticResource TextSecondary}" />
+                    <TextBlock Text="About Cine" Foreground="{StaticResource OsdForeground}" />
+                </StackPanel>
+            </Button>
+        </StackPanel>
+    </containers:PanelContainer>
+</UserControl>

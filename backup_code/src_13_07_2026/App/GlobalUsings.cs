@@ -1,0 +1,14 @@
+global using AvaloniaColor = Avalonia.Media.Color;
+global using AvaloniaBrushes = Avalonia.Media.Brushes;
+global using AvaloniaPoint = Avalonia.Point;
+global using AvaloniaSize = Avalonia.Size;
+global using AvaloniaCursor = Avalonia.Input.Cursor;
+global using AvaloniaToolTip = Avalonia.Controls.ToolTip;
+global using AvaloniaApp = Avalonia.Application;
+global using AvaloniaDragDropEffects = Avalonia.Input.DragDropEffects;
+global using AvaloniaTextWrapping = Avalonia.Media.TextWrapping;
+global using AvaloniaButton = Avalonia.Controls.Button;
+global using AvaloniaRect = Avalonia.Rect;
+global using AvaloniaUserControl = Avalonia.Controls.UserControl;
+global using AvaloniaToggleButton = Avalonia.Controls.Primitives.ToggleButton;
+global using UserControl = Avalonia.Controls.UserControl;

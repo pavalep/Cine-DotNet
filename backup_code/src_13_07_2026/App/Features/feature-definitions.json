@@ -1,0 +1,150 @@
+{
+  "$schema": "https://cine.app/schemas/feature-definitions.json",
+  "version": 1,
+  "features": [
+    {
+      "key": "playback.4k",
+      "displayName": "4K Playback",
+      "description": "Play back video at 4K resolution",
+      "toggleType": "LicenseTierGate",
+      "defaultEnabled": true,
+      "requiredTier": "Full",
+      "dependsOn": []
+    },
+    {
+      "key": "playback.8k",
+      "displayName": "8K Playback",
+      "description": "Play back video at 8K resolution",
+      "toggleType": "LicenseTierGate",
+      "defaultEnabled": false,
+      "requiredTier": "Pro",
+      "dependsOn": []
+    },
+    {
+      "key": "playback.hdr",
+      "displayName": "HDR Playback",
+      "description": "High Dynamic Range video output",
+      "toggleType": "LicenseTierGate",
+      "defaultEnabled": true,
+      "requiredTier": "Full",
+      "dependsOn": []
+    },
+    {
+      "key": "codecs.hdr10",
+      "displayName": "HDR10 Codec",
+      "description": "HDR10 codec support",
+      "toggleType": "LicenseTierGate",
+      "defaultEnabled": true,
+      "requiredTier": "Pro",
+      "dependsOn": [ "playback.hdr" ]
+    },
+    {
+      "key": "codecs.dolbyVision",
+      "displayName": "Dolby Vision Codec",
+      "description": "Dolby Vision codec support",
+      "toggleType": "LicenseTierGate",
+      "defaultEnabled": false,
+      "requiredTier": "Pro",
+      "dependsOn": [ "playback.hdr" ]
+    },
+    {
+      "key": "codecs.dts",
+      "displayName": "DTS Audio Codec",
+      "description": "DTS and DTS-HD audio codec support",
+      "toggleType": "LicenseTierGate",
+      "defaultEnabled": true,
+      "requiredTier": "Full",
+      "dependsOn": []
+    },
+    {
+      "key": "codecs.truehd",
+      "displayName": "Dolby TrueHD Codec",
+      "description": "Dolby TrueHD audio codec support",
+      "toggleType": "LicenseTierGate",
+      "defaultEnabled": false,
+      "requiredTier": "Pro",
+      "dependsOn": []
+    },
+    {
+      "key": "audio.equalizer",
+      "displayName": "Audio Equalizer",
+      "description": "Built-in 10-band graphic equalizer",
+      "toggleType": "LicenseTierGate",
+      "defaultEnabled": true,
+      "requiredTier": "Full",
+      "dependsOn": []
+    },
+    {
+      "key": "audio.deviceExclusive",
+      "displayName": "Exclusive Audio Device",
+      "description": "Exclusive mode WASAPI audio output",
+      "toggleType": "LicenseTierGate",
+      "defaultEnabled": false,
+      "requiredTier": "Pro",
+      "dependsOn": []
+    },
+    {
+      "key": "video.shaders",
+      "displayName": "Custom Shaders",
+      "description": "Apply custom mpv shaders to video output",
+      "toggleType": "LicenseTierGate",
+      "defaultEnabled": true,
+      "requiredTier": "Pro",
+      "dependsOn": []
+    },
+    {
+      "key": "video.filters.advanced",
+      "displayName": "Advanced Video Filters",
+      "description": "Advanced filter pipeline (deband, denoise, sharpen)",
+      "toggleType": "LicenseTierGate",
+      "defaultEnabled": true,
+      "requiredTier": "Full",
+      "dependsOn": []
+    },
+    {
+      "key": "subtitles.advancedStyling",
+      "displayName": "Advanced Subtitle Styling",
+      "description": "Full subtitle customization (fonts, shadows, blur)",
+      "toggleType": "LicenseTierGate",
+      "defaultEnabled": true,
+      "requiredTier": "Full",
+      "dependsOn": []
+    },
+    {
+      "key": "playlist.saveLoad",
+      "displayName": "Playlist Save/Load",
+      "description": "Save and load playlists from disk",
+      "toggleType": "LicenseTierGate",
+      "defaultEnabled": true,
+      "requiredTier": "Full",
+      "dependsOn": []
+    },
+    {
+      "key": "ui.pipMode",
+      "displayName": "Picture-in-Picture Mode",
+      "description": "Detach video into a floating PiP window",
+      "toggleType": "LicenseTierGate",
+      "defaultEnabled": true,
+      "requiredTier": "Full",
+      "dependsOn": []
+    },
+    {
+      "key": "ui.crashReporting",
+      "displayName": "Crash Reporting",
+      "description": "Automatic crash telemetry and log upload",
+      "toggleType": "Boolean",
+      "defaultEnabled": true,
+      "requiredTier": "Free",
+      "dependsOn": []
+    },
+    {
+      "key": "ui.trialWatermark",
+      "displayName": "Trial Watermark",
+      "description": "Shows 'Trial' watermark during evaluation",
+      "toggleType": "Boolean",
+      "defaultEnabled": true,
+      "requiredTier": "Free",
+      "dependsOn": []
+    }
+  ]
+}

@@ -1,0 +1,155 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cine.Avalonia.ViewModels"
+             xmlns:components="using:Cine.Avalonia.Views.Components"
+             xmlns:panels="clr-namespace:Cine.Avalonia.Views.Components.Panels"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Cine.Avalonia.Views.Components.HeaderBar"
+             x:DataType="vm:MainViewModel"
+             x:Name="HeaderBarRoot">
+    <Border x:Name="HeaderBarBorder" Classes="header-bar"
+            Background="{StaticResource GlassBackground}"
+            BorderBrush="{StaticResource AppBorderDim}"
+            BorderThickness="0,0,0,1"
+            VerticalAlignment="Top"
+            HorizontalAlignment="Stretch"
+            Height="{StaticResource size-header-bar}"
+            IsHitTestVisible="True"
+            ZIndex="20">
+        <Grid>
+            <!-- Glass edge highlight (top reflection) -->
+            <Rectangle Fill="{StaticResource GlassEdgeHighlight}" Height="1" VerticalAlignment="Top" />
+            
+            <!-- Glass sheen gradient -->
+            <Rectangle>
+                <Rectangle.Fill>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0.4,1">
+                        <GradientStop Offset="0" Color="{StaticResource GlassSheenStart}" />
+                        <GradientStop Offset="0.5" Color="{StaticResource GlassSheenMid}" />
+                        <GradientStop Offset="1" Color="{StaticResource GlassSheenEnd}" />
+                    </LinearGradientBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+            
+            <Grid x:Name="HeaderGrid" Margin="{StaticResource space-h-2}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Col 0: Back Button + Open Menu Button -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal"
+                        VerticalAlignment="Center">
+                <!-- Back button — shown when media is playing, navigates to StartPage -->
+                <Button x:Name="BtnBack"
+                        IsVisible="False"
+                        Classes="circular-menu"
+                        Click="OnBackClick"
+                        ToolTip.Tip="Back to Start"
+                        AutomationProperties.Name="Back to Start"
+                        Margin="{StaticResource space-h-l2-r1}">
+                    <materialIcons:MaterialIcon Kind="ArrowLeft" Width="18" Height="18"
+                        Foreground="{StaticResource OsdForeground}" />
+                </Button>
+
+                <!-- Open button (panel moved to overlay layer below) -->
+                <Button x:Name="BtnOpenMenu"
+                    IsVisible="False"
+                    Classes="open-menu-trigger"
+                    VerticalAlignment="Center"
+                    Margin="{StaticResource space-h-l2-r1}">
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource space-spacing-1}">
+                        <TextBlock Text="Open"
+                                   Foreground="{StaticResource OsdForeground}"
+                                   Classes="md3-body2"
+                                   VerticalAlignment="Center" />
+                        <materialIcons:MaterialIcon Kind="MenuDown" Width="8" Height="8"
+                            Foreground="{StaticResource OsdForeground}"
+                            VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+
+            <!-- Col 1: Window Title (centered) -->
+            <Border Grid.Column="1"
+                    CornerRadius="{StaticResource radius-xs}"
+                    Padding="{StaticResource space-3}"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+                <TextBlock x:Name="TitleText" Text="Cine"
+                           Foreground="{StaticResource OsdForeground}"
+                           Classes="md3-subtitle1"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"
+                           MaxWidth="300" />
+            </Border>
+
+            <!-- Col 2: PIP + Menu + Window Controls -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal"
+                        VerticalAlignment="Center"
+                        Spacing="0"
+                        Background="Transparent">
+                <ToggleButton x:Name="BtnPip" IsVisible="False"
+                              Classes="circular-menu"
+                              Margin="{StaticResource space-right-1}"
+                              Click="OnTogglePip"
+                              ToolTip.Tip="Picture-in-Picture"
+                              AutomationProperties.Name="Picture in Picture">
+                    <materialIcons:MaterialIcon Kind="PictureInPictureBottomRight" Width="16" Height="16"
+                        Foreground="{StaticResource OsdForeground}" />
+                </ToggleButton>
+
+                <!-- Primary Menu Button (panel moved to overlay layer below) -->
+                <Button x:Name="BtnPrimaryMenu" IsVisible="False"
+                        Classes="circular-menu"
+                        ToolTip.Tip="Main Menu"
+                        Margin="{StaticResource space-right-1}"
+                        AutomationProperties.Name="Main menu">
+                    <materialIcons:MaterialIcon Kind="DotsHorizontal" Width="16" Height="16"
+                        Foreground="{StaticResource OsdForeground}" />
+                </Button>
+
+                <!-- Fullscreen Close Button -->
+                <Button x:Name="BtnFullscreenClose"
+                        Classes="circular-menu"
+                        ToolTip.Tip="Close"
+                        AutomationProperties.Name="Close"
+                        Click="OnFullscreenCloseClick"
+                        IsVisible="False"
+                        Margin="{StaticResource space-right-1}">
+                    <materialIcons:MaterialIcon Kind="Close" Width="18" Height="18"
+                        Foreground="{StaticResource OsdForeground}" />
+                </Button>
+
+                <!-- Native Window Controls -->
+                <StackPanel Orientation="Horizontal" Spacing="0"
+                            IsVisible="True" x:Name="WindowControlsPanel"
+                            Background="Transparent"
+                            Margin="{StaticResource space-right-1}">
+                    <Button x:Name="BtnMinimize" Click="OnMinimizeClick"
+                            Classes="window-control"
+                            ToolTip.Tip="Minimize"
+                            AutomationProperties.Name="Minimize window">
+                        <materialIcons:MaterialIcon Kind="WindowMinimize" Width="12" Height="12"
+                            Foreground="{StaticResource OsdForeground}" />
+                    </Button>
+                    <Button x:Name="BtnMaximizeRestore" Click="OnMaximizeRestoreClick"
+                            Classes="window-control"
+                            ToolTip.Tip="Maximize">
+                        <materialIcons:MaterialIcon x:Name="MaximizeRestoreIconPath" Kind="WindowMaximize" Width="12" Height="12"
+                            Foreground="{StaticResource OsdForeground}" />
+                    </Button>
+                    <Button x:Name="BtnClose" Click="OnCloseClick"
+                            Classes="window-control close"
+                            ToolTip.Tip="Close">
+                        <materialIcons:MaterialIcon Kind="Close" Width="12" Height="12"
+                            Foreground="{StaticResource OsdForeground}" />
+                    </Button>
+                </StackPanel>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Border>
+</UserControl>

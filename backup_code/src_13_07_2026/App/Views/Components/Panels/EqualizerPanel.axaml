@@ -1,0 +1,119 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Cine.Avalonia.Views.Components.Panels.EqualizerPanel"
+             x:CompileBindings="False">
+    <UserControl.Styles>
+        <Style Selector="Button.eq-preset">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="Margin" Value="2" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="{StaticResource PopoverBorder}" />
+            <Setter Property="Foreground" Value="{StaticResource AppTextPrimary}" />
+            <Setter Property="CornerRadius" Value="{StaticResource radius-xs}" />
+        </Style>
+        <Style Selector="Button.eq-preset:pointerover">
+            <Setter Property="BorderBrush" Value="{StaticResource AppAccent}" />
+        </Style>
+        <Style Selector="Button.eq-preset:pressed">
+            <Setter Property="Background" Value="{StaticResource AppAccent}" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <Style Selector="Button.eq-preset.selected">
+            <Setter Property="Background" Value="{StaticResource AppAccent}" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderBrush" Value="{StaticResource AppAccent}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+    </UserControl.Styles>
+    <Border Background="{StaticResource PopoverBackground}"
+            BorderBrush="{StaticResource PopoverBorder}"
+            BorderThickness="1"
+            CornerRadius="{StaticResource radius-sm}"
+            Padding="14,12"
+            Width="{StaticResource size-dialog-equalizer-width}">
+        <StackPanel Spacing="10" KeyboardNavigation.TabNavigation="Cycle">
+            <!-- Header -->
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <TextBlock Grid.Column="0" Text="Equalizer" Classes="md3-subtitle1"
+                           Foreground="{StaticResource OsdForeground}" VerticalAlignment="Center" />
+                <Button Grid.Column="2" x:Name="ResetBtn"
+                        Classes="ghost" Padding="8,4"
+                        Click="OnResetClick"
+                        Foreground="{StaticResource AppAccent}"
+                        Content="Reset"
+                        TabIndex="0"
+                        VerticalAlignment="Center" />
+            </Grid>
+
+            <!-- Preset Buttons -->
+            <WrapPanel x:Name="PresetWrapPanel">
+                <Button Content="Flat" Classes="eq-preset" Click="OnPresetClick" Tag="Flat" TabIndex="1" />
+                <Button Content="Classic" Classes="eq-preset" Click="OnPresetClick" Tag="Classical" TabIndex="2" />
+                <Button Content="Rock" Classes="eq-preset" Click="OnPresetClick" Tag="Rock" TabIndex="3" />
+                <Button Content="Pop" Classes="eq-preset" Click="OnPresetClick" Tag="Pop" TabIndex="4" />
+                <Button Content="Jazz" Classes="eq-preset" Click="OnPresetClick" Tag="Jazz" TabIndex="5" />
+                <Button Content="Bass+" Classes="eq-preset" Click="OnPresetClick" Tag="Bass Boost" TabIndex="6" />
+                <Button Content="Vocal" Classes="eq-preset" Click="OnPresetClick" Tag="Vocal" TabIndex="7" />
+                <Button Content="Movie" Classes="eq-preset" Click="OnPresetClick" Tag="Movie" TabIndex="8" />
+                <Button Content="HD 800" Classes="eq-preset" Click="OnPresetClick" Tag="Headphones" TabIndex="9" />
+                <Button Content="Podcast" Classes="eq-preset" Click="OnPresetClick" Tag="Podcast" TabIndex="10" />
+            </WrapPanel>
+
+            <!-- EQ Sliders -->
+            <ScrollViewer Height="200" HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Disabled">
+                <WrapPanel x:Name="SlidersPanel" Height="190"
+                           HorizontalAlignment="Left" />
+            </ScrollViewer>
+
+            <Separator Background="{StaticResource PopoverBorder}" Height="1" Opacity="0.5" />
+
+            <!-- Toggles -->
+            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto">
+                <StackPanel Grid.Column="0" Spacing="4">
+                    <TextBlock Text="Normalization (DRC)" Classes="md3-caption" FontWeight="SemiBold"
+                               Foreground="{StaticResource AppTextOnDarkSecondary}" />
+                    <ToggleSwitch x:Name="NormToggle"
+                                  IsChecked="{Binding IsAudioNormalizationEnabled}"
+                                  OnContent="" OffContent="" TabIndex="11" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Spacing="4">
+                    <TextBlock Text="Dialogue Boost" Classes="md3-caption" FontWeight="SemiBold"
+                               Foreground="{StaticResource AppTextOnDarkHint}" />
+                    <ToggleSwitch x:Name="DialogueToggle"
+                                  IsChecked="{Binding IsDialogueBoostEnabled}"
+                                  OnContent="" OffContent="" TabIndex="12" />
+                </StackPanel>
+            </Grid>
+
+            <!-- Audio Delay -->
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto" RowDefinitions="Auto">
+                <TextBlock Grid.Column="0" Text="Audio Delay"
+                           Classes="md3-caption" FontWeight="SemiBold"
+                           Foreground="{StaticResource AppTextOnDarkSecondary}"
+                           VerticalAlignment="Center" Margin="0,0,8,0" />
+                <Slider Grid.Column="1" x:Name="DelaySlider"
+                        Classes="compact"
+                        Minimum="-10" Maximum="10" TickFrequency="0.5"
+                        Value="{Binding AudioDelay}"
+                        Foreground="{StaticResource AppAccent}" TabIndex="13" />
+                <TextBlock Grid.Column="2" x:Name="DelayLabel"
+                           Text="0.00s" Classes="md3-caption" MinWidth="40"
+                           Foreground="{StaticResource OsdForeground}"
+                           HorizontalAlignment="Right"
+                           VerticalAlignment="Center" Margin="8,0,0,0" />
+                <NumericUpDown Grid.Column="3" x:Name="DelayNumeric"
+                               MinWidth="56" Height="28"
+                               Minimum="-10" Maximum="10" Increment="0.1"
+                               Value="{Binding AudioDelay, Mode=TwoWay, StringFormat=F2}"
+                               FormatString="F2"
+                               Classes="md3-caption compact"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Center" Margin="4,0,0,0" TabIndex="14" />
+            </Grid>
+        </StackPanel>
+    </Border>
+</UserControl>

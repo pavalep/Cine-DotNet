@@ -1,0 +1,192 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Cine.Avalonia.ViewModels"
+        xmlns:components="using:Cine.Avalonia.Views.Components"
+        xmlns:conv="using:Cine.Avalonia.Converters"
+        xmlns:uiconsts="using:Cine.Avalonia.Views.Resources"
+
+        xmlns:controls="clr-namespace:Cine.Avalonia.Controls"
+        xmlns:local="using:Cine.Avalonia.Controls"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        xmlns:pages="using:Cine.Avalonia.Views.Pages"
+        xmlns:panels="using:Cine.Avalonia.Views.Components.Panels"
+        x:Class="Cine.Avalonia.Views.Shell.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Title="Cine"
+        Width="800" Height="600"
+        MinWidth="600"
+        MinHeight="420"
+        Background="{StaticResource AppBackground}"
+        TransparencyLevelHint="None"
+        UseLayoutRounding="False"
+        WindowStartupLocation="CenterScreen"
+        WindowDecorations="None"
+        DragDrop.AllowDrop="True">
+
+    <Window.Styles>
+        <Style Selector="Window > Grid > StackPanel > Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Width" Value="46" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Cursor" Value="Arrow" />
+        </Style>
+    </Window.Styles>
+
+    <Window.Resources>
+        <conv:TimeSpanToStringConverter x:Key="TimeSpanToString" />
+        <conv:ChapterMarginConverter x:Key="ChapterMarginConverter" />
+    </Window.Resources>
+
+    <!-- =====================================================================
+         ROOT GRID
+         Single-cell container. Children overlap — declared later = on top.
+         ===================================================================== -->
+    <Grid Background="Transparent"
+      HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <!--  CONTENT CLIP — Rounds all content corners when not maximized -->
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <Border x:Name="ContentClip" CornerRadius="8" ClipToBounds="True"
+                Background="Transparent">
+
+            <Grid x:Name="MainOverlay" Background="Transparent"
+              HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+
+                <!-- ══════════════════════════════════════════════════════════ -->
+                <!--  LAYER 0: VIDEO + BACKDROP (renders first, behind overlays) -->
+                <!-- ══════════════════════════════════════════════════════════ -->
+
+                <!-- Playback background -->
+                <Border Background="{StaticResource PlaybackRadialBackground}"
+                        IsHitTestVisible="False"
+                        x:Name="PlaybackBackground" />
+
+                <!-- Player page — video surface + all playback overlays.
+                     Rendered behind StartPage (below). Becomes visible via navigation. -->
+                <pages:PlayerPage x:Name="PlayerPage" />
+
+                <!-- Start Page — full viewport, opaque background.
+                     TOPMOST layer in this section. Always clickable. Fades out when media
+                     opens, revealing video beneath. -->
+                <components:StartPage x:Name="StartPage" PointerPressed="OnStartPagePointerPressed" />
+
+            </Grid>
+        </Border>
+
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <!--  PANEL OVERLAY HOST — regular visual elements (not Popups)   -->
+        <!--  positioned at the MainWindow root level, outside            -->
+        <!--  ContentClip to avoid clipping. Control visibility from      -->
+        <!--  ControlsBox and HeaderBar code-behind.                      -->
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <Grid x:Name="PanelOverlayHost" ZIndex="100">
+
+            <!-- ── Light dismiss layer ──
+                 Transparent border over the center area (excluding header
+                 and controls bar zones) that captures clicks outside panels
+                 and trigger buttons to close all open panels.              -->
+            <Border x:Name="PanelDismissBackground"
+                    Background="Transparent"
+                    IsHitTestVisible="False"
+                    Margin="0,60,0,100"
+                    PointerPressed="OnPanelDismissBackgroundPressed" />
+
+            <!-- ── Header panels (top area) ── -->
+            <panels:OpenMenuPanel x:Name="MainOpenMenuPanel"
+                                  HorizontalAlignment="Left"
+                                  VerticalAlignment="Top"
+                                  Margin="10,56,0,0"
+                                  IsVisible="False" />
+            <panels:PrimaryMenuPanel x:Name="MainPrimaryMenuPanel"
+                                     HorizontalAlignment="Right"
+                                     VerticalAlignment="Top"
+                                     Margin="0,56,10,0"
+                                     IsVisible="False" />
+
+            <!-- ── Controls bar panels (bottom area) ── -->
+            <panels:VolumePanel x:Name="MainVolumePanel"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Bottom"
+                                Margin="0,0,0,90"
+                                IsVisible="False" />
+            <panels:SubtitlePanel x:Name="MainSubtitlePanel"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Bottom"
+                                  Margin="0,0,0,90"
+                                  IsVisible="False" />
+            <panels:AudioTrackPanel x:Name="MainAudioTrackPanel"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Bottom"
+                                    Margin="0,0,0,90"
+                                    IsVisible="False" />
+            <panels:ChaptersPanel x:Name="MainChaptersPanel"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Bottom"
+                                  Margin="0,0,0,90"
+                                  IsVisible="False" />
+            <panels:PlaylistPanel x:Name="MainPlaylistPanel"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Bottom"
+                                  Margin="0,0,0,90"
+                                  IsVisible="False" />
+            <panels:EqualizerPanel x:Name="MainEqualizerPanel"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Bottom"
+                                   Margin="0,0,0,90"
+                                   IsVisible="False" />
+        </Grid>
+
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <!--  WINDOW FRAME — 2px focus-aware border using system accent    -->
+        <!--  color. Hidden when unfocused. No hit-test (visual only).     -->
+        <!--  CornerRadius matches ContentClip for a seamless look.        -->
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <Border x:Name="WindowFrame" IsHitTestVisible="False"
+                BorderThickness="2" CornerRadius="8"
+                BorderBrush="Transparent" />
+
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <!--  RESIZE GRIPS — Invisible hit-test zones for window resize.   -->
+        <!--  Uses WindowDecorationProperties.ElementRole for native       -->
+        <!--  cursor and behavior (Avalonia 12+). ZIndex=999 to be on top  -->
+        <!--  of everything.  Hidden in fullscreen via ResizeGripPanel.    -->
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <Panel x:Name="ResizeGripPanel">
+            <Border WindowDecorationProperties.ElementRole="ResizeN"
+                    Background="Transparent" Height="4" IsHitTestVisible="True"
+                    VerticalAlignment="Top" HorizontalAlignment="Stretch"
+                    ZIndex="999" />
+            <Border WindowDecorationProperties.ElementRole="ResizeS"
+                    Background="Transparent" Height="4" IsHitTestVisible="True"
+                    VerticalAlignment="Bottom" HorizontalAlignment="Stretch"
+                    ZIndex="999" />
+            <Border WindowDecorationProperties.ElementRole="ResizeW"
+                    Background="Transparent" Width="4" IsHitTestVisible="True"
+                    VerticalAlignment="Stretch" HorizontalAlignment="Left"
+                    ZIndex="999" />
+            <Border WindowDecorationProperties.ElementRole="ResizeE"
+                    Background="Transparent" Width="4" IsHitTestVisible="True"
+                    VerticalAlignment="Stretch" HorizontalAlignment="Right"
+                    ZIndex="999" />
+            <Border WindowDecorationProperties.ElementRole="ResizeNW"
+                    Background="Transparent" Width="8" Height="8" IsHitTestVisible="True"
+                    VerticalAlignment="Top" HorizontalAlignment="Left"
+                    ZIndex="999" />
+            <Border WindowDecorationProperties.ElementRole="ResizeNE"
+                    Background="Transparent" Width="8" Height="8" IsHitTestVisible="True"
+                    VerticalAlignment="Top" HorizontalAlignment="Right"
+                    ZIndex="999" />
+            <Border WindowDecorationProperties.ElementRole="ResizeSW"
+                    Background="Transparent" Width="8" Height="8" IsHitTestVisible="True"
+                    VerticalAlignment="Bottom" HorizontalAlignment="Left"
+                    ZIndex="999" />
+            <Border WindowDecorationProperties.ElementRole="ResizeSE"
+                    Background="Transparent" Width="8" Height="8" IsHitTestVisible="True"
+                    VerticalAlignment="Bottom" HorizontalAlignment="Right"
+                    ZIndex="999" />
+        </Panel>
+    </Grid>
+</Window>
