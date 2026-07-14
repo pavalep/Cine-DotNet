@@ -1,6 +1,6 @@
 using System;
 
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 /// <summary>
 /// Parses human-readable time strings into <see cref="TimeSpan"/>.

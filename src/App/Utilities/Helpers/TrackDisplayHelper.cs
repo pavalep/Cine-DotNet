@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
-using Cine.Avalonia.Models;
-using Cine.Media.Models;
+using Simba.Avalonia.Models;
+using Simba.Media.Models;
 
-namespace Cine.Avalonia.Helpers;
+namespace Simba.Avalonia.Helpers;
 
 /// <summary>
 /// Shared helper for generating user-friendly track display names.

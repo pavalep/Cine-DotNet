@@ -3,11 +3,11 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using Cine.Avalonia.Models;
-using Cine.Avalonia.Serialization;
-using Cine.Core;
+using Simba.Avalonia.Models;
+using Simba.Avalonia.Serialization;
+using Simba.Core;
 
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 public sealed class RecentFilesService : IRecentFilesService
 {
@@ -31,7 +31,7 @@ public sealed class RecentFilesService : IRecentFilesService
         {
             var dir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Cine");
+                "Simba");
             Directory.CreateDirectory(dir);
             _storePath = Path.Combine(dir, "recent.json");
         }
@@ -106,7 +106,7 @@ public sealed class RecentFilesService : IRecentFilesService
                 return;
 
             var json = File.ReadAllText(_storePath);
-            var list = JsonSerializer.Deserialize(json, CineJsonContext.Default.ListRecentFileEntry);
+            var list = JsonSerializer.Deserialize(json, SimbaJsonContext.Default.ListRecentFileEntry);
             if (list == null) return;
 
             _recentFiles.Clear();
@@ -131,7 +131,7 @@ public sealed class RecentFilesService : IRecentFilesService
     {
         try
         {
-            var json = JsonSerializer.Serialize(_recentFiles.ToList(), CineJsonContext.Default.ListRecentFileEntry);
+            var json = JsonSerializer.Serialize(_recentFiles.ToList(), SimbaJsonContext.Default.ListRecentFileEntry);
             File.WriteAllText(_storePath, json);
         }
         catch (Exception ex)

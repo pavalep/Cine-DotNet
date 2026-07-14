@@ -1,11 +1,11 @@
 using System;
 using System.ComponentModel;
 using System.Windows.Input;
-using Cine.Media.Interfaces;
-using Cine.Media.Models;
-using Cine.Avalonia.Utilities;
+using Simba.Media.Interfaces;
+using Simba.Media.Models;
+using Simba.Avalonia.Utilities;
 
-namespace Cine.Avalonia.Models
+namespace Simba.Avalonia.Models
 {
     /// <summary>
     /// Represents a single track item in a track selection menu (subtitle, audio, or video).

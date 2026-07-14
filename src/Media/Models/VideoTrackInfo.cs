@@ -1,4 +1,4 @@
-namespace Cine.Media.Models;
+namespace Simba.Media.Models;
 
 /// <summary>
 /// Represents a video track from the media file.

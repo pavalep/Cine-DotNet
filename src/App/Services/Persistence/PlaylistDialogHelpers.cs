@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Cine.Avalonia.ViewModels;
+using Simba.Avalonia.ViewModels;
 
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 /// <summary>
 /// Helpers for PlaylistDialog logic — search filtering and M3U export.

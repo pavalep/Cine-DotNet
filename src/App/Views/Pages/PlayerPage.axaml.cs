@@ -1,7 +1,7 @@
 using Avalonia.Controls;
-using Cine.Avalonia.Core.Navigation;
+using Simba.Avalonia.Core.Navigation;
 
-namespace Cine.Avalonia.Views.Pages;
+namespace Simba.Avalonia.Views.Pages;
 
 /// <summary>
 /// Wraps the video surface and all playback-related overlays as a single

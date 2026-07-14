@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Cine.Core;
-using Cine.Media.Codecs;
-using Cine.Media.Interfaces;
+using Simba.Core;
+using Simba.Media.Codecs;
+using Simba.Media.Interfaces;
 
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 /// <summary>
 /// Orchestrates codec provider selection and session creation.

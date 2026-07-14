@@ -1,7 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 
-namespace Cine.Avalonia.Views.Components.Containers;
+namespace Simba.Avalonia.Views.Components.Containers;
 
 /// <summary>
 /// Reusable container that wraps content in a styled Border.

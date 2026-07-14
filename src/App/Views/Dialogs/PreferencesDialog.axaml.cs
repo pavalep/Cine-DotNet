@@ -3,10 +3,10 @@ using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Cine.Avalonia.Storage;
+using Simba.Avalonia.Storage;
 using KeyEventArgs = Avalonia.Input.KeyEventArgs;
 
-namespace Cine.Avalonia.Views.Dialogs;
+namespace Simba.Avalonia.Views.Dialogs;
 
 public partial class PreferencesDialog : Window
 {

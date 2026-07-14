@@ -4,7 +4,7 @@
         mc:Ignorable="d" xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         d:DesignWidth="260" d:DesignHeight="380"
-        x:Class="Cine.Avalonia.Views.Dialogs.SubtitleSettingsDialog"
+        x:Class="Simba.Avalonia.Views.Dialogs.SubtitleSettingsDialog"
         Title="Subtitle Settings"
         Width="260" Height="380"
         MinWidth="220" MinHeight="280"

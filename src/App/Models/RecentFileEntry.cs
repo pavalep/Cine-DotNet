@@ -1,4 +1,4 @@
-namespace Cine.Avalonia.Models;
+namespace Simba.Avalonia.Models;
 
 /// <summary>
 /// Persistent data for a single recent-file entry.

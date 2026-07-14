@@ -3,10 +3,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.ExceptionServices;
 
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 /// <summary>
-/// Robust crash reporting — writes crash dumps to %LOCALAPPDATA%\Cine\crash\.
+/// Robust crash reporting — writes crash dumps to %LOCALAPPDATA%\Simba\crash\.
 /// P10.6: Replaces silent catch with durable file logging + context capture.
 /// </summary>
 public static class CrashReporter
@@ -17,7 +17,7 @@ public static class CrashReporter
     {
         CrashDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Cine", "crash");
+            "Simba", "crash");
         try { Directory.CreateDirectory(CrashDir); }
         catch { /* best-effort — crash dir creation can fail in low-disk scenarios */ }
     }
@@ -45,7 +45,7 @@ public static class CrashReporter
             var path = Path.Combine(CrashDir, fileName);
 
             using var sw = new StreamWriter(path, append: false);
-            sw.WriteLine("=== Cine Crash Report ===");
+            sw.WriteLine("=== Simba Crash Report ===");
             sw.WriteLine($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}");
             sw.WriteLine($"Process: {Process.GetCurrentProcess().ProcessName}");
             sw.WriteLine($"PID: {Environment.ProcessId}");
@@ -97,7 +97,7 @@ public static class CrashReporter
     }
 
     /// <summary>
-    /// Non-fatal error/warning log. Writes to cine_errors.log.
+    /// Non-fatal error/warning log. Writes to simba_errors.log.
     /// </summary>
     public static void Log(Exception ex, bool isWarning = false)
     {
@@ -105,7 +105,7 @@ public static class CrashReporter
     }
 
     /// <summary>
-    /// Non-fatal error log — writes to cine_errors.log.
+    /// Non-fatal error log — writes to simba_errors.log.
     /// </summary>
     public static void LogError(string message, Exception? ex = null)
     {
@@ -113,7 +113,7 @@ public static class CrashReporter
         {
             var path = Path.Combine(
                 Path.GetDirectoryName(CrashDir) ?? CrashDir,
-                "cine_errors.log");
+                "simba_errors.log");
             using var sw = new StreamWriter(path, append: true);
             sw.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}");
             if (ex != null) sw.WriteLine($"  Exception: {ex.Message}");

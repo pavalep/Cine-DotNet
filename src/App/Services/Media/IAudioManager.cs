@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Threading.Tasks;
-using Cine.Avalonia.Models;
-using Cine.Media.Models;
+using Simba.Avalonia.Models;
+using Simba.Media.Models;
 
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 /// <summary>
 /// Centralized manager for audio state: volume, mute, equalizer, tracks, delay.

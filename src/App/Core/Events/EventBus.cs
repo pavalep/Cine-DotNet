@@ -2,7 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 
-namespace Cine.Avalonia.Core;
+namespace Simba.Avalonia.Core;
 
 /// <summary>
 /// In-memory typed event bus for decoupled pub/sub.

@@ -2,12 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
-using Cine.Avalonia.Serialization;
+using Simba.Avalonia.Serialization;
 
-namespace Cine.Avalonia.Storage;
+namespace Simba.Avalonia.Storage;
 
 /// <summary>
-/// Playlist persistence — saves/loads the current playlist to/from %LOCALAPPDATA%\Cine\playlist.json.
+/// Playlist persistence — saves/loads the current playlist to/from %LOCALAPPDATA%\Simba\playlist.json.
 /// Corruption-safe with automatic recovery.
 /// </summary>
 public sealed class PlaylistSettingsStore : SettingsStoreBase
@@ -47,7 +47,7 @@ public sealed class PlaylistSettingsStore : SettingsStoreBase
                 return null;
 
             var json = File.ReadAllText(path);
-            var data = JsonSerializer.Deserialize(json, CineJsonContext.Default.PlaylistData);
+            var data = JsonSerializer.Deserialize(json, SimbaJsonContext.Default.PlaylistData);
             if (data == null || data.Version < 1 || data.Items == null || data.Items.Count == 0)
             {
                 TryDelete(path);
@@ -77,7 +77,7 @@ public sealed class PlaylistSettingsStore : SettingsStoreBase
                 CurrentPosition: currentPosition,
                 LastPlayed: DateTime.UtcNow
             );
-            var json = JsonSerializer.Serialize(data, CineJsonContext.Default.PlaylistData);
+            var json = JsonSerializer.Serialize(data, SimbaJsonContext.Default.PlaylistData);
             File.WriteAllText(StoreFilePath, json);
         }
         catch (Exception ex)

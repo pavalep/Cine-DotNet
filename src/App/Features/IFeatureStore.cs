@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Cine.Avalonia.Features;
+namespace Simba.Avalonia.Features;
 
 /// <summary>
 /// Loads feature definitions from the embedded JSON resource

@@ -10,14 +10,14 @@
   IgnorableNamespaces="uap uap3 uap10 rescap desktop desktop6">
 
   <Identity
-    Name="Cine.CineMediaPlayer"
-    Publisher="CN=CineApp"
+    Name="Simba.SimbaMediaPlayer"
+    Publisher="CN=SimbaApp"
     Version="1.0.0.0" />
 
   <Properties>
-    <DisplayName>Cine</DisplayName>
-    <PublisherDisplayName>Cine Project</PublisherDisplayName>
-    <Logo>Assets\CineLogo75x75.png</Logo>
+    <DisplayName>Simba</DisplayName>
+    <PublisherDisplayName>Simba Project</PublisherDisplayName>
+    <Logo>Assets\SimbaLogo75x75.png</Logo>
   </Properties>
 
   <Dependencies>
@@ -35,18 +35,18 @@
       Executable="App.exe"
       EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
-        DisplayName="Cine"
+        DisplayName="Simba"
         Description="A modern, high-performance media player"
         BackgroundColor="#1A1A2E"
-        Square150x150Logo="Assets\CineLogo150x150.png"
-        Square44x44Logo="Assets\CineLogo44x44.png">
+        Square150x150Logo="Assets\SimbaLogo150x150.png"
+        Square44x44Logo="Assets\SimbaLogo44x44.png">
       </uap:VisualElements>
 
       <Extensions>
         <uap3:Extension Category="windows.fileTypeAssociation">
-          <uap3:FileTypeAssociation Name="cine-media"
+          <uap3:FileTypeAssociation Name="simba-media"
                                     Parameters="&quot;%1&quot;">
-            <uap:DisplayName>Cine Media</uap:DisplayName>
+            <uap:DisplayName>Simba Media</uap:DisplayName>
             <uap:SupportedFileTypes>
               <uap:FileType ContentType="video/mp4">.mp4</uap:FileType>
               <uap:FileType ContentType="video/mp4">.m4v</uap:FileType>

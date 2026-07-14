@@ -1,6 +1,6 @@
-using Cine.Avalonia.Services;
+using Simba.Avalonia.Services;
 
-namespace Cine.Avalonia.ViewModels;
+namespace Simba.Avalonia.ViewModels;
 
 /// <summary>
 /// Renderer mode switching: Auto (D3D11 hardware) vs Software.

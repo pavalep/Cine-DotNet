@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace Cine.Media.Implementations;
+namespace Simba.Media.Implementations;
 
 /// <summary>Matches reference LibMpv-OpenGL MarshalHelper.</summary>
 public class MarshalHelper : IDisposable

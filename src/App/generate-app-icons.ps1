@@ -31,15 +31,15 @@ if (-not $icon) {
 }
 
 $sizes = @{
-    "CineLogo44x44.png"    = 44
-    "CineLogo71x71.png"    = 71
-    "CineLogo75x75.png"    = 75
-    "CineLogo124x124.png"  = 124
-    "CineLogo150x150.png"  = 150
-    "CineLogo310x150.png"  = @{ Width = 310; Height = 150 }
-    "CineLogo310x310.png"  = 310
-    "CineSplash.png"       = @{ Width = 620; Height = 300 }
-    "CineBadge24x24.png"   = 24
+    "SimbaLogo44x44.png"    = 44
+    "SimbaLogo71x71.png"    = 71
+    "SimbaLogo75x75.png"    = 75
+    "SimbaLogo124x124.png"  = 124
+    "SimbaLogo150x150.png"  = 150
+    "SimbaLogo310x150.png"  = @{ Width = 310; Height = 150 }
+    "SimbaLogo310x310.png"  = 310
+    "SimbaSplash.png"       = @{ Width = 620; Height = 300 }
+    "SimbaBadge24x24.png"   = 24
 }
 
 foreach ($entry in $sizes.GetEnumerator()) {
@@ -58,7 +58,7 @@ foreach ($entry in $sizes.GetEnumerator()) {
     $g = [System.Drawing.Graphics]::FromImage($bitmap)
     $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
     $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::HighQuality
-    $g.Clear([System.Drawing.Color]::FromArgb(0x1A, 0x1A, 0x2E))  # Cine dark bg
+    $g.Clear([System.Drawing.Color]::FromArgb(0x1A, 0x1A, 0x2E))  # Simba dark bg
     $g.DrawIcon($icon, [System.Drawing.Rectangle]::new(0, 0, $w, $h))
     $g.Dispose()
 

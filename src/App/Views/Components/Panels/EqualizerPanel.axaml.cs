@@ -4,11 +4,11 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Layout;
-using Cine.Avalonia.Services;
-using Cine.Avalonia.Constants;
-using Cine.Avalonia.Views.Resources;
+using Simba.Avalonia.Services;
+using Simba.Avalonia.Constants;
+using Simba.Avalonia.Views.Resources;
 
-namespace Cine.Avalonia.Views.Components.Panels;
+namespace Simba.Avalonia.Views.Components.Panels;
 
 public partial class EqualizerPanel : UserControl
 {

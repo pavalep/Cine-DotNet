@@ -5,7 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 /// <summary>
 /// Centralized file-dialog helper for all Avalonia StorageProvider operations.
@@ -100,7 +100,7 @@ public sealed class FileDialogHandler
         }
         catch (Exception ex)
         {
-            global::Cine.Core.Log.ForContext<FileDialogHandler>()
+            global::Simba.Core.Log.ForContext<FileDialogHandler>()
                 .Warning("File dialog failed: {Error}", ex.Message);
             return default;
         }

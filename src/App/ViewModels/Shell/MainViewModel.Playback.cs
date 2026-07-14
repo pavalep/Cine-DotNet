@@ -1,7 +1,7 @@
-using Cine.Core;
-using Cine.Media.Interfaces;
+using Simba.Core;
+using Simba.Media.Interfaces;
 
-namespace Cine.Avalonia.ViewModels;
+namespace Simba.Avalonia.ViewModels;
 
 /// <summary>
 /// Playback commands: play/pause/stop, seek, volume, fullscreen, speed, screenshot.

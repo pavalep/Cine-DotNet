@@ -3,19 +3,19 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Cine.Core.Services;
+using Simba.Core.Services;
 
-namespace Cine.Avalonia.Storage;
+namespace Simba.Avalonia.Storage;
 
 /// <summary>
-/// Base class for JSON‑based settings stores under %LOCALAPPDATA%\Cine.
+/// Base class for JSON‑based settings stores under %LOCALAPPDATA%\Simba.
 /// Provides common file I/O, error handling, and hashing helpers.
 /// </summary>
 public abstract class SettingsStoreBase
 {
     private readonly string _subfolder;
 
-    /// <summary>Root store directory (%LOCALAPPDATA%\Cine).</summary>
+    /// <summary>Root store directory (%LOCALAPPDATA%\Simba).</summary>
     protected string StoreRoot { get; }
 
     /// <summary>Fully-qualified store directory (StoreRoot + subfolder, if any).</summary>
@@ -26,7 +26,7 @@ public abstract class SettingsStoreBase
         _subfolder = subfolder;
         StoreRoot = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Cine");
+            "Simba");
         StoreDirectory = string.IsNullOrEmpty(subfolder)
             ? StoreRoot
             : Path.Combine(StoreRoot, subfolder);
@@ -74,7 +74,7 @@ public abstract class SettingsStoreBase
         {
             if (File.Exists(path)) File.Delete(path);
         }
-        catch (Exception ex) { global::Cine.Core.Log.ForContext(nameof(SettingsStoreBase)).Error(ex, "Failed to delete {Path}", path); }
+        catch (Exception ex) { global::Simba.Core.Log.ForContext(nameof(SettingsStoreBase)).Error(ex, "Failed to delete {Path}", path); }
     }
 
     /// <summary>Compute a stable short hash from a file path (first 16 hex chars of SHA‑256).</summary>
@@ -87,10 +87,10 @@ public abstract class SettingsStoreBase
 
     /// <summary>Get a contextual logger for the concrete type.</summary>
     protected static ILogger ForContext<TStore>() where TStore : SettingsStoreBase
-        => global::Cine.Core.Log.ForContext<TStore>();
+        => global::Simba.Core.Log.ForContext<TStore>();
 
     /// <summary>Get a contextual logger for the concrete type.</summary>
-    protected ILogger ForContext() => global::Cine.Core.Log.ForContext(GetType().Name);
+    protected ILogger ForContext() => global::Simba.Core.Log.ForContext(GetType().Name);
 
     private static readonly JsonSerializerOptions DefaultJsonOptions = new()
     {

@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Cine.Avalonia.Storage;
-using Cine.Core;
+using Simba.Avalonia.Storage;
+using Simba.Core;
 
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 /// <summary>
 /// Orchestrates playlist navigation, shuffle, and loop logic.

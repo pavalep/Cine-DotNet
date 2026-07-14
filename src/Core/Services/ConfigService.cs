@@ -1,13 +1,13 @@
 using System;
 using System.IO;
 using System.Text.Json;
-using Cine.Core;
+using Simba.Core;
 
-namespace Cine.Core.Services;
+namespace Simba.Core.Services;
 
 /// <summary>
 /// Thread-safe configuration manager with atomic writes, validation, and backup.
-/// Stores settings as JSON in %LOCALAPPDATA%\Cine\settings.json
+/// Stores settings as JSON in %LOCALAPPDATA%\Simba\settings.json
 /// </summary>
 public class ConfigService
 {
@@ -27,7 +27,7 @@ public class ConfigService
     {
         _configDir = configDir ?? Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Cine");
+            "Simba");
         Directory.CreateDirectory(_configDir);
         _configFile = Path.Combine(_configDir, "settings.json");
         _backupFile = _configFile + ".bak";

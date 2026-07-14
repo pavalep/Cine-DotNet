@@ -1,6 +1,6 @@
 using System;
 
-namespace Cine.Avalonia.Features;
+namespace Simba.Avalonia.Features;
 
 /// <summary>
 /// Declarative feature gating for UI components.

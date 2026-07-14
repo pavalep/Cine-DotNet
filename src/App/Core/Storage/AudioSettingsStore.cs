@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 
-namespace Cine.Avalonia.Storage;
+namespace Simba.Avalonia.Storage;
 
 /// <summary>
 /// Audio settings persistence — per-file + global defaults.
-/// Stores in %LOCALAPPDATA%\Cine\audio-settings.json as a single compound file.
+/// Stores in %LOCALAPPDATA%\Simba\audio-settings.json as a single compound file.
 /// </summary>
 public sealed class AudioSettingsStore : SettingsStoreBase
 {

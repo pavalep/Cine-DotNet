@@ -1,4 +1,4 @@
-namespace Cine.Avalonia.ViewModels;
+namespace Simba.Avalonia.ViewModels;
 
 /// <summary>
 /// Represents a single feature's status for display in the Preferences dialog.

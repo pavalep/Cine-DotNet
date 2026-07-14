@@ -4,17 +4,17 @@ using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
-using Cine.Avalonia.Views.Components;
-using Cine.Avalonia.Controls;
-using Cine.Avalonia.Extensions;
-using Cine.Avalonia.Managers;
-using Cine.Avalonia.Services;
-using Cine.Avalonia.ViewModels;
-using Cine.Core;
-using Cine.Media.Events;
-using Cine.Media.Models;
+using Simba.Avalonia.Views.Components;
+using Simba.Avalonia.Controls;
+using Simba.Avalonia.Extensions;
+using Simba.Avalonia.Managers;
+using Simba.Avalonia.Services;
+using Simba.Avalonia.ViewModels;
+using Simba.Core;
+using Simba.Media.Events;
+using Simba.Media.Models;
 
-namespace Cine.Avalonia.Views.Shell;
+namespace Simba.Avalonia.Views.Shell;
 
 /// <summary>
 /// Media event handlers: OnMediaOpened, OnPositionChanged, OnPlaybackStateChanged,
@@ -197,7 +197,7 @@ public partial class MainWindow
         }
 
         // F17: Category-based OSD click actions
-        string category = (e as global::Cine.Avalonia.Views.Components.OsdNotification.OsdClickedEventArgs)?.Category ?? "default";
+        string category = (e as global::Simba.Avalonia.Views.Components.OsdNotification.OsdClickedEventArgs)?.Category ?? "default";
         switch (category)
         {
             case "volume":
@@ -209,7 +209,7 @@ public partial class MainWindow
                 _playerService?.Player?.ResetSpeed();
                 break;
             case "error":
-                Cine.Core.Log.ForContext<MainWindow>().Warning("OSD error notification clicked");
+                Simba.Core.Log.ForContext<MainWindow>().Warning("OSD error notification clicked");
                 break;
         }
     }

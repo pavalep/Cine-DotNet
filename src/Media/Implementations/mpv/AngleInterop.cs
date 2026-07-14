@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace Cine.Media.Implementations;
+namespace Simba.Media.Implementations;
 
 /// <summary>
 /// P/Invoke bindings for ANGLE EGL (libEGL.dll).

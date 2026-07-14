@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using Avalonia.Input;
 
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 /// <summary>
 /// Validates the keyboard shortcut registry for conflicts at startup.

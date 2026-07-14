@@ -5,16 +5,16 @@ using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using Cine.Media.Events;
-using Cine.Media.Interfaces;
-using Cine.Media.Models;
-using Cine.Avalonia.Helpers;
-using Cine.Avalonia.Core;
-using Cine.Avalonia.Storage;
-using Cine.Avalonia.Models;
-using Cine.Avalonia.Services;
+using Simba.Media.Events;
+using Simba.Media.Interfaces;
+using Simba.Media.Models;
+using Simba.Avalonia.Helpers;
+using Simba.Avalonia.Core;
+using Simba.Avalonia.Storage;
+using Simba.Avalonia.Models;
+using Simba.Avalonia.Services;
 
-namespace Cine.Avalonia.Managers;
+namespace Simba.Avalonia.Managers;
 
 /// <summary>
 /// Centralized manager for all audio-related state: Volume, Mute, Equalizer,
@@ -225,7 +225,7 @@ public sealed class AudioManager : DomainManager<IMediaPlayer>, IAudioManager
         }
         catch (Exception ex)
         {
-            global::Cine.Core.Log.ForContext<AudioManager>()
+            global::Simba.Core.Log.ForContext<AudioManager>()
                 .Debug("Failed to apply EQ — player not ready: {Error}", ex.Message);
         }
     }
@@ -336,7 +336,7 @@ public sealed class AudioManager : DomainManager<IMediaPlayer>, IAudioManager
                     System.IO.Path.GetFullPath(t.Source.ExternalFilename).Equals(normalizedPath, StringComparison.OrdinalIgnoreCase));
                 if (alreadyLoaded)
                 {
-                    global::Cine.Core.Log.ForContext<AudioManager>()
+                    global::Simba.Core.Log.ForContext<AudioManager>()
                         .Info("OnAddAudioAsync: skipping duplicate {File}", path);
                     return;
                 }
@@ -348,7 +348,7 @@ public sealed class AudioManager : DomainManager<IMediaPlayer>, IAudioManager
         catch (Exception ex)
         {
             // User cancelled the file dialog or an error occurred
-            global::Cine.Core.Log.ForContext<AudioManager>()
+            global::Simba.Core.Log.ForContext<AudioManager>()
                 .Info("Add audio dialog: {Message}", ex.Message);
         }
     }
@@ -393,7 +393,7 @@ public sealed class AudioManager : DomainManager<IMediaPlayer>, IAudioManager
 
     private static string FormatTrack(string prefix, SubtitleSource track)
     {
-        return Cine.Avalonia.Helpers.TrackDisplayHelper.FormatTrack(TrackType.Audio, track);
+        return Simba.Avalonia.Helpers.TrackDisplayHelper.FormatTrack(TrackType.Audio, track);
     }
 
     #endregion
@@ -497,7 +497,7 @@ public sealed class AudioManager : DomainManager<IMediaPlayer>, IAudioManager
                 try { SaveSettings(); }
                 catch (Exception ex)
                 {
-                    global::Cine.Core.Log.ForContext<AudioManager>()
+                    global::Simba.Core.Log.ForContext<AudioManager>()
                         .Warning("Debounce save failed: {Error}", ex.Message);
                 }
             }
@@ -590,7 +590,7 @@ public sealed class AudioManager : DomainManager<IMediaPlayer>, IAudioManager
         }
         catch (Exception ex)
         {
-            global::Cine.Core.Log.ForContext<AudioManager>()
+            global::Simba.Core.Log.ForContext<AudioManager>()
                 .Warning("Dispose save failed: {Error}", ex.Message);
         }
 

@@ -1,4 +1,4 @@
-namespace Cine.Media.Models;
+namespace Simba.Media.Models;
 
 /// <summary>Category of codec capability.</summary>
 public enum CodecType

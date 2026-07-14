@@ -3,18 +3,18 @@ using System.IO;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Cine.Core;
+using Simba.Core;
 
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 /// <summary>
 /// Downloads native runtime dependencies (libmpv, ANGLE) on first launch.
 /// These are excluded from the MSIX/MSI to keep the package small (~15 MB).
-/// Downloaded once to %LOCALAPPDATA%\Cine\runtime\ and cached permanently.
+/// Downloaded once to %LOCALAPPDATA%\Simba\runtime\ and cached permanently.
 /// 
 /// Resolution order:
 /// 1. AppContext.BaseDirectory (DLLs bundled next to EXE)
-/// 2. %LOCALAPPDATA%\Cine\runtime\ (previously downloaded)
+/// 2. %LOCALAPPDATA%\Simba\runtime\ (previously downloaded)
 /// 3. Download from release archives (extracted automatically when needed)
 /// 4. Clear instructions if all automated methods fail
 /// </summary>
@@ -22,7 +22,7 @@ public class RuntimeDownloader
 {
     private static readonly string RuntimeDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "Cine", "runtime");
+        "Simba", "runtime");
 
     private static readonly HttpClient _http = new()
     {
@@ -44,8 +44,8 @@ public class RuntimeDownloader
     public static bool IsRuntimeReady()
     {
         // Dev mode: allow overriding runtime readiness to speed local dev and testing.
-        // Set environment variable CINE_DEV_MODE=1 to skip runtime-download/first-launch flow.
-        if (string.Equals(Environment.GetEnvironmentVariable("CINE_DEV_MODE"), "1", StringComparison.Ordinal))
+        // Set environment variable SIMBA_DEV_MODE=1 to skip runtime-download/first-launch flow.
+        if (string.Equals(Environment.GetEnvironmentVariable("SIMBA_DEV_MODE"), "1", StringComparison.Ordinal))
             return true;
 
         // Check bundled first
@@ -229,7 +229,7 @@ public class RuntimeDownloader
             }
 
             // Clean up
-            try { File.Delete(archivePath); Directory.Delete(tempDir, true); } catch (Exception) { Cine.Core.Log.ForContext("RuntimeDownloader").Warning("RuntimeDownloader cleanup failed"); }
+            try { File.Delete(archivePath); Directory.Delete(tempDir, true); } catch (Exception) { Simba.Core.Log.ForContext("RuntimeDownloader").Warning("RuntimeDownloader cleanup failed"); }
 
             if (File.Exists(dest))
                 progress?.Report("  libmpv-2.dll: done.");
@@ -284,7 +284,7 @@ public class RuntimeDownloader
                     return output.Trim();
             }
         }
-        catch (Exception) { Cine.Core.Log.ForContext("RuntimeDownloader").Warning("WhichFailed failed"); }
+        catch (Exception) { Simba.Core.Log.ForContext("RuntimeDownloader").Warning("WhichFailed failed"); }
 
         return null;
     }

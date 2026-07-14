@@ -1,9 +1,9 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:containers="using:Cine.Avalonia.Views.Components.Containers"
-             xmlns:models="using:Cine.Avalonia.Models"
+             xmlns:containers="using:Simba.Avalonia.Views.Components.Containers"
+             xmlns:models="using:Simba.Avalonia.Models"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
-             x:Class="Cine.Avalonia.Views.Components.Panels.OpenMenuPanel">
+             x:Class="Simba.Avalonia.Views.Components.Panels.OpenMenuPanel">
     <containers:PanelContainer CornerRadius="12" Padding="8"
                                Width="260"
                                Background="{StaticResource PopoverBackground}">

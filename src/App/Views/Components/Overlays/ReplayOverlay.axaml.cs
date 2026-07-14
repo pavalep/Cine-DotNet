@@ -1,10 +1,10 @@
 using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Cine.Avalonia.Core;
+using Simba.Avalonia.Core;
 using RoutedEventArgs = Avalonia.Interactivity.RoutedEventArgs;
 
-namespace Cine.Avalonia.Views.Components;
+namespace Simba.Avalonia.Views.Components;
 
 public partial class ReplayOverlay : AvaloniaUserControl
 {

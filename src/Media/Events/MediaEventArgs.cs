@@ -1,4 +1,4 @@
-namespace Cine.Media.Events;
+namespace Simba.Media.Events;
 
 /// <summary>
 /// Event args for file operations - matches Python's @mpv.event("start-file"), "file-loaded", "end-file"

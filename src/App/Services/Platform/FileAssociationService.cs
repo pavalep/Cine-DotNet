@@ -1,12 +1,12 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using Cine.Core;
+using Simba.Core;
 
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 /// <summary>
-/// Registers Cine as the default player for supported video/audio formats on Windows.
+/// Registers Simba as the default player for supported video/audio formats on Windows.
 /// Writes to HKEY_CURRENT_USER\Software\Classes (no admin required).
 /// Per-format try-catch ensures one failed format doesn't block others.
 /// </summary>
@@ -30,9 +30,9 @@ public sealed class FileAssociationService
         ".srt", ".vtt", ".ass", ".ssa", ".sub", ".idx"
     };
 
-    private const string AppId = "CineMediaPlayer";
-    private const string AppName = "Cine Media Player";
-    private const string SubAppId = "CineMediaPlayer.sub";
+    private const string AppId = "SimbaMediaPlayer";
+    private const string AppName = "Simba Media Player";
+    private const string SubAppId = "SimbaMediaPlayer.sub";
 
     private readonly IRegistryService _registry;
     private readonly string _executablePath;
@@ -77,7 +77,7 @@ public sealed class FileAssociationService
         Log.ForContext("FileAssociation").Info("File associations unregistered: {0} removed, {1} failed", removed, failed);
     }
 
-    /// <summary>Check if Cine is the default for a given extension.</summary>
+    /// <summary>Check if Simba is the default for a given extension.</summary>
     public bool IsRegistered(string extension)
     {
         try
@@ -194,7 +194,7 @@ public sealed class FileAssociationService
     private static string GetExecutablePath()
     {
         using var process = Process.GetCurrentProcess();
-        return process.MainModule?.FileName ?? "Cine.exe";
+        return process.MainModule?.FileName ?? "Simba.exe";
     }
 
     [DllImport("shell32.dll", CharSet = CharSet.Auto)]

@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 /// <summary>
 /// Validates media files and provides file-system utilities for media operations.
@@ -102,7 +102,7 @@ public class MediaFileService : IMediaFileService
     public string GenerateScreenshotPath()
     {
         var dir = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
-        return Path.Combine(dir, $"cine_screenshot_{DateTime.Now:yyyyMMdd_HHmmss}.png");
+        return Path.Combine(dir, $"simba_screenshot_{DateTime.Now:yyyyMMdd_HHmmss}.png");
     }
 
     /// <inheritdoc/>

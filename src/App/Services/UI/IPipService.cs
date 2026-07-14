@@ -1,6 +1,6 @@
 using System;
 
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 /// <summary>
 /// Abstraction for PipService — enables unit testing of PipWindowManager

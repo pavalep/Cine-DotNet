@@ -2,13 +2,13 @@ using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Cine.Avalonia.Core;
-using Cine.Avalonia.ViewModels;
-using Cine.Avalonia.Views.Dialogs;
-using Cine.Avalonia.Views.Shell;
+using Simba.Avalonia.Core;
+using Simba.Avalonia.ViewModels;
+using Simba.Avalonia.Views.Dialogs;
+using Simba.Avalonia.Views.Shell;
 using RoutedEventArgs = Avalonia.Interactivity.RoutedEventArgs;
 
-namespace Cine.Avalonia.Views.Components;
+namespace Simba.Avalonia.Views.Components;
 
 public partial class FullscreenHeader : UserControl
 {
@@ -74,7 +74,7 @@ public partial class FullscreenHeader : UserControl
         };
         flyout.Items.Add(prefsItem);
 
-        var aboutItem = new MenuItem { Header = "About Cine" };
+        var aboutItem = new MenuItem { Header = "About Simba" };
         aboutItem.Click += (_, _) =>
         {
             var w = TopLevel.GetTopLevel(this) as Window;
@@ -113,7 +113,7 @@ public partial class FullscreenHeader : UserControl
         }
         catch (Exception ex)
         {
-            global::Cine.Core.Log.ForContext<FullscreenHeader>().Error(ex, "OnFullscreenMenuClick ShowAt failed (BtnFullscreenMenu)");
+            global::Simba.Core.Log.ForContext<FullscreenHeader>().Error(ex, "OnFullscreenMenuClick ShowAt failed (BtnFullscreenMenu)");
         }
     }
 

@@ -3,9 +3,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Threading;
-using Cine.Avalonia.Extensions;
+using Simba.Avalonia.Extensions;
 
-namespace Cine.Avalonia.Views.Components;
+namespace Simba.Avalonia.Views.Components;
 
 public partial class PauseOverlay : AvaloniaUserControl
 {

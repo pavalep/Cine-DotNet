@@ -1,4 +1,4 @@
-namespace Cine.Media.Models;
+namespace Simba.Media.Models;
 
 /// <summary>
 /// Chapter information - matches Python's chapter list from mpv chapter property

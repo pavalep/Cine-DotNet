@@ -5,17 +5,17 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
-using Cine.Avalonia.Extensions;
-using Cine.Avalonia.Helpers;
+using Simba.Avalonia.Extensions;
+using Simba.Avalonia.Helpers;
 using Material.Icons;
-using Cine.Avalonia.Models;
-using Cine.Avalonia.Core.Navigation;
-using Cine.Core;
-using Cine.Media.Events;
-using Cine.Media.Interfaces;
-using Cine.Media.Models;
+using Simba.Avalonia.Models;
+using Simba.Avalonia.Core.Navigation;
+using Simba.Core;
+using Simba.Media.Events;
+using Simba.Media.Interfaces;
+using Simba.Media.Models;
 
-namespace Cine.Avalonia.ViewModels;
+namespace Simba.Avalonia.ViewModels;
 
 /// <summary>
 /// File operations, renderer mode, audio EQ presets, and player event handlers.
@@ -85,12 +85,12 @@ public partial class MainViewModel
             {
                 var player = _player;
                 await Task.Run(() => player?.AddAudio(path));
-                global::Cine.Core.Log.ForContext<MainViewModel>().Info("Audio track added: {Path}", Path.GetFileName(path));
+                global::Simba.Core.Log.ForContext<MainViewModel>().Info("Audio track added: {Path}", Path.GetFileName(path));
             }
         }
         catch (Exception ex)
         {
-            global::Cine.Core.Log.ForContext<MainViewModel>().Error(ex, "AddAudio failed");
+            global::Simba.Core.Log.ForContext<MainViewModel>().Error(ex, "AddAudio failed");
         }
     }
 
@@ -105,7 +105,7 @@ public partial class MainViewModel
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-            global::Cine.Core.Log.ForContext<MainViewModel>().Error(ex, "LoadExternalSubtitle failed");
+            global::Simba.Core.Log.ForContext<MainViewModel>().Error(ex, "LoadExternalSubtitle failed");
             OnError?.Invoke(this, $"Failed to load subtitle: {ex.Message}");
         }
     }
@@ -125,7 +125,7 @@ public partial class MainViewModel
         }
         catch (Exception ex)
         {
-            global::Cine.Core.Log.ForContext<MainViewModel>().Error(ex, "LoadExternalAudio failed");
+            global::Simba.Core.Log.ForContext<MainViewModel>().Error(ex, "LoadExternalAudio failed");
             OnError?.Invoke(this, $"Failed to load audio track: {ex.Message}");
         }
     }
@@ -263,7 +263,7 @@ public partial class MainViewModel
     {
         var thumbDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Cine", "thumbnails");
+            "Simba", "thumbnails");
         Directory.CreateDirectory(thumbDir);
 
         var hash = filePath.GetHashCode().ToString("x8") + "_" +

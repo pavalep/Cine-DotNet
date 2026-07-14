@@ -25,7 +25,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace Cine.Media.Implementations;
+namespace Simba.Media.Implementations;
 
 internal sealed class AudioRenderer : IDisposable
 {

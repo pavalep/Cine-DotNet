@@ -1,7 +1,7 @@
 using System;
 using Microsoft.Win32;
 
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 /// <summary>
 /// Real Windows Registry implementation of <see cref="IRegistryService"/>.

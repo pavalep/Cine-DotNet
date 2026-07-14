@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Cine.Media.Implementations;
+namespace Simba.Media.Implementations;
 
 /// <summary>
 /// Shared mpv initialization options for high-quality (primary) and low-quality (PiP) profiles.

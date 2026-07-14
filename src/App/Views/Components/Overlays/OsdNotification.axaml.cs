@@ -10,10 +10,10 @@ using Avalonia.Threading;
 using Material.Icons;
 using Material.Icons.Avalonia;
 using AvaloniaLayout = Avalonia.Layout;
-using Cine.Avalonia.Core;
-using Cine.Avalonia.Extensions;
+using Simba.Avalonia.Core;
+using Simba.Avalonia.Extensions;
 
-namespace Cine.Avalonia.Views.Components;
+namespace Simba.Avalonia.Views.Components;
 
 public partial class OsdNotification : AvaloniaUserControl
 {

@@ -12,20 +12,20 @@ using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
-using Cine.Avalonia.Controls;
-using Cine.Avalonia.Core.Navigation;
-using Cine.Avalonia.Extensions;
-using Cine.Avalonia.Views.Resources;
-using Cine.Avalonia.Models;
-using Cine.Avalonia.Services;
-using Cine.Avalonia.Services.UI;
-using Cine.Avalonia.ViewModels;
-using Cine.Core;
-using Cine.Media.Events;
-using Cine.Media.Models;
+using Simba.Avalonia.Controls;
+using Simba.Avalonia.Core.Navigation;
+using Simba.Avalonia.Extensions;
+using Simba.Avalonia.Views.Resources;
+using Simba.Avalonia.Models;
+using Simba.Avalonia.Services;
+using Simba.Avalonia.Services.UI;
+using Simba.Avalonia.ViewModels;
+using Simba.Core;
+using Simba.Media.Events;
+using Simba.Media.Models;
 using Material.Icons;
 
-namespace Cine.Avalonia.Views.Shell;
+namespace Simba.Avalonia.Views.Shell;
 
 /// <summary>
 /// Window state management: OnClosed, property watchers, window position
@@ -36,7 +36,7 @@ public partial class MainWindow
 {
     private static string WindowStatePath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "Cine", "window_state.json");
+        "Simba", "window_state.json");
 
     protected override void OnClosing(WindowClosingEventArgs e)
     {
@@ -84,7 +84,7 @@ public partial class MainWindow
     {
         base.OnSizeChanged(e);
 
-        this.Title = $"Cine — {e.NewSize.Width:F0}x{e.NewSize.Height:F0}";
+        this.Title = $"Simba — {e.NewSize.Width:F0}x{e.NewSize.Height:F0}";
 
         bool isMaximized = WindowState == WindowState.Maximized
                         || WindowState == WindowState.FullScreen;
@@ -230,7 +230,7 @@ public partial class MainWindow
         PlayerPage.HeaderBarControl.ShowBackButton();
         PlayerPage.HeaderBarControl.SetPipVisibility(Bounds.Width >= UiConstants.BreakpointCompact);
         PlayerPage.HeaderBarControl.SetTitle(_viewModel!.Title);
-        Title = $"Cine — {_viewModel.Title}";
+        Title = $"Simba — {_viewModel.Title}";
     }
 
     private void ShowStartPage()
@@ -245,7 +245,7 @@ public partial class MainWindow
         PlayerPage.HeaderBarControl.HidePrimaryMenu();
         PlayerPage.HeaderBarControl.HideBackButton();
         PlayerPage.HeaderBarControl.SetPipVisibility(false);
-        PlayerPage.HeaderBarControl.SetTitle("Cine");
+        PlayerPage.HeaderBarControl.SetTitle("Simba");
     }
 
     private void HideStartPage()

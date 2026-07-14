@@ -1,4 +1,4 @@
-namespace Cine.Avalonia.Features;
+namespace Simba.Avalonia.Features;
 
 /// <summary>
 /// Evaluates feature toggle state by combining the embedded definition,

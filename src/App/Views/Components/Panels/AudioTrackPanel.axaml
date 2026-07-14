@@ -1,5 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             x:Class="Cine.Avalonia.Views.Components.Panels.AudioTrackPanel">
+             x:Class="Simba.Avalonia.Views.Components.Panels.AudioTrackPanel">
     <Border x:Name="ContentContainer" />
 </UserControl>

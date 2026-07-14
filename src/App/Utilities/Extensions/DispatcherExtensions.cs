@@ -2,7 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 
-namespace Cine.Avalonia.Extensions;
+namespace Simba.Avalonia.Extensions;
 
 /// <summary>
 /// Extension methods for Dispatcher to reduce boilerplate.

@@ -3,13 +3,13 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using Cine.Avalonia.Core;
-using Cine.Media.Interfaces;
-using Cine.Media.Models;
-using Cine.Avalonia.Helpers;
-using Cine.Avalonia.Models;
+using Simba.Avalonia.Core;
+using Simba.Media.Interfaces;
+using Simba.Media.Models;
+using Simba.Avalonia.Helpers;
+using Simba.Avalonia.Models;
 
-namespace Cine.Avalonia.Managers;
+namespace Simba.Avalonia.Managers;
 
 /// <summary>
 /// Centralized manager for all video-related state: Contrast, Brightness,
@@ -173,7 +173,7 @@ public sealed class VideoManager : DomainManager<IMediaPlayer>, INotifyPropertyC
 
     private static string FormatTrack(string prefix, SubtitleSource track)
     {
-        return Cine.Avalonia.Helpers.TrackDisplayHelper.FormatTrack(TrackType.Video, track);
+        return Simba.Avalonia.Helpers.TrackDisplayHelper.FormatTrack(TrackType.Video, track);
     }
 
     #endregion

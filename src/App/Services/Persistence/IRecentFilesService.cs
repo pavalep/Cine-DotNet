@@ -1,7 +1,7 @@
 using System.Collections.ObjectModel;
-using Cine.Avalonia.Models;
+using Simba.Avalonia.Models;
 
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 public interface IRecentFilesService
 {

@@ -1,7 +1,7 @@
-using Cine.Media.Interfaces;
-using Cine.Media.Models;
+using Simba.Media.Interfaces;
+using Simba.Media.Models;
 
-namespace Cine.Media.Codecs;
+namespace Simba.Media.Codecs;
 
 /// <summary>
 /// Codec provider backed by Windows Media Foundation (MediaFoundationPlayer).

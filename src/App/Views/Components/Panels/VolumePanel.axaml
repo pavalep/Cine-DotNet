@@ -1,8 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:Cine.Avalonia.ViewModels"
-             xmlns:containers="using:Cine.Avalonia.Views.Components.Containers"
-             x:Class="Cine.Avalonia.Views.Components.Panels.VolumePanel"
+             xmlns:vm="using:Simba.Avalonia.ViewModels"
+             xmlns:containers="using:Simba.Avalonia.Views.Components.Containers"
+             x:Class="Simba.Avalonia.Views.Components.Panels.VolumePanel"
              x:DataType="vm:MainViewModel">
     <containers:PanelContainer CornerRadius="12"
                                Width="280">

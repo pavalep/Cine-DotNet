@@ -6,12 +6,12 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
-using Cine.Avalonia.Core.Navigation;
-using Cine.Avalonia.Extensions;
-using Cine.Avalonia.ViewModels;
-using Cine.Avalonia.ViewModels.Pages;
+using Simba.Avalonia.Core.Navigation;
+using Simba.Avalonia.Extensions;
+using Simba.Avalonia.ViewModels;
+using Simba.Avalonia.ViewModels.Pages;
 
-namespace Cine.Avalonia.Views.Components;
+namespace Simba.Avalonia.Views.Components;
 
 public partial class StartPage : global::Avalonia.Controls.UserControl, INavigable
 {

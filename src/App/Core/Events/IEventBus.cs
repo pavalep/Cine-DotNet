@@ -1,6 +1,6 @@
 using System;
 
-namespace Cine.Avalonia.Core;
+namespace Simba.Avalonia.Core;
 
 /// <summary>
 /// Simple typed event bus for decoupled pub/sub communication between

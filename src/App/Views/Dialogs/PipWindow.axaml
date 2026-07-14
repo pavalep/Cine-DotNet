@@ -1,8 +1,8 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
-        x:Class="Cine.Avalonia.Views.Dialogs.PipWindow"
-        Title="Cine — PIP"
+        x:Class="Simba.Avalonia.Views.Dialogs.PipWindow"
+        Title="Simba — PIP"
         Width="480" Height="320"
         MinWidth="280" MinHeight="180"
         MaxWidth="1920" MaxHeight="1080"
@@ -135,7 +135,7 @@
                                        VerticalAlignment="Center"
                                        Margin="12,0,0,0"
                                        TextTrimming="CharacterEllipsis"
-                                       Text="Cine PiP" />
+                                       Text="Simba PiP" />
                             <Button Grid.Column="1" x:Name="ExpandButton"
                                     Classes="pip-btn"
                                     ToolTip.Tip="Return to Main Window"

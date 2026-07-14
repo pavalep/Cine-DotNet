@@ -23,11 +23,11 @@ using System.Text;
 using System.Text.Json;
 using System.Runtime.InteropServices;
 using System.Threading;
-using Cine.Media.Events;
-using Cine.Media.Interfaces;
-using Cine.Media.Models;
+using Simba.Media.Events;
+using Simba.Media.Interfaces;
+using Simba.Media.Models;
 
-namespace Cine.Media.Implementations;
+namespace Simba.Media.Implementations;
 
 public class MediaFoundationPlayer : IMediaPlayer, IDisposable
 {
@@ -331,7 +331,7 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
         set
         {
             if (!value)
-                throw new NotSupportedException("WPF MediaElement fallback is disabled; Cine uses Avalonia + native D3D11 only.");
+                throw new NotSupportedException("WPF MediaElement fallback is disabled; Simba uses Avalonia + native D3D11 only.");
             _nativeRendering = true;
         }
     }
@@ -1056,7 +1056,7 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
     public void ScreenshotWithSubtitles()
     {
         var dir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Cine Screenshots");
+            Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Simba Screenshots");
         Directory.CreateDirectory(dir);
         TakeScreenshot(Path.Combine(dir, $"screenshot_{DateTime.Now:yyyyMMdd_HHmmss}.png"), true);
     }
@@ -1064,7 +1064,7 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
     public void ScreenshotWithoutSubtitles()
     {
         var dir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Cine Screenshots");
+            Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Simba Screenshots");
         Directory.CreateDirectory(dir);
         TakeScreenshot(Path.Combine(dir, $"screenshot_nosub_{DateTime.Now:yyyyMMdd_HHmmss}.png"), false);
     }
@@ -1201,7 +1201,7 @@ public class MediaFoundationPlayer : IMediaPlayer, IDisposable
 
     #region Constants
 
-    private const string SCREENSHOT_DIR = @"%USERPROFILE%\Pictures\Cine Screenshots";
+    private const string SCREENSHOT_DIR = @"%USERPROFILE%\Pictures\Simba Screenshots";
     private static readonly string[] SUB_EXTS = { ".ass", ".srt", ".sub", ".vtt", ".ssa", ".smi", ".txt", ".idx" };
 
     #endregion

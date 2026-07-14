@@ -11,29 +11,29 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
-using Cine.Avalonia.Controls;
-using Cine.Avalonia.Core;
-using Cine.Avalonia.Extensions;
-using Cine.Avalonia.Features;
-using Cine.Avalonia.Managers;
-using Cine.Avalonia.Models;
-using Cine.Avalonia.Core.Navigation;
-using Cine.Avalonia.Services;
-using Cine.Avalonia.Services.UI;
-using Cine.Avalonia.Storage;
-using Cine.Avalonia.ViewModels;
-using Cine.Avalonia.ViewModels.Pages;
-using Cine.Avalonia.Views.Components;
-using Cine.Avalonia.Views.Dialogs;
-using Cine.Core;
+using Simba.Avalonia.Controls;
+using Simba.Avalonia.Core;
+using Simba.Avalonia.Extensions;
+using Simba.Avalonia.Features;
+using Simba.Avalonia.Managers;
+using Simba.Avalonia.Models;
+using Simba.Avalonia.Core.Navigation;
+using Simba.Avalonia.Services;
+using Simba.Avalonia.Services.UI;
+using Simba.Avalonia.Storage;
+using Simba.Avalonia.ViewModels;
+using Simba.Avalonia.ViewModels.Pages;
+using Simba.Avalonia.Views.Components;
+using Simba.Avalonia.Views.Dialogs;
+using Simba.Core;
 using Material.Icons;
-using Cine.Media.Events;
-using Cine.Media.Implementations;
-using Cine.Media.Interfaces;
-using Cine.Media.Models;
+using Simba.Media.Events;
+using Simba.Media.Implementations;
+using Simba.Media.Interfaces;
+using Simba.Media.Models;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Cine.Avalonia.Views.Shell;
+namespace Simba.Avalonia.Views.Shell;
 
 public partial class MainWindow
 {
@@ -501,7 +501,7 @@ public partial class MainWindow
     /// component subscriptions after initialization is complete.
     /// Called from OnWindowInitialized() after managers are created.
     /// </summary>
-    private void InitializeWiring(Cine.Media.Interfaces.IMediaPlayer player, IEventBus eventBus)
+    private void InitializeWiring(Simba.Media.Interfaces.IMediaPlayer player, IEventBus eventBus)
     {
         player.Opened += OnMediaOpened;
         player.PlaybackStateChangedEvent += OnPlaybackStateChanged;
@@ -646,13 +646,13 @@ public partial class MainWindow
         {
             var dir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Cine");
+                "Simba");
             Directory.CreateDirectory(dir);
-            return Path.Combine(dir, "cine_startup.log");
+            return Path.Combine(dir, "simba_startup.log");
         }
         catch
         {
-            return Path.Combine(Path.GetTempPath(), "cine_startup.log");
+            return Path.Combine(Path.GetTempPath(), "simba_startup.log");
         }
     }
 

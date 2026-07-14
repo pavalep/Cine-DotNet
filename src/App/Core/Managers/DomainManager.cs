@@ -1,7 +1,7 @@
 using System;
-using Cine.Media.Interfaces;
+using Simba.Media.Interfaces;
 
-namespace Cine.Avalonia.Core;
+namespace Simba.Avalonia.Core;
 
 /// <summary>
 /// Base class for domain managers that wrap a media player interface.

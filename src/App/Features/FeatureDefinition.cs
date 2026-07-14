@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Cine.Avalonia.Features;
+namespace Simba.Avalonia.Features;
 
 /// <summary>
 /// Describes a single feature toggle — its key, type, default state, and dependencies.

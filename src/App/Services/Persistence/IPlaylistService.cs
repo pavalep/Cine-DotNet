@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 /// <summary>
 /// Manages playlist state: items, navigation, shuffle, loop, and persistence.

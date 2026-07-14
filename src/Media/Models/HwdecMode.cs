@@ -1,4 +1,4 @@
-namespace Cine.Media.Models;
+namespace Simba.Media.Models;
 
 /// <summary>
 /// Hardware decoding mode - matches Python's hwdec automatic, direct3d11va options

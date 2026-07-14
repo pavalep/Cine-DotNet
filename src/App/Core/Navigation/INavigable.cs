@@ -1,7 +1,7 @@
-namespace Cine.Avalonia.Core.Navigation;
+namespace Simba.Avalonia.Core.Navigation;
 
 /// <summary>
-/// Lifecycle hooks for navigable pages managed by <see cref="Cine.Avalonia.Navigation.INavigationService"/>.
+/// Lifecycle hooks for navigable pages managed by <see cref="Simba.Avalonia.Navigation.INavigationService"/>.
 /// Pages implement this interface to react to navigation events.
 /// </summary>
 public interface INavigable

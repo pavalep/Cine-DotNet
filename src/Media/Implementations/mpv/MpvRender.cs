@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace Cine.Media.Implementations;
+namespace Simba.Media.Implementations;
 
 /// <summary>
 /// P/Invoke bindings for the mpv render API (libmpv OpenGL rendering).

@@ -1,8 +1,8 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
-        xmlns:vm="using:Cine.Avalonia.ViewModels"
-        x:Class="Cine.Avalonia.Views.Dialogs.PreferencesDialog"
+        xmlns:vm="using:Simba.Avalonia.ViewModels"
+        x:Class="Simba.Avalonia.Views.Dialogs.PreferencesDialog"
         x:DataType="vm:MainViewModel"
         Title="Preferences"
         Width="520" MinWidth="400" MaxWidth="640"
@@ -303,7 +303,7 @@
                             <Path Data="M 25 20 L 45 32 L 25 44 Z"
                                   Fill="{StaticResource OsdForeground}" />
                         </Panel>
-                        <TextBlock Text="Cine Media Player" Classes="md3-subtitle1" FontWeight="Bold"
+                        <TextBlock Text="Simba Media Player" Classes="md3-subtitle1" FontWeight="Bold"
                                    Foreground="{StaticResource OsdForeground}" HorizontalAlignment="Center" />
                         <TextBlock Text="Version 1.0.0" Classes="md3-body2"
                                    Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center" />

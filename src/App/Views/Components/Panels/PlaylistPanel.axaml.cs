@@ -10,10 +10,10 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
-using Cine.Avalonia.ViewModels;
-using Cine.Avalonia.Services;
-using Cine.Avalonia.Views.Resources;
-using Cine.Core;
+using Simba.Avalonia.ViewModels;
+using Simba.Avalonia.Services;
+using Simba.Avalonia.Views.Resources;
+using Simba.Core;
 using KeyEventArgs = Avalonia.Input.KeyEventArgs;
 using DragEventArgs = Avalonia.Input.DragEventArgs;
 using DragDropEffects = Avalonia.Input.DragDropEffects;
@@ -21,7 +21,7 @@ using ListBox = Avalonia.Controls.ListBox;
 using Button = Avalonia.Controls.Button;
 using Point = Avalonia.Point;
 
-namespace Cine.Avalonia.Views.Components.Panels;
+namespace Simba.Avalonia.Views.Components.Panels;
 
 public partial class PlaylistPanel : UserControl
 {
@@ -248,14 +248,14 @@ public partial class PlaylistPanel : UserControl
         {
             var path = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Cine", "Settings", "playlist-queue-mode.json");
+                "Simba", "Settings", "playlist-queue-mode.json");
             if (File.Exists(path))
             {
                 var text = File.ReadAllText(path);
                 return text.Trim() == "true";
             }
         }
-        catch (Exception) { global::Cine.Core.Log.ForContext<PlaylistPanel>().Warning("LoadQueueMode failed"); }
+        catch (Exception) { global::Simba.Core.Log.ForContext<PlaylistPanel>().Warning("LoadQueueMode failed"); }
         return false;
     }
 
@@ -265,14 +265,14 @@ public partial class PlaylistPanel : UserControl
         {
             var dir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Cine", "Settings");
+                "Simba", "Settings");
             Directory.CreateDirectory(dir);
             var path = Path.Combine(dir, "playlist-queue-mode.json");
             var tempPath = path + ".tmp";
             File.WriteAllText(tempPath, _queueMode.ToString().ToLower());
             File.Move(tempPath, path, overwrite: true);
         }
-        catch (Exception) { global::Cine.Core.Log.ForContext<PlaylistPanel>().Warning("SaveQueueMode failed"); }
+        catch (Exception) { global::Simba.Core.Log.ForContext<PlaylistPanel>().Warning("SaveQueueMode failed"); }
     }
 
     private void OnQueueModeClick(object? sender, RoutedEventArgs e)
@@ -306,7 +306,7 @@ public partial class PlaylistPanel : UserControl
             }
             catch (Exception ex)
             {
-                global::Cine.Core.Log.ForContext<PlaylistPanel>()
+                global::Simba.Core.Log.ForContext<PlaylistPanel>()
                     .Warning("Failed to open file in explorer: {Error}", ex.Message);
             }
         }
@@ -327,7 +327,7 @@ public partial class PlaylistPanel : UserControl
             }
             catch (Exception ex)
             {
-                global::Cine.Core.Log.ForContext<PlaylistPanel>()
+                global::Simba.Core.Log.ForContext<PlaylistPanel>()
                     .Warning("Failed to open properties in explorer: {Error}", ex.Message);
             }
         }

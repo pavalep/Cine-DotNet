@@ -6,11 +6,11 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
-using Cine.Avalonia.Models;
-using Cine.Avalonia.Views.Components;
-using Cine.Avalonia.Services;
+using Simba.Avalonia.Models;
+using Simba.Avalonia.Views.Components;
+using Simba.Avalonia.Services;
 
-namespace Cine.Avalonia.Views.Components.Panels;
+namespace Simba.Avalonia.Views.Components.Panels;
 
 public partial class SubtitlePanel : UserControl
 {

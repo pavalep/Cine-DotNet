@@ -3,21 +3,21 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media;
-using Cine.Avalonia.Services;
-using Cine.Avalonia.Constants;
-using Cine.Core.Services;
-using Cine.Avalonia.ViewModels;
-using Cine.Avalonia.Views.Resources;
-using Cine.Avalonia.Views.Dialogs;
-using Cine.Avalonia.Views.Components;
-using Cine.Avalonia.Views.Shell;
+using Simba.Avalonia.Services;
+using Simba.Avalonia.Constants;
+using Simba.Core.Services;
+using Simba.Avalonia.ViewModels;
+using Simba.Avalonia.Views.Resources;
+using Simba.Avalonia.Views.Dialogs;
+using Simba.Avalonia.Views.Components;
+using Simba.Avalonia.Views.Shell;
 using AvaloniaLayout = Avalonia.Layout;
 using Button = global::Avalonia.Controls.Button;
 using PointerPressedEventArgs = Avalonia.Input.PointerPressedEventArgs;
 using Control = Avalonia.Controls.Control;
 using ToolTip = Avalonia.Controls.ToolTip;
 
-namespace Cine.Avalonia.Views.Components;
+namespace Simba.Avalonia.Views.Components;
 
 public partial class ControlsBox : AvaloniaUserControl
 {
@@ -236,11 +236,11 @@ public partial class ControlsBox : AvaloniaUserControl
             PlayPauseIcon.Opacity = 1;
             PlayPauseAltIcon.Opacity = 0;
             PlayPauseIcon.InvalidateVisual();
-            Cine.Core.Log.ForContext<ControlsBox>().Debug("SyncPlayPauseIcon: replay mode -> Replay");
+            Simba.Core.Log.ForContext<ControlsBox>().Debug("SyncPlayPauseIcon: replay mode -> Replay");
         }
         else
         {
-            Cine.Core.Log.ForContext<ControlsBox>().Debug("SyncPlayPauseIcon: isPlaying={IsPlaying}", isPlaying);
+            Simba.Core.Log.ForContext<ControlsBox>().Debug("SyncPlayPauseIcon: isPlaying={IsPlaying}", isPlaying);
             var showPlay = !isPlaying;
             PlayPauseIcon.Kind = Material.Icons.MaterialIconKind.Play;
             PlayPauseAltIcon.Kind = Material.Icons.MaterialIconKind.Pause;
@@ -252,7 +252,7 @@ public partial class ControlsBox : AvaloniaUserControl
     public void SetReplayMode(bool replayMode)
     {
         _replayMode = replayMode;
-        Cine.Core.Log.ForContext<ControlsBox>().Debug("SetReplayMode({ReplayMode})", replayMode);
+        Simba.Core.Log.ForContext<ControlsBox>().Debug("SetReplayMode({ReplayMode})", replayMode);
     }
 
     public void SetControlsVisibility(bool visible)
@@ -312,15 +312,15 @@ public partial class ControlsBox : AvaloniaUserControl
     private void OnPlayPause(object? sender, RoutedEventArgs e)
     {
         if (_viewModel == null) return;
-        Cine.Core.Log.ForContext<ControlsBox>().Debug("OnPlayPause CLICKED. _replayMode={ReplayMode}", _replayMode);
+        Simba.Core.Log.ForContext<ControlsBox>().Debug("OnPlayPause CLICKED. _replayMode={ReplayMode}", _replayMode);
         if (_replayMode)
         {
             _replayMode = false;
             _viewModel.PlayPause();
-            Cine.Core.Log.ForContext<ControlsBox>().Debug("OnPlayPause replay mode: _viewModel.PlayPause() called");
+            Simba.Core.Log.ForContext<ControlsBox>().Debug("OnPlayPause replay mode: _viewModel.PlayPause() called");
             return;
         }
-        Cine.Core.Log.ForContext<ControlsBox>().Debug("OnPlayPause: _viewModel.PlayPause() called");
+        Simba.Core.Log.ForContext<ControlsBox>().Debug("OnPlayPause: _viewModel.PlayPause() called");
         _viewModel.PlayPause();
     }
 

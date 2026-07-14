@@ -2,7 +2,7 @@ using System;
 using System.Globalization;
 using System.IO;
 
-namespace Cine.Avalonia.Models;
+namespace Simba.Avalonia.Models;
 
 /// <summary>
 /// Lightweight display model for a recent file shown in the StartPage card list.

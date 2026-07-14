@@ -1,4 +1,4 @@
-namespace Cine.Avalonia.Core.Navigation;
+namespace Simba.Avalonia.Core.Navigation;
 
 /// <summary>Application-level navigation routes.</summary>
 public enum AppRoute

@@ -1,5 +1,5 @@
 // D3D11Renderer.cs - Direct3D 11 Video Frame Renderer
-// GPU-accelerated video rendering pipeline for the Cine native player
+// GPU-accelerated video rendering pipeline for the Simba native player
 //
 // Supports two rendering paths:
 //   1. BGRA-direct (default):  decoder outputs RGB32/BGRA → memcpy to back buffer
@@ -25,7 +25,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 
-namespace Cine.Media.Implementations;
+namespace Simba.Media.Implementations;
 
 /// <summary>
 /// Manages a Direct3D 11 GPU device, DXGI swap chain, render target,

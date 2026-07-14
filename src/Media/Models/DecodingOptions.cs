@@ -1,4 +1,4 @@
-namespace Cine.Media.Models;
+namespace Simba.Media.Models;
 
 /// <summary>Options that influence decoding behaviour for a session.</summary>
 public record DecodingOptions

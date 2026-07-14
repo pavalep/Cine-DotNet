@@ -2,12 +2,12 @@ using System;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Media;
-using Cine.Avalonia.Helpers;
-using Cine.Avalonia.Models;
-using Cine.Media.Interfaces;
-using Cine.Media.Models;
+using Simba.Avalonia.Helpers;
+using Simba.Avalonia.Models;
+using Simba.Media.Interfaces;
+using Simba.Media.Models;
 
-namespace Cine.Avalonia.Views.Components;
+namespace Simba.Avalonia.Views.Components;
 
 /// <summary>
 /// Overlay control showing "Now Playing" media information.

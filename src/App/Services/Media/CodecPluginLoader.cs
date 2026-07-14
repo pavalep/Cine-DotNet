@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Cine.Core;
-using Cine.Media.Interfaces;
+using Simba.Core;
+using Simba.Media.Interfaces;
 
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 /// <summary>
 /// Placeholder for MEF-based external codec plugin loading.

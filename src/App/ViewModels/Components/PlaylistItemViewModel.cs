@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
 
-namespace Cine.Avalonia.ViewModels;
+namespace Simba.Avalonia.ViewModels;
 
 public class PlaylistItemViewModel : INotifyPropertyChanged
 {

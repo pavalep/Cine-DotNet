@@ -1,7 +1,7 @@
 using System;
-using Cine.Media.Interfaces;
+using Simba.Media.Interfaces;
 
-namespace Cine.Avalonia.ViewModels;
+namespace Simba.Avalonia.ViewModels;
 
 /// <summary>
 /// Video adjustment properties and commands: contrast, brightness, gamma,

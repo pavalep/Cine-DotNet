@@ -1,7 +1,7 @@
 using System;
-using Cine.Media.Models;
+using Simba.Media.Models;
 
-namespace Cine.Media.Events;
+namespace Simba.Media.Events;
 
 public class PlaybackStateChangedEventArgs : EventArgs
 {

@@ -1,6 +1,6 @@
 using System;
 
-namespace Cine.Avalonia.Features;
+namespace Simba.Avalonia.Features;
 
 /// <summary>
 /// Validates license state and provides the current <see cref="LicensingTier"/>.

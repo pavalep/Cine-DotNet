@@ -2,12 +2,12 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Cine.Avalonia.Core;
-using Cine.Core;
-using Cine.Media.Interfaces;
-using Cine.Media.Implementations;
+using Simba.Avalonia.Core;
+using Simba.Core;
+using Simba.Media.Interfaces;
+using Simba.Media.Implementations;
 
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 /// <summary>
 /// Service that wraps the active player backend for use by Avalonia ViewModels.
@@ -30,14 +30,14 @@ public class PlayerService : IDisposable
         {
             var dir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Cine");
+                "Simba");
             Directory.CreateDirectory(dir);
-            return Path.Combine(dir, "cine_startup.log");
+            return Path.Combine(dir, "simba_startup.log");
         }
         catch (Exception ex)
         {
             Log.ForContext<PlayerService>().Error(ex, "Log path creation failed");
-            return Path.Combine(Path.GetTempPath(), "cine_startup.log");
+            return Path.Combine(Path.GetTempPath(), "simba_startup.log");
         }
     }
 

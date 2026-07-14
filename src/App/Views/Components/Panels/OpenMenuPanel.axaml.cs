@@ -1,9 +1,9 @@
 using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Cine.Avalonia.Models;
+using Simba.Avalonia.Models;
 
-namespace Cine.Avalonia.Views.Components.Panels;
+namespace Simba.Avalonia.Views.Components.Panels;
 
 public partial class OpenMenuPanel : UserControl
 {

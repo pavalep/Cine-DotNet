@@ -47,7 +47,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Cine.Media.Implementations;
+namespace Simba.Media.Implementations;
 
 internal sealed class MfHelper : IDisposable
 {

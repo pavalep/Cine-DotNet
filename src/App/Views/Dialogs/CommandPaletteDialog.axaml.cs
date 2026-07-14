@@ -7,7 +7,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using KeyEventArgs = Avalonia.Input.KeyEventArgs;
 
-namespace Cine.Avalonia.Views.Dialogs;
+namespace Simba.Avalonia.Views.Dialogs;
 
 /// <summary>Entry shown in the command palette.</summary>
 public sealed record PaletteCommandEntry(string Description, Action Execute);

@@ -3,9 +3,9 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
-using Cine.Avalonia.Models;
+using Simba.Avalonia.Models;
 
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 /// <summary>
 /// Centralized manager for subtitle state: tracks, delay, position, font, styling.

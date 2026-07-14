@@ -3,7 +3,7 @@ using System.Globalization;
 using Avalonia.Data.Converters;
 
 
-namespace Cine.Avalonia.Utilities;
+namespace Simba.Avalonia.Utilities;
 
 /// <summary>Returns the negated boolean value.</summary>
 public sealed class NegateBoolConverter : IValueConverter

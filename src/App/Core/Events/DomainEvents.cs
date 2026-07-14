@@ -1,4 +1,4 @@
-namespace Cine.Avalonia.Core;
+namespace Simba.Avalonia.Core;
 
 /// <summary>Published when a track is switched (audio or subtitle).</summary>
 public sealed record TrackChangedEvent(string TrackType, string DisplayName);

@@ -1,8 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:containers="using:Cine.Avalonia.Views.Components.Containers"
+             xmlns:containers="using:Simba.Avalonia.Views.Components.Containers"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
-             x:Class="Cine.Avalonia.Views.Components.Panels.PrimaryMenuPanel">
+             x:Class="Simba.Avalonia.Views.Components.Panels.PrimaryMenuPanel">
     <containers:PanelContainer CornerRadius="12" Padding="8"
                                Width="260"
                                Background="{StaticResource PopoverBackground}">
@@ -96,7 +96,7 @@
                 <StackPanel Orientation="Horizontal" Spacing="10">
                     <materialIcons:MaterialIcon Kind="Information" Width="18" Height="18"
                         Foreground="{StaticResource TextSecondary}" />
-                    <TextBlock Text="About Cine" Foreground="{StaticResource OsdForeground}" />
+                    <TextBlock Text="About Simba" Foreground="{StaticResource OsdForeground}" />
                 </StackPanel>
             </Button>
         </StackPanel>

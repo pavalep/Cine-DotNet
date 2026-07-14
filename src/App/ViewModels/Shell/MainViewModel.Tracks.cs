@@ -1,12 +1,12 @@
 using System;
 using System.Linq;
 using Avalonia.Threading;
-using Cine.Avalonia.Extensions;
-using Cine.Avalonia.Models;
-using Cine.Media.Events;
-using Cine.Media.Models;
+using Simba.Avalonia.Extensions;
+using Simba.Avalonia.Models;
+using Simba.Media.Events;
+using Simba.Media.Models;
 
-namespace Cine.Avalonia.ViewModels;
+namespace Simba.Avalonia.ViewModels;
 
 /// <summary>
 /// Track menu building for audio/video tracks.
@@ -63,7 +63,7 @@ public partial class MainViewModel
         }
         catch (Exception ex)
         {
-            global::Cine.Core.Log.ForContext<MainViewModel>().Error(ex, "OnPlayerOpened track read failed");
+            global::Simba.Core.Log.ForContext<MainViewModel>().Error(ex, "OnPlayerOpened track read failed");
             return;
         }
 
@@ -77,7 +77,7 @@ public partial class MainViewModel
             }
             catch (Exception ex)
             {
-                global::Cine.Core.Log.ForContext<MainViewModel>().Warning("OnPlayerOpened UI update failed: {Error}", ex.Message);
+                global::Simba.Core.Log.ForContext<MainViewModel>().Warning("OnPlayerOpened UI update failed: {Error}", ex.Message);
             }
         });
     }

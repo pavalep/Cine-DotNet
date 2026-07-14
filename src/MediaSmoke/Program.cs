@@ -3,7 +3,7 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
-using Cine.Media.Implementations;
+using Simba.Media.Implementations;
 
 static byte[] CreatePcm16MonoWav(int sampleRate, double seconds, double frequencyHz)
 {
@@ -50,7 +50,7 @@ if (string.Equals(path, "--d3d", StringComparison.OrdinalIgnoreCase))
 {
     using var form = new Form
     {
-        Text = "Cine D3D Smoke",
+        Text = "Simba D3D Smoke",
         Width = 800,
         Height = 600
     };
@@ -67,7 +67,7 @@ if (string.Equals(path, "--d3d", StringComparison.OrdinalIgnoreCase))
 
 if (string.IsNullOrWhiteSpace(path))
 {
-    tempWavPath = Path.Combine(Path.GetTempPath(), $"cine_smoke_{Guid.NewGuid():N}.wav");
+    tempWavPath = Path.Combine(Path.GetTempPath(), $"simba_smoke_{Guid.NewGuid():N}.wav");
     File.WriteAllBytes(tempWavPath, CreatePcm16MonoWav(sampleRate: 48000, seconds: 1.0, frequencyHz: 440));
     path = tempWavPath;
 }

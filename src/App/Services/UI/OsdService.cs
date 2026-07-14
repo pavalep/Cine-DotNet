@@ -1,7 +1,7 @@
 using Material.Icons;
-using Cine.Avalonia.Views.Components;
+using Simba.Avalonia.Views.Components;
 
-namespace Cine.Avalonia.Services.UI;
+namespace Simba.Avalonia.Services.UI;
 
 public sealed class OsdService : IOsdService
 {

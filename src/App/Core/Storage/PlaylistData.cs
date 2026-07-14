@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Cine.Avalonia.Storage;
+namespace Simba.Avalonia.Storage;
 
 /// <summary>Persisted playlist data.</summary>
 internal sealed record PlaylistData(

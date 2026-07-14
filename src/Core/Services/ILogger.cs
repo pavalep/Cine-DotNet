@@ -1,6 +1,6 @@
 using System;
 
-namespace Cine.Core.Services;
+namespace Simba.Core.Services;
 
 /// <summary>
 /// Structured logger with severity levels, context, and file output.

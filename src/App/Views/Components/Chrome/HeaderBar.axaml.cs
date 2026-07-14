@@ -5,17 +5,17 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.VisualTree;
-using Cine.Avalonia.Services;
-using Cine.Avalonia.Constants;
-using Cine.Avalonia.ViewModels;
-using Cine.Avalonia.Core;
-using Cine.Avalonia.Views.Resources;
-using Cine.Avalonia.Views.Shell;
+using Simba.Avalonia.Services;
+using Simba.Avalonia.Constants;
+using Simba.Avalonia.ViewModels;
+using Simba.Avalonia.Core;
+using Simba.Avalonia.Views.Resources;
+using Simba.Avalonia.Views.Shell;
 using Layout = Avalonia.Layout;
 using PointerPressedEventArgs = Avalonia.Input.PointerPressedEventArgs;
 using ToolTip = Avalonia.Controls.ToolTip;
 
-namespace Cine.Avalonia.Views.Components;
+namespace Simba.Avalonia.Views.Components;
 
 public partial class HeaderBar : AvaloniaUserControl
 {

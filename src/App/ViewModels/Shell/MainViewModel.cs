@@ -9,21 +9,21 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Avalonia.Threading;
-using Cine.Avalonia.Managers;
-using Cine.Avalonia.Models;
-using Cine.Avalonia.Extensions;
-using Cine.Avalonia.Services;
-using Cine.Avalonia.Utilities;
-using Cine.Avalonia.Features;
-using Cine.Avalonia.Core.Navigation;
-using Cine.Avalonia.Services.UI;
-using Cine.Core;
-using Cine.Media.Interfaces;
-using Cine.Media.Models;
-using Cine.Media.Events;
+using Simba.Avalonia.Managers;
+using Simba.Avalonia.Models;
+using Simba.Avalonia.Extensions;
+using Simba.Avalonia.Services;
+using Simba.Avalonia.Utilities;
+using Simba.Avalonia.Features;
+using Simba.Avalonia.Core.Navigation;
+using Simba.Avalonia.Services.UI;
+using Simba.Core;
+using Simba.Media.Interfaces;
+using Simba.Media.Models;
+using Simba.Media.Events;
 using System.Text.Json;
 
-namespace Cine.Avalonia.ViewModels;
+namespace Simba.Avalonia.ViewModels;
 
 /// <summary>
 /// ViewModel for the main player window. Wraps IMediaPlayer for MVVM binding.
@@ -99,7 +99,7 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public string Title => !string.IsNullOrEmpty(_filePath)
         ? TruncateFilename(Path.GetFileName(_filePath))
-        : "Cine";
+        : "Simba";
 
     private static string TruncateFilename(string name, int maxLen = 48)
     {
@@ -545,6 +545,6 @@ public partial class MainViewModel : INotifyPropertyChanged, IDisposable
         if (_player is IDisposable disposable)
             disposable.Dispose();
 
-        global::Cine.Core.Log.ForContext<MainViewModel>().Info("MainViewModel disposed");
+        global::Simba.Core.Log.ForContext<MainViewModel>().Info("MainViewModel disposed");
     }
 }

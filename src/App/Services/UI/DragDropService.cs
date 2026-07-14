@@ -5,9 +5,9 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Cine.Core;
+using Simba.Core;
 
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 /// <summary>
 /// Processes drag-and-drop file operations by delegating to <see cref="IMediaFileService"/>

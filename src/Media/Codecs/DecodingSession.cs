@@ -1,6 +1,6 @@
-using Cine.Media.Interfaces;
+using Simba.Media.Interfaces;
 
-namespace Cine.Media.Codecs;
+namespace Simba.Media.Codecs;
 
 /// <summary>
 /// Default implementation of <see cref="IDecodingSession"/>.

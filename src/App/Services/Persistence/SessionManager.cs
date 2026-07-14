@@ -1,13 +1,13 @@
 using System;
 using System.IO;
 using System.Text.Json;
-using Cine.Core;
+using Simba.Core;
 
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 /// <summary>
 /// Manages session persistence (save/load/clear) for the media player.
-/// Data is stored as JSON in <c>%LOCALAPPDATA%\Cine\session.json</c>.
+/// Data is stored as JSON in <c>%LOCALAPPDATA%\Simba\session.json</c>.
 /// </summary>
 public class SessionManager : ISessionService
 {
@@ -26,7 +26,7 @@ public class SessionManager : ISessionService
         {
             var dir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Cine");
+                "Simba");
             Directory.CreateDirectory(dir);
             _sessionPath = Path.Combine(dir, "session.json");
         }

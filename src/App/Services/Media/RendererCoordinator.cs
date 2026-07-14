@@ -1,4 +1,4 @@
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 /// <summary>
 /// Coordinates renderer mode switching: Auto (D3D11 hardware) vs Software.

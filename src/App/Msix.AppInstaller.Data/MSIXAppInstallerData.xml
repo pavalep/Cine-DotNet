@@ -14,7 +14,7 @@
 
     <Icon
       HorizontalAlignment="center"
-      Logo="Images\CineLogo124x124.png"
+      Logo="Images\SimbaLogo124x124.png"
       TopMargin="60"/>
 
     <Buttons
@@ -29,15 +29,15 @@
     <HyperLinks TopMargin="24">
       <HyperLink
         Text="Terms &amp; conditions"
-        Url="https://github.com/user/Cine/blob/main/LICENSE"
+        Url="https://github.com/user/Simba/blob/main/LICENSE"
         HorizontalAlignment="center"/>
       <HyperLink
         Text="Privacy policy"
-        Url="https://github.com/user/Cine"
+        Url="https://github.com/user/Simba"
         HorizontalAlignment="center"/>
       <HyperLink
         Text="GitHub"
-        Url="https://github.com/user/Cine"
+        Url="https://github.com/user/Simba"
         HorizontalAlignment="center"/>
     </HyperLinks>
   </UX>

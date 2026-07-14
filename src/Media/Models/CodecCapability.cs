@@ -1,4 +1,4 @@
-namespace Cine.Media.Models;
+namespace Simba.Media.Models;
 
 /// <summary>Describes a single codec capability of a provider.</summary>
 public record CodecCapability

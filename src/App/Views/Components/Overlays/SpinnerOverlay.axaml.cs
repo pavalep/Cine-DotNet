@@ -3,9 +3,9 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Threading;
-using Cine.Avalonia.Extensions;
+using Simba.Avalonia.Extensions;
 
-namespace Cine.Avalonia.Views.Components;
+namespace Simba.Avalonia.Views.Components;
 
 public partial class SpinnerOverlay : AvaloniaUserControl
 {

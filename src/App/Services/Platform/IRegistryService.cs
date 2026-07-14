@@ -1,6 +1,6 @@
 using System;
 
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 /// <summary>
 /// Abstraction over Windows Registry access for file association registration.

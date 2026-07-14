@@ -4,7 +4,7 @@
              mc:Ignorable="d" xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              d:DesignWidth="320" d:DesignHeight="240"
-             x:Class="Cine.Avalonia.Views.Components.NowPlayingInfo"
+             x:Class="Simba.Avalonia.Views.Components.NowPlayingInfo"
              IsVisible="False"
              IsHitTestVisible="False">
 

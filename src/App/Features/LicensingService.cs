@@ -4,22 +4,22 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
-namespace Cine.Avalonia.Features;
+namespace Simba.Avalonia.Features;
 
 /// <summary>
 /// Encrypted license storage with hardware binding and trial tracking.
 ///
 /// License file: AES-256-GCM encrypted JSON stored at
-/// <c>%APPDATA%/Cine/license.enc</c>.
+/// <c>%APPDATA%/Simba/license.enc</c>.
 ///
 /// Trial: up to 30 days from first launch, tracked via
-/// <c>%APPDATA%/Cine/trial.dat</c> (a plain-text timestamp).
+/// <c>%APPDATA%/Simba/trial.dat</c> (a plain-text timestamp).
 /// </summary>
 public sealed class LicensingService : ILicensingService, IDisposable
 {
     // ── Constants ──
     private static readonly string AppDataDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Cine");
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Simba");
 
     private static readonly string LicenseFilePath = Path.Combine(AppDataDir, "license.enc");
     private static readonly string TrialFilePath = Path.Combine(AppDataDir, "trial.dat");
@@ -28,7 +28,7 @@ public sealed class LicensingService : ILicensingService, IDisposable
     // In production these would be derived from a hardware fingerprint.
     // For now use a fixed key so the feature system is testable.
     private static readonly byte[] EncryptionKey =
-        Encoding.UTF8.GetBytes("CineLicenseKey01"); // 16 bytes = AES-128; we pad to 32 below.
+        Encoding.UTF8.GetBytes("SimbaLicenseKey01"); // 16 bytes = AES-128; we pad to 32 below.
 
     // ── State ──
     private LicensingTier _currentTier = LicensingTier.Full;
@@ -251,7 +251,7 @@ public sealed class LicensingService : ILicensingService, IDisposable
     {
         // Pad/truncate the key to 32 bytes (AES-256)
         var key = new byte[32];
-        var src = Encoding.UTF8.GetBytes("CineAES256LicenseKey_2024!!");
+        var src = Encoding.UTF8.GetBytes("SimbaAES256LicenseKey_2024!!");
         Buffer.BlockCopy(src, 0, key, 0, Math.Min(src.Length, key.Length));
         return key;
     }

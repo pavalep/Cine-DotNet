@@ -7,17 +7,17 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
-using Cine.Avalonia.Models;
-using Cine.Avalonia.Constants;
-using Cine.Avalonia.Views.Resources;
-using Cine.Core.Services;
-using Cine.Media.Models;
+using Simba.Avalonia.Models;
+using Simba.Avalonia.Constants;
+using Simba.Avalonia.Views.Resources;
+using Simba.Core.Services;
+using Simba.Media.Models;
 using AvaloniaLayout = Avalonia.Layout;
 using Button = global::Avalonia.Controls.Button;
 using Cursor = Avalonia.Input.Cursor;
 using TextBox = global::Avalonia.Controls.TextBox;
 
-namespace Cine.Avalonia.Views.Components;
+namespace Simba.Avalonia.Views.Components;
 
 /// <summary>
 /// Builds a track-selection flyout with a scrollable track list, an optional
@@ -25,12 +25,12 @@ namespace Cine.Avalonia.Views.Components;
 /// and delay adjustment controls (&#x2212; / value / + / Reset).
 ///
 /// Designed to eliminate the ~180 lines of duplicated flyout-building code
-/// shared between <see cref="Cine.Avalonia.Components.SubtitleOverlay"/> and
-/// <see cref="Cine.Avalonia.Components.AudioTrackSelector"/>.
+/// shared between <see cref="Simba.Avalonia.Components.SubtitleOverlay"/> and
+/// <see cref="Simba.Avalonia.Components.AudioTrackSelector"/>.
 /// </summary>
 public static class TrackFlyoutBuilder
 {
-    private static readonly ILogger _log = global::Cine.Core.Log.ForContext("TrackFlyoutBuilder");
+    private static readonly ILogger _log = global::Simba.Core.Log.ForContext("TrackFlyoutBuilder");
 
     /// <summary>
     /// Build a complete track-selection flyout.

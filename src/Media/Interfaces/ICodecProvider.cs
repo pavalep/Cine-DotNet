@@ -1,6 +1,6 @@
-using Cine.Media.Models;
+using Simba.Media.Models;
 
-namespace Cine.Media.Interfaces;
+namespace Simba.Media.Interfaces;
 
 /// <summary>
 /// Describes a codec provider's capabilities and can configure a player.

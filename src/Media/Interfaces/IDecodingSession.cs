@@ -1,4 +1,4 @@
-namespace Cine.Media.Interfaces;
+namespace Simba.Media.Interfaces;
 
 /// <summary>
 /// Represents an active decoding session wrapping a player instance.

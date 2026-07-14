@@ -1,12 +1,12 @@
 using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using Cine.Avalonia.Core;
-using Cine.Media.Events;
-using Cine.Media.Interfaces;
-using Cine.Media.Models;
+using Simba.Avalonia.Core;
+using Simba.Media.Events;
+using Simba.Media.Interfaces;
+using Simba.Media.Models;
 
-namespace Cine.Avalonia.Managers;
+namespace Simba.Avalonia.Managers;
 
 /// <summary>
 /// Centralized single source of truth for all playback state.

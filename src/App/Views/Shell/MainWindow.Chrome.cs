@@ -6,19 +6,19 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Threading;
-using Cine.Avalonia.Extensions;
-using Cine.Avalonia.Services;
-using Cine.Avalonia.Constants;
-using Cine.Avalonia.Views.Resources;
-using Cine.Avalonia.Views.Components;
-using Cine.Media.Events;
+using Simba.Avalonia.Extensions;
+using Simba.Avalonia.Services;
+using Simba.Avalonia.Constants;
+using Simba.Avalonia.Views.Resources;
+using Simba.Avalonia.Views.Components;
+using Simba.Media.Events;
 using Material.Icons;
 using Material.Icons.Avalonia;
 using App = global::Avalonia.Application;
 using AvaloniaLayout = Avalonia.Layout;
 using RoutedEventArgs = Avalonia.Interactivity.RoutedEventArgs;
 
-namespace Cine.Avalonia.Views.Shell;
+namespace Simba.Avalonia.Views.Shell;
 
 public partial class MainWindow
 {
@@ -102,7 +102,7 @@ public partial class MainWindow
             {
                 var dialog = new Window
                 {
-                    Title = "Cine — Error",
+                    Title = "Simba — Error",
                     Width = 400,
                     Height = 200,
                     WindowStartupLocation = WindowStartupLocation.CenterOwner,
@@ -160,7 +160,7 @@ public partial class MainWindow
             catch (Exception ex)
             {
                 // Last resort - can't show error dialog, log to debug
-                System.Diagnostics.Debug.WriteLine($"[Cine] Fatal error: {message} - {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[Simba] Fatal error: {message} - {ex.Message}");
             }
         });
     }
@@ -297,7 +297,7 @@ public partial class MainWindow
 
     private async void FadeHeaderAndControls(double targetOpacity)
     {
-        Cine.Avalonia.Services.ErrorBoundary.Run(async () =>
+        Simba.Avalonia.Services.ErrorBoundary.Run(async () =>
         {
             var headerBar = PlayerPage.HeaderBarControl.HeaderBarElement;
             var controlsBox = PlayerPage.ControlsBoxControl.ControlsBoxElement;

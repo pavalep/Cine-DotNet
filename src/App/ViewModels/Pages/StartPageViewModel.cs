@@ -7,12 +7,12 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using Avalonia.Threading;
-using Cine.Avalonia.Core.Navigation;
-using Cine.Avalonia.Models;
-using Cine.Avalonia.Services;
-using Cine.Avalonia.Utilities;
+using Simba.Avalonia.Core.Navigation;
+using Simba.Avalonia.Models;
+using Simba.Avalonia.Services;
+using Simba.Avalonia.Utilities;
 
-namespace Cine.Avalonia.ViewModels.Pages;
+namespace Simba.Avalonia.ViewModels.Pages;
 
 /// <summary>
 /// ViewModel for the StartPage — owns RecentFiles display and open-file commands.

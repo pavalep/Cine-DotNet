@@ -2,9 +2,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:vm="clr-namespace:Cine.Avalonia.ViewModels"
+             xmlns:vm="clr-namespace:Simba.Avalonia.ViewModels"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="60"
-             x:Class="Cine.Avalonia.Views.Components.TrialBanner"
+             x:Class="Simba.Avalonia.Views.Components.TrialBanner"
              IsVisible="{Binding IsTrial}"
              x:DataType="vm:MainViewModel">
     <Border Background="{StaticResource AppBackground}"

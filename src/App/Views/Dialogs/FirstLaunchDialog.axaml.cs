@@ -1,7 +1,7 @@
 using Avalonia.Controls;
-using Cine.Avalonia.ViewModels.Dialogs;
+using Simba.Avalonia.ViewModels.Dialogs;
 
-namespace Cine.Avalonia.Views.Dialogs;
+namespace Simba.Avalonia.Views.Dialogs;
 
 public partial class FirstLaunchDialog : Window
 {

@@ -1,4 +1,4 @@
-namespace Cine.Media.Events;
+namespace Simba.Media.Events;
 
 /// <summary>
 /// Event args for fullscreen state changes - matches Python's @mpv.event for fullscreen property changes

@@ -1,7 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
-             x:Class="Cine.Avalonia.Views.Components.Panels.EqualizerPanel"
+             x:Class="Simba.Avalonia.Views.Components.Panels.EqualizerPanel"
              x:CompileBindings="False">
     <UserControl.Styles>
         <Style Selector="Button.eq-preset">

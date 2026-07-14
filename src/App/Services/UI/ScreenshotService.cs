@@ -2,9 +2,9 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
-using Cine.Core;
+using Simba.Core;
 
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 /// <summary>
 /// Manages screenshot capture with clipboard copy and file save options.
@@ -36,12 +36,12 @@ public class ScreenshotService
     /// <summary>
     /// Create the screenshot service.
     /// </summary>
-    /// <param name="outputDir">Directory to save screenshots. Defaults to %Pictures%\Cine Screenshots.</param>
+    /// <param name="outputDir">Directory to save screenshots. Defaults to %Pictures%\Simba Screenshots.</param>
     public ScreenshotService(string? outputDir = null)
     {
         _outputDir = outputDir ?? Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.MyPictures),
-            "Cine Screenshots");
+            "Simba Screenshots");
         Directory.CreateDirectory(_outputDir);
     }
 
@@ -58,7 +58,7 @@ public class ScreenshotService
         var mediaTag = !string.IsNullOrWhiteSpace(MediaName)
             ? $"{Sanitize(MediaName)}_"
             : "";
-        var filename = $"Cine_{mediaTag}{timestamp:yyyy-MM-dd_HHmmss}_{_shotCounter}{fmt}";
+        var filename = $"Simba_{mediaTag}{timestamp:yyyy-MM-dd_HHmmss}_{_shotCounter}{fmt}";
         var path = Path.Combine(_outputDir, filename);
 
         Log.ForContext<ScreenshotService>().Info("Saving screenshot to {Path}", path);

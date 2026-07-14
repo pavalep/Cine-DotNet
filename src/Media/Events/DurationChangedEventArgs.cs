@@ -1,4 +1,4 @@
-namespace Cine.Media.Events;
+namespace Simba.Media.Events;
 
 /// <summary>
 /// Event args for duration changes - matches Python's @mpv.property_observer("duration")

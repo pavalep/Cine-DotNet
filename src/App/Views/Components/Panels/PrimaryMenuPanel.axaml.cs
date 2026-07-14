@@ -3,7 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using MaterialIcon = global::Material.Icons.Avalonia.MaterialIcon;
 
-namespace Cine.Avalonia.Views.Components.Panels;
+namespace Simba.Avalonia.Views.Components.Panels;
 
 public partial class PrimaryMenuPanel : UserControl
 {

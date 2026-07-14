@@ -8,13 +8,13 @@ using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
-using Cine.Core;
-using Cine.Avalonia.Extensions;
-using Cine.Avalonia.Serialization;
-using Cine.Avalonia.Services;
+using Simba.Core;
+using Simba.Avalonia.Extensions;
+using Simba.Avalonia.Serialization;
+using Simba.Avalonia.Services;
 using KeyEventArgs = Avalonia.Input.KeyEventArgs;
 
-namespace Cine.Avalonia.Views.Dialogs;
+namespace Simba.Avalonia.Views.Dialogs;
 
 public partial class PipWindow : Window, IPipWindow
 {
@@ -46,7 +46,7 @@ public partial class PipWindow : Window, IPipWindow
     // ────── State persistence ──────
     private static readonly string PipStatePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "Cine", "pip_state.json");
+        "Simba", "pip_state.json");
 
     public PipWindow()
     {
@@ -374,7 +374,7 @@ public partial class PipWindow : Window, IPipWindow
 
     private void SaveState()
     {
-        try { File.WriteAllText(PipStatePath, JsonSerializer.Serialize(new PipState(Position.X, Position.Y, (int)Width, (int)Height, _isPinned), CineJsonContext.Default.PipState)); }
+        try { File.WriteAllText(PipStatePath, JsonSerializer.Serialize(new PipState(Position.X, Position.Y, (int)Width, (int)Height, _isPinned), SimbaJsonContext.Default.PipState)); }
         catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[PiP] SaveState failed: {ex.Message}"); }
     }
 
@@ -383,7 +383,7 @@ public partial class PipWindow : Window, IPipWindow
         try
         {
             if (!File.Exists(PipStatePath)) return;
-            var state = JsonSerializer.Deserialize(File.ReadAllText(PipStatePath), CineJsonContext.Default.PipState);
+            var state = JsonSerializer.Deserialize(File.ReadAllText(PipStatePath), SimbaJsonContext.Default.PipState);
             if (state == null) return;
             var screens = Screens?.All;
             if (screens != null && screens.Count > 0)

@@ -3,11 +3,11 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media;
-using Cine.Avalonia.Constants;
-using Cine.Avalonia.Views.Resources;
+using Simba.Avalonia.Constants;
+using Simba.Avalonia.Views.Resources;
 using Layout = Avalonia.Layout;
 
-namespace Cine.Avalonia.Views.Dialogs;
+namespace Simba.Avalonia.Views.Dialogs;
 
 public partial class KeyboardShortcutsDialog : Window
 {

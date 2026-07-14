@@ -4,7 +4,7 @@ using System.Globalization;
 using Avalonia;
 using Avalonia.Data.Converters;
 
-namespace Cine.Avalonia.Converters;
+namespace Simba.Avalonia.Converters;
 
 /// <summary>Converts a TimeSpan to a human-readable string like "01:23:45" or "-00:05".</summary>
 public class TimeSpanToStringConverter : IValueConverter

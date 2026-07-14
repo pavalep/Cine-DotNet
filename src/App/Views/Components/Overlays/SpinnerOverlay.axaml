@@ -1,6 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             x:Class="Cine.Avalonia.Views.Components.SpinnerOverlay">
+             x:Class="Simba.Avalonia.Views.Components.SpinnerOverlay">
 
     <UserControl.Resources>
         <!-- Spinner active arc gradient — accent on left → lighter accent on right -->

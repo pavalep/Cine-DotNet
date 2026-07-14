@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Concurrent;
-using Cine.Core.Services;
+using Simba.Core.Services;
 
-namespace Cine.Core;
+namespace Simba.Core;
 
 /// <summary>
 /// Central logging service - singleton factory for ILogger instances.
@@ -10,7 +10,7 @@ namespace Cine.Core;
 /// </summary>
 public static class Log
 {
-    private static readonly Lazy<FileLogger> _root = new(() => new FileLogger("Cine"));
+    private static readonly Lazy<FileLogger> _root = new(() => new FileLogger("Simba"));
     private static readonly ConcurrentDictionary<string, ILogger> _cache = new();
 
     public static ILogger Default => _root.Value;

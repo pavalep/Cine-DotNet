@@ -5,15 +5,15 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
-using Cine.Avalonia.Storage;
-using Cine.Avalonia.Services;
-using Cine.Avalonia.Constants;
-using Cine.Avalonia.Views.Resources;
+using Simba.Avalonia.Storage;
+using Simba.Avalonia.Services;
+using Simba.Avalonia.Constants;
+using Simba.Avalonia.Views.Resources;
 using Button = global::Avalonia.Controls.Button;
 using Cursor = Avalonia.Input.Cursor;
 using AvaloniaLayout = Avalonia.Layout;
 
-namespace Cine.Avalonia.Views.Dialogs;
+namespace Simba.Avalonia.Views.Dialogs;
 
 public partial class SubtitleSettingsDialog : Window
 {

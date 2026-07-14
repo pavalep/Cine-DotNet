@@ -1,13 +1,13 @@
 using System;
 using System.IO;
 using System.Text.Json;
-using Cine.Core.Services;
+using Simba.Core.Services;
 
-namespace Cine.Avalonia.Storage;
+namespace Simba.Avalonia.Storage;
 
 /// <summary>
 /// Per-file subtitle settings persistence.
-/// Stores global defaults + per-file overrides as JSON in %LOCALAPPDATA%\Cine\subtitles\.
+/// Stores global defaults + per-file overrides as JSON in %LOCALAPPDATA%\Simba\subtitles\.
 /// </summary>
 public sealed class SubtitleSettingsStore : SettingsStoreBase
 {

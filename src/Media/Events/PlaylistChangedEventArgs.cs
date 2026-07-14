@@ -1,4 +1,4 @@
-namespace Cine.Media.Events;
+namespace Simba.Media.Events;
 
 using System.Collections.Generic;
 

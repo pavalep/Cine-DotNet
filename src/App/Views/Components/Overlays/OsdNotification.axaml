@@ -1,7 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
-             x:Class="Cine.Avalonia.Views.Components.OsdNotification">
+             x:Class="Simba.Avalonia.Views.Components.OsdNotification">
     <UserControl.Resources>
         <Thickness x:Key="osd-bottom-margin">0,0,0,110</Thickness>
     </UserControl.Resources>

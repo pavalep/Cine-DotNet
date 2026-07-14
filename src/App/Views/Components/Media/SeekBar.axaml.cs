@@ -4,14 +4,14 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
-using Cine.Avalonia.ViewModels;
+using Simba.Avalonia.ViewModels;
 using PointerEventArgs = Avalonia.Input.PointerEventArgs;
 using PointerPressedEventArgs = Avalonia.Input.PointerPressedEventArgs;
 using PointerReleasedEventArgs = Avalonia.Input.PointerReleasedEventArgs;
 using PointerWheelEventArgs = Avalonia.Input.PointerWheelEventArgs;
 using SizeChangedEventArgs = Avalonia.Controls.SizeChangedEventArgs;
 
-namespace Cine.Avalonia.Views.Components;
+namespace Simba.Avalonia.Views.Components;
 
 public partial class SeekBar : AvaloniaUserControl
 {

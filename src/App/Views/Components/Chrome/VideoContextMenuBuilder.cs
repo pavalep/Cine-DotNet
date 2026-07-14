@@ -4,14 +4,14 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Controls.Primitives;
-using Cine.Avalonia.ViewModels;
-using Cine.Avalonia.Views.Dialogs;
-using Cine.Avalonia.Views.Resources;
-using Cine.Media.Interfaces;
+using Simba.Avalonia.ViewModels;
+using Simba.Avalonia.Views.Dialogs;
+using Simba.Avalonia.Views.Resources;
+using Simba.Media.Interfaces;
 using MaterialIcon = global::Material.Icons.Avalonia.MaterialIcon;
 using MenuItem = Avalonia.Controls.MenuItem;
 
-namespace Cine.Avalonia.Views.Components;
+namespace Simba.Avalonia.Views.Components;
 
 /// <summary>
 /// Builds the right-click video context menu with Material icons and selection state.
@@ -43,7 +43,7 @@ public class VideoContextMenuBuilder
 
     public MenuFlyout Build()
     {
-        Cine.Core.Log.ForContext<VideoContextMenuBuilder>().Debug("Building video context menu: topmost={Topmost} aspect={Aspect} crop={Crop} speed={Speed}", _topmost, _aspectRatio, _cropValue, _speedValue);
+        Simba.Core.Log.ForContext<VideoContextMenuBuilder>().Debug("Building video context menu: topmost={Topmost} aspect={Aspect} crop={Crop} speed={Speed}", _topmost, _aspectRatio, _cropValue, _speedValue);
         var menu = new MenuFlyout { Placement = PlacementMode.Pointer };
 
         // ── Playback ──
@@ -138,9 +138,9 @@ public class VideoContextMenuBuilder
             item.Icon = Icon(icon.Value, 16);
         item.Click += (_, _) =>
         {
-            Cine.Core.Log.ForContext<VideoContextMenuBuilder>().Debug("Menu item clicked: {Item}", text);
+            Simba.Core.Log.ForContext<VideoContextMenuBuilder>().Debug("Menu item clicked: {Item}", text);
             try { action(); }
-            catch (Exception ex) { Cine.Core.Log.ForContext<VideoContextMenuBuilder>().Error(ex, "Menu item action failed: {Item}", text); }
+            catch (Exception ex) { Simba.Core.Log.ForContext<VideoContextMenuBuilder>().Error(ex, "Menu item action failed: {Item}", text); }
         };
         return item;
     }
@@ -153,9 +153,9 @@ public class VideoContextMenuBuilder
             : Icon(global::Material.Icons.MaterialIconKind.CircleOutline, 16);
         item.Click += (_, _) =>
         {
-            Cine.Core.Log.ForContext<VideoContextMenuBuilder>().Debug("Menu select clicked: {Item}", text);
+            Simba.Core.Log.ForContext<VideoContextMenuBuilder>().Debug("Menu select clicked: {Item}", text);
             try { action(); }
-            catch (Exception ex) { Cine.Core.Log.ForContext<VideoContextMenuBuilder>().Error(ex, "Menu select action failed: {Item}", text); }
+            catch (Exception ex) { Simba.Core.Log.ForContext<VideoContextMenuBuilder>().Error(ex, "Menu select action failed: {Item}", text); }
         };
         return item;
     }

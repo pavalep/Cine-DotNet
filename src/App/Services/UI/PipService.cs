@@ -1,10 +1,10 @@
 using System;
 using Avalonia.Threading;
-using Cine.Avalonia.Controls;
-using Cine.Avalonia.Views.Dialogs;
-using Cine.Core;
+using Simba.Avalonia.Controls;
+using Simba.Avalonia.Views.Dialogs;
+using Simba.Core;
 
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 /// <summary>
 /// Manages PiP (Picture-in-Picture) lifecycle.

@@ -1,6 +1,6 @@
 using System;
 
-namespace Cine.Avalonia.Constants;
+namespace Simba.Avalonia.Constants;
 
 /// <summary>
 /// Immutable value types for domain concepts.

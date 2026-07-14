@@ -1,6 +1,6 @@
 using Material.Icons;
 
-namespace Cine.Avalonia.Services.UI;
+namespace Simba.Avalonia.Services.UI;
 
 public interface IOsdService
 {

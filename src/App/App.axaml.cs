@@ -12,15 +12,15 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using Avalonia.Win32;
-using Cine.Avalonia.Core;
-using Cine.Avalonia.Services;
-using Cine.Avalonia.ViewModels;
-using Cine.Avalonia.Views.Dialogs;
-using Cine.Avalonia.Views.Shell;
-using Cine.Core;
+using Simba.Avalonia.Core;
+using Simba.Avalonia.Services;
+using Simba.Avalonia.ViewModels;
+using Simba.Avalonia.Views.Dialogs;
+using Simba.Avalonia.Views.Shell;
+using Simba.Core;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Cine.Avalonia;
+namespace Simba.Avalonia;
 
 public class App : global::Avalonia.Application
 {
@@ -106,7 +106,7 @@ public class App : global::Avalonia.Application
     private static void Log(string msg)
     {
         CrashReporter.LogError(msg);
-        Cine.Core.Log.ForContext<App>().Debug("{Message}", msg);
+        Simba.Core.Log.ForContext<App>().Debug("{Message}", msg);
         try { File.AppendAllText(Path.Combine(Path.GetTempPath(), "cine-startup.log"), $"{DateTime.Now:HH:mm:ss.fff} {msg}{Environment.NewLine}"); } catch { }
     }
 
@@ -121,7 +121,7 @@ public class App : global::Avalonia.Application
 
     public static void Main(string[] args)
     {
-        try { File.WriteAllText(Path.Combine(Path.GetTempPath(), "cine-startup.log"), $"=== CINE STARTUP LOG ==={Environment.NewLine}"); } catch { }
+        try { File.WriteAllText(Path.Combine(Path.GetTempPath(), "cine-startup.log"), $"=== SIMBA STARTUP LOG ==={Environment.NewLine}"); } catch { }
 
         // ── Six-Layer Exception Defense ──
         // Layer 4: Thread-pool / non-task exceptions (informational — can't prevent termination)
@@ -145,7 +145,7 @@ public class App : global::Avalonia.Application
         // Layer 5: Last line of defense — global try-catch around entire app lifetime
         try
         {
-            Log("=== Cine.Avalonia starting ===");
+            Log("=== Simba.Avalonia starting ===");
 
             // ── On-demand runtime download ──
             // When running as MSIX (has package identity), libmpv DLLs are excluded
@@ -158,7 +158,7 @@ public class App : global::Avalonia.Application
                     if (!RuntimeDownloader.IsRuntimeReady())
                     {
                         Log("MSIX: Runtime DLLs missing — downloading on demand...");
-                        Cine.Core.Log.ForContext<App>().Info("Downloading media runtime (first launch, this may take a minute)...");
+                        Simba.Core.Log.ForContext<App>().Info("Downloading media runtime (first launch, this may take a minute)...");
                         using var runtimeCts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
                     Task.Run(async () => await RuntimeDownloader.EnsureRuntimeAsync(ct: runtimeCts.Token).ConfigureAwait(false)).GetAwaiter().GetResult();
                         Log("MSIX: Runtime download complete.");
@@ -167,7 +167,7 @@ public class App : global::Avalonia.Application
                 catch (Exception dlEx)
                 {
                     Log($"MSIX: Runtime download failed: {dlEx.Message}");
-                    Cine.Core.Log.ForContext<App>().Warning(dlEx.ToString(), "Could not download media runtime");
+                    Simba.Core.Log.ForContext<App>().Warning(dlEx.ToString(), "Could not download media runtime");
                 }
             }
 
@@ -325,8 +325,8 @@ public class App : global::Avalonia.Application
             // Register file associations for double-click support
             try
             {
-                var registry = new Cine.Avalonia.Services.WindowsRegistryService();
-                var fileAssoc = new Cine.Avalonia.Services.FileAssociationService(registry);
+                var registry = new Simba.Avalonia.Services.WindowsRegistryService();
+                var fileAssoc = new Simba.Avalonia.Services.FileAssociationService(registry);
                 fileAssoc.RegisterOnStartup();
             }
             catch (Exception regEx)

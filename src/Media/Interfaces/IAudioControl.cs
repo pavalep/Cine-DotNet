@@ -1,8 +1,8 @@
 using System;
-using Cine.Media.Events;
-using Cine.Media.Models;
+using Simba.Media.Events;
+using Simba.Media.Models;
 
-namespace Cine.Media.Interfaces;
+namespace Simba.Media.Interfaces;
 
 /// <summary>
 /// Audio volume, mute, delay, track selection, and audio device management.

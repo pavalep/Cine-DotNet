@@ -1,9 +1,9 @@
 using System;
 using System.IO;
 using System.Text.Json;
-using Cine.Core;
+using Simba.Core;
 
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 /// <summary>
 /// Orchestrates session resume — loading saved state, validating, and

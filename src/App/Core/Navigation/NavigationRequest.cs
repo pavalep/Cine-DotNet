@@ -1,6 +1,6 @@
 using System;
 
-namespace Cine.Avalonia.Core.Navigation;
+namespace Simba.Avalonia.Core.Navigation;
 
 /// <summary>Represents a navigation request with route and optional parameter.</summary>
 public class NavigationRequest : EventArgs

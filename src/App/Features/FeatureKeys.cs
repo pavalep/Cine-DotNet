@@ -1,4 +1,4 @@
-namespace Cine.Avalonia.Features;
+namespace Simba.Avalonia.Features;
 
 /// <summary>
 /// Compile-time-safe feature key constants.

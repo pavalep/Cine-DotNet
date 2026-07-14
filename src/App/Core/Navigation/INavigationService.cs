@@ -1,6 +1,6 @@
 using System;
 
-namespace Cine.Avalonia.Core.Navigation;
+namespace Simba.Avalonia.Core.Navigation;
 
 /// <summary>Abstraction over application-level navigation between pages.</summary>
 public interface INavigationService

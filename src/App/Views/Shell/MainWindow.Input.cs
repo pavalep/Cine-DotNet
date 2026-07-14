@@ -15,12 +15,12 @@ using KeyEventArgs = Avalonia.Input.KeyEventArgs;
 using PointerWheelEventArgs = Avalonia.Input.PointerWheelEventArgs;
 using PointerPressedEventArgs = Avalonia.Input.PointerPressedEventArgs;
 using RoutedEventArgs = Avalonia.Interactivity.RoutedEventArgs;
-using Cine.Avalonia.Controls;
-using Cine.Avalonia.Services;
+using Simba.Avalonia.Controls;
+using Simba.Avalonia.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Cine.Avalonia.ViewModels;
-using Cine.Avalonia.Views.Dialogs;
-using Cine.Avalonia.Views.Components;
+using Simba.Avalonia.ViewModels;
+using Simba.Avalonia.Views.Dialogs;
+using Simba.Avalonia.Views.Components;
 using Material.Icons;
 using MaterialIcon = global::Material.Icons.Avalonia.MaterialIcon;
 using App = global::Avalonia.Application;
@@ -28,7 +28,7 @@ using SizeChangedEventArgs = Avalonia.Controls.SizeChangedEventArgs;
 using DragEventArgs = Avalonia.Input.DragEventArgs;
 using DragDropEffects = Avalonia.Input.DragDropEffects;
 
-namespace Cine.Avalonia.Views.Shell;
+namespace Simba.Avalonia.Views.Shell;
 
 public partial class MainWindow
 {

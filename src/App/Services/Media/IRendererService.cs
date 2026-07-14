@@ -1,4 +1,4 @@
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 /// <summary>Renderer mode: Auto (D3D11 hardware) vs Software.</summary>
 public enum RendererType { Auto, Software }

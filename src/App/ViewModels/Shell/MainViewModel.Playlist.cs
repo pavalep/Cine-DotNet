@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Cine.Avalonia.Serialization;
-using Cine.Avalonia.Services;
-using Cine.Media.Interfaces;
+using Simba.Avalonia.Serialization;
+using Simba.Avalonia.Services;
+using Simba.Media.Interfaces;
 
-namespace Cine.Avalonia.ViewModels;
+namespace Simba.Avalonia.ViewModels;
 
 /// <summary>
 /// Playlist and session management: navigation, persistence, recent files.

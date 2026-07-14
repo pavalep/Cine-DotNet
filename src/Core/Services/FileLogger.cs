@@ -5,7 +5,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Cine.Core.Services;
+namespace Simba.Core.Services;
 
 public class FileLogger : ILogger, IDisposable
 {
@@ -16,12 +16,12 @@ public class FileLogger : ILogger, IDisposable
     private readonly StreamWriter? _writer;
     private readonly object _lock = new();
 
-    public FileLogger(string name = "Cine", string? logDir = null)
+    public FileLogger(string name = "Simba", string? logDir = null)
     {
         _name = name;
         _logDir = logDir ?? Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Cine", "logs");
+            "Simba", "logs");
 
         string logFile = "";
         StreamWriter? writer = null;

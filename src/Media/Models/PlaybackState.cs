@@ -1,4 +1,4 @@
-namespace Cine.Media.Models;
+namespace Simba.Media.Models;
 
 /// <summary>
 /// Current playback state - matches Python mpv's pause/unpause/stop states

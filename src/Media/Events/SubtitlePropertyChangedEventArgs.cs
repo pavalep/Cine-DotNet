@@ -1,4 +1,4 @@
-namespace Cine.Media.Events;
+namespace Simba.Media.Events;
 
 /// <summary>
 /// Event args for subtitle property changes observed from mpv.

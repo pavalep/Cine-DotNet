@@ -9,16 +9,16 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
-using Cine.Avalonia.Helpers;
-using Cine.Avalonia.Core;
-using Cine.Avalonia.Storage;
-using Cine.Avalonia.Models;
-using Cine.Avalonia.Services;
-using Cine.Core.Services;
-using Cine.Media.Events;
-using Cine.Media.Interfaces;
-using Cine.Media.Models;
-namespace Cine.Avalonia.Managers;
+using Simba.Avalonia.Helpers;
+using Simba.Avalonia.Core;
+using Simba.Avalonia.Storage;
+using Simba.Avalonia.Models;
+using Simba.Avalonia.Services;
+using Simba.Core.Services;
+using Simba.Media.Events;
+using Simba.Media.Interfaces;
+using Simba.Media.Models;
+namespace Simba.Avalonia.Managers;
 
 /// <summary>
 /// Centralized manager for all subtitle-related state.
@@ -77,7 +77,7 @@ public sealed class SubtitleManager : DomainManager<IMediaPlayer>, ISubtitleMana
     {
         _store = store ?? throw new ArgumentNullException(nameof(store));
         _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
-        _log = global::Cine.Core.Log.Default;
+        _log = global::Simba.Core.Log.Default;
 
         _log.Debug("Constructor: initializing SubtitleManager");
 
@@ -1179,7 +1179,7 @@ public sealed class SubtitleManager : DomainManager<IMediaPlayer>, ISubtitleMana
 
     private static string FormatTrack(string prefix, SubtitleSource track)
     {
-        return Cine.Avalonia.Helpers.TrackDisplayHelper.FormatTrack(TrackType.Subtitle, track);
+        return Simba.Avalonia.Helpers.TrackDisplayHelper.FormatTrack(TrackType.Subtitle, track);
     }
 
     // ═══════════════════════════════════════════════

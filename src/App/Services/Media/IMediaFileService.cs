@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 /// <summary>
 /// Validates media files and provides file-system utilities for media operations.

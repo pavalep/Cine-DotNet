@@ -5,12 +5,12 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
-using Cine.Avalonia.Services.UI;
-using Cine.Avalonia.Views.Components;
-using Cine.Avalonia.Controls;
-using Cine.Avalonia.Services;
+using Simba.Avalonia.Services.UI;
+using Simba.Avalonia.Views.Components;
+using Simba.Avalonia.Controls;
+using Simba.Avalonia.Services;
 
-namespace Cine.Avalonia.Views.Shell;
+namespace Simba.Avalonia.Views.Shell;
 
 public partial class MainWindow : global::Avalonia.Controls.Window
 {

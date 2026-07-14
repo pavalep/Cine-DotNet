@@ -1,17 +1,17 @@
 using Microsoft.Extensions.DependencyInjection;
-using Cine.Avalonia.Services;
-using Cine.Avalonia.Managers;
-using Cine.Avalonia.Storage;
-using Cine.Avalonia.ViewModels;
-using Cine.Avalonia.ViewModels.Pages;
-using Cine.Avalonia.Features;
-using Cine.Avalonia.Views.Shell;
-using Cine.Avalonia.Core.Navigation;
-using Cine.Avalonia.Services.UI;
-using Cine.Media.Codecs;
-using Cine.Media.Interfaces;
+using Simba.Avalonia.Services;
+using Simba.Avalonia.Managers;
+using Simba.Avalonia.Storage;
+using Simba.Avalonia.ViewModels;
+using Simba.Avalonia.ViewModels.Pages;
+using Simba.Avalonia.Features;
+using Simba.Avalonia.Views.Shell;
+using Simba.Avalonia.Core.Navigation;
+using Simba.Avalonia.Services.UI;
+using Simba.Media.Codecs;
+using Simba.Media.Interfaces;
 
-namespace Cine.Avalonia.Core;
+namespace Simba.Avalonia.Core;
 
 /// <summary>
 /// Application composition root — single location for all dependency registration.

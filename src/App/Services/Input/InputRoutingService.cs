@@ -2,7 +2,7 @@ using Avalonia.Input;
 using KeyEventArgs = Avalonia.Input.KeyEventArgs;
 using KeyModifiers = Avalonia.Input.KeyModifiers;
 
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 /// <summary>
 /// Application-wide keyboard shortcut router with scope support.

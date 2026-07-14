@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 
-namespace Cine.Media.Implementations;
+namespace Simba.Media.Implementations;
 
 /// <summary>
 /// Creates and manages an OpenGL ES context via ANGLE EGL + an offscreen FBO for mpv rendering.
@@ -143,7 +143,7 @@ public class AngleGlContext : IDisposable
         try
         {
             File.AppendAllText(
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Cine", "cine_angle.log"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Simba", "simba_angle.log"),
                 $"[{DateTime.Now:HH:mm:ss.fff}] {msg}{Environment.NewLine}");
         }
         catch { }

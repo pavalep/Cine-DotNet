@@ -15,7 +15,7 @@
     <!-- MSIX: packaged externally via MakeAppx in CI pipeline. Keep framework-dependent. -->
     <SelfContained>false</SelfContained>
     <PublishSingleFile>false</PublishSingleFile>
-    <ApplicationTitle>Cine</ApplicationTitle>
+    <ApplicationTitle>Simba</ApplicationTitle>
   </PropertyGroup>
 
   <ItemGroup>

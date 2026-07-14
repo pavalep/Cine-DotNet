@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
 
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 /// <summary>
 /// Wraps <see cref="FileDialogHandler"/> as an <see cref="IFileDialogService"/>

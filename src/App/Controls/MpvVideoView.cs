@@ -7,13 +7,13 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Avalonia.Platform;
-using Cine.Avalonia.Services;
-using Cine.Media.Implementations;
-using Cine.Media.Models;
+using Simba.Avalonia.Services;
+using Simba.Media.Implementations;
+using Simba.Media.Models;
 using Image = Avalonia.Controls.Image;
 using LayoutInformation = Avalonia.Layout.LayoutInformation;
 
-namespace Cine.Avalonia.Controls;
+namespace Simba.Avalonia.Controls;
 
 /// <summary>
 /// Self-contained video renderer for the main window.
@@ -92,14 +92,14 @@ public class MpvVideoView : Decorator
         try
         {
             var dir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Cine");
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Simba");
             Directory.CreateDirectory(dir);
-            return Path.Combine(dir, "cine_mainwin_gl.log");
+            return Path.Combine(dir, "simba_mainwin_gl.log");
         }
         catch
         {
             // Fall back to temp path — debug logging is best-effort
-            return Path.Combine(Path.GetTempPath(), "cine_mainwin_gl.log");
+            return Path.Combine(Path.GetTempPath(), "simba_mainwin_gl.log");
         }
     }
     private static void Log(string msg)

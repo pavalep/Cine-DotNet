@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
 
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 /// <summary>
 /// Abstracts file-dialog operations so ViewModels can request file selection

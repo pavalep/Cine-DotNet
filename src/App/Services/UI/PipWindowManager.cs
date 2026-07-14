@@ -1,13 +1,13 @@
 using System;
 using System.IO;
-using Cine.Avalonia.Views.Components;
-using Cine.Avalonia.Controls;
-using Cine.Avalonia.ViewModels;
-using Cine.Avalonia.Views.Dialogs;
-using Cine.Media.Events;
-using Cine.Media.Models;
+using Simba.Avalonia.Views.Components;
+using Simba.Avalonia.Controls;
+using Simba.Avalonia.ViewModels;
+using Simba.Avalonia.Views.Dialogs;
+using Simba.Media.Events;
+using Simba.Media.Models;
 
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 /// <summary>
 /// Orchestrates Picture-in-Picture lifecycle: toggling, position/state sync,

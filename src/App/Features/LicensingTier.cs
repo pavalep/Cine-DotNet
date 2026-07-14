@@ -1,4 +1,4 @@
-namespace Cine.Avalonia.Features;
+namespace Simba.Avalonia.Features;
 
 /// <summary>
 /// License tiers in ascending order of capability.

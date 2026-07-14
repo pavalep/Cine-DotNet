@@ -1,6 +1,6 @@
 using System;
 
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 /// <summary>
 /// Manages application theme (dark/light/system) and high-contrast detection.

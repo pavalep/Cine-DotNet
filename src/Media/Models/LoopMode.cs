@@ -1,4 +1,4 @@
-namespace Cine.Media.Models;
+namespace Simba.Media.Models;
 
 /// <summary>
 /// Loop mode for playback - matches Python's loop=file, loop=playlist, loop=no

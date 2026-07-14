@@ -1,6 +1,6 @@
-namespace Cine.Media.Events;
+namespace Simba.Media.Events;
 
-using Cine.Media.Models;
+using Simba.Media.Models;
 
 /// <summary>
 /// Event args for loop mode changes - matches Python's @mpv.event for loop property changes

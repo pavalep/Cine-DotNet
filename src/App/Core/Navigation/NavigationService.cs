@@ -1,6 +1,6 @@
 using System;
 
-namespace Cine.Avalonia.Core.Navigation;
+namespace Simba.Avalonia.Core.Navigation;
 
 /// <summary>Default implementation of <see cref="INavigationService"/>.</summary>
 internal sealed class NavigationService : INavigationService

@@ -3,7 +3,7 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-namespace Cine.Media.Implementations;
+namespace Simba.Media.Implementations;
 
 public static class MpvInterop
 {
@@ -44,10 +44,10 @@ public static class MpvInterop
                 return handle;
         }
 
-        // Also search %LOCALAPPDATA%\Cine\runtime\ for downloaded mpv DLLs
+        // Also search %LOCALAPPDATA%\Simba\runtime\ for downloaded mpv DLLs
         var runtimeDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Cine", "runtime");
+            "Simba", "runtime");
         foreach (var name in CandidateNames)
         {
             var runtime = Path.Combine(runtimeDir, name);
@@ -82,7 +82,7 @@ public static class MpvInterop
         // Check runtime download directory
         var runtimeDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Cine", "runtime");
+            "Simba", "runtime");
         foreach (var name in CandidateNames)
         {
             var runtime = Path.Combine(runtimeDir, name);

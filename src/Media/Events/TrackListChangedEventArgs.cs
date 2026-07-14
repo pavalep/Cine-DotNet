@@ -1,7 +1,7 @@
-namespace Cine.Media.Events;
+namespace Simba.Media.Events;
 
 using System.Collections.Generic;
-using Cine.Media.Models;
+using Simba.Media.Models;
 
 /// <summary>
 /// Event args for track list changes - matches Python's @mpv.property_observer for audio/video subtitle tracks

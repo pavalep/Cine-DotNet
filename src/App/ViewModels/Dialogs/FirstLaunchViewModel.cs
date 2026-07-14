@@ -6,11 +6,11 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
-using Cine.Avalonia.Services;
-using Cine.Avalonia.Utilities;
-using Cine.Core;
+using Simba.Avalonia.Services;
+using Simba.Avalonia.Utilities;
+using Simba.Core;
 
-namespace Cine.Avalonia.ViewModels.Dialogs;
+namespace Simba.Avalonia.ViewModels.Dialogs;
 
 public class DownloadItem : INotifyPropertyChanged
 {
@@ -125,7 +125,7 @@ public class FirstLaunchViewModel : INotifyPropertyChanged
             Environment.SetEnvironmentVariable("CINE_RUNTIME_DIR", runtimeDir);
 
             StatusText = "All components ready!";
-            ButtonText = "Launch Cine";
+            ButtonText = "Launch Simba";
             _isDownloading = false;
             _isComplete = true;
 

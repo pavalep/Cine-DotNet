@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
 
-namespace Cine.Avalonia.Services;
+namespace Simba.Avalonia.Services;
 
 /// <summary>
 /// Persists and restores playback session state across application restarts.

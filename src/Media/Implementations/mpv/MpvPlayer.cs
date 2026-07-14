@@ -6,11 +6,11 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Cine.Media.Events;
-using Cine.Media.Interfaces;
-using Cine.Media.Models;
+using Simba.Media.Events;
+using Simba.Media.Interfaces;
+using Simba.Media.Models;
 
-namespace Cine.Media.Implementations;
+namespace Simba.Media.Implementations;
 
 public sealed class MpvPlayer : IMediaPlayer, IDisposable
 {
@@ -63,7 +63,7 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
         {
             var dir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Cine");
+                "Simba");
             Directory.CreateDirectory(dir);
             return Path.Combine(dir, "MpvPlayer.log");
         }
@@ -1889,7 +1889,7 @@ public sealed class MpvPlayer : IMediaPlayer, IDisposable
     private static string GetDefaultScreenshotPath()
     {
         var dir = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
-        return System.IO.Path.Combine(dir, $"cine_screenshot_{DateTime.Now:yyyyMMdd_HHmmss}.png");
+        return System.IO.Path.Combine(dir, $"simba_screenshot_{DateTime.Now:yyyyMMdd_HHmmss}.png");
     }
 
     // ── JSON parsing for mpv property data ──
